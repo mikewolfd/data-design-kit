@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/component.schema.json",
+  "title": "DDK 0.1 component",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "component"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "role": {
+      "enum": [
+        "reader",
+        "transform"
+      ]
+    },
+    "parameters": {
+      "$ref": "common.schema.json#/$defs/parameterSchema"
+    },
+    "inputs": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "optional": {
+            "type": "boolean"
+          },
+          "allowAdditionalFields": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dataset"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 0
+    },
+    "outputs": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          }
+        },
+        "required": [
+          "dataset"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    },
+    "implementation": {
+      "type": "object",
+      "properties": {
+        "adapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/path"
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "configuration": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "adapter"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "path"
+          ],
+          "not": {
+            "required": [
+              "entrypoint"
+            ]
+          }
+        },
+        {
+          "required": [
+            "entrypoint"
+          ],
+          "not": {
+            "required": [
+              "path"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "role",
+    "parameters",
+    "inputs",
+    "outputs"
+  ],
+  "additionalProperties": false
+}

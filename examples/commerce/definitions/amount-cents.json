@@ -1,0 +1,22 @@
+{
+  "logicalType": "integer",
+  "required": true,
+  "description": "An amount in integer minor currency units.",
+  "quality": [
+    {
+      "id": "nonnegative-amount",
+      "type": "sql",
+      "query": "SELECT COUNT(*) FROM ${object} WHERE amount_cents < 0",
+      "mustBe": 0,
+      "customProperties": [
+        {
+          "vendor": "ddk",
+          "property": "fieldDependencies",
+          "value": [
+            "amount_cents"
+          ]
+        }
+      ]
+    }
+  ]
+}

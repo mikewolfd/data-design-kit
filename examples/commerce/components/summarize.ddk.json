@@ -1,0 +1,29 @@
+{
+  "specVersion": "0.1",
+  "kind": "component",
+  "id": "urn:example:summarize",
+  "version": "1.0.0",
+  "role": "transform",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "inputs": {
+    "orders": {
+      "dataset": "orders"
+    },
+    "customers": {
+      "dataset": "customers"
+    }
+  },
+  "outputs": {
+    "rows": {
+      "dataset": "daily-revenue"
+    }
+  },
+  "implementation": {
+    "adapter": "datafusion-sql",
+    "path": "../transforms/revenue.sql"
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "apiVersion": "v3.2.0",
+  "kind": "DataContract",
+  "id": "urn:example:commerce-datasets",
+  "version": "1.0.0",
+  "name": "Commerce example datasets",
+  "status": "draft",
+  "schema": [
+    {
+      "id": "orders",
+      "name": "orders",
+      "logicalType": "object",
+      "physicalType": "table",
+      "properties": [
+        {
+          "name": "order_id",
+          "logicalType": "string",
+          "required": true
+        },
+        {
+          "name": "customer_id",
+          "logicalType": "string",
+          "required": true
+        },
+        {
+          "name": "order_day",
+          "logicalType": "date",
+          "required": true
+        },
+        {
+          "name": "amount_cents",
+          "logicalType": "integer",
+          "required": true,
+          "authoritativeDefinitions": [
+            {
+              "type": "definition",
+              "url": "../definitions/amount-cents.json"
+            }
+          ]
+        },
+        {
+          "name": "status",
+          "logicalType": "string",
+          "required": true
+        }
+      ],
+      "customProperties": [
+        {
+          "vendor": "ddk",
+          "property": "rowIdentity",
+          "value": [
+            "order_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "customers",
+      "name": "customers",
+      "logicalType": "object",
+      "physicalType": "table",
+      "properties": [
+        {
+          "name": "customer_id",
+          "logicalType": "string",
+          "required": true
+        },
+        {
+          "name": "region",
+          "logicalType": "string",
+          "required": true
+        }
+      ],
+      "customProperties": [
+        {
+          "vendor": "ddk",
+          "property": "rowIdentity",
+          "value": [
+            "customer_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "daily_revenue",
+      "name": "daily_revenue",
+      "logicalType": "object",
+      "physicalType": "table",
+      "properties": [
+        {
+          "name": "order_day",
+          "logicalType": "date",
+          "required": true
+        },
+        {
+          "name": "region",
+          "logicalType": "string",
+          "required": true
+        },
+        {
+          "name": "amount_cents",
+          "logicalType": "integer",
+          "required": true,
+          "authoritativeDefinitions": [
+            {
+              "type": "definition",
+              "url": "../definitions/amount-cents.json"
+            }
+          ]
+        }
+      ],
+      "customProperties": [
+        {
+          "vendor": "ddk",
+          "property": "rowIdentity",
+          "value": [
+            "order_day",
+            "region"
+          ]
+        }
+      ],
+      "quality": [
+        {
+          "id": "no-duplicate-grain",
+          "type": "sql",
+          "query": "SELECT COUNT(*) FROM (SELECT order_day, region FROM daily_revenue GROUP BY order_day, region HAVING COUNT(*) > 1) AS duplicate_groups",
+          "mustBe": 0,
+          "customProperties": [
+            {
+              "vendor": "ddk",
+              "property": "fieldDependencies",
+              "value": [
+                "order_day",
+                "region"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

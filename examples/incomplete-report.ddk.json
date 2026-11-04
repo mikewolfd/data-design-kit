@@ -1,0 +1,79 @@
+{
+  "specVersion": "0.1",
+  "kind": "report",
+  "id": "urn:example:illustrative-incomplete-report",
+  "version": "1.0.0",
+  "decision": "incomplete",
+  "scope": {
+    "projects": [
+      "urn:example:commerce-project"
+    ],
+    "artifacts": [
+      "reviewed-revenue-design"
+    ],
+    "followedReferences": [],
+    "excludedConsumers": []
+  },
+  "coverage": {
+    "requestedGroups": [
+      "core.documents",
+      "core.references",
+      "core.graph",
+      "core.calls",
+      "core.datasets",
+      "core.policies",
+      "plan.output"
+    ],
+    "completedProfiles": [
+      "core"
+    ],
+    "availableCapabilities": [],
+    "missingCapabilities": [
+      "plan.output"
+    ],
+    "mappingLimits": [
+      "No implementation is declared for review-adjustments."
+    ]
+  },
+  "lock": {
+    "verified": false
+  },
+  "tools": {
+    "ddk": {
+      "version": "0.0.0-example"
+    }
+  },
+  "checks": [
+    {
+      "id": "illustration/core",
+      "requirement": "DDK-GRAPH-003",
+      "group": "core.datasets",
+      "subject": "reviewed-revenue-design",
+      "status": "passed",
+      "required": true,
+      "applicable": true,
+      "evidence": "declared",
+      "diagnostics": []
+    },
+    {
+      "id": "illustration/plan",
+      "requirement": "DDK-ADAPTER-005",
+      "group": "plan.output",
+      "subject": "review-adjustments",
+      "status": "not_run",
+      "required": true,
+      "applicable": true,
+      "evidence": "inferred",
+      "reason": "No supported implementation is declared.",
+      "diagnostics": []
+    }
+  ],
+  "operationalErrors": [],
+  "limits": {
+    "maxDocumentBytes": 8388608
+  },
+  "metadata": {
+    "illustrative": true,
+    "observedRuntimeResult": false
+  }
+}

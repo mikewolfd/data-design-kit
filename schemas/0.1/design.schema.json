@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/design.schema.json",
+  "title": "DDK 0.1 design",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "design"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "parameters": {
+      "$ref": "common.schema.json#/$defs/parameterSchema"
+    },
+    "sources": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          }
+        },
+        "required": [
+          "dataset"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 0
+    },
+    "steps": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "inputs": {
+            "type": "object",
+            "propertyNames": {
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "$ref": "common.schema.json#/$defs/origin"
+            },
+            "minProperties": 0
+          },
+          "arguments": {
+            "type": "object",
+            "propertyNames": {
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "$ref": "common.schema.json#/$defs/argument"
+            },
+            "minProperties": 0
+          }
+        },
+        "required": [
+          "component",
+          "inputs",
+          "arguments"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 0
+    },
+    "exports": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "$ref": "common.schema.json#/$defs/origin"
+          },
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "allowAdditionalFields": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "from",
+          "dataset"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "parameters",
+    "sources",
+    "steps",
+    "exports"
+  ],
+  "additionalProperties": false
+}

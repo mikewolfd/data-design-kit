@@ -1,0 +1,212 @@
+{
+  "status": "planned",
+  "specification": "0.1",
+  "workPackages": [
+    {
+      "id": "WP-00",
+      "title": "Evidence and compatibility",
+      "status": "planned",
+      "dependsOn": [],
+      "requirements": [],
+      "planSection": "WP-00 — Evidence and compatibility"
+    },
+    {
+      "id": "WP-01",
+      "title": "Documents and catalog",
+      "status": "planned",
+      "dependsOn": [
+        "WP-00"
+      ],
+      "requirements": [
+        "DDK-MODEL-001",
+        "DDK-MODEL-002",
+        "DDK-SYNTAX-001",
+        "DDK-SYNTAX-002",
+        "DDK-SYNTAX-003",
+        "DDK-SYNTAX-004",
+        "DDK-REF-001",
+        "DDK-REF-002",
+        "DDK-REF-003",
+        "DDK-REF-004",
+        "DDK-REF-005",
+        "DDK-SAFE-001",
+        "DDK-SAFE-003"
+      ],
+      "planSection": "WP-01 — Documents and catalog"
+    },
+    {
+      "id": "WP-02",
+      "title": "Results and CLI",
+      "status": "planned",
+      "dependsOn": [
+        "WP-01"
+      ],
+      "requirements": [
+        "DDK-CONF-001",
+        "DDK-CONF-002",
+        "DDK-CONF-003",
+        "DDK-CONF-004",
+        "DDK-CHECK-001",
+        "DDK-CHECK-002",
+        "DDK-CHECK-003",
+        "DDK-RESULT-001",
+        "DDK-RESULT-002",
+        "DDK-RESULT-003",
+        "DDK-RESULT-004",
+        "DDK-RESULT-005",
+        "DDK-CLI-001",
+        "DDK-CLI-002",
+        "DDK-CLI-003",
+        "DDK-CLI-004",
+        "DDK-ADAPTER-001",
+        "DDK-SAFE-002"
+      ],
+      "planSection": "WP-02 — Results and CLI"
+    },
+    {
+      "id": "WP-03",
+      "title": "Interfaces and parameters",
+      "status": "planned",
+      "dependsOn": [
+        "WP-02"
+      ],
+      "requirements": [
+        "DDK-CALL-001",
+        "DDK-CALL-002",
+        "DDK-CALL-003",
+        "DDK-CALL-004",
+        "DDK-CALL-005",
+        "DDK-CALL-006"
+      ],
+      "planSection": "WP-03 — Interfaces and parameters"
+    },
+    {
+      "id": "WP-04",
+      "title": "Datasets and graphs",
+      "status": "planned",
+      "dependsOn": [
+        "WP-03"
+      ],
+      "requirements": [
+        "DDK-DATA-001",
+        "DDK-DATA-002",
+        "DDK-DATA-003",
+        "DDK-DATA-004",
+        "DDK-DATA-005",
+        "DDK-GRAPH-001",
+        "DDK-GRAPH-002",
+        "DDK-GRAPH-003",
+        "DDK-GRAPH-004"
+      ],
+      "planSection": "WP-04 — Datasets and graphs"
+    },
+    {
+      "id": "WP-05",
+      "title": "Policies and shared definitions",
+      "status": "planned",
+      "dependsOn": [
+        "WP-04"
+      ],
+      "requirements": [
+        "DDK-POLICY-001",
+        "DDK-POLICY-002",
+        "DDK-POLICY-003",
+        "DDK-POLICY-004",
+        "DDK-POLICY-005"
+      ],
+      "planSection": "WP-05 — Policies and shared definitions"
+    },
+    {
+      "id": "WP-06",
+      "title": "Locks and impact",
+      "status": "planned",
+      "dependsOn": [
+        "WP-05"
+      ],
+      "requirements": [
+        "DDK-IMPACT-001",
+        "DDK-IMPACT-002",
+        "DDK-IMPACT-003",
+        "DDK-IMPACT-004",
+        "DDK-LOCK-001",
+        "DDK-LOCK-002",
+        "DDK-LOCK-003",
+        "DDK-LOCK-004"
+      ],
+      "planSection": "WP-06 — Locks and impact"
+    },
+    {
+      "id": "WP-07",
+      "title": "ODCS CLI integration",
+      "status": "planned",
+      "dependsOn": [
+        "WP-06"
+      ],
+      "requirements": [
+        "DDK-ADAPTER-003"
+      ],
+      "planSection": "WP-07 — ODCS CLI integration"
+    },
+    {
+      "id": "WP-08",
+      "title": "Files and ingestion",
+      "status": "planned",
+      "dependsOn": [
+        "WP-07"
+      ],
+      "requirements": [
+        "DDK-ADAPTER-002",
+        "DDK-ADAPTER-004"
+      ],
+      "planSection": "WP-08 — Files and ingestion"
+    },
+    {
+      "id": "WP-09",
+      "title": "Substrait and DataFusion",
+      "status": "planned",
+      "dependsOn": [
+        "WP-06",
+        "WP-00"
+      ],
+      "requirements": [
+        "DDK-ADAPTER-005",
+        "DDK-ADAPTER-006",
+        "DDK-ADAPTER-009"
+      ],
+      "planSection": "WP-09 — Substrait and DataFusion"
+    },
+    {
+      "id": "WP-10",
+      "title": "Executed examples and portability",
+      "status": "planned",
+      "dependsOn": [
+        "WP-08",
+        "WP-09"
+      ],
+      "requirements": [
+        "DDK-ADAPTER-007",
+        "DDK-ADAPTER-008",
+        "DDK-ADAPTER-010",
+        "DDK-SAFE-004"
+      ],
+      "planSection": "WP-10 — Executed examples and portability"
+    },
+    {
+      "id": "WP-11",
+      "title": "Release qualification",
+      "status": "planned",
+      "dependsOn": [
+        "WP-10"
+      ],
+      "requirements": [
+        "DDK-VERSION-001",
+        "DDK-VERSION-002",
+        "DDK-VERSION-003",
+        "DDK-TEST-001",
+        "DDK-TEST-002",
+        "DDK-TEST-003"
+      ],
+      "planSection": "WP-11 — Release qualification"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "specVersion": "0.1",
+  "kind": "adapter",
+  "id": "urn:example:datafusion-adapter-proposal",
+  "version": "1.0.0",
+  "status": "experimental-unverified",
+  "profiles": [
+    "plan.datafusion"
+  ],
+  "tools": {
+    "datafusion-python": {
+      "version": "unqualified",
+      "commit": "878e5d3b8d373bca19671af43e49dfb1890f8da2"
+    }
+  },
+  "capabilities": [
+    {
+      "group": "plan.consumer",
+      "standards": {
+        "substrait": "to-be-measured"
+      },
+      "operations": [
+        "read",
+        "filter",
+        "join",
+        "aggregate"
+      ],
+      "facets": {
+        "fieldNames": "unknown",
+        "nullability": "unknown"
+      },
+      "limitations": [
+        "No version tuple has been executed or qualified by this repository."
+      ],
+      "evidence": []
+    }
+  ]
+}

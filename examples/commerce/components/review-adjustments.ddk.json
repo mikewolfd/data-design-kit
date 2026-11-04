@@ -1,0 +1,22 @@
+{
+  "specVersion": "0.1",
+  "kind": "component",
+  "id": "urn:example:review-adjustments",
+  "version": "1.0.0",
+  "role": "transform",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "inputs": {
+    "revenue": {
+      "dataset": "daily-revenue"
+    }
+  },
+  "outputs": {
+    "rows": {
+      "dataset": "daily-revenue"
+    }
+  }
+}

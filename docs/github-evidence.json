@@ -1,0 +1,248 @@
+{
+  "observed": "2026-11-04",
+  "method": "Default-branch source and selected PR bodies and diffs, retrieved by GitHub API; not executed",
+  "sourceFiles": [
+    {
+      "repo": "substrait-io/substrait-validator",
+      "path": "README.md",
+      "commit": "157c13913ac2e95786d86e75558d4967eabff662",
+      "url": "https://github.com/substrait-io/substrait-validator/blob/157c13913ac2e95786d86e75558d4967eabff662/README.md",
+      "relevantLineNumbers": [
+        30
+      ]
+    },
+    {
+      "repo": "substrait-io/substrait-validator",
+      "path": "rs/Cargo.toml",
+      "commit": "157c13913ac2e95786d86e75558d4967eabff662",
+      "url": "https://github.com/substrait-io/substrait-validator/blob/157c13913ac2e95786d86e75558d4967eabff662/rs/Cargo.toml",
+      "relevantLineNumbers": [
+        21,
+        24,
+        38,
+        40,
+        43,
+        47,
+        64,
+        82,
+        124,
+        125,
+        126
+      ]
+    },
+    {
+      "repo": "substrait-io/substrait-validator",
+      "path": "py/pyproject.toml",
+      "commit": "157c13913ac2e95786d86e75558d4967eabff662",
+      "url": "https://github.com/substrait-io/substrait-validator/blob/157c13913ac2e95786d86e75558d4967eabff662/py/pyproject.toml",
+      "relevantLineNumbers": [
+        22,
+        23,
+        51
+      ]
+    },
+    {
+      "repo": "apache/datafusion-python",
+      "path": "python/datafusion/substrait.py",
+      "commit": "878e5d3b8d373bca19671af43e49dfb1890f8da2",
+      "url": "https://github.com/apache/datafusion-python/blob/878e5d3b8d373bca19671af43e49dfb1890f8da2/python/datafusion/substrait.py",
+      "relevantLineNumbers": [
+        57,
+        65,
+        155,
+        176
+      ]
+    },
+    {
+      "repo": "apache/datafusion-python",
+      "path": "Cargo.toml",
+      "commit": "878e5d3b8d373bca19671af43e49dfb1890f8da2",
+      "url": "https://github.com/apache/datafusion-python/blob/878e5d3b8d373bca19671af43e49dfb1890f8da2/Cargo.toml",
+      "relevantLineNumbers": [
+        49,
+        70
+      ]
+    },
+    {
+      "repo": "substrait-io/duckdb-substrait-extension",
+      "path": "duckdb_dialect.yaml",
+      "commit": "eb7ad41970245f06be9d4ee9a4a7c8d32a3f0a34",
+      "url": "https://github.com/substrait-io/duckdb-substrait-extension/blob/eb7ad41970245f06be9d4ee9a4a7c8d32a3f0a34/duckdb_dialect.yaml",
+      "relevantLineNumbers": []
+    }
+  ],
+  "pullRequests": [
+    {
+      "repo": "datacontract/datacontract-cli",
+      "number": 1812,
+      "url": "https://github.com/datacontract/datacontract-cli/pull/1812",
+      "state": "closed",
+      "merged": true,
+      "mergeCommit": "34b12923e0366fa4004c2f90644da41769699e0f",
+      "head": "26255cc8ec638f196eed2ccc6a96471fee331558",
+      "title": "Merge inlined logicalTypeOptions per key and respect legacy inline enums",
+      "files": [
+        "CHANGELOG.md",
+        "datacontract/lint/resolve.py",
+        "tests/test_resolve_definitions.py"
+      ]
+    },
+    {
+      "repo": "substrait-io/substrait-validator",
+      "number": 554,
+      "url": "https://github.com/substrait-io/substrait-validator/pull/554",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": "a3434dd8626496eab697a2de688fe396efb1ab92",
+      "head": "ecac0926959af7d6ea69f3ec3432ddb5a3aec1df",
+      "title": "build(deps): bump substrait-protobuf from 0.88.1 to 0.106.0 in /py in the substrait group across 1 directory",
+      "files": [
+        "py/pyproject.toml"
+      ]
+    },
+    {
+      "repo": "substrait-io/substrait-validator",
+      "number": 562,
+      "url": "https://github.com/substrait-io/substrait-validator/pull/562",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": "506cb053c74bb65d29f8f43b1093a74b7d27ec18",
+      "head": "a63894e89a32e18feb8821647f590985d34d92cf",
+      "title": "build(deps): bump the substrait group across 1 directory with 3 updates",
+      "files": [
+        "Cargo.lock",
+        "rs/Cargo.toml"
+      ]
+    },
+    {
+      "repo": "apache/datafusion-python",
+      "number": 1733,
+      "url": "https://github.com/apache/datafusion-python/pull/1733",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": "6a4e7b939ff0b8e7577efac8b93d217619a29694",
+      "head": "5a4d2e685a5e9cf66cb3ec502cde5daeebe169dd",
+      "title": "docs(example): quarantine foreign plan workaround",
+      "files": [
+        "examples/datafusion-ffi-example/src/foreign_plan_workaround.rs",
+        "examples/datafusion-ffi-example/src/lib.rs",
+        "examples/datafusion-ffi-example/src/physical_extension_codec.rs"
+      ]
+    },
+    {
+      "repo": "datacontract/datacontract-cli",
+      "number": 1725,
+      "url": "https://github.com/datacontract/datacontract-cli/pull/1725",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": null,
+      "head": "53d1e1386e9d2ca6a34238c878ca5d438e37a060",
+      "title": "Fail on columns the contract does not declare, when the schema says so",
+      "files": [
+        "CHANGELOG.md",
+        "datacontract/engines/checks/check_spec.py",
+        "datacontract/engines/checks/create_checks.py",
+        "datacontract/engines/checks/dimensions.py",
+        "datacontract/engines/ibis/ibis_check_execute.py",
+        "docs/docs/schema.md",
+        "tests/test_test_additional_fields.py"
+      ]
+    },
+    {
+      "repo": "bitol-io/open-data-contract-standard",
+      "number": 360,
+      "url": "https://github.com/bitol-io/open-data-contract-standard/pull/360",
+      "state": "closed",
+      "merged": true,
+      "mergeCommit": "448f7b93329ece7827897d7dd51e827a3e279460",
+      "head": "6fd30bd032071562342a2e4a954d088f518b5d97",
+      "title": "fix(schema): allow quality rules that combine operators",
+      "files": [
+        "CHANGELOG.md",
+        "docs/examples/quality/combined-operators.odcs.yaml",
+        "schema/odcs-json-schema-latest.json",
+        "schema/odcs-json-schema-v3.1.0.json",
+        "schema/odcs-json-schema-v3.2.0.json",
+        "src/script/negative-tests/quality-operator-wrong-type.odcs.yaml"
+      ]
+    },
+    {
+      "repo": "frictionlessdata/frictionless-py",
+      "number": 1867,
+      "url": "https://github.com/frictionlessdata/frictionless-py/pull/1867",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": "faec8d5e1a6d732431b5029c64f7608cc39c8092",
+      "head": "b8fa647caa4b336cbe07989772b704b41a61661b",
+      "title": "Keep every check and check-error when validate_start reports problems",
+      "files": [
+        "frictionless/resource/__spec__/test_validate.py",
+        "frictionless/resource/resource.py"
+      ]
+    },
+    {
+      "repo": "frictionlessdata/frictionless-py",
+      "number": 1827,
+      "url": "https://github.com/frictionlessdata/frictionless-py/pull/1827",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": "f465b7e784509444bc8e59ba5baf1485d78f8c03",
+      "head": "a99f284679ea1e3661236b8686e89e64fca0497f",
+      "title": "feat: schema.uniqueKeys (DPv2)",
+      "files": [
+        "frictionless/checklist/__spec__/test_general.py",
+        "frictionless/checks/baseline.py",
+        "frictionless/errors/row.py",
+        "frictionless/resource/__spec__/test_validate_schema.py",
+        "frictionless/resources/table.py",
+        "frictionless/schema/__spec__/test_general.py",
+        "frictionless/schema/__spec__/test_validate.py",
+        "frictionless/schema/schema.py",
+        "frictionless/schema/types.py"
+      ]
+    },
+    {
+      "repo": "dlt-hub/dlt",
+      "number": 4299,
+      "url": "https://github.com/dlt-hub/dlt/pull/4299",
+      "state": "open",
+      "merged": false,
+      "mergeCommit": "4a5e5e06d016ec2d96c9a681e0da888087c41aa3",
+      "head": "fc4f8c1f0faa109b63183a93b7566ce1164aaed4",
+      "title": "fix(filesystem): preserve native nested types in parquet",
+      "files": [
+        "dlt/common/data_writers/writers.py",
+        "tests/load/pipeline/test_filesystem_pipeline.py"
+      ]
+    }
+  ],
+  "observations": {
+    "datafusionPythonCargoLock": {
+      "commit": "878e5d3b8d373bca19671af43e49dfb1890f8da2",
+      "packages": [
+        {
+          "package": "datafusion-substrait",
+          "version": "55.2.0"
+        },
+        {
+          "package": "prost",
+          "version": "0.14.4"
+        },
+        {
+          "package": "prost-types",
+          "version": "0.14.4"
+        },
+        {
+          "package": "substrait",
+          "version": "0.63.0"
+        }
+      ]
+    },
+    "odcsSchemaOperatorCombination": {
+      "release": "v3.2.0",
+      "releaseComposition": "oneOf",
+      "developmentCommit": "448f7b93329ece7827897d7dd51e827a3e279460",
+      "developmentComposition": "anyOf"
+    }
+  }
+}

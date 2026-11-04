@@ -1,0 +1,452 @@
+[
+  {
+    "id": "DDK-CONF-001",
+    "title": "Product classes and claims",
+    "specification": "docs/specification.md#DDK-CONF-001",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CONF-002",
+    "title": "Required profiles",
+    "specification": "docs/specification.md#DDK-CONF-002",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CONF-003",
+    "title": "Partial support",
+    "specification": "docs/specification.md#DDK-CONF-003",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CONF-004",
+    "title": "Normative artifacts and conflicts",
+    "specification": "docs/specification.md#DDK-CONF-004",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-MODEL-001",
+    "title": "Identity and aliases",
+    "specification": "docs/specification.md#DDK-MODEL-001",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-MODEL-002",
+    "title": "Evidence does not escalate implicitly",
+    "specification": "docs/specification.md#DDK-MODEL-002",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-SYNTAX-001",
+    "title": "JSON and YAML",
+    "specification": "docs/specification.md#DDK-SYNTAX-001",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-SYNTAX-002",
+    "title": "Schema validation and locations",
+    "specification": "docs/specification.md#DDK-SYNTAX-002",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-SYNTAX-003",
+    "title": "Keywords and literals",
+    "specification": "docs/specification.md#DDK-SYNTAX-003",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-SYNTAX-004",
+    "title": "Value comparison",
+    "specification": "docs/specification.md#DDK-SYNTAX-004",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-REF-001",
+    "title": "Paths and namespaces",
+    "specification": "docs/specification.md#DDK-REF-001",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-REF-002",
+    "title": "Import traversal",
+    "specification": "docs/specification.md#DDK-REF-002",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-REF-003",
+    "title": "Dataset selection",
+    "specification": "docs/specification.md#DDK-REF-003",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-REF-004",
+    "title": "Shared property definitions",
+    "specification": "docs/specification.md#DDK-REF-004",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-REF-005",
+    "title": "Complete and bounded scope",
+    "specification": "docs/specification.md#DDK-REF-005",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-CALL-001",
+    "title": "Interface-only components",
+    "specification": "docs/specification.md#DDK-CALL-001",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-CALL-002",
+    "title": "Named inputs",
+    "specification": "docs/specification.md#DDK-CALL-002",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-CALL-003",
+    "title": "Tagged arguments",
+    "specification": "docs/specification.md#DDK-CALL-003",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-CALL-004",
+    "title": "Literal validation",
+    "specification": "docs/specification.md#DDK-CALL-004",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-CALL-005",
+    "title": "Symbolic parameter compatibility",
+    "specification": "docs/specification.md#DDK-CALL-005",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-CALL-006",
+    "title": "Correlated arguments",
+    "specification": "docs/specification.md#DDK-CALL-006",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-DATA-001",
+    "title": "Direction of comparison",
+    "specification": "docs/specification.md#DDK-DATA-001",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-DATA-002",
+    "title": "Supported field relations",
+    "specification": "docs/specification.md#DDK-DATA-002",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-DATA-003",
+    "title": "Unknown restrictions and physical types",
+    "specification": "docs/specification.md#DDK-DATA-003",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-DATA-004",
+    "title": "Defaults and claims",
+    "specification": "docs/specification.md#DDK-DATA-004",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-DATA-005",
+    "title": "Aggregating field decisions",
+    "specification": "docs/specification.md#DDK-DATA-005",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-GRAPH-001",
+    "title": "Reference and cycle checks",
+    "specification": "docs/specification.md#DDK-GRAPH-001",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-GRAPH-002",
+    "title": "Multiple outputs",
+    "specification": "docs/specification.md#DDK-GRAPH-002",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-GRAPH-003",
+    "title": "Declared and inferred outputs",
+    "specification": "docs/specification.md#DDK-GRAPH-003",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-GRAPH-004",
+    "title": "Determinate failures and dependent checks",
+    "specification": "docs/specification.md#DDK-GRAPH-004",
+    "owner": "WP-04"
+  },
+  {
+    "id": "DDK-POLICY-001",
+    "title": "Explicit rules",
+    "specification": "docs/specification.md#DDK-POLICY-001",
+    "owner": "WP-05"
+  },
+  {
+    "id": "DDK-POLICY-002",
+    "title": "Fields and row identity",
+    "specification": "docs/specification.md#DDK-POLICY-002",
+    "owner": "WP-05"
+  },
+  {
+    "id": "DDK-POLICY-003",
+    "title": "Quality field dependencies",
+    "specification": "docs/specification.md#DDK-POLICY-003",
+    "owner": "WP-05"
+  },
+  {
+    "id": "DDK-POLICY-004",
+    "title": "Vocabulary rules",
+    "specification": "docs/specification.md#DDK-POLICY-004",
+    "owner": "WP-05"
+  },
+  {
+    "id": "DDK-POLICY-005",
+    "title": "Shared-definition use and overrides",
+    "specification": "docs/specification.md#DDK-POLICY-005",
+    "owner": "WP-05"
+  },
+  {
+    "id": "DDK-CHECK-001",
+    "title": "Processing order",
+    "specification": "docs/specification.md#DDK-CHECK-001",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CHECK-002",
+    "title": "Check inventory and selection",
+    "specification": "docs/specification.md#DDK-CHECK-002",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CHECK-003",
+    "title": "Bounded repeated work",
+    "specification": "docs/specification.md#DDK-CHECK-003",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-IMPACT-001",
+    "title": "Explicit snapshots",
+    "specification": "docs/specification.md#DDK-IMPACT-001",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-IMPACT-002",
+    "title": "Consumer revalidation",
+    "specification": "docs/specification.md#DDK-IMPACT-002",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-IMPACT-003",
+    "title": "Compatibility direction",
+    "specification": "docs/specification.md#DDK-IMPACT-003",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-IMPACT-004",
+    "title": "Overrides and scope limits",
+    "specification": "docs/specification.md#DDK-IMPACT-004",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-LOCK-001",
+    "title": "Byte inventory",
+    "specification": "docs/specification.md#DDK-LOCK-001",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-LOCK-002",
+    "title": "Locked operation",
+    "specification": "docs/specification.md#DDK-LOCK-002",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-LOCK-003",
+    "title": "Runtime inputs",
+    "specification": "docs/specification.md#DDK-LOCK-003",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-LOCK-004",
+    "title": "Stable and volatile report data",
+    "specification": "docs/specification.md#DDK-LOCK-004",
+    "owner": "WP-06"
+  },
+  {
+    "id": "DDK-RESULT-001",
+    "title": "Four check outcomes",
+    "specification": "docs/specification.md#DDK-RESULT-001",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-RESULT-002",
+    "title": "Overall decision",
+    "specification": "docs/specification.md#DDK-RESULT-002",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-RESULT-003",
+    "title": "Diagnostics",
+    "specification": "docs/specification.md#DDK-RESULT-003",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-RESULT-004",
+    "title": "Evidence and coverage",
+    "specification": "docs/specification.md#DDK-RESULT-004",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-RESULT-005",
+    "title": "Initial diagnostic families",
+    "specification": "docs/specification.md#DDK-RESULT-005",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CLI-001",
+    "title": "Core commands",
+    "specification": "docs/specification.md#DDK-CLI-001",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CLI-002",
+    "title": "Exit codes",
+    "specification": "docs/specification.md#DDK-CLI-002",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CLI-003",
+    "title": "Machine output",
+    "specification": "docs/specification.md#DDK-CLI-003",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-CLI-004",
+    "title": "Explicit requested coverage",
+    "specification": "docs/specification.md#DDK-CLI-004",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-ADAPTER-001",
+    "title": "Capability manifests",
+    "specification": "docs/specification.md#DDK-ADAPTER-001",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-ADAPTER-002",
+    "title": "Mapping coverage",
+    "specification": "docs/specification.md#DDK-ADAPTER-002",
+    "owner": "WP-08"
+  },
+  {
+    "id": "DDK-ADAPTER-003",
+    "title": "ODCS and shared definitions",
+    "specification": "docs/specification.md#DDK-ADAPTER-003",
+    "owner": "WP-07"
+  },
+  {
+    "id": "DDK-ADAPTER-004",
+    "title": "Files and ingestion",
+    "specification": "docs/specification.md#DDK-ADAPTER-004",
+    "owner": "WP-08"
+  },
+  {
+    "id": "DDK-ADAPTER-005",
+    "title": "Substrait production and consumption",
+    "specification": "docs/specification.md#DDK-ADAPTER-005",
+    "owner": "WP-09"
+  },
+  {
+    "id": "DDK-ADAPTER-006",
+    "title": "Independent plan checks",
+    "specification": "docs/specification.md#DDK-ADAPTER-006",
+    "owner": "WP-09"
+  },
+  {
+    "id": "DDK-ADAPTER-007",
+    "title": "Fixture and portability testing",
+    "specification": "docs/specification.md#DDK-ADAPTER-007",
+    "owner": "WP-10"
+  },
+  {
+    "id": "DDK-ADAPTER-008",
+    "title": "Execution boundary",
+    "specification": "docs/specification.md#DDK-ADAPTER-008",
+    "owner": "WP-10"
+  },
+  {
+    "id": "DDK-ADAPTER-009",
+    "title": "Generated bundles",
+    "specification": "docs/specification.md#DDK-ADAPTER-009",
+    "owner": "WP-09"
+  },
+  {
+    "id": "DDK-ADAPTER-010",
+    "title": "Bindings and fixture values",
+    "specification": "docs/specification.md#DDK-ADAPTER-010",
+    "owner": "WP-10"
+  },
+  {
+    "id": "DDK-SAFE-001",
+    "title": "Offline and file boundaries",
+    "specification": "docs/specification.md#DDK-SAFE-001",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-SAFE-002",
+    "title": "Execution and secrets",
+    "specification": "docs/specification.md#DDK-SAFE-002",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-SAFE-003",
+    "title": "Limits and cancellation",
+    "specification": "docs/specification.md#DDK-SAFE-003",
+    "owner": "WP-01"
+  },
+  {
+    "id": "DDK-SAFE-004",
+    "title": "Data lifetime",
+    "specification": "docs/specification.md#DDK-SAFE-004",
+    "owner": "WP-10"
+  },
+  {
+    "id": "DDK-VERSION-001",
+    "title": "Version boundaries",
+    "specification": "docs/specification.md#DDK-VERSION-001",
+    "owner": "WP-11"
+  },
+  {
+    "id": "DDK-VERSION-002",
+    "title": "Extensions",
+    "specification": "docs/specification.md#DDK-VERSION-002",
+    "owner": "WP-11"
+  },
+  {
+    "id": "DDK-VERSION-003",
+    "title": "Profiles and release claims",
+    "specification": "docs/specification.md#DDK-VERSION-003",
+    "owner": "WP-11"
+  },
+  {
+    "id": "DDK-TEST-001",
+    "title": "Independent expectations",
+    "specification": "docs/specification.md#DDK-TEST-001",
+    "owner": "WP-11"
+  },
+  {
+    "id": "DDK-TEST-002",
+    "title": "Required case families",
+    "specification": "docs/specification.md#DDK-TEST-002",
+    "owner": "WP-11"
+  },
+  {
+    "id": "DDK-TEST-003",
+    "title": "Release evidence",
+    "specification": "docs/specification.md#DDK-TEST-003",
+    "owner": "WP-11"
+  }
+]

@@ -1,0 +1,1269 @@
+{
+  "specification": "0.1",
+  "status": "planned-not-executed",
+  "cases": [
+    {
+      "id": "CASE-CONF-001",
+      "requirements": [
+        "DDK-CONF-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A support declaration claims only core but its summary says all transformation tests passed.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-CONFORMANCE-CLAIM"
+      }
+    },
+    {
+      "id": "CASE-CONF-002",
+      "requirements": [
+        "DDK-CONF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Check the commerce library with all implementation modules absent and network/database calls instrumented to fail if invoked.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CONF-003",
+      "requirements": [
+        "DDK-CONF-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Require plan.output for an interface-only component with no supported implementation.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-CAPABILITY-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CONF-004",
+      "requirements": [
+        "DDK-CONF-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A draft schema accepts a missing mandatory output while the normative requirement rejects it; qualification must stop.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-SPECIFICATION-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-MODEL-001",
+      "requirements": [
+        "DDK-MODEL-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Register two different component documents with the same URI identity and version through different aliases.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-IDENTITY-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-MODEL-002",
+      "requirements": [
+        "DDK-MODEL-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An interface-only reader passes declared output checks; inspect that evidence never becomes inferred or executed.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-SYNTAX-001",
+      "requirements": [
+        "DDK-SYNTAX-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Parse JSON containing duplicate year keys; for a YAML implementation also exercise aliases, merge keys, and implicit date scalars.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-DUPLICATE-KEY"
+      }
+    },
+    {
+      "id": "CASE-SYNTAX-002",
+      "requirements": [
+        "DDK-SYNTAX-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An ODCS document combines two valid quality operators: the pinned corrected schema accepts it; the release comparison records its different result.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-SYNTAX-003",
+      "requirements": [
+        "DDK-SYNTAX-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Add an unknown top-level component property named retryMagic; separately confirm a default annotation does not supply a required year.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-UNKNOWN-PROPERTY"
+      }
+    },
+    {
+      "id": "CASE-SYNTAX-004",
+      "requirements": [
+        "DDK-SYNTAX-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Compare boolean true against numeric 1 and compare a decimal bound immediately above an exact decimal value.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CALL-TYPE-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-REF-001",
+      "requirements": [
+        "DDK-REF-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An imported shared component and the root both declare orders; the imported component must bind its local dataset while /orders selects the root.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-REF-002",
+      "requirements": [
+        "DDK-REF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Project a imports b, which imports a; retain the import path in the failure.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-IMPORT-CYCLE"
+      }
+    },
+    {
+      "id": "CASE-REF-003",
+      "requirements": [
+        "DDK-REF-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Select a schema object name matching two objects, then separately verify that an exact stable ID takes precedence.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-DATASET-AMBIGUOUS"
+      }
+    },
+    {
+      "id": "CASE-REF-004",
+      "requirements": [
+        "DDK-REF-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A required local property definition points to a missing file; a separate fixture forms a two-file definition cycle.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-DEFINITION-MISSING"
+      }
+    },
+    {
+      "id": "CASE-REF-005",
+      "requirements": [
+        "DDK-REF-005"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Check one imported project while a second known consumer project is excluded; the report must list uncovered consumers.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CALL-001",
+      "requirements": [
+        "DDK-CALL-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Remove all implementation references from the commerce components while retaining valid interfaces and dataset declarations.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CALL-002",
+      "requirements": [
+        "DDK-CALL-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Call a two-input transformation with orders supplied and customers absent, plus a separate unknown port extra.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CALL-INPUT-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CALL-003",
+      "requirements": [
+        "DDK-CALL-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Pass a literal object containing a parameter-looking key; its contents remain literal and null stays distinct from missing.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CALL-004",
+      "requirements": [
+        "DDK-CALL-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Omit required year even though its schema has default 2026.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CALL-ARGUMENT-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CALL-005",
+      "requirements": [
+        "DDK-CALL-005"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A symbolic integer source admits 1999..2026 while the target admits 2000..2100; include finite-enum and exclusive-bound subcases.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CALL-PARAMETER-INCOMPATIBLE"
+      }
+    },
+    {
+      "id": "CASE-CALL-006",
+      "requirements": [
+        "DDK-CALL-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Symbolic arguments participate in an unsupported whole-object conditional even though each individual primitive type matches.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CALL-CORRELATION-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-DATA-001",
+      "requirements": [
+        "DDK-DATA-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Remove the customer_id column from an available dataset while the consumer lists that column with required false.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DATA-FIELD-MISSING"
+      }
+    },
+    {
+      "id": "CASE-DATA-002",
+      "requirements": [
+        "DDK-DATA-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A nullable customer_id is supplied to a non-null input; enum labels match but their underlying allowed values do not.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DATA-NULLABILITY"
+      }
+    },
+    {
+      "id": "CASE-DATA-003",
+      "requirements": [
+        "DDK-DATA-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A consumer requires physical decimal precision and a time-zone rule absent from the supported mapping.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "DATA-MAPPING-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-DATA-004",
+      "requirements": [
+        "DDK-DATA-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Declare customer_id unique without testing rows; evidence must retain a declared assumption only.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-DATA-005",
+      "requirements": [
+        "DDK-DATA-005"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "One field is incompatible and another has an unknown physical type; the dataset comparison fails and retains both details.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DATA-FIELD-INCOMPATIBLE"
+      }
+    },
+    {
+      "id": "CASE-GRAPH-001",
+      "requirements": [
+        "DDK-GRAPH-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Two named steps consume one another; a separate fixture references a nonexistent output port.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "GRAPH-CYCLE"
+      }
+    },
+    {
+      "id": "CASE-GRAPH-002",
+      "requirements": [
+        "DDK-GRAPH-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A design has two exports: one is correct and one omits an expected field; both receive results.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DATA-EXPORT-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-GRAPH-003",
+      "requirements": [
+        "DDK-GRAPH-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An opaque component has a declared output and no implementation; core can pass while a separately required inferred-output check is not run.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-IMPLEMENTATION-MISSING"
+      }
+    },
+    {
+      "id": "CASE-GRAPH-004",
+      "requirements": [
+        "DDK-GRAPH-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A missing producer blocks a dependent export, while an independent invalid argument is still reported.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-STEP-MISSING"
+      }
+    },
+    {
+      "id": "CASE-POLICY-001",
+      "requirements": [
+        "DDK-POLICY-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Request an unrecognized URI-named policy rule with a valid extension-rule shape.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "POLICY-RULE-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-POLICY-002",
+      "requirements": [
+        "DDK-POLICY-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A rowIdentity annotation contains region twice and names a missing order_day field.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-ROW-IDENTITY"
+      }
+    },
+    {
+      "id": "CASE-POLICY-003",
+      "requirements": [
+        "DDK-POLICY-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A SQL quality rule has no complete fieldDependencies metadata; separate cases declare a nonexistent field and valid dependencies.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "POLICY-QUALITY-DEPENDENCIES-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-POLICY-004",
+      "requirements": [
+        "DDK-POLICY-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A vocabulary policy selects /status with value retired while only draft and active are allowed.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-VOCABULARY"
+      }
+    },
+    {
+      "id": "CASE-POLICY-005",
+      "requirements": [
+        "DDK-POLICY-005"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A registered quality-bearing property definition has no consumers; warn without claiming the inherited rule was executed.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": "POLICY-DEFINITION-UNUSED"
+      }
+    },
+    {
+      "id": "CASE-CHECK-001",
+      "requirements": [
+        "DDK-CHECK-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An invalid prerequisite must not be replaced by an empty object; independent documents still finish checking.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-PREREQUISITE-INVALID"
+      }
+    },
+    {
+      "id": "CASE-CHECK-002",
+      "requirements": [
+        "DDK-CHECK-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Select one design and require core.calls; include all its prerequisites and report excluded sibling consumers.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CHECK-003",
+      "requirements": [
+        "DDK-CHECK-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Many designs use the same file and definition; instrumentation records one parse per real path and byte digest.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-IMPACT-001",
+      "requirements": [
+        "DDK-IMPACT-001"
+      ],
+      "profile": "impact",
+      "runtimeStatus": "planned",
+      "scenario": "Change component bytes but retain its URI identity and version in the candidate snapshot.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "IMPACT-VERSION-REUSE"
+      }
+    },
+    {
+      "id": "CASE-IMPACT-002",
+      "requirements": [
+        "DDK-IMPACT-002"
+      ],
+      "profile": "impact",
+      "runtimeStatus": "planned",
+      "scenario": "Rename reader argument year to fiscal-year; all three loaded designs are affected and their stale calls fail with dependency paths.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CALL-ARGUMENT-MISSING"
+      }
+    },
+    {
+      "id": "CASE-IMPACT-003",
+      "requirements": [
+        "DDK-IMPACT-003"
+      ],
+      "profile": "impact",
+      "runtimeStatus": "planned",
+      "scenario": "A candidate adds a required reader argument and weakens a promised output; distinguish input and output compatibility directions.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "IMPACT-BREAKING-INTERFACE"
+      }
+    },
+    {
+      "id": "CASE-IMPACT-004",
+      "requirements": [
+        "DDK-IMPACT-004"
+      ],
+      "profile": "impact",
+      "runtimeStatus": "planned",
+      "scenario": "An override weakens minLength from 5 to 2; a separate unsupported custom restriction remains unknown and external consumers remain uncovered.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "IMPACT-REQUIREMENT-WEAKENED"
+      }
+    },
+    {
+      "id": "CASE-LOCK-001",
+      "requirements": [
+        "DDK-LOCK-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Two development builds share version 0.1.4 but have different source commits and wheel digests; their inventories must differ.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LOCK-002",
+      "requirements": [
+        "DDK-LOCK-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Change one followed shared-definition byte after locking; verification fails without rewriting the lock.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "LOCK-DIGEST-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-LOCK-003",
+      "requirements": [
+        "DDK-LOCK-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A saved plan uses a staged-file list; changing one file invalidates reused execution evidence even when the newest filename stays the same.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "LOCK-EXECUTION-INPUT-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-LOCK-004",
+      "requirements": [
+        "DDK-LOCK-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Repeat a locked check with shuffled discovery order; stable results match while timestamps remain in volatile metadata.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RESULT-001",
+      "requirements": [
+        "DDK-RESULT-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Attempt a required unsupported physical-type comparison; the instance is unknown with reason, evidence level, and applicability.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "DATA-MAPPING-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-RESULT-002",
+      "requirements": [
+        "DDK-RESULT-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Reduce a report with a required failure and a required unknown; failed wins. Additional table cases cover optional failures and operational errors.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RESULT-003",
+      "requirements": [
+        "DDK-RESULT-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Hide all error messages in human rendering; the underlying failed results and exit code remain unchanged.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RESULT-004",
+      "requirements": [
+        "DDK-RESULT-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A report has declared, inferred, and executed checks; snapshot and missing-capability evidence remain separately visible.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RESULT-005",
+      "requirements": [
+        "DDK-RESULT-005"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A result uses a diagnostic code already assigned another meaning; release qualification rejects the reassignment.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-DIAGNOSTIC-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-CLI-001",
+      "requirements": [
+        "DDK-CLI-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Invoke check without execution flags while reader implementations contain deliberate import-time side effects.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CLI-002",
+      "requirements": [
+        "DDK-CLI-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Exercise malformed content, unreadable file, missing adapter, valid project, and invalid arguments; verify codes 1, 3, 2, 0, and 64 respectively.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CLI-003",
+      "requirements": [
+        "DDK-CLI-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Run JSON format with progress enabled and an invalid call; stdout is one valid failed report and progress is on stderr.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CLI-004",
+      "requirements": [
+        "DDK-CLI-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Request a two-export build when only one export is supported; no partial bundle replaces the previous successful bundle.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-EXPORT-UNAVAILABLE"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-001",
+      "requirements": [
+        "DDK-ADAPTER-001"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Discover a valid manifest next to an executable module that raises on import; a core inventory reads only the manifest.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-002",
+      "requirements": [
+        "DDK-ADAPTER-002"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Translate a dataset with unique keys and decimal precision while the target only preserves names and primitive types.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-MAPPING-INCOMPLETE"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-003",
+      "requirements": [
+        "DDK-ADAPTER-003"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "An ODCS backend cannot execute a requested custom quality rule; native lint success does not make that data check pass.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-QUALITY-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-004",
+      "requirements": [
+        "DDK-ADAPTER-004"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Configure a dlt discard policy without a quarantine writer; the receipt records available discard counts but no quarantine claim.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-005",
+      "requirements": [
+        "DDK-ADAPTER-005"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Compile a supported component, save plan bytes, consume them with explicit bindings, and retain input/output field order and type mappings.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-006",
+      "requirements": [
+        "DDK-ADAPTER-006"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "The consumer accepts a plan but the standalone validator reports unresolved validity in loose mode; required standard validity is unknown.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-PLAN-VALIDITY-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-007",
+      "requirements": [
+        "DDK-ADAPTER-007"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "An output has one duplicate row that a set comparison would erase; multiset comparison fails against independently expected rows.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-FIXTURE-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-008",
+      "requirements": [
+        "DDK-ADAPTER-008"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "A custom function declaration has no runtime implementation; requesting its execution cannot treat the declaration as executable code.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-FUNCTION-IMPLEMENTATION-MISSING"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-009",
+      "requirements": [
+        "DDK-ADAPTER-009"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Interrupt a bundle build after generating one output; preserve the prior successful bundle and expose missing obligations.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-BUILD-INTERRUPTED"
+      }
+    },
+    {
+      "id": "CASE-ADAPTER-010",
+      "requirements": [
+        "DDK-ADAPTER-010"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Supply a reader output through a binding; mark the reader as injected, verify digests, and reject a duplicate origin binding.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-BINDING-DUPLICATE"
+      }
+    },
+    {
+      "id": "CASE-SAFE-001",
+      "requirements": [
+        "DDK-SAFE-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A definition path or symlink resolves outside caller-permitted roots; no outside file or remote URL is read.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-PATH-OUTSIDE-ROOT"
+      }
+    },
+    {
+      "id": "CASE-SAFE-002",
+      "requirements": [
+        "DDK-SAFE-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Arguments contain shell substitution text and an explicit secret parameter; values are passed structurally and reports redact the secret.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-SAFE-003",
+      "requirements": [
+        "DDK-SAFE-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Exceed the configured artifact or reference-depth limit; retain partial diagnostics and return an operational error.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-RESOURCE-LIMIT"
+      }
+    },
+    {
+      "id": "CASE-SAFE-004",
+      "requirements": [
+        "DDK-SAFE-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Cancel a fixture run, retain configured failure evidence, and remove only the runner-owned successful temporary directory.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-CANCELLED"
+      }
+    },
+    {
+      "id": "CASE-VERSION-001",
+      "requirements": [
+        "DDK-VERSION-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Supply a component with an unsupported mandatory DDK version even though its own artifact version is a valid SemVer.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-VERSION-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "CASE-VERSION-002",
+      "requirements": [
+        "DDK-VERSION-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An optional URI-keyed annotation is unknown; preserve it without changing core behavior or loading an adapter.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-VERSION-003",
+      "requirements": [
+        "DDK-VERSION-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An adapter advertises qualification without a tested version tuple or case results; release qualification rejects that claim.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "ADAPTER-QUALIFICATION-MISSING"
+      }
+    },
+    {
+      "id": "CASE-TEST-001",
+      "requirements": [
+        "DDK-TEST-001"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A fixture expected output was generated by the transformation under test; qualification rejects it as independent expectation evidence.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-EXPECTATION-PROVENANCE"
+      }
+    },
+    {
+      "id": "CASE-TEST-002",
+      "requirements": [
+        "DDK-TEST-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A release reports documentation-schema checks as runtime conformance results; qualification rejects the unsupported claim.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-CONFORMANCE-EVIDENCE"
+      }
+    },
+    {
+      "id": "CASE-TEST-003",
+      "requirements": [
+        "DDK-TEST-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A release evidence bundle lacks exact dependency versions, unresolved checks, and fixture provenance.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-RELEASE-EVIDENCE-MISSING"
+      }
+    },
+    {
+      "id": "CASE-GITHUB-CLI-INHERITANCE",
+      "requirements": [
+        "DDK-REF-004",
+        "DDK-POLICY-005"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "An inherited pattern plus inline maxLength must preserve both restrictions for the selected resolver; compare release 1.2.9 and pinned main.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "https://github.com/datacontract/datacontract-cli/pull/1812",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-GITHUB-ODCS-OPERATORS",
+      "requirements": [
+        "DDK-SYNTAX-002"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "The same quality rule with two valid operators is checked under the release schema and the corrected pinned development revision; record distinct schema hashes.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "https://github.com/bitol-io/open-data-contract-standard/pull/360",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-GITHUB-FRICTIONLESS-KEYS",
+      "requirements": [
+        "DDK-ADAPTER-002"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "A repeated composite key fails when enforcement is claimed; null-bearing key semantics follow the selected Table Schema profile.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "https://github.com/frictionlessdata/frictionless-py/pull/1827",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-GITHUB-FRICTIONLESS-ERRORS",
+      "requirements": [
+        "DDK-ADAPTER-004"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "A misconfigured check with two errors followed by another check preserves all intended check outcomes or marks coverage incomplete.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "https://github.com/frictionlessdata/frictionless-py/pull/1867",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-GITHUB-DLT-NESTED",
+      "requirements": [
+        "DDK-ADAPTER-004"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "A future nested profile must preserve an Arrow struct through filesystem Parquet before advertising that mapping.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "https://github.com/dlt-hub/dlt/pull/4299",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-GITHUB-VALIDATOR-TUPLE",
+      "requirements": [
+        "DDK-ADAPTER-006"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Run the same saved plan under released and selected GitHub validator candidates; classify unsupported semantics separately from process success.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "https://github.com/substrait-io/substrait-validator/pull/562",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-BUSINESS-REVENUE",
+      "requirements": [
+        "DDK-ADAPTER-007"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "The independent commerce fixture produces north 1700 and south 500 on 2026-01-05 and north 250 on 2026-01-06; cancelled and unmatched orders are excluded.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "examples/commerce/tests/revenue.fixture.ddk.json",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-PORTABILITY-SAME-BYTES",
+      "requirements": [
+        "DDK-ADAPTER-005",
+        "DDK-ADAPTER-007"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "DataFusion and DuckDB consume the same saved binary plan and each matches the independently authored revenue fixture; separately compiling SQL cannot satisfy this case.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "source": "docs/adapter-profiles.md",
+      "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "specVersion": "0.1",
+  "kind": "design",
+  "id": "urn:example:reviewed-revenue-design",
+  "version": "1.0.0",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "year": {
+        "type": "integer",
+        "minimum": 2020,
+        "maximum": 2030
+      }
+    },
+    "required": [
+      "year"
+    ],
+    "additionalProperties": false
+  },
+  "sources": {
+    "customers": {
+      "dataset": "customers"
+    }
+  },
+  "steps": {
+    "read": {
+      "component": "read-orders",
+      "inputs": {},
+      "arguments": {
+        "year": {
+          "parameter": "year"
+        }
+      }
+    },
+    "summarize": {
+      "component": "summarize",
+      "inputs": {
+        "orders": {
+          "step": "read",
+          "output": "rows"
+        },
+        "customers": {
+          "source": "customers"
+        }
+      },
+      "arguments": {}
+    },
+    "review": {
+      "component": "review-adjustments",
+      "inputs": {
+        "revenue": {
+          "step": "summarize",
+          "output": "rows"
+        }
+      },
+      "arguments": {}
+    }
+  },
+  "exports": {
+    "revenue": {
+      "from": {
+        "step": "review",
+        "output": "rows"
+      },
+      "dataset": "daily-revenue"
+    }
+  }
+}

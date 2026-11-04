@@ -1,0 +1,427 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/report.schema.json",
+  "title": "DDK 0.1 report",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "report"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "decision": {
+      "enum": [
+        "passed",
+        "failed",
+        "incomplete",
+        "error"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "followedReferences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "excludedConsumers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "projects",
+        "artifacts",
+        "followedReferences",
+        "excludedConsumers"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "requestedGroups": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/group"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "completedProfiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "availableCapabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "missingCapabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "mappingLimits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "requestedGroups",
+        "completedProfiles",
+        "availableCapabilities",
+        "missingCapabilities",
+        "mappingLimits"
+      ],
+      "additionalProperties": false
+    },
+    "lock": {
+      "type": "object",
+      "properties": {
+        "verified": {
+          "type": "boolean"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/path"
+        }
+      },
+      "required": [
+        "verified"
+      ],
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          },
+          "distributionSha256": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirement": {
+            "type": "string",
+            "pattern": "^DDK-[A-Z]+-[0-9]{3}$"
+          },
+          "group": {
+            "$ref": "common.schema.json#/$defs/group"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown",
+              "not_run"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "applicable": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "enum": [
+              "declared",
+              "inferred",
+              "executed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/diagnostic"
+            },
+            "minItems": 0
+          },
+          "evidenceRecords": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "declaration",
+                    "plan",
+                    "native-report",
+                    "dataset-snapshot",
+                    "fixture",
+                    "mapping"
+                  ]
+                },
+                "path": {
+                  "$ref": "common.schema.json#/$defs/path"
+                },
+                "sha256": {
+                  "$ref": "common.schema.json#/$defs/digest"
+                },
+                "tool": {
+                  "type": "string"
+                },
+                "attributes": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "sha256"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "id",
+          "requirement",
+          "group",
+          "subject",
+          "status",
+          "required",
+          "applicable",
+          "evidence",
+          "diagnostics"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "unknown",
+                    "not_run"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "reason"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "applicable": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "const": "not_run"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "evidence": {
+                  "const": "executed"
+                },
+                "status": {
+                  "enum": [
+                    "passed",
+                    "failed"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "evidenceRecords"
+              ],
+              "properties": {
+                "evidenceRecords": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 0
+    },
+    "operationalErrors": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/diagnostic"
+      },
+      "minItems": 0
+    },
+    "limits": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "impact": {
+      "type": "object",
+      "properties": {
+        "baseProject": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "candidateProject": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "identity": {
+                "$ref": "common.schema.json#/$defs/identifier"
+              },
+              "baseVersion": {
+                "$ref": "common.schema.json#/$defs/version"
+              },
+              "candidateVersion": {
+                "$ref": "common.schema.json#/$defs/version"
+              },
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "identity",
+              "kinds"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "affected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "consumer": {
+                "type": "string"
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "consumer",
+              "paths"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "baseProject",
+        "candidateProject",
+        "changed",
+        "affected"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "decision",
+    "scope",
+    "coverage",
+    "lock",
+    "tools",
+    "checks",
+    "operationalErrors",
+    "limits"
+  ],
+  "additionalProperties": false
+}

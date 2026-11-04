@@ -1,0 +1,27 @@
+{
+  "specVersion": "0.1",
+  "kind": "component",
+  "id": "urn:example:read-orders",
+  "version": "1.0.0",
+  "role": "reader",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "year": {
+        "type": "integer",
+        "minimum": 2000,
+        "maximum": 2100
+      }
+    },
+    "required": [
+      "year"
+    ],
+    "additionalProperties": false
+  },
+  "inputs": {},
+  "outputs": {
+    "rows": {
+      "dataset": "orders"
+    }
+  }
+}

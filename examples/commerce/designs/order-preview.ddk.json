@@ -1,0 +1,32 @@
+{
+  "specVersion": "0.1",
+  "kind": "design",
+  "id": "urn:example:order-preview-design",
+  "version": "1.0.0",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "sources": {},
+  "steps": {
+    "read": {
+      "component": "read-orders",
+      "inputs": {},
+      "arguments": {
+        "year": {
+          "literal": 2026
+        }
+      }
+    }
+  },
+  "exports": {
+    "orders": {
+      "from": {
+        "step": "read",
+        "output": "rows"
+      },
+      "dataset": "orders"
+    }
+  }
+}

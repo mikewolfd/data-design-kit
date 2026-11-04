@@ -1,0 +1,644 @@
+# Data Design Kit 0.1 — Engineering Specification
+
+**Independent Editor's Draft — November 4, 2026**
+
+| Document property | Value |
+| --- | --- |
+| Short name | DDK |
+| Specification version | 0.1 |
+| Document status | Draft for implementation; no conforming implementation is claimed |
+| Normative artifacts | This document, the versioned schemas, and the normative adapter requirements explicitly linked here |
+| Implementation roadmap | [Implementation plan](implementation-plan.md) |
+| Public-source evidence | [References](references.md) |
+| Original-material license | Apache-2.0 |
+
+## Abstract
+
+Data Design Kit defines a way to check reusable data designs before their implementations exist. A project connects dataset definitions, named component interfaces, proposed calls, shared property definitions, and project policies. A checker resolves these relationships, checks selected compatibility rules, identifies affected consumers, and reports the strength and limits of its evidence.
+
+DDK uses Open Data Contract Standard (ODCS) documents for datasets and JSON Schema for component parameters. Optional profiles connect designs to file validation, ingestion, structured transformation plans, and executed tests through maintained tools. A successful core check establishes selected consistency among declarations. Stronger claims require inferred or executed evidence under explicitly requested profiles.
+
+## Status of this document
+
+This is a new engineering proposal. It follows the organization and conformance discipline of W3C technical reports but is not a W3C publication. It carries no W3C, Bitol, or Apache endorsement. No runtime behavior is implemented by publishing this draft.
+
+Examples and conformance expectations were written independently for this project. Public upstream artifacts retain their own provenance. See [PROVENANCE.md](../PROVENANCE.md).
+
+The draft settles the core document model and reporting rules sufficiently to guide implementation. Compatibility among Substrait producers, the standalone validator, and consumers remains an implementation investigation. An integration cannot claim support until it publishes evidence for its exact version tuple.
+
+## Table of contents
+
+1. [Purpose and boundaries](#purpose)
+2. [Conformance](#conformance)
+3. [Terms and data model](#model)
+4. [Document syntax](#syntax)
+5. [Projects and reference resolution](#resolution)
+6. [Component interfaces and arguments](#interfaces)
+7. [Dataset compatibility](#datasets)
+8. [Design graphs and outputs](#graphs)
+9. [Project policies and shared definitions](#policies)
+10. [Core checking algorithm](#checking)
+11. [Change impact](#impact)
+12. [Locks and reproducibility](#locks)
+13. [Results and diagnostics](#results)
+14. [Command-line behavior](#cli)
+15. [Integration profiles](#integrations)
+16. [Security, privacy, and resource limits](#security)
+17. [Versioning and extensibility](#versioning)
+18. [Conformance evidence](#evidence)
+19. [References](#references)
+
+<a id="purpose"></a>
+## 1. Purpose and boundaries
+
+### 1.1 Intended users and outcomes (informative)
+
+A data architect proposes datasets using shared readers and transformations. A library maintainer changes a parameter, input requirement, shared field, or quality definition. A reviewer needs to know which proposed calls remain valid, which outputs are compatible, and which claims still depend on unimplemented code or untested data.
+
+DDK answers four questions: What datasets and parameters enter the design? Which declared components use them? What datasets does the design promise? Which checks support those promises?
+
+### 1.2 Ownership of existing standards (informative)
+
+ODCS owns dataset descriptions and quality requirements. JSON Schema owns parameter validation. Substrait owns supported structured calculation plans. DDK adds the named interfaces and relationships that connect those artifacts, a bounded declared-compatibility model, change-impact analysis, project policy application, and a common result format.
+
+The initial implementation uses Data Contract CLI for ODCS-specific operations; Frictionless for incoming files; dlt for ingestion; DataFusion for optional Substrait production and consumption; and pytest for executed examples. These integrations are replaceable at their declared boundaries.
+
+### 1.3 Scope exclusions (informative)
+
+This version does not define a scheduler, catalog service, storage engine, arbitrary data-quality language, generic Python type checker, SQL optimizer, universal schema-subtyping solver, or business-correctness prover. Cross-repository coverage is limited to explicitly loaded projects. A core checker never needs the implementation of a reader or transformation.
+
+<a id="conformance"></a>
+## 2. Conformance
+
+### 2.1 Normative language
+
+The uppercase terms defined by BCP 14, including **MUST**, **MUST NOT**, **SHOULD**, and **MAY**, have their RFC 2119 and RFC 8174 meanings. Lowercase uses carry their ordinary meaning. Sections marked informative, examples, rationale, architecture decisions, and the implementation plan are non-normative. Numbered requirements with `DDK-` identifiers and the versioned format schemas are normative.
+
+<a id="DDK-CONF-001"></a>
+### DDK-CONF-001 — Product classes and claims
+
+A conforming product MUST identify its specification version and claimed product classes: **document producer**, **core checker**, **impact analyzer**, **adapter**, or **report consumer**. An implementation MUST claim each optional profile separately and MUST identify the tested dependency versions. Support for one profile MUST NOT imply support for another.
+
+<a id="DDK-CONF-002"></a>
+### DDK-CONF-002 — Required profiles
+
+`core` is mandatory for a core checker. Optional profiles are `impact`, `odcs-cli`, `files.frictionless`, `ingest.dlt`, `plan.datafusion`, `plan.substrait-validator`, `test.fixtures`, and `test.portability`. `core` operates on local declarations and a local schema registry. A checker MUST complete `core` without selecting an execution engine, importing component implementation modules, contacting databases, reading production rows, or using network access.
+
+<a id="DDK-CONF-003"></a>
+### DDK-CONF-003 — Partial support
+
+A checker MUST enumerate the checks requested by the project and command. An unsupported, indeterminate, or unavailable required check MUST produce `unknown` or `not_run` and MUST prevent an overall `passed` decision. Partial ODCS interpretation MUST be reported as a DDK compatibility limit rather than as invalid ODCS.
+
+<a id="DDK-CONF-004"></a>
+### DDK-CONF-004 — Normative artifacts and conflicts
+
+The schemas in `schemas/0.1/` define DDK document shapes. This specification defines semantics and algorithms. The vendored ODCS schema defines upstream ODCS syntax. An unresolved contradiction between these artifacts MUST block a conformance claim for the affected requirement. Implementers MUST report the contradiction rather than selecting a permissive interpretation silently.
+
+<a id="model"></a>
+## 3. Terms and data model
+
+| Term | Meaning |
+| --- | --- |
+| Project | An explicitly enumerated set of artifacts, imported projects, and requested checks. |
+| Artifact | A registered dataset, component, design, property definition, or policy document. |
+| Dataset | One selected schema object from an ODCS document. |
+| Component | A versioned reader or transformation interface, optionally linked to implementation material. |
+| Design | Calls to components, source datasets, parameter declarations, and named exports. |
+| Port | A named component input or output associated with a dataset definition. |
+| Declared evidence | A checked relationship among authored declarations; actual data and implementations remain assumptions. |
+| Inferred evidence | A property derived by a compiler, planner, or supported static algorithm. |
+| Executed evidence | A property observed by running a test or examining actual data. |
+| Binding | An explicit association between a logical input and a fixture or staged data snapshot. |
+| Effective definition | The result of applying the documented ODCS definition-resolution rules. |
+| Check instance | One named question about a particular artifact, call, rule, or output. |
+| Lock | An inventory of exact input bytes, tool versions, and transitive references used for a run. |
+
+<a id="DDK-MODEL-001"></a>
+### DDK-MODEL-001 — Identity and aliases
+
+Every DDK document MUST have `specVersion`, `kind`, `id`, and `version`. `id` MUST be an absolute URI used as an identifier, without implicit dereferencing. `version` MUST be a Semantic Versioning 2.0 version. Artifact aliases are project-local names; identity comparisons MUST use the document identity and version rather than an alias. For a dataset, identity also includes the selected ODCS schema object's stable ID, or its exact name when no stable ID exists.
+
+Artifact, namespace, source, and step aliases use the restricted alias grammar. Named component ports and JSON Schema parameter properties may use any nonempty string and remain case-sensitive; they are not restricted to filesystem-style aliases.
+
+<a id="DDK-MODEL-002"></a>
+### DDK-MODEL-002 — Evidence does not escalate implicitly
+
+A checker MUST preserve the evidence level attached to a claim. A component's promised output MUST remain declared evidence until an independent plan inference or execution supplies stronger evidence. A valid interface declaration MUST NOT be reported as proof that an implementation accepts its arguments or produces its promised rows.
+
+<a id="syntax"></a>
+## 4. Document syntax
+
+<a id="DDK-SYNTAX-001"></a>
+### DDK-SYNTAX-001 — JSON and YAML
+
+A producer MUST support JSON documents conforming to RFC 8259. A checker MUST support JSON and MAY also support YAML 1.2. Supported YAML MUST map to the JSON data model. Duplicate mapping keys, merge keys, aliases, custom tags, non-string object keys, non-finite numbers, and implicit date objects MUST be rejected. YAML support MUST preserve JSON boolean and number meanings. UTF-8 decoding errors are document failures.
+
+<a id="DDK-SYNTAX-002"></a>
+### DDK-SYNTAX-002 — Schema validation and locations
+
+A checker MUST validate DDK documents against the matching Draft 2020-12 schemas and ODCS documents against their declared supported dialect. This draft's ODCS profile accepts `apiVersion: v3.2.0` and validates against the pinned ODCS 3.2.0 schema at GitHub revision `448f7b93329ece7827897d7dd51e827a3e279460`, whose own dialect is Draft 2019-09. The revision is part of the profile and lock, not inferred from `apiVersion`. It MUST retain source locations at least as a path and RFC 6901 JSON Pointer. Line and column locations, when emitted, MUST be one-based.
+
+<a id="DDK-SYNTAX-003"></a>
+### DDK-SYNTAX-003 — Keywords and literals
+
+Unknown DDK structural properties MUST be rejected except within the explicit `extensions` object. User-authored JSON Schema values, JSON literals, ODCS custom properties, and adapter-owned configurations retain the extension rules of their respective standards. A checker MUST distinguish an unrecognized required extension from an optional annotation. JSON Schema `default` is an annotation and MUST NOT insert argument values.
+
+<a id="DDK-SYNTAX-004"></a>
+### DDK-SYNTAX-004 — Value comparison
+
+Object-member ordering is insignificant; array ordering is significant unless a rule explicitly states otherwise. Field and alias names are case-sensitive. A checker MUST distinguish booleans from numbers and MUST compare numeric bounds without introducing binary floating-point rounding errors. It MUST preserve original bytes separately for hashing. String identifiers MUST NOT be case-folded or Unicode-normalized implicitly.
+
+<a id="resolution"></a>
+## 5. Projects and reference resolution
+
+### 5.1 Project document
+
+The project schema is [project.schema.json](../schemas/0.1/project.schema.json). `artifacts` maps aliases to `{kind, path}` entries; dataset entries also specify `object`. `imports` maps namespace aliases to paths of other project documents. `requiredChecks` lists check groups that gate the result. [The commerce project](../examples/commerce/project.ddk.json) is a complete document-shape example.
+
+<a id="DDK-REF-001"></a>
+### DDK-REF-001 — Paths and namespaces
+
+A document-relative path MUST resolve from the directory containing that document. Each artifact reference MUST resolve in its declaring project's namespace. A reference beginning with `/` is root-relative; other references are relative to the declaring namespace. `/` separates namespace segments, and each segment follows the alias grammar in the common schema. Parent traversal in artifact aliases is forbidden. Ordinary file paths may use `..` only when their resolved real paths remain inside the explicitly permitted project roots.
+
+<a id="DDK-REF-002"></a>
+### DDK-REF-002 — Import traversal
+
+A checker MUST visit the root project and its imports using a deterministic depth-first traversal over sorted import aliases. It MUST reject an import cycle, duplicate fully qualified alias, or conflicting definitions for the same identity and version. Reuse of the same source document through different aliases is permitted when its bytes and selected dataset object agree. Symlink targets MUST be checked against the same root boundary as ordinary paths.
+
+<a id="DDK-REF-003"></a>
+### DDK-REF-003 — Dataset selection
+
+A dataset entry's `object` MUST match an ODCS schema object's stable `id` first, then its exact `name` only when no ID match exists. Zero or multiple matches MUST fail resolution. A checker MUST validate the entire ODCS document, while recording which object was selected. Duplicate object or property IDs and duplicate property names within an interpreted object MUST be reported even when upstream schema validation permits them.
+
+<a id="DDK-REF-004"></a>
+### DDK-REF-004 — Shared property definitions
+
+A checker MUST preserve the resolution and override precedence documented by the selected ODCS definition resolver. For the initial `odcs-cli` integration, inline property values win over inherited values. Every followed local definition and fragment MUST enter the lock and reference graph. An unresolved or cyclic required definition MUST fail its reference check. Definitions that require unavailable remote resolution MUST remain `unknown`; the checker MUST NOT substitute an empty definition.
+
+<a id="DDK-REF-005"></a>
+### DDK-REF-005 — Complete and bounded scope
+
+The report MUST enumerate loaded project namespaces, selected artifacts, followed references, and requested selection filters. An impact analyzer MUST restrict claims to that inventory. A checker MUST NOT infer that all consumers in an organization were checked merely because a repository or package was scanned.
+
+### 5.2 Resolution example (informative)
+
+A root project imports `shared/project.ddk.json` as `shared`. A design in the root refers to `shared/read-orders`. A component defined inside that imported project refers to its local `orders` dataset. That reference resolves to `shared/orders`; it does not bind to the root project's `orders` alias. `/orders` would explicitly select the latter.
+
+<a id="interfaces"></a>
+## 6. Component interfaces and arguments
+
+### 6.1 Component document
+
+The component schema is [component.schema.json](../schemas/0.1/component.schema.json). `role` is `reader` or `transform`. `parameters` contains a JSON Schema object. `inputs` and `outputs` map named ports to dataset references. Inputs may be optional and may accept additional fields. Outputs describe promised datasets. `implementation` is optional and is interpreted only by explicitly invoked adapter profiles.
+
+<a id="DDK-CALL-001"></a>
+### DDK-CALL-001 — Interface-only components
+
+A core checker MUST accept a valid component without an implementation. It MUST resolve its dataset references and validate its parameter schema without importing or executing implementation code. Every component MUST declare at least one output. Reader and transformation roles MUST use the same call-checking rules.
+
+<a id="DDK-CALL-002"></a>
+### DDK-CALL-002 — Named inputs
+
+A call MUST provide every non-optional named input, MUST NOT provide undeclared input names, and MUST reference an existing design source or step output. For each supplied input, the checker MUST compare the available declared dataset with the port's required dataset using Section 7. Optionality concerns whether a port is supplied, not whether its field values may be null.
+
+<a id="DDK-CALL-003"></a>
+### DDK-CALL-003 — Tagged arguments
+
+Each argument value MUST be exactly one of `{ "literal": <JSON value> }` or `{ "parameter": "<design parameter name>" }`. Literal objects MUST remain ordinary data and MUST NOT be searched for executable expressions or parameter markers. Missing and unexpected arguments MUST follow the component's JSON Schema `required` and `additionalProperties` rules. An absent argument is distinct from an explicit `null`.
+
+<a id="DDK-CALL-004"></a>
+### DDK-CALL-004 — Literal validation
+
+A checker MUST validate each complete literal argument object against the declared parameter schema using the supported JSON Schema dialect. It MUST validate schema syntax before validating instances. Component parameter schemas MUST explicitly declare `type: object`, `properties`, and `additionalProperties: false`; required names MUST exist in `properties`. Schema defaults MUST NOT satisfy missing required arguments.
+
+<a id="DDK-CALL-005"></a>
+### DDK-CALL-005 — Symbolic parameter compatibility
+
+A design-parameter reference MUST resolve to a declared parameter. For schemas restricted to primitive `type`, `enum`, `const`, inclusive/exclusive numeric bounds, and nonnegative string or array length bounds, a checker MUST determine whether the source's admitted values are a subset of the target's admitted values. Boolean values are never numeric. Source `integer` may satisfy target `number`, subject to bounds. Unsupported keywords that affect this proof, cross-property conditions, or unresolved references MUST yield `unknown` unless a documented sound extension proves the relation. A disproved relationship MUST fail; a supported relationship MUST pass.
+
+<a id="DDK-CALL-006"></a>
+### DDK-CALL-006 — Correlated arguments
+
+When all arguments are literal, the complete parameter object MUST be checked, including supported cross-property constraints. When symbolic arguments occur and whole-object constraints could affect validity, the checker MUST return `unknown` for that whole-object check unless it proves validity or invalidity. Per-argument success MUST NOT erase the whole-object result.
+
+<a id="datasets"></a>
+## 7. Dataset compatibility
+
+### 7.1 Initial tabular profile
+
+DDK 0.1 interprets flat ODCS objects with named scalar properties. ODCS remains capable of richer structures. Nested objects, arrays, maps, vectors, omitted logical types, and unsupported type options can be valid ODCS while requiring an `unknown` DDK compatibility result.
+
+<a id="DDK-DATA-001"></a>
+### DDK-DATA-001 — Direction of comparison
+
+Compatibility asks whether values and fields promised by an available dataset satisfy the requirements of a consumer. Every property listed by the consumer is a required column in this tabular profile. ODCS property `required` concerns null values and MUST NOT be interpreted as permission to omit the column. Component inputs allow additional available fields by default; design exports forbid them by default. Explicit settings MUST override these defaults and be included in evidence.
+
+<a id="DDK-DATA-002"></a>
+### DDK-DATA-002 — Supported field relations
+
+A checker MUST compare exact field names, logical scalar types, nullability, and declared enums. Available logical types MUST match required types, except `integer` may satisfy logical `number` when other supported restrictions permit it. Available nullable values cannot satisfy a required non-null field. Available enum values MUST be a subset of required enum values when the consumer restricts them. A missing available enum supplies no such restriction. ODCS enum entries MUST be compared using their `value`, not their label. These checks establish relationships among declarations only.
+
+<a id="DDK-DATA-003"></a>
+### DDK-DATA-003 — Unknown restrictions and physical types
+
+Any consumer restriction that the checker cannot interpret MUST yield `unknown` unless independently disproved. Physical types, decimal precision and scale, integer widths, timestamps, time zones, and engine-specific coercions MUST be handled only by a versioned mapping profile with stated rules. The checker MUST NOT assume that logical `number` means a particular floating-point or decimal representation. Missing information MUST NOT be replaced with an engine default silently.
+
+<a id="DDK-DATA-004"></a>
+### DDK-DATA-004 — Defaults and claims
+
+For this comparison only, omitted ODCS `required` means nullable, following the pinned standard's default. Omitted `unique` supplies no uniqueness guarantee. Declared uniqueness, keys, and row identity MUST be recorded as assumptions until actual-data checks establish them for a particular snapshot. Column compatibility MUST NOT be reported as proof of join cardinality, correct aggregation, uniqueness, or business meaning.
+
+<a id="DDK-DATA-005"></a>
+### DDK-DATA-005 — Aggregating field decisions
+
+A dataset comparison MUST fail when any field relation is disproved or forbidden extra fields exist. Otherwise it MUST be `unknown` when any applicable relation is indeterminate, and `passed` when all applicable relations are established. Field ordering is irrelevant to declared compatibility but MUST be preserved when mapping to positional execution formats. A checker MUST report the complete mapping rather than relying on coincidental column order.
+
+<a id="graphs"></a>
+## 8. Design graphs and outputs
+
+The design schema is [design.schema.json](../schemas/0.1/design.schema.json). A design declares its parameters, external `sources`, component `steps`, and named `exports`. A source is a dataset declaration, not evidence that actual rows exist. A step refers to a component and supplies named inputs and tagged arguments.
+
+<a id="DDK-GRAPH-001"></a>
+### DDK-GRAPH-001 — Reference and cycle checks
+
+Every step component, source, output port, and export origin MUST resolve. The checker MUST construct an edge from each producing step to each consuming step and MUST reject a cycle, including a self-cycle. Step maps provide unique names by construction; duplicate keys MUST already have failed parsing. Topological scheduling MUST choose lexicographically smallest ready names to produce deterministic order.
+
+<a id="DDK-GRAPH-002"></a>
+### DDK-GRAPH-002 — Multiple outputs
+
+A design MUST declare at least one named export. Each export MUST specify an origin and an expected dataset. A checker MUST compare every export separately. Multiple sinks, multiple component outputs, and direct exports of sources are permitted. An unconnected step SHOULD produce a warning; it MUST NOT cause the checker to guess which output a user intended.
+
+<a id="DDK-GRAPH-003"></a>
+### DDK-GRAPH-003 — Declared and inferred outputs
+
+Core export checks MUST use the origin component's declared output or the source's declared dataset. Inferred output checks MUST run as separate instances under a plan profile. Missing implementations or unsupported inference MUST remain visible as `not_run` or `unknown` for those plan checks. The core checker MUST NOT recognize operation names and invent output columns using private transformation rules.
+
+<a id="DDK-GRAPH-004"></a>
+### DDK-GRAPH-004 — Determinate failures and dependent checks
+
+A failed reference or cycle check MUST block checks that require that relationship. Blocked dependent checks MUST be `not_run` with an explicit dependency reason. Independent artifacts and check instances SHOULD continue so that one run can report several actionable problems. A checker MUST preserve the original failure even when later checks are blocked.
+
+<a id="policies"></a>
+## 9. Project policies and shared definitions
+
+The policy schema is [policy.schema.json](../schemas/0.1/policy.schema.json). A policy document contains stable rule IDs and typed rule configurations. Core rules are `fields-exist`, `row-identity`, `quality-fields`, and `vocabulary`. Adapter coverage is requested through explicit check groups and adapter capabilities rather than a handwritten mapping-completeness list.
+
+An extension rule uses an absolute URI as its `check` value and places its arguments in `configuration`. A core checker can therefore parse an unrecognized rule and report unknown coverage without accepting arbitrary structural keys.
+
+<a id="DDK-POLICY-001"></a>
+### DDK-POLICY-001 — Explicit rules
+
+A checker MUST validate each policy's rule shape, resolve its targets, and emit a separate result for each rule. Rule IDs MUST be unique within a policy. An unsupported required rule MUST be `unknown`. Optional extensions MUST be preserved as metadata but MUST NOT be credited as evaluated controls.
+
+<a id="DDK-POLICY-002"></a>
+### DDK-POLICY-002 — Fields and row identity
+
+`fields-exist` MUST check exact names in the selected dataset. `row-identity` MUST read the selected ODCS object's `customProperties` entry with `vendor: ddk` and `property: rowIdentity`; its value MUST be a nonempty array of unique field names. Missing or malformed annotations and absent fields MUST fail. Duplicate entries for the same DDK property MUST fail. Success establishes declaration consistency only, not uniqueness of rows.
+
+<a id="DDK-POLICY-003"></a>
+### DDK-POLICY-003 — Quality field dependencies
+
+`quality-fields` MUST visit object-level and property-level ODCS quality rules in the selected object. Property-level rules implicitly depend on their containing property. Additional declared dependencies use `customProperties` with `vendor: ddk`, `property: fieldDependencies`, and a unique array of field names. The checker MUST reject missing referenced fields. For SQL or custom rules with no complete dependency declaration, the dependency-completeness instance MUST be `unknown`; parsing SQL is not a core requirement. Presence of SQL text MUST NOT imply SQL correctness or execution.
+
+<a id="DDK-POLICY-004"></a>
+### DDK-POLICY-004 — Vocabulary rules
+
+`vocabulary` MUST resolve its target artifact and RFC 6901 pointer, then compare its selected JSON value with `allowed`. When `each` is true, the selected value MUST be an array and every element MUST be allowed. A missing pointer, wrong selected shape, or disallowed value MUST fail. A checker MUST distinguish this explicit project policy from the upstream standard's own allowed values.
+
+<a id="DDK-POLICY-005"></a>
+### DDK-POLICY-005 — Shared-definition use and overrides
+
+A checker MUST inventory references to registered shared property definitions and SHOULD warn about definitions with no loaded consumers. Definitions containing quality arrays MUST be included in this inventory. Resolution MUST record which values are inherited and which are overridden. Core MUST report that override precedence was applied, without asserting that an override preserves every inherited restriction. An impact check requesting non-weakening MUST use the supported subset relation and return `unknown` for unsupported relationships.
+
+### 9.1 Extension ownership (informative)
+
+The `ddk` custom-property vendor identifier in this draft is a proposal for this project's annotations. It is not an ODCS standard feature. Existing ODCS extensions keep their original ownership. A future CUE adapter can add policy evaluation without requiring all authors to write CUE or altering the core declarations.
+
+<a id="checking"></a>
+## 10. Core checking algorithm
+
+<a id="DDK-CHECK-001"></a>
+### DDK-CHECK-001 — Processing order
+
+A core checker MUST perform these stages in order, while continuing independent work after known failures:
+
+1. Parse the command and identify requested profiles and permitted roots.
+2. Parse project documents, check their schemas, and traverse imports.
+3. Parse registered artifacts, validate document shapes, and index identities.
+4. Resolve local ODCS references and record effective values and provenance.
+5. Build artifact and step dependency graphs; detect unresolved references and cycles.
+6. Validate component parameter schemas, literal calls, symbolic calls, and named ports.
+7. Compare declared input datasets and every design export.
+8. Evaluate explicit project policies and shared-definition usage.
+9. Add requested optional-profile instances, including unavailable capabilities.
+10. Compute the overall decision from check outcomes and write the report.
+
+A stage MUST NOT consume an invalid prerequisite as if it were a valid empty object.
+
+<a id="DDK-CHECK-002"></a>
+### DDK-CHECK-002 — Check inventory and selection
+
+The mandatory core groups are `core.documents`, `core.references`, `core.graph`, `core.calls`, `core.datasets`, and `core.policies`. A root project's `requiredChecks` MUST include these groups. Optional groups are listed in Section 15. A selection filter MUST include transitive prerequisites, MUST report excluded consumers, and MUST NOT be used to claim full-project coverage. An artifact with no applicable policy rules has a completed zero-rule inventory, not fabricated policy successes.
+
+<a id="DDK-CHECK-003"></a>
+### DDK-CHECK-003 — Bounded repeated work
+
+Within a run, a checker MUST parse each distinct real-path and byte-digest combination once and SHOULD reuse validated effective definitions and compatibility results. Cache keys MUST include relevant schemas, resolver rules, profiles, and adapter versions. A changed dependency MUST invalidate dependent results. Reference and graph analysis MUST operate on indexed relationships rather than repeatedly scanning all documents for each consumer.
+
+### 10.1 Expected algorithmic cost (informative)
+
+Index construction and graph traversal can be linear in the input size and relationship count. Sorting names and a deterministic ready-node heap add ordering costs. JSON Schema validation and symbolic containment have their own costs; the system makes no blanket linear-time promise for arbitrary schemas. The implementation plan defines measured performance gates instead of asserting unmeasured speed.
+
+<a id="impact"></a>
+## 11. Change impact
+
+<a id="DDK-IMPACT-001"></a>
+### DDK-IMPACT-001 — Explicit snapshots
+
+An impact analyzer MUST accept an explicit base project and candidate project, each with a resolved inventory. It MUST compare document identities and versions, record content changes, and preserve each snapshot's resolution scope. Changed bytes under the same identity and version MUST produce a version-reuse diagnostic, even when the semantic comparison can continue. Formatting-only changes MAY be classified separately from meaning changes.
+
+<a id="DDK-IMPACT-002"></a>
+### DDK-IMPACT-002 — Consumer revalidation
+
+The analyzer MUST find direct and transitive consumers of changed components, dataset definitions, policies, and shared property definitions. It MUST revalidate candidate calls against candidate interfaces and attach dependency paths explaining each impact. Removal of an argument or input name, newly required arguments, changed output ports, and unsupported parameter restrictions MUST be distinguished. A consumer appearing in the impact set does not by itself mean it is broken.
+
+<a id="DDK-IMPACT-003"></a>
+### DDK-IMPACT-003 — Compatibility direction
+
+For component parameters and inputs, a backward-compatible candidate accepts at least the values and datasets accepted by the base. For promised outputs, candidate values MUST satisfy base consumer requirements. The analyzer MUST name the comparison direction and MUST apply its supported subset relation accordingly. Dataset-version classification delegated to Data Contract CLI MUST preserve the selected producer or consumer perspective and its original evidence. Unsupported general schema containment MUST remain `unknown`.
+
+<a id="DDK-IMPACT-004"></a>
+### DDK-IMPACT-004 — Overrides and scope limits
+
+When non-weakening is requested for a shared definition or override, the analyzer MUST compare effective supported restrictions and identify changed provenance. It MUST report unknown portions rather than assuming that a syntactically valid override is safe. Missing external projects MUST be listed as uncovered scope; automatic organization-wide consumer discovery is outside this profile.
+
+<a id="locks"></a>
+## 12. Locks and reproducibility
+
+The lock schema is [lock.schema.json](../schemas/0.1/lock.schema.json). Locks describe exact inputs; they are not a package registry or a secret store.
+
+<a id="DDK-LOCK-001"></a>
+### DDK-LOCK-001 — Byte inventory
+
+A lock MUST record SHA-256 hashes of the original bytes for the project closure, followed shared definitions, parameter schemas, implementation sources used by requested profiles, and adapter capability manifests. It MUST record schema versions and revisions, resolver identity and version, selected ODCS objects, and tool versions. Development builds MUST also record the source commit and built-distribution digest, even when their version string matches a release. Hashing MUST NOT depend on a reserialized YAML or JSON representation. Different objects selected from the same file MUST retain their individual selections and share the byte digest.
+
+<a id="DDK-LOCK-002"></a>
+### DDK-LOCK-002 — Locked operation
+
+In `--locked` mode, missing lock entries, changed digests, changed resolution rules, and unexpected followed dependencies MUST fail lock verification before cached results are trusted. The checker MUST NOT update the lock automatically. Unlocked operation is permitted, but the report MUST mark lock verification as absent. A lock command MUST write an explicitly named lock file and MUST preserve a previous file when inventory construction fails.
+
+<a id="DDK-LOCK-003"></a>
+### DDK-LOCK-003 — Runtime inputs
+
+Execution evidence MUST additionally identify the compiled plan's bytes, the effective bindings, source snapshot identifiers or file digests, parameter values or suitably redacted value fingerprints, and engine versions. Glob patterns MUST be expanded to an explicit file list before execution; the expanded list MUST enter the execution receipt. Reuse of execution evidence MUST require matching inputs and check semantics. DDK MUST NOT store secrets in locks or reports.
+
+<a id="DDK-LOCK-004"></a>
+### DDK-LOCK-004 — Stable and volatile report data
+
+Given the same locked inputs, requested checks, and tool versions, a checker MUST produce the same check identities, outcomes, reasons, and sorted diagnostics. Timestamps, run identifiers, elapsed times, and resource measurements MUST be segregated as volatile metadata. A cache MUST distinguish stable result content from those volatile observations.
+
+<a id="results"></a>
+## 13. Results and diagnostics
+
+The report schema is [report.schema.json](../schemas/0.1/report.schema.json).
+
+<a id="DDK-RESULT-001"></a>
+### DDK-RESULT-001 — Four check outcomes
+
+Every check instance MUST have exactly one status:
+
+| Status | Meaning |
+| --- | --- |
+| `passed` | The named check established its stated relation within its declared scope. |
+| `failed` | The named check established a contradiction or violated a required rule. |
+| `unknown` | The check was attempted but available information or supported reasoning could not decide it. |
+| `not_run` | The check did not run, for example because a prerequisite failed or a required adapter is absent. |
+
+Each instance MUST identify its requirement, group, subject, required/applicable flags, and evidence level. `unknown` and `not_run` MUST include a reason. A result with `applicable: false` MUST use `not_run` and explain why. It does not block the overall decision.
+
+<a id="DDK-RESULT-002"></a>
+### DDK-RESULT-002 — Overall decision
+
+The report MUST compute `decision` in this order:
+
+1. `error` when an operational failure prevents a trustworthy run or required report completion.
+2. Otherwise, `failed` when any applicable required check failed, or a declared warnings-as-errors gate failed.
+3. Otherwise, `incomplete` when any applicable required check is `unknown` or `not_run`.
+4. Otherwise, `passed`.
+
+Optional failed checks MUST remain visible, even when they do not gate the decision. A passed decision MUST state the requested and completed profiles; it MUST NOT be summarized as proof that all implementations or datasets are correct.
+
+<a id="DDK-RESULT-003"></a>
+### DDK-RESULT-003 — Diagnostics
+
+Every diagnostic MUST have a stable code, severity, message, and subject location. Related locations SHOULD identify the declaration responsible for a call failure. A checker MUST sort diagnostics by normalized source path, JSON Pointer, code, and check identity. Changing display verbosity or severity filters MUST NOT change the underlying results or exit code. Suggested fixes MUST be presented as suggestions, not applied automatically.
+
+<a id="DDK-RESULT-004"></a>
+### DDK-RESULT-004 — Evidence and coverage
+
+A report MUST contain the loaded scope, requested check groups, available and missing adapter capabilities, mapping limits, dependency versions, and lock state. Evidence MUST distinguish authored claims, static inferences, and observed test results. Runtime evidence MUST identify its data snapshot. A report consumer MUST preserve unknown and not-run states rather than reducing every non-failure to success.
+
+Executed passed or failed checks MUST attach at least one `evidenceRecords` entry with an artifact kind, path, and SHA-256 digest. Native reports, plans, fixtures, and dataset snapshots use separate entries as applicable. Impact reports MUST populate the structured `impact` section with base/candidate projects, changed identities, and affected-consumer paths. Free-text summaries alone do not satisfy that structure.
+
+<a id="DDK-RESULT-005"></a>
+### DDK-RESULT-005 — Initial diagnostic families
+
+A checker MUST classify initial diagnostic codes in these families: `DOC` for syntax and versions; `REF` for references and imports; `CALL` for interfaces and arguments; `DATA` for compatibility; `GRAPH` for step relationships; `POLICY` for project rules; `IMPACT` for changes; `LOCK` for inventory mismatches; `ADAPTER` for capabilities; and `EXEC` for execution evidence. Codes MUST NOT be reused with a different meaning within specification version 0.1. The conformance suite records the precise codes required for its cases.
+
+### 13.1 Illustrative diagnostics (informative)
+
+```text
+CALL-ARGUMENT-UNKNOWN: design revenue, step read-orders supplies region;
+the selected reader declares country instead.
+
+DATA-NULLABILITY: customers.customer_id permits null values;
+the enrich input requires a non-null customer_id.
+
+ADAPTER-CAPABILITY-UNKNOWN: plan output comparison was requested;
+the tax component has no supported plan implementation.
+```
+
+<a id="cli"></a>
+## 14. Command-line behavior
+
+The proposed executable name is `ddk`. These commands describe the intended interface; this repository does not implement them.
+
+<a id="DDK-CLI-001"></a>
+### DDK-CLI-001 — Core commands
+
+An initial CLI MUST expose `check`, `impact`, `lock`, `build`, and `test`. `check` defaults to `core`. `impact` adds the impact profile and requires explicit base and candidate projects. `build` generates explicitly requested supported artifacts. `test` executes only explicitly selected tests and bindings. The default command path MUST NOT run ingestion or production transformations. Core invocation MUST accept a project path, optional lock path, `--locked`, output format, selection filter, and explicit additional permitted roots.
+
+<a id="DDK-CLI-002"></a>
+### DDK-CLI-002 — Exit codes
+
+The CLI MUST return `0` for `passed`, `1` for `failed`, `2` for `incomplete`, and `3` for `error`. Invalid command usage MUST return `64`. Known malformed documents are check failures, not operational crashes. Unreadable required files, adapter process crashes, and resource exhaustion that prevent trustworthy completion are operational errors. The precedence in Section 13 determines the code when several conditions occur.
+
+<a id="DDK-CLI-003"></a>
+### DDK-CLI-003 — Machine output
+
+`--format json` MUST write exactly one report object to standard output and send progress or logs to standard error. Human and JSON formats MUST express the same results and decision. When a command encounters an operational error after selecting JSON output, it SHOULD emit a valid error report where possible. Writing reports and generated bundles to files MUST be atomic; a failed command MUST preserve existing successful artifacts.
+
+<a id="DDK-CLI-004"></a>
+### DDK-CLI-004 — Explicit requested coverage
+
+Commands MUST allow additional required check groups without editing project files. Command additions MUST NOT remove mandatory core groups. A missing requested adapter MUST yield required `not_run` results and exit `2`, not an implicit fallback. A build that supports only part of an explicitly requested export set MUST NOT claim a complete bundle or overwrite a previously complete one.
+
+### 14.1 Illustrative commands (informative)
+
+```sh
+ddk check examples/commerce/project.ddk.json --format json
+ddk lock examples/commerce/project.ddk.json --output project.ddk.lock.json
+ddk check examples/commerce/project.ddk.json --locked --lock project.ddk.lock.json
+ddk impact --base base/project.ddk.json --candidate candidate/project.ddk.json
+ddk build examples/commerce/project.ddk.json --require plan.consumer --output build/revenue
+ddk test examples/commerce/project.ddk.json --bindings tests/bindings.ddk.json --require test.fixtures
+```
+
+<a id="integrations"></a>
+## 15. Integration profiles
+
+The detailed profile boundaries in [adapter-profiles.md](adapter-profiles.md) implement the requirements below. Their examples and version research are informative; explicitly numbered adapter requirements here are normative.
+
+| Profile | Check groups | Principal evidence |
+| --- | --- | --- |
+| `core` | Six mandatory `core.*` groups | Declared |
+| `impact` | `impact.consumers`, `impact.compatibility`, `impact.non-weakening` | Declared/inferred |
+| `odcs-cli` | `odcs.lint`, `odcs.versions`, `data.odcs` | Declared or executed, depending on command |
+| `files.frictionless` | `files.structure`, `files.constraints` | Executed |
+| `ingest.dlt` | `ingest.schema-policy`, `ingest.receipt` | Declared/executed |
+| `plan.datafusion` | `plan.compile`, `plan.consumer`, `plan.output` | Inferred |
+| `plan.substrait-validator` | `plan.standard` | Inferred, bounded by validator coverage |
+| `test.fixtures` | `test.fixtures` | Executed |
+| `test.portability` | `test.portability` | Executed on identified engines |
+
+<a id="DDK-ADAPTER-001"></a>
+### DDK-ADAPTER-001 — Capability manifests
+
+An adapter MUST publish a manifest conforming to [adapter.schema.json](../schemas/0.1/adapter.schema.json), naming its version, profiles, check groups, supported input standards and versions, mapping limitations, dependency versions, and evidence references. Installed executable code MUST NOT be imported merely to discover capabilities during a core check. A capability advertised as qualified MUST be backed by passing independent conformance cases for the claimed version tuple. An `experimental-unverified` manifest describes an experiment candidate and MUST NOT populate the report's qualified available capabilities.
+
+<a id="DDK-ADAPTER-002"></a>
+### DDK-ADAPTER-002 — Mapping coverage
+
+For every requested dataset translation, an adapter MUST report each required facet as `exact`, `checked`, `unsupported`, or `unknown`. `exact` means the target declaration preserves the facet; `checked` means a separately identified executed test checks it rather than encoding it in the target schema. Uniqueness, nullability, missing-value handling, decimals, time zones, enums, and nested structures MUST be accounted for explicitly when present. A mapping entry or emitted configuration alone MUST NOT establish semantic support.
+
+<a id="DDK-ADAPTER-003"></a>
+### DDK-ADAPTER-003 — ODCS and shared definitions
+
+The initial ODCS adapter MUST use the public ODCS 3.2.0 schema and preserve Data Contract CLI's documented local-definition semantics. Runtime quality and version checks MUST retain their engine, dialect, selected perspective, and underlying diagnostics. Network resolution MUST remain disabled for offline checking. A quality rule that the selected backend cannot execute MUST not be counted as a successful data test.
+
+<a id="DDK-ADAPTER-004"></a>
+### DDK-ADAPTER-004 — Files and ingestion
+
+The Frictionless adapter MUST keep structural file checks separate from transformations and preserve its missing-value and constraint semantics. The dlt adapter MUST distinguish column declarations from schema-evolution policies and MUST identify the dataset stage to which each applies. A discard policy MUST record discarded counts when available and MUST NOT claim to have quarantined rows unless an explicit implementation saved them. Staged outputs MUST be associated with the load identifier and exact snapshot used by subsequent checks.
+
+<a id="DDK-ADAPTER-005"></a>
+### DDK-ADAPTER-005 — Substrait production and consumption
+
+A plan adapter MUST identify its authoring input, producer version, encoded Substrait version, function-extension identifiers and digests, consumer version, and supported operations. DataFusion is the initial proposed producer and consumer. Authoring SQL or a high-level builder MUST produce a saved plan; tests claiming plan execution MUST consume those saved bytes rather than rerun the original SQL. Logical input bindings MUST resolve before consumer planning. Field order, names, nullability, and physical-type mappings MUST be explicit.
+
+<a id="DDK-ADAPTER-006"></a>
+### DDK-ADAPTER-006 — Independent plan checks
+
+`plan.compile`, `plan.consumer`, `plan.standard`, and `plan.output` MUST be separate check groups. Successful consumer planning MUST NOT be reported as successful standalone Substrait validation. A validator's loose mode MUST NOT convert indeterminate validity into a passed DDK standard check; unresolved validity MUST remain `unknown`. Unsupported format versions MUST NOT trigger silent conversion or downgrade. A required unavailable compatible validator MUST yield an incomplete result.
+
+<a id="DDK-ADAPTER-007"></a>
+### DDK-ADAPTER-007 — Fixture and portability testing
+
+Fixture tests MUST specify independently authored input rows, expected outputs, dataset bindings, and comparison rules. Unless specified otherwise, rows are compared as an unordered multiset, preserving duplicates; column names and values are compared exactly. Numeric tolerances, sort keys, and null behavior MUST be explicit. Portability tests MUST consume the same saved plan on at least two identified engines, compare each result with independent expectations, and name the tested operation subset. Agreement between two engines alone MUST NOT establish correct business results.
+
+<a id="DDK-ADAPTER-008"></a>
+### DDK-ADAPTER-008 — Execution boundary
+
+Execution adapters MUST run only after explicit invocation of an execution profile with explicit bindings. Readers, SQL, custom functions, policy executables, and ingestion implementations are executable code, not ordinary document parsing. A custom function declaration MUST NOT be treated as an implementation. Fixture execution MUST default to local test data and a temporary output location. Publication or changes to production destinations require a separate caller-controlled workflow; a passed DDK report MUST NOT publish automatically.
+
+<a id="DDK-ADAPTER-009"></a>
+### DDK-ADAPTER-009 — Generated bundles
+
+A successful build MUST produce a manifest conforming to [bundle.schema.json](../schemas/0.1/bundle.schema.json), identifying source document digests, requested exports, generated plan and configuration digests, logical input schemas, mapping coverage, adapter versions, and missing obligations. Generated ODCS views MUST retain source provenance and distinguish inherited content from derived runtime configuration. They MUST NOT masquerade as independently published versions of the original dataset definition. A consumer MUST be able to verify the bundle before using cached results.
+
+<a id="DDK-ADAPTER-010"></a>
+### DDK-ADAPTER-010 — Bindings and fixture values
+
+Bindings MUST follow [bindings.schema.json](../schemas/0.1/bindings.schema.json), resolve their design and origins, and verify every supplied file digest before execution. Duplicate bindings for one origin MUST fail. A supplied binding for a reader's output is an injected dataset and MUST NOT be reported as execution of that reader. Fixture rows MUST follow [fixture.schema.json](../schemas/0.1/fixture.schema.json) and be converted using explicit input mappings; scalar dates use ISO calendar-date strings, numeric tolerances default to zero, and unsupported temporal or decimal conversions MUST remain unknown. Each expected output MUST name an existing output port. Fixture data and binding paths resolve from their declaring files.
+
+<a id="security"></a>
+## 16. Security, privacy, and resource limits
+
+<a id="DDK-SAFE-001"></a>
+### DDK-SAFE-001 — Offline and file boundaries
+
+Core checking MUST disable network access by policy and MUST never dereference an identifier merely because it is a URL. Only explicitly registered artifacts, followed allowed references, and pinned schemas may be read. Permitted roots default to the real directory of the root project; additional roots MUST come from caller configuration, not an untrusted imported document. Escaping symlinks, disallowed file schemes, and unsupported remote references MUST produce explicit diagnostics.
+
+<a id="DDK-SAFE-002"></a>
+### DDK-SAFE-002 — Execution and secrets
+
+A checker MUST NOT evaluate template expressions, Python object constructors, shell substitutions, or arbitrary import hooks while reading documents. Execution adapters MUST receive argument arrays or structured API values rather than concatenated shell commands. Credentials MUST be supplied through an explicit runtime mechanism and MUST be excluded from published reports, bundles, and locks. Source snippets containing designated secret arguments MUST be redacted.
+
+<a id="DDK-SAFE-003"></a>
+### DDK-SAFE-003 — Limits and cancellation
+
+A checker MUST enforce configurable limits for document bytes, total project bytes, reference depth, parsed nesting, artifact count, graph edges, adapter runtime, and captured diagnostics. Initial defaults are 8 MiB per document, 64 MiB of authored project input, reference depth 32, nesting depth 64, 10,000 artifacts, and 100,000 step edges. Pinned upstream schemas are tracked separately from the authored-byte limit. Limits and overrides MUST appear in the report. Exhaustion MUST preserve partial diagnostics and produce an operational error, never a truncated success. Adapters MUST support cancellation and bounded log capture.
+
+<a id="DDK-SAFE-004"></a>
+### DDK-SAFE-004 — Data lifetime
+
+Fixture runners MUST clean up their own temporary successful-run data and MUST preserve failure evidence when configured, identifying its location and sensitivity. Runtime adapters SHOULD process the selected staged snapshot directly rather than make unnecessary full copies. Cached evidence MUST retain its input digests and MUST expire when its validity conditions change. Performance claims MUST identify measurements and the tested environment.
+
+<a id="versioning"></a>
+## 17. Versioning and extensibility
+
+<a id="DDK-VERSION-001"></a>
+### DDK-VERSION-001 — Version boundaries
+
+`specVersion: 0.1` fixes document semantics within this draft series. Artifact `version` tracks the author's declaration independently. ODCS versions, JSON Schema dialects, Substrait versions, adapter versions, and engine versions MUST remain separately represented. A tool MUST NOT infer one from another. Unsupported mandatory versions MUST be reported explicitly.
+
+<a id="DDK-VERSION-002"></a>
+### DDK-VERSION-002 — Extensions
+
+DDK document extensions MUST live in the `extensions` object, keyed by an absolute URI. An extension that changes required validation behavior MUST be named in requested capabilities. Unknown optional extensions MUST be preserved without affecting core outcomes. New adapters MUST use explicit manifests; installation alone MUST NOT enable execution or change existing results.
+
+<a id="DDK-VERSION-003"></a>
+### DDK-VERSION-003 — Profiles and release claims
+
+A release MUST publish its supported profile matrix, exact dependency tuples, conformance-case results, and unresolved limits. Experimental optional adapters MAY ship with `unknown` capabilities, but MUST NOT claim conformance for unproven checks. Core conformance MUST remain releasable independently of an unresolved Substrait ecosystem version mismatch.
+
+<a id="evidence"></a>
+## 18. Conformance evidence
+
+<a id="DDK-TEST-001"></a>
+### DDK-TEST-001 — Independent expectations
+
+A conformance claim MUST identify the requirement IDs and independently written cases it satisfies. Test expectations MUST come from this specification, public standards, or explicitly authored business examples. They MUST NOT be generated from the checker or transformation under test. Negative cases MUST verify both the diagnostic and the decision. Cases whose behavior is indeterminate MUST verify `unknown` and its effect on required coverage.
+
+<a id="DDK-TEST-002"></a>
+### DDK-TEST-002 — Required case families
+
+A core checker MUST pass the core families in [cases.json](../conformance/cases.json): syntax, namespace resolution, imports, interfaces, parameter containment, dataset compatibility, multiple exports, policy references, lock verification, result aggregation, and execution isolation. An impact analyzer MUST additionally pass shared-interface and shared-definition change cases. Each optional adapter MUST pass its listed integration cases for the published tuple. Documentation-shape validation MUST NOT be reported as any of these runtime passes.
+
+<a id="DDK-TEST-003"></a>
+### DDK-TEST-003 — Release evidence
+
+A release evidence bundle MUST include tool and dependency versions, test-case results, requested profiles, unknown/not-run inventory, fixture provenance, and measured resource results. Runtime claims MUST be reproducible from the released code and pinned public dependencies. A draft document or schema alone MUST NOT claim to be a conforming implementation.
+
+### 18.1 Initial release demonstration (informative)
+
+The implementation plan requires one shared reader, several consuming designs, a changed interface, a shared quality-bearing property, an invalid dependency, and explicit unknown inference. One implemented calculation exercises file validation, ingestion to a staged snapshot, saved-plan execution, fixture expectations, and output ODCS tests. This demonstrates integration while leaving engine-independent design checking usable on its own.
+
+<a id="references"></a>
+## 19. References
+
+### 19.1 Normative references
+
+- [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119): requirement keywords.
+- [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174): uppercase keyword interpretation.
+- [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259): JSON.
+- [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901): JSON Pointer.
+- [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12): DDK shapes and parameters.
+- [JSON Schema Draft 2019-09](https://json-schema.org/draft/2019-09/schema): the pinned ODCS schema's dialect.
+- [ODCS 3.2.0](https://github.com/bitol-io/open-data-contract-standard/tree/v3.2.0), its [pinned schema correction](https://github.com/bitol-io/open-data-contract-standard/commit/448f7b93329ece7827897d7dd51e827a3e279460), and the [vendored schema](../vendor/odcs/3.2.0/odcs-json-schema.json). The draft intentionally uses this development revision; it is not byte-identical to the published tag.
+- [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): artifact version syntax.
+- [YAML 1.2.2](https://yaml.org/spec/1.2.2/): optional YAML syntax, restricted by Section 4.
+
+### 19.2 Informative references
+
+[Research and references](references.md) records specific upstream versions, licenses, documented capabilities, and links for Data Contract CLI, Frictionless, dlt, Substrait, DataFusion, pytest, CUE, and W3C specification guidance. The adapter profiles record which behaviors remain proposed or unverified.

@@ -1,0 +1,98 @@
+{
+  "specVersion": "0.1",
+  "kind": "fixture",
+  "id": "urn:example:revenue-fixture",
+  "version": "1.0.0",
+  "component": "summarize",
+  "parameters": {},
+  "inputs": {
+    "orders": {
+      "dataset": "orders",
+      "rows": [
+        {
+          "order_id": "o1",
+          "customer_id": "c1",
+          "order_day": "2026-01-05",
+          "amount_cents": 1000,
+          "status": "completed"
+        },
+        {
+          "order_id": "o2",
+          "customer_id": "c2",
+          "order_day": "2026-01-05",
+          "amount_cents": 500,
+          "status": "completed"
+        },
+        {
+          "order_id": "o3",
+          "customer_id": "c1",
+          "order_day": "2026-01-05",
+          "amount_cents": 300,
+          "status": "cancelled"
+        },
+        {
+          "order_id": "o4",
+          "customer_id": "c3",
+          "order_day": "2026-01-05",
+          "amount_cents": 700,
+          "status": "completed"
+        },
+        {
+          "order_id": "o5",
+          "customer_id": "c9",
+          "order_day": "2026-01-05",
+          "amount_cents": 200,
+          "status": "completed"
+        },
+        {
+          "order_id": "o6",
+          "customer_id": "c1",
+          "order_day": "2026-01-06",
+          "amount_cents": 250,
+          "status": "completed"
+        }
+      ]
+    },
+    "customers": {
+      "dataset": "customers",
+      "rows": [
+        {
+          "customer_id": "c1",
+          "region": "north"
+        },
+        {
+          "customer_id": "c2",
+          "region": "south"
+        },
+        {
+          "customer_id": "c3",
+          "region": "north"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "rows": [
+      {
+        "order_day": "2026-01-05",
+        "region": "north",
+        "amount_cents": 1700
+      },
+      {
+        "order_day": "2026-01-05",
+        "region": "south",
+        "amount_cents": 500
+      },
+      {
+        "order_day": "2026-01-06",
+        "region": "north",
+        "amount_cents": 250
+      }
+    ]
+  },
+  "comparison": {
+    "rows": "unordered-multiset",
+    "absoluteTolerance": 0,
+    "relativeTolerance": 0
+  }
+}

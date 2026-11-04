@@ -1,0 +1,15 @@
+Data Design Kit
+Copyright 2026 Data Design Kit contributors
+
+This project contains original engineering documents, draft schemas, examples,
+and conformance definitions, licensed under Apache License 2.0.
+
+The vendor/odcs/3.2.0 directory contains the Open Data Contract Standard 3.2.0
+JSON Schema from bitol-io/open-data-contract-standard, development revision
+448f7b93329ece7827897d7dd51e827a3e279460, licensed under Apache License 2.0.
+The published v3.2.0 snapshot is retained in vendor/odcs/3.2.0-release.
+Upstream LICENSE files are preserved alongside both schemas.
+Source locations and hashes are recorded in docs/upstream-artifacts.json.
+
+This independent project is not affiliated with or endorsed by W3C, Bitol,
+the Apache Software Foundation, or the maintainers of the integrated tools.

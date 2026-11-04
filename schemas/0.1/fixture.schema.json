@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/fixture.schema.json",
+  "title": "DDK 0.1 fixture",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "fixture"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "component": {
+      "$ref": "common.schema.json#/$defs/artifactRef"
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "inputs": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "dataset",
+          "rows"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    },
+    "expected": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "minItems": 0
+      },
+      "minProperties": 1
+    },
+    "comparison": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "enum": [
+            "unordered-multiset",
+            "ordered"
+          ]
+        },
+        "sortKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "absoluteTolerance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "relativeTolerance": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "rows",
+        "absoluteTolerance",
+        "relativeTolerance"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "component",
+    "parameters",
+    "inputs",
+    "expected",
+    "comparison"
+  ],
+  "additionalProperties": false
+}

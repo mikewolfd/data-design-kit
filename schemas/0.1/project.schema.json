@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/project.schema.json",
+  "title": "DDK 0.1 project",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "project"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "artifacts": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "dataset"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/path"
+              },
+              "object": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "path",
+              "object"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "component",
+                  "design",
+                  "definition",
+                  "policy"
+                ]
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/path"
+              }
+            },
+            "required": [
+              "kind",
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "minProperties": 1
+    },
+    "imports": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 0
+    },
+    "requiredChecks": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/group"
+      },
+      "minItems": 6,
+      "uniqueItems": true,
+      "allOf": [
+        {
+          "contains": {
+            "const": "core.documents"
+          }
+        },
+        {
+          "contains": {
+            "const": "core.references"
+          }
+        },
+        {
+          "contains": {
+            "const": "core.graph"
+          }
+        },
+        {
+          "contains": {
+            "const": "core.calls"
+          }
+        },
+        {
+          "contains": {
+            "const": "core.datasets"
+          }
+        },
+        {
+          "contains": {
+            "const": "core.policies"
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "artifacts",
+    "requiredChecks"
+  ],
+  "additionalProperties": false
+}

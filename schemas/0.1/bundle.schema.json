@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/bundle.schema.json",
+  "title": "DDK 0.1 bundle",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "bundle"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "project": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "exports": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "plan": {
+            "$ref": "common.schema.json#/$defs/path"
+          }
+        },
+        "required": [
+          "dataset",
+          "plan"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    },
+    "sourceInventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "role": {
+            "enum": [
+              "project",
+              "artifact",
+              "definition",
+              "schema",
+              "implementation",
+              "binding",
+              "data",
+              "capability"
+            ]
+          },
+          "selection": {
+            "type": "string"
+          },
+          "identity": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "role": {
+            "enum": [
+              "plan",
+              "plan-json",
+              "configuration",
+              "contract-view",
+              "bindings",
+              "report"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "inputMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "logicalName": {
+                  "$ref": "common.schema.json#/$defs/name"
+                },
+                "engineName": {
+                  "$ref": "common.schema.json#/$defs/name"
+                },
+                "position": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "logicalType": {
+                  "$ref": "common.schema.json#/$defs/name"
+                },
+                "physicalType": {
+                  "$ref": "common.schema.json#/$defs/name"
+                },
+                "nullable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "logicalName",
+                "engineName",
+                "position",
+                "logicalType",
+                "physicalType",
+                "nullable"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "dataset",
+          "fields"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "capabilityManifests": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/file"
+      },
+      "minItems": 0
+    },
+    "mappingCoverage": {
+      "type": "object"
+    },
+    "obligations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "$ref": "common.schema.json#/$defs/group"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown",
+              "not_run"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          },
+          "distributionSha256": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "project",
+    "exports",
+    "sourceInventory",
+    "files",
+    "inputMappings",
+    "capabilityManifests",
+    "mappingCoverage",
+    "obligations",
+    "tools"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,64 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:commerce-project",
+  "version": "1.0.0",
+  "artifacts": {
+    "orders": {
+      "kind": "dataset",
+      "path": "datasets/commerce.odcs.json",
+      "object": "orders"
+    },
+    "customers": {
+      "kind": "dataset",
+      "path": "datasets/commerce.odcs.json",
+      "object": "customers"
+    },
+    "daily-revenue": {
+      "kind": "dataset",
+      "path": "datasets/commerce.odcs.json",
+      "object": "daily_revenue"
+    },
+    "read-orders": {
+      "kind": "component",
+      "path": "components/read-orders.ddk.json"
+    },
+    "summarize": {
+      "kind": "component",
+      "path": "components/summarize.ddk.json"
+    },
+    "review-adjustments": {
+      "kind": "component",
+      "path": "components/review-adjustments.ddk.json"
+    },
+    "daily-revenue-design": {
+      "kind": "design",
+      "path": "designs/daily-revenue.ddk.json"
+    },
+    "order-preview-design": {
+      "kind": "design",
+      "path": "designs/order-preview.ddk.json"
+    },
+    "reviewed-revenue-design": {
+      "kind": "design",
+      "path": "designs/reviewed-revenue.ddk.json"
+    },
+    "amount-cents": {
+      "kind": "definition",
+      "path": "definitions/amount-cents.json"
+    },
+    "commerce-policy": {
+      "kind": "policy",
+      "path": "policies/commerce.ddk.json"
+    }
+  },
+  "imports": {},
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ]
+}

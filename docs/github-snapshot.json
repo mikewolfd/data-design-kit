@@ -1,0 +1,457 @@
+{
+  "observed": "2026-11-04",
+  "method": "GitHub REST API; default branch commit and up to 100 open pull requests per repository; filtered titles, not exhaustive review",
+  "repositories": [
+    {
+      "repo": "substrait-io/substrait",
+      "branch": "main",
+      "head": "a4d8e00342d027560e3534a564a7b55ddba4b8e4",
+      "commitDate": "2026-11-01T08:35:52Z",
+      "message": "chore(release): 0.108.0",
+      "openPullsExamined": 19,
+      "relevantOpenPulls": [
+        {
+          "number": 1315,
+          "title": "feat(proto): support plan-level detachment for global definitions",
+          "url": "https://github.com/substrait-io/substrait/pull/1315",
+          "updated": "2026-11-04T17:22:43Z",
+          "head": "1d6bc3245599495140e7c7fbce495bbd9d0cb94d"
+        },
+        {
+          "number": 1312,
+          "title": "feat(window)!: define RANGE compatibility and boundary semantics",
+          "url": "https://github.com/substrait-io/substrait/pull/1312",
+          "updated": "2026-11-04T00:20:11Z",
+          "head": "53e3e4924393113b0d1a4b067f6df3be628abc8d"
+        },
+        {
+          "number": 1299,
+          "title": "feat(proto): add SqlQuery read type to ReadRel",
+          "url": "https://github.com/substrait-io/substrait/pull/1299",
+          "updated": "2026-11-03T17:11:05Z",
+          "head": "576f589465ac5b2ec7c3510ef2b18b91903b74e7"
+        },
+        {
+          "number": 1147,
+          "title": "feat: add null type for untyped nulls and empty collections",
+          "url": "https://github.com/substrait-io/substrait/pull/1147",
+          "updated": "2026-09-30T13:01:57Z",
+          "head": "d9942ba8b002a127832b5bde79d7260704f255a8"
+        }
+      ]
+    },
+    {
+      "repo": "substrait-io/substrait-validator",
+      "branch": "main",
+      "head": "157c13913ac2e95786d86e75558d4967eabff662",
+      "commitDate": "2026-10-16T15:39:22Z",
+      "message": "build: align commitlint config and PR title check with the other substrait repos (#589)",
+      "openPullsExamined": 8,
+      "relevantOpenPulls": [
+        {
+          "number": 617,
+          "title": "build(deps): bump jsonschema from 0.58.6 to 0.59.0",
+          "url": "https://github.com/substrait-io/substrait-validator/pull/617",
+          "updated": "2026-10-20T01:22:57Z",
+          "head": "980f5997b568acec62c9b45b006dbea14a7f0e0d"
+        },
+        {
+          "number": 562,
+          "title": "build(deps): bump the substrait group across 1 directory with 3 updates",
+          "url": "https://github.com/substrait-io/substrait-validator/pull/562",
+          "updated": "2026-11-04T01:22:55Z",
+          "head": "a63894e89a32e18feb8821647f590985d34d92cf"
+        },
+        {
+          "number": 554,
+          "title": "build(deps): bump substrait-protobuf from 0.88.1 to 0.106.0 in /py in the substrait group across 1 directory",
+          "url": "https://github.com/substrait-io/substrait-validator/pull/554",
+          "updated": "2026-11-04T01:22:53Z",
+          "head": "ecac0926959af7d6ea69f3ec3432ddb5a3aec1df"
+        }
+      ]
+    },
+    {
+      "repo": "apache/datafusion-python",
+      "branch": "main",
+      "head": "878e5d3b8d373bca19671af43e49dfb1890f8da2",
+      "commitDate": "2026-10-08T19:24:00Z",
+      "message": "build(deps): cargo update and roll up open dependabot PRs (#1787)",
+      "openPullsExamined": 46,
+      "relevantOpenPulls": [
+        {
+          "number": 1823,
+          "title": "build(deps): bump arrow-select from 59.3.0 to 60.1.0",
+          "url": "https://github.com/apache/datafusion-python/pull/1823",
+          "updated": "2026-10-31T19:43:31Z",
+          "head": "c6f0e195029f61e58e769882a08340d5fbe4887b"
+        },
+        {
+          "number": 1822,
+          "title": "build(deps): bump arrow-schema from 59.3.0 to 60.1.0",
+          "url": "https://github.com/apache/datafusion-python/pull/1822",
+          "updated": "2026-10-31T19:43:21Z",
+          "head": "487b8ebc2bca52b365dfd546716e7f219f6b5bad"
+        },
+        {
+          "number": 1820,
+          "title": "build(deps): bump arrow from 59.3.0 to 60.1.0",
+          "url": "https://github.com/apache/datafusion-python/pull/1820",
+          "updated": "2026-10-31T19:43:03Z",
+          "head": "e0e30923cc098020b278a2e4abb169a9a7f2d462"
+        },
+        {
+          "number": 1819,
+          "title": "build(deps): bump arrow-array from 59.3.0 to 60.1.0",
+          "url": "https://github.com/apache/datafusion-python/pull/1819",
+          "updated": "2026-10-31T19:42:55Z",
+          "head": "eff5b27750e52d47b4f94bba33b5da6bc4f0cc16"
+        },
+        {
+          "number": 1733,
+          "title": "docs(example): quarantine foreign plan workaround",
+          "url": "https://github.com/apache/datafusion-python/pull/1733",
+          "updated": "2026-09-20T11:10:25Z",
+          "head": "5a4d2e685a5e9cf66cb3ec502cde5daeebe169dd"
+        },
+        {
+          "number": 1671,
+          "title": "Add typed Protocols for FFI capsule exports (part of #1577)",
+          "url": "https://github.com/apache/datafusion-python/pull/1671",
+          "updated": "2026-09-16T18:04:19Z",
+          "head": "1a329cac3df6ed778e0befb6947745a6fed87345"
+        },
+        {
+          "number": 1265,
+          "title": "Add PyCapsule Protocol support for Arrow inputs",
+          "url": "https://github.com/apache/datafusion-python/pull/1265",
+          "updated": "2025-10-11T17:17:44Z",
+          "head": "fb2d63ec21c595afc250a970309a6739a1df6f90"
+        }
+      ]
+    },
+    {
+      "repo": "substrait-io/duckdb-substrait-extension",
+      "branch": "main",
+      "head": "eb7ad41970245f06be9d4ee9a4a7c8d32a3f0a34",
+      "commitDate": "2026-11-02T06:58:48Z",
+      "message": "fix: preserve GROUPS window frame semantics (#309)",
+      "openPullsExamined": 2,
+      "relevantOpenPulls": [
+        {
+          "number": 114,
+          "title": "feat: add explain TableFunction for substrait",
+          "url": "https://github.com/substrait-io/duckdb-substrait-extension/pull/114",
+          "updated": "2025-10-07T17:50:43Z",
+          "head": "5707b5339379405dfc2813d1b236fc2ab36aa5d1"
+        }
+      ]
+    },
+    {
+      "repo": "datacontract/datacontract-cli",
+      "branch": "main",
+      "head": "34b12923e0366fa4004c2f90644da41769699e0f",
+      "commitDate": "2026-11-04T08:51:00Z",
+      "message": "Merge inlined logicalTypeOptions per key and respect legacy inline enums (#1812)",
+      "openPullsExamined": 14,
+      "relevantOpenPulls": [
+        {
+          "number": 1772,
+          "title": "improve PowerBI lineage with PowerQuery Scan features",
+          "url": "https://github.com/datacontract/datacontract-cli/pull/1772",
+          "updated": "2026-11-03T16:51:45Z",
+          "head": "af6728425b3fea3d5ef54a44b9d4bf2d6e5129b0"
+        },
+        {
+          "number": 1759,
+          "title": "Feat/import snowflake lineage addition",
+          "url": "https://github.com/datacontract/datacontract-cli/pull/1759",
+          "updated": "2026-10-23T23:43:02Z",
+          "head": "4a3a4bfe1e940849e25766dfe14ad55691b37035"
+        },
+        {
+          "number": 1726,
+          "title": "Fail on columns in another order than declared, when the schema says so",
+          "url": "https://github.com/datacontract/datacontract-cli/pull/1726",
+          "updated": "2026-11-03T15:31:44Z",
+          "head": "3d81c89182ad80c49d56d0acfde053ef7c3d8237"
+        },
+        {
+          "number": 1725,
+          "title": "Fail on columns the contract does not declare, when the schema says so",
+          "url": "https://github.com/datacontract/datacontract-cli/pull/1725",
+          "updated": "2026-10-26T16:39:15Z",
+          "head": "53d1e1386e9d2ca6a34238c878ca5d438e37a060"
+        },
+        {
+          "number": 1724,
+          "title": "Check the type of each CSV value instead of failing the read",
+          "url": "https://github.com/datacontract/datacontract-cli/pull/1724",
+          "updated": "2026-10-26T16:38:59Z",
+          "head": "44c2488a4333b88c633f3055bd204e2a52ef2165"
+        }
+      ]
+    },
+    {
+      "repo": "dlt-hub/dlt",
+      "branch": "devel",
+      "head": "ad4ec2d752dde7dea80506b4be2d345e3e3667ad",
+      "commitDate": "2026-11-04T10:45:21Z",
+      "message": "Release highlights 1.32 (#4624)",
+      "openPullsExamined": 100,
+      "relevantOpenPulls": [
+        {
+          "number": 4634,
+          "title": "fix(filesystem): strip credentials from trace lineage locations",
+          "url": "https://github.com/dlt-hub/dlt/pull/4634",
+          "updated": "2026-11-03T01:21:03Z",
+          "head": "352feef9b1ed596380766892b7a90f3ebd491398"
+        },
+        {
+          "number": 4631,
+          "title": "fix(destinations): skip the schema delete when the version table is missing",
+          "url": "https://github.com/dlt-hub/dlt/pull/4631",
+          "updated": "2026-11-01T16:31:37Z",
+          "head": "41e0484138e0a14f19728021cf83cd01bf81db00"
+        },
+        {
+          "number": 4630,
+          "title": "fix(destinations): skip schema delete when version table is missing",
+          "url": "https://github.com/dlt-hub/dlt/pull/4630",
+          "updated": "2026-10-31T21:22:07Z",
+          "head": "4596fc86bf6ac7809f2e4feb30eafb3840de5a6b"
+        },
+        {
+          "number": 4594,
+          "title": "fix(typing): fall back to Any when a generic has no type argument",
+          "url": "https://github.com/dlt-hub/dlt/pull/4594",
+          "updated": "2026-11-02T16:05:31Z",
+          "head": "325ba4ca382fcd78f61727e0affb7f5f16094e7a"
+        },
+        {
+          "number": 4579,
+          "title": "fix(destinations): raise SchemaCorruptedException instead of bare assert for unsupported replace strategy",
+          "url": "https://github.com/dlt-hub/dlt/pull/4579",
+          "updated": "2026-10-18T04:12:05Z",
+          "head": "0443cd8f75a25e8dccaa80a2c072a2c149a93928"
+        },
+        {
+          "number": 4468,
+          "title": "fix(schema): merge_table keeps processing hints a resource does not carry",
+          "url": "https://github.com/dlt-hub/dlt/pull/4468",
+          "updated": "2026-10-30T19:49:22Z",
+          "head": "2d5a6802999ecd0a2ac1c73caadf6a60934d9f26"
+        },
+        {
+          "number": 4389,
+          "title": "fix(workspace): keep the AiContextApiError contract for invalid API bodies",
+          "url": "https://github.com/dlt-hub/dlt/pull/4389",
+          "updated": "2026-08-24T02:11:44Z",
+          "head": "afe38efc7612f4e169761458c5fc928492d3b592"
+        },
+        {
+          "number": 4357,
+          "title": "feat(mssql): load parquet with mssql-python native arrow bulk copy",
+          "url": "https://github.com/dlt-hub/dlt/pull/4357",
+          "updated": "2026-11-01T16:30:31Z",
+          "head": "8812131e13bc3b112e73449130a19270fb5ad4d6"
+        },
+        {
+          "number": 4299,
+          "title": "fix(filesystem): preserve native nested types in parquet",
+          "url": "https://github.com/dlt-hub/dlt/pull/4299",
+          "updated": "2026-09-23T12:53:55Z",
+          "head": "fc4f8c1f0faa109b63183a93b7566ce1164aaed4"
+        },
+        {
+          "number": 4290,
+          "title": "fix(incremental): do not close bounded arrow source on all-null cursor batch",
+          "url": "https://github.com/dlt-hub/dlt/pull/4290",
+          "updated": "2026-07-27T07:31:19Z",
+          "head": "0e76de66f0158b8a6fd831ba66acf6d3a9dfe15f"
+        },
+        {
+          "number": 4285,
+          "title": "fix(incremental): do not close bounded source on all-null arrow cursor batch",
+          "url": "https://github.com/dlt-hub/dlt/pull/4285",
+          "updated": "2026-07-25T08:28:27Z",
+          "head": "f6ceb78d9b9b0230ad7761fdaf061695fb65141d"
+        },
+        {
+          "number": 4258,
+          "title": "feat(sql_database): add mssql_arrow backend for native arrow batches",
+          "url": "https://github.com/dlt-hub/dlt/pull/4258",
+          "updated": "2026-11-01T16:30:30Z",
+          "head": "8bdf4622ada63accf2f459dffcf5cd2b01f53fa4"
+        },
+        {
+          "number": 4233,
+          "title": "fix(extract): call arrow callable primary key with a row, not the table",
+          "url": "https://github.com/dlt-hub/dlt/pull/4233",
+          "updated": "2026-07-16T16:27:10Z",
+          "head": "1bd2ca40ce3812f887ac7b674ab3cb634779b346"
+        },
+        {
+          "number": 4185,
+          "title": "fix(schema): interpolate table name in missing root_key error",
+          "url": "https://github.com/dlt-hub/dlt/pull/4185",
+          "updated": "2026-07-07T10:33:37Z",
+          "head": "be21a3aff892c354f8403c741757bf9b9fd8851c"
+        }
+      ]
+    },
+    {
+      "repo": "frictionlessdata/frictionless-py",
+      "branch": "main",
+      "head": "c08fa29cb0708427ae65bb689ded8e2691078a82",
+      "commitDate": "2026-10-15T21:45:07Z",
+      "message": "v5.21.0",
+      "openPullsExamined": 49,
+      "relevantOpenPulls": [
+        {
+          "number": 1869,
+          "title": "perf: validate WKT without TatSu",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1869",
+          "updated": "2026-10-22T17:11:21Z",
+          "head": "c23f7fcf154ec4e183b85c1526a9212775859152"
+        },
+        {
+          "number": 1867,
+          "title": "Keep every check and check-error when validate_start reports problems",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1867",
+          "updated": "2026-10-22T12:35:32Z",
+          "head": "b8fa647caa4b336cbe07989772b704b41a61661b"
+        },
+        {
+          "number": 1861,
+          "title": "fix: reject bound constraints that cannot be read as the field type",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1861",
+          "updated": "2026-10-29T05:52:30Z",
+          "head": "971410cb11dcd329563f028e076d2b51845a1fd6"
+        },
+        {
+          "number": 1859,
+          "title": "Support Data Package v2 duration bounds with XML Schema ordering",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1859",
+          "updated": "2026-10-18T00:07:57Z",
+          "head": "6f6421c3dbb2c30351e21b0cf969eb92e08c2850"
+        },
+        {
+          "number": 1856,
+          "title": "Use field writers when serializing schema cells",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1856",
+          "updated": "2026-10-17T09:09:32Z",
+          "head": "5ee8d13c1edd38d0c903604e753d576e2c1534cb"
+        },
+        {
+          "number": 1845,
+          "title": "Validate yearmonth sequence values consistently",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1845",
+          "updated": "2026-10-14T08:31:33Z",
+          "head": "9952322fc7fbb48b0e711242447ccd177727bb93"
+        },
+        {
+          "number": 1827,
+          "title": "feat: schema.uniqueKeys (DPv2)",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1827",
+          "updated": "2026-11-01T23:00:03Z",
+          "head": "a99f284679ea1e3661236b8686e89e64fca0497f"
+        },
+        {
+          "number": 1826,
+          "title": "Validate falsey field examples in schemas",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1826",
+          "updated": "2026-10-01T12:45:08Z",
+          "head": "30879cdeacdb489063593358e6fb12fc4bf139ef"
+        },
+        {
+          "number": 1824,
+          "title": "Fix resource field counts with partial schemas",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1824",
+          "updated": "2026-09-30T03:54:16Z",
+          "head": "d13d57b0b337478582fb00d276bb5c3e16991fce"
+        },
+        {
+          "number": 1821,
+          "title": "fix: validate JSON syntax for non-tabular resources",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1821",
+          "updated": "2026-09-25T14:00:51Z",
+          "head": "edd4422fae598c00483e61d8f636bd89baffd3ae"
+        },
+        {
+          "number": 1815,
+          "title": "docs: clarify filename-based validation type inference",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1815",
+          "updated": "2026-09-08T16:11:48Z",
+          "head": "76292a83a43c5c76231c0170efafad960196e024"
+        },
+        {
+          "number": 1801,
+          "title": "Add --jsonschema option to the validate CLI command",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1801",
+          "updated": "2026-08-07T22:08:38Z",
+          "head": "6d8487f1c746ce988d0ed44c270182c084fc3fdf"
+        },
+        {
+          "number": 1794,
+          "title": "Look up namespaced SQL tables by their schema-qualified key",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1794",
+          "updated": "2026-07-26T13:01:31Z",
+          "head": "b9cccf6b40f411c9f355c9970a9879e09ddc2e14"
+        },
+        {
+          "number": 1776,
+          "title": "docs: improve validation report reference",
+          "url": "https://github.com/frictionlessdata/frictionless-py/pull/1776",
+          "updated": "2026-04-26T01:35:04Z",
+          "head": "741e3fa2c56ef954c09b1382edec2dd961a08c76"
+        }
+      ]
+    },
+    {
+      "repo": "bitol-io/open-data-contract-standard",
+      "branch": "dev",
+      "head": "448f7b93329ece7827897d7dd51e827a3e279460",
+      "commitDate": "2026-10-29T17:34:24Z",
+      "message": "fix(schema): allow data quality rules that combine operators (#360)",
+      "openPullsExamined": 6,
+      "relevantOpenPulls": [
+        {
+          "number": 361,
+          "title": "Rename ContractGate to DataContractGate in vendors list",
+          "url": "https://github.com/bitol-io/open-data-contract-standard/pull/361",
+          "updated": "2026-10-29T20:28:29Z",
+          "head": "413f2bca7871180e75789522ca74b43309d93b76"
+        },
+        {
+          "number": 358,
+          "title": "feat(schema): allow key/value pairs as tags",
+          "url": "https://github.com/bitol-io/open-data-contract-standard/pull/358",
+          "updated": "2026-10-27T10:33:02Z",
+          "head": "c545de9deb1f30fe1ae7eb8eb5aeb4b0f89e2aad"
+        },
+        {
+          "number": 355,
+          "title": "schema: drop enum on relationships[].type",
+          "url": "https://github.com/bitol-io/open-data-contract-standard/pull/355",
+          "updated": "2026-10-21T13:17:24Z",
+          "head": "a8de9170186695a2cf91301f4188562f28364ec3"
+        },
+        {
+          "number": 353,
+          "title": "docs: fix schema and relationship examples that fail validation",
+          "url": "https://github.com/bitol-io/open-data-contract-standard/pull/353",
+          "updated": "2026-10-13T22:25:57Z",
+          "head": "13b2842bbf35b799890664a88f711ef999ca10c6"
+        },
+        {
+          "number": 342,
+          "title": "feat: RFC 0048 geometry and geography type",
+          "url": "https://github.com/bitol-io/open-data-contract-standard/pull/342",
+          "updated": "2026-09-16T07:45:07Z",
+          "head": "948eac74e9bc71cd7ef5bae7db0019bb3155142d"
+        }
+      ]
+    }
+  ]
+}
