@@ -1,28 +1,32 @@
 {
   "specVersion": "0.1",
   "kind": "adapter",
-  "id": "urn:example:datafusion-adapter-proposal",
+  "id": "urn:example:docspec-adapter-proposal",
   "version": "1.0.0",
   "status": "experimental-unverified",
   "profiles": [
-    "plan.datafusion"
+    "plan.docspec-sql",
+    "execute.docspec-job"
   ],
   "tools": {
-    "datafusion-python": {
-      "version": "unqualified",
-      "commit": "878e5d3b8d373bca19671af43e49dfb1890f8da2"
+    "docspec-rs": {
+      "version": "unreleased-unqualified",
+      "commit": "5a7fa9fc205a20599f16e141670aab71f38d78f5"
+    },
+    "datafusion": {
+      "version": "53.1.0"
     }
   },
   "capabilities": [
     {
-      "group": "plan.consumer",
+      "group": "plan.output",
       "standards": {
-        "substrait": "to-be-measured"
+        "sql": "datafusion-sql"
       },
       "operations": [
-        "read",
+        "projection",
         "filter",
-        "join",
+        "equi-join",
         "aggregate"
       ],
       "facets": {
@@ -30,9 +34,50 @@
         "nullability": "unknown"
       },
       "limitations": [
-        "No version tuple has been executed or qualified by this repository."
+        "SQL preparation and DDK integration are proposed, not qualified.",
+        "No Substrait or managed-operation support is implied."
       ],
-      "evidence": []
+      "evidence": [],
+      "artifactFormats": [
+        "sql"
+      ],
+      "semanticProfiles": [
+        {
+          "id": "urn:example:commerce-sql-semantics",
+          "revision": "1"
+        }
+      ]
+    },
+    {
+      "group": "runtime.job",
+      "standards": {
+        "sql": "datafusion-sql"
+      },
+      "operations": [
+        "sql-job"
+      ],
+      "facets": {
+        "partialOutputs": "unknown"
+      },
+      "limitations": [
+        "Returned partial outputs do not establish durable recovery."
+      ],
+      "evidence": [],
+      "executionMode": "bounded_job",
+      "backend": "local",
+      "requestKinds": [
+        "sql-job"
+      ],
+      "reconciliation": "unsupported",
+      "artifactFormats": [
+        "sql"
+      ],
+      "semanticProfiles": [
+        {
+          "id": "urn:example:commerce-sql-semantics",
+          "revision": "1"
+        }
+      ]
     }
   ]
 }

@@ -32,5 +32,50 @@
     "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
     "license": "Apache-2.0",
     "retrieved": "2026-11-04"
+  },
+  {
+    "path": "vendor/odps/1.1.0/odps-json-schema-v1.1.0.json",
+    "upstream": "https://raw.githubusercontent.com/bitol-io/open-data-product-standard/04995037fc003ead1da27f65a40a09eb0664b591/schema/odps-json-schema-v1.1.0.json",
+    "revision": "04995037fc003ead1da27f65a40a09eb0664b591",
+    "gitBlob": "3384d244d3a81182189f123b3b374b4241f70be1",
+    "sha256": "b7eae1af15b3c6b18e5dffaa2119212acb38ec73286933c76d16c8712e0d90d1",
+    "license": "Apache-2.0",
+    "retrieved": "2026-11-05"
+  },
+  {
+    "path": "vendor/odps/1.1.0/LICENSE",
+    "upstream": "https://raw.githubusercontent.com/bitol-io/open-data-product-standard/04995037fc003ead1da27f65a40a09eb0664b591/LICENSE",
+    "revision": "04995037fc003ead1da27f65a40a09eb0664b591",
+    "gitBlob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "license": "Apache-2.0",
+    "retrieved": "2026-11-05"
+  },
+  {
+    "path": "vendor/openlineage/1.55.0/OpenLineage.json",
+    "upstream": "https://raw.githubusercontent.com/OpenLineage/OpenLineage/5ec09f180d0857327a58b85531b7447d069abf07/spec/OpenLineage.json",
+    "revision": "5ec09f180d0857327a58b85531b7447d069abf07",
+    "gitBlob": "58167f71407add7734810cda9943b39b83c89aa2",
+    "sha256": "69f68bee00b9beac88a87059c0102410e7bb05f3f43c46d02a0409831eceb0d2",
+    "license": "Apache-2.0",
+    "retrieved": "2026-11-05"
+  },
+  {
+    "path": "vendor/openlineage/1.55.0/DatasetVersionDatasetFacet.json",
+    "upstream": "https://raw.githubusercontent.com/OpenLineage/OpenLineage/5ec09f180d0857327a58b85531b7447d069abf07/spec/facets/DatasetVersionDatasetFacet.json",
+    "revision": "5ec09f180d0857327a58b85531b7447d069abf07",
+    "gitBlob": "c1cb2f5a7dd764203cb99a9992cdc8756564ce6a",
+    "sha256": "91f57b67bc6d639bb6d600e26b827dac551e3520a233d1785d65870da263dc34",
+    "license": "Apache-2.0",
+    "retrieved": "2026-11-05"
+  },
+  {
+    "path": "vendor/openlineage/1.55.0/LICENSE",
+    "upstream": "https://raw.githubusercontent.com/OpenLineage/OpenLineage/5ec09f180d0857327a58b85531b7447d069abf07/LICENSE",
+    "revision": "5ec09f180d0857327a58b85531b7447d069abf07",
+    "gitBlob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "license": "Apache-2.0",
+    "retrieved": "2026-11-05"
   }
 ]

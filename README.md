@@ -1,21 +1,22 @@
 # Data Design Kit
 
-**Status: specification and implementation plan, November 4, 2026. No DDK runtime is implemented.**
+**Status.** Engineering specification and implementation plan, November 5, 2026. Runtime implementation remains planned.
 
-Data Design Kit (DDK) is a proposed checker for reusable data designs. It checks calls to shared reader and transformation interfaces, dataset requirements, dependency relationships, project policies, and the effect of changes before implementations or an execution engine exist.
+Data Design Kit (DDK) uses maintained data definitions to check designs, test transformations, and generate a catalog of exact versions, access methods, relationships, and evidence. Maintainers can use the same definitions to assess changes and supply documentation and consumer metadata.
 
-DDK uses ODCS for dataset definitions and JSON Schema for parameters. Optional integrations use Data Contract CLI, Frictionless, dlt, Substrait, DataFusion, and pytest. The new code owns connections among definitions, change impact, supported compatibility checks, and evidence reporting.
+The first product release requires ODPS product definitions, ODCS dataset definitions, DCAT 3 discovery, OpenLineage job and run events, and a qualified Substrait execution path through DocSpec. It also includes SQL and fixture tests, supported ODCS output checks, and change analysis. Native systems supply the records of capture, computation, retention, and publication.
 
 ## Read the design
 
 - [Engineering specification](docs/specification.md): normative requirements, formats, algorithms, profiles, and conformance.
 - [Implementation plan](docs/implementation-plan.md): work packages, dependencies, acceptance criteria, release gates, and risks.
 - [Adapter profiles](docs/adapter-profiles.md): exact boundaries for third-party integrations and proposed capability negotiation.
+- [Runtime integration](docs/runtime-integration.md): injected services, bounded versus managed execution, native bindings, and quality-gated selection.
 - [Architecture decisions](docs/architecture-decisions.md): decisions and alternatives behind the draft.
 - [Research and references](docs/references.md): public sources, observed versions, licensing, and unresolved compatibility.
 - [Conformance cases](conformance/cases.json): independently specified future runtime tests.
 - [Delivery verification](docs/verification.md): checks actually performed and their limits.
-- [Examples](examples/commerce/project.ddk.json) and [draft schemas](schemas/0.1/project.schema.json): machine-checked document examples.
+- [Commerce catalog example](examples/commerce/catalog/README.md) and [draft catalog schema](schemas/0.1/catalog.schema.json) show the product, discovery, lineage, and evidence formats.
 
 The specification follows the structure of a W3C technical report. This is an independent engineering draft, not a W3C publication or standards-body endorsement. “Data Design Kit” and `ddk` are working names.
 
@@ -23,7 +24,9 @@ The specification follows the structure of a W3C technical report. This is an in
 
 This repository contains authored specifications, draft format schemas, examples, conformance expectations, and upstream provenance. It contains no DDK checker, compiler, ingestion runner, data-quality runtime, build tooling, or generated build directory. Example commands in the specification describe the proposed interface.
 
-The ODCS 3.2.0 schema is vendored from a pinned public GitHub development commit that includes the combined-quality-operators correction. The published release snapshot is retained separately for comparison. Both have licenses and recorded digests. All other new project material was authored for this design. See [PROVENANCE.md](PROVENANCE.md).
+The integrated architecture separates domain rules, application use cases, and adapters. Native references preserve their original identity schemes. Check outcomes remain separate from uncertain runtime outcomes. Managed quality-gated selection and Substrait support are proposed work, not existing integration guarantees. DocSpec is team-owned and unreleased; its API may change to support the design.
+
+The repository pins the ODCS schema correction and retains its published comparison snapshot. It also vendors the released ODPS and OpenLineage schemas used by the examples. Exact revisions, licenses, and digests are recorded in [PROVENANCE.md](PROVENANCE.md).
 
 ## Verification
 

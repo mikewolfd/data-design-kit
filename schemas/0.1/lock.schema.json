@@ -42,7 +42,10 @@
               "implementation",
               "binding",
               "data",
-              "capability"
+              "capability",
+              "metadata",
+              "disclosure-policy",
+              "recipe"
             ]
           },
           "selection": {
@@ -88,6 +91,47 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "nativeInputs": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nativeVersion"
+      },
+      "minItems": 0
+    },
+    "reuseRecords": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/reuseRecord"
+      },
+      "minItems": 0
+    },
+    "catalogOptions": {
+      "type": "object",
+      "properties": {
+        "audience": {
+          "enum": [
+            "local",
+            "public"
+          ]
+        },
+        "exports": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "metadataAdapter": {
+          "$ref": "common.schema.json#/$defs/toolIdentity"
+        }
+      },
+      "required": [
+        "audience",
+        "exports"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

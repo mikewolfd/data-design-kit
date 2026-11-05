@@ -1,6 +1,6 @@
 # Research, GitHub Evidence, and References
 
-**Observed: November 4, 2026.** This document separates public documentation, source inspection, merged development, unmerged proposals, and tests still to run.
+**Research baseline.** November 4, 2026 for the original tool survey. November 5, 2026 for the catalog pins. This document separates public documentation, source inspection, merged development, unmerged proposals, and tests still to run.
 
 ## 1. Method and limits
 
@@ -59,7 +59,23 @@ The development head [`448f7b93`](https://github.com/bitol-io/open-data-contract
 
 **Plan consequence:** this draft pins the corrected development schema and retains the release snapshot for comparison. Locks identify exact schema revisions and hashes; native CLI schema selection must be verified independently.
 
+### 2.8 Catalog standards and release pins
+
+- [ODPS 1.1.0 source](https://github.com/bitol-io/open-data-product-standard/tree/04995037fc003ead1da27f65a40a09eb0664b591) defines the product and port references used in the first release. The vendored schema comes from this release commit.
+- [DCAT 3](https://www.w3.org/TR/2024/REC-vocab-dcat-3-20240822/) supplies discovery, version links, distributions, and access services. DDK generates the JSON-LD representation from its resolved records.
+- [OpenLineage 1.55.0 source](https://github.com/OpenLineage/OpenLineage/tree/5ec09f180d0857327a58b85531b7447d069abf07) supplies the pinned event schema and dataset version facet. Design events and observed run events have separate roles. The release tag resolves to the cited commit.
+- [ODCS relationship PR 355](https://github.com/bitol-io/open-data-contract-standard/pull/355) was open when reviewed. The first DDK profile uses supported ODCS references and a narrow extension for missing scoped relationship semantics.
+- The [released Rust DataFusion Substrait API](https://docs.rs/datafusion-substrait/55.2.0/datafusion_substrait/) and [development source](https://github.com/apache/datafusion/blob/main/datafusion/substrait/src/lib.rs) describe logical plan conversion. Use the owned DocSpec integration experiment to establish the exact producer and consumer combination and supported operations.
+
 ## 3. Published snapshots and licenses
+
+### Owned DocSpec source baseline
+
+The runtime architecture also uses local source inspection of team-owned, unreleased `docspec-rs` at commit `5a7fa9fc205a20599f16e141670aab71f38d78f5`. The [source inventory](docspec-evidence.json) records owning files, line locations, observations, and unverified integration work. Current source pins Rust DataFusion 53.1.0, provides bounded SQL jobs and a distinct managed lifecycle, and separates built-in routine validation from computation. It does not establish an external quality acceptance API or Substrait support.
+
+The team can reshape DocSpec's API and select a different tested dependency baseline. The prior Python DataFusion snapshot remains research evidence, not a mandatory second execution engine. Source inspection supplies no new runtime conformance result. See the [runtime design](runtime-integration.md).
+
+### Public dependency observations
 
 These observations identify research baselines, not a tested compatible installation. License metadata was checked against public repositories; distribution and transitive notices remain a release gate.
 

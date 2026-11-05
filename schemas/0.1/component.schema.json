@@ -73,49 +73,7 @@
       "minProperties": 1
     },
     "implementation": {
-      "type": "object",
-      "properties": {
-        "adapter": {
-          "type": "string",
-          "minLength": 1
-        },
-        "path": {
-          "$ref": "common.schema.json#/$defs/path"
-        },
-        "entrypoint": {
-          "type": "string",
-          "minLength": 1
-        },
-        "configuration": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "adapter"
-      ],
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "required": [
-            "path"
-          ],
-          "not": {
-            "required": [
-              "entrypoint"
-            ]
-          }
-        },
-        {
-          "required": [
-            "entrypoint"
-          ],
-          "not": {
-            "required": [
-              "path"
-            ]
-          }
-        }
-      ]
+      "$ref": "common.schema.json#/$defs/implementation"
     }
   },
   "required": [

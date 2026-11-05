@@ -1,0 +1,25 @@
+{
+  "eventTime": "2026-11-05T11:00:00Z",
+  "producer": "https://example.org/ddk/0.1/examples/commerce",
+  "schemaURL": "https://openlineage.io/spec/2-0-2/OpenLineage.json#/$defs/JobEvent",
+  "job": {
+    "namespace": "https://data.example.org/commerce",
+    "name": "urn:example:summarize"
+  },
+  "inputs": [
+    {
+      "namespace": "https://data.example.org/commerce",
+      "name": "urn:example:commerce:dataset:orders"
+    },
+    {
+      "namespace": "https://data.example.org/commerce",
+      "name": "urn:example:commerce:dataset:customers"
+    }
+  ],
+  "outputs": [
+    {
+      "namespace": "https://data.example.org/commerce",
+      "name": "urn:example:commerce:dataset:daily-revenue"
+    }
+  ]
+}

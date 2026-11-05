@@ -1,32 +1,21 @@
 # Verification of This Documentation Delivery
 
-**Date:** November 4, 2026. **Scope:** engineering documents, proposed format schemas, examples, traceability, and source provenance.
+**Date.** November 5, 2026, after catalog and first release integration.
 
 ## Checks performed
 
-The documentation checker passed in a newly created Python 3.12.9 environment with `jsonschema 4.26.0` and `Markdown 3.10.2`.
-
-- 11 draft JSON Schema documents passed meta-schema validation.
-- 13 DDK/ODCS example documents passed the appropriate shape validation.
-- 75 normative requirement IDs matched the requirement inventory.
-- Every requirement had exactly one primary owner among 12 planned work packages.
-- Every requirement had a future conformance case among 83 planned cases.
-- Work-package dependencies were acyclic and referenced known packages.
-- Local Markdown links and explicit requirement anchors resolved.
-- Four vendored public artifact digests and two fixture file digests matched.
-- The authored commerce SQL produced the three independently expected rows in an in-memory SQLite database; the CSV inputs matched the JSON fixture rows.
-- The reading edition rendered from the authored Markdown.
-
-The checker reports the current local-link count when run; that count can grow as documentation is added.
+- The documentation checker validated 12 draft JSON Schemas and 16 DDK/ODCS example documents. It checked local links, exact source digests, and the independently authored commerce SQL against the three expected rows using SQLite.
+- The requirement inventory matches 94 normative requirements, each with one primary owner and at least one conformance case. The 17 work packages and 133 runtime cases are planned. Required and optional dependencies form an acyclic graph. The first release dependency closure includes ODPS catalog assembly, DCAT, OpenLineage, saved Substrait execution, fixture tests, and both pilots.
+- The architecture checker passed 44 shape checks covering runtime and implementation separation, native bindings, uncertain operations, managed evidence, and direct SQL artifacts.
+- The catalog checker passed 20 positive and negative shape checks covering scoped identities, version authorities, availability, check evidence, and public disclosure. It also verified the example's exact port, version, release, and native run references and the generated companion digests.
+- The ODPS example and the OpenLineage job, start, and completion events passed validation against the pinned upstream schemas. The supported OpenLineage version facets resolve to the exact catalog version records. The vendored files matched their recorded Git blobs and SHA-256 digests.
+- RDFLib 7.2.1 independently parsed the DCAT JSON-LD. The expected discovery path linked the catalog to the dataset, selected version, distribution, and advertised download. The selection reference matched the native metadata record.
+- The reading edition rendered from the authored Markdown. Its local links and copied schemas, examples, and evidence files were checked against the repository.
 
 ## Evidence boundaries
 
-The SQL check verifies the consistency of an authored documentation example using SQLite. It does not execute a saved Substrait plan, prove a DataFusion mapping, or test a DDK adapter.
+These checks verify document shapes, authored examples, and implementation traceability. The SQLite check verifies the example calculation. The native receipt and events in the catalog example are illustrative.
 
-No DDK runtime, native-tool adapter, standalone-validator tuple, or portability suite exists in this delivery. All 83 runtime conformance cases and all 12 runtime work packages remain planned. GitHub source observations and upstream authors' reported tests were not counted as this project's executed runtime evidence.
+DDK runtime conformance, DocSpec execution, saved Substrait execution, live access, publisher selection, native evidence acceptance, and both project pilots remain planned. The repository contains specifications and test expectations. It records no runtime conformance claim.
 
-Verification and rendering used separate task tooling outside the repository. No build scripts, dependency files, environments, workflow configuration, or generated build directories are included in the deliverables repository.
-
-## Verification method
-
-The external task tooling used Python JSON Schema validators, local link and anchor inspection, requirement and work-package inventory checks, SHA-256 verification, and an in-memory SQLite execution of the authored example SQL. Its dependencies and rendered files remain outside the repository. The implementation plan requires full version and distribution locking before a runtime release.
+Verification and rendering used separate task tooling. The repository contains the deliverables and pinned upstream schema artifacts.

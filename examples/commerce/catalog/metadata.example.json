@@ -1,0 +1,170 @@
+{
+  "illustrative": true,
+  "sources": [
+    {
+      "id": "urn:example:commerce:occurrence:orders-capture-01",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:capture",
+        "authority": "https://data.example.org/commerce",
+        "value": "orders-capture-01"
+      },
+      "content": {
+        "scheme": "urn:example:commerce:scheme:content-sha256",
+        "authority": "https://data.example.org/commerce",
+        "value": "f799f8402503d7e13d3c74740a910ce8303ff0dd41e6f9c0d71342dfe06ba906"
+      },
+      "outcome": "retained",
+      "scope": "The orders fixture file.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "versions": [
+    {
+      "id": "urn:example:commerce:version:orders:fixture-01",
+      "dataset": "orders",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:fixture-version",
+        "authority": "https://data.example.org/commerce",
+        "value": "orders-01"
+      },
+      "retention": "present",
+      "scope": "The authored commerce fixture.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "sources": [
+        "urn:example:commerce:occurrence:orders-capture-01"
+      ],
+      "coverage": [
+        {
+          "scope": "The selected orders fixture file.",
+          "unit": "publisher orders",
+          "status": "unknown",
+          "record": {
+            "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+          }
+        }
+      ]
+    },
+    {
+      "id": "urn:example:commerce:version:customers:fixture-01",
+      "dataset": "customers",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:fixture-version",
+        "authority": "https://data.example.org/commerce",
+        "value": "customers-01"
+      },
+      "retention": "present",
+      "scope": "The authored commerce fixture.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "sources": []
+    },
+    {
+      "id": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "dataset": "daily-revenue",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:fixture-version",
+        "authority": "https://data.example.org/commerce",
+        "value": "daily-revenue-01"
+      },
+      "retention": "present",
+      "scope": "The authored commerce fixture.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "sources": []
+    }
+  ],
+  "representations": [
+    {
+      "id": "urn:example:commerce:representation:revenue-parquet",
+      "version": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "kind": "file",
+      "availability": "available",
+      "mediaType": "application/vnd.apache.parquet",
+      "location": "https://data.example.org/commerce/releases/fixture-01/daily_revenue.parquet",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "releases": [
+    {
+      "id": "urn:example:commerce:release:fixture-01",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:release",
+        "authority": "https://data.example.org/commerce",
+        "value": "fixture-01"
+      },
+      "members": [
+        "urn:example:commerce:version:daily-revenue:fixture-01"
+      ],
+      "membership": "complete",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "selections": [
+    {
+      "authority": "https://data.example.org/commerce",
+      "purpose": "public-revenue",
+      "release": "urn:example:commerce:release:fixture-01",
+      "observedAt": "2026-11-05T12:05:00Z",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "urn:example:commerce:run:revenue-fixture-01",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:job",
+        "authority": "https://data.example.org/commerce",
+        "value": "revenue-fixture-01"
+      },
+      "inputs": [
+        "urn:example:commerce:version:orders:fixture-01",
+        "urn:example:commerce:version:customers:fixture-01"
+      ],
+      "outputs": [
+        "urn:example:commerce:version:daily-revenue:fixture-01"
+      ],
+      "outcome": "succeeded",
+      "observedAt": "2026-11-05T12:05:00Z",
+      "startedAt": "2026-11-05T12:00:00Z",
+      "endedAt": "2026-11-05T12:00:01Z",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "production": "summarize"
+    }
+  ],
+  "checks": [
+    {
+      "subject": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "rule": {
+        "id": "urn:example:commerce:rule:fixture-expected-revenue",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "ddk-fixture-runner",
+        "version": "example"
+      },
+      "scope": "The authored commerce fixture.",
+      "status": "not_run",
+      "reason": "The illustrative receipt supplies no saved-plan fixture result."
+    }
+  ],
+  "productionObservations": [
+    {
+      "production": "summarize",
+      "observedAt": "2026-11-05T11:00:00Z"
+    }
+  ]
+}

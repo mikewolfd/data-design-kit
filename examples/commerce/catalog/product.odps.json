@@ -1,0 +1,40 @@
+{
+  "apiVersion": "v1.1.0",
+  "kind": "DataProduct",
+  "id": "urn:example:commerce:product",
+  "version": "1.0.0",
+  "name": "Daily commerce revenue",
+  "status": "draft",
+  "description": {
+    "purpose": "Compare daily commerce revenue by region using matched customer records.",
+    "limitations": "Example fixture scope. Excludes cancelled orders and orders with no matched customer."
+  },
+  "team": {
+    "name": "Example commerce maintainers",
+    "members": [
+      {
+        "username": "example-maintainer",
+        "role": "owner"
+      }
+    ]
+  },
+  "inputPorts": [
+    {
+      "name": "orders",
+      "contractId": "urn:example:commerce-datasets",
+      "version": "1.0.0"
+    },
+    {
+      "name": "customers",
+      "contractId": "urn:example:commerce-datasets",
+      "version": "1.0.0"
+    }
+  ],
+  "outputPorts": [
+    {
+      "name": "daily-revenue",
+      "contractId": "urn:example:commerce-datasets",
+      "version": "1.0.0"
+    }
+  ]
+}

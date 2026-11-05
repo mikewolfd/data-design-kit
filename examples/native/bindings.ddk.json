@@ -1,0 +1,46 @@
+{
+  "specVersion": "0.1",
+  "kind": "bindings",
+  "id": "urn:example:native-bindings",
+  "version": "1.0.0",
+  "design": "daily-revenue-design",
+  "parameters": {
+    "year": 2026
+  },
+  "execution": {
+    "runtime": "docspec",
+    "adapter": "docspec",
+    "mode": "bounded_job",
+    "connection": {
+      "transport": "subprocess"
+    }
+  },
+  "data": [
+    {
+      "kind": "native",
+      "origin": {
+        "step": "read",
+        "output": "rows"
+      },
+      "dataset": "orders",
+      "nativeVersion": {
+        "runtime": "docspec",
+        "scheme": "urn:docspec:version-ref",
+        "schemeVersion": "1-proposed",
+        "namespace": "illustrative-commerce",
+        "digestAlgorithm": "blake3",
+        "reference": {
+          "dataset": "orders",
+          "version": "example-v1",
+          "manifest": {
+            "owner": "orders",
+            "path": "example-only/manifest.json",
+            "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "bytes": 123
+          }
+        }
+      }
+    }
+  ],
+  "fixtures": []
+}

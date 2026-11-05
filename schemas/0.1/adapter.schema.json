@@ -100,6 +100,62 @@
               "type": "string"
             },
             "minItems": 0
+          },
+          "executionMode": {
+            "enum": [
+              "bounded_job",
+              "managed_operation"
+            ]
+          },
+          "backend": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requestKinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "reconciliation": {
+            "enum": [
+              "supported",
+              "unsupported"
+            ]
+          },
+          "artifactFormats": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "semanticProfiles": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/semanticProfile"
+            },
+            "minItems": 1
+          },
+          "nativeReferenceSchemes": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/identifier"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "qualityAccess": {
+            "enum": [
+              "files",
+              "native",
+              "files-and-native"
+            ]
           }
         },
         "required": [
@@ -110,7 +166,96 @@
           "limitations",
           "evidence"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "executionMode": {
+                  "const": "managed_operation"
+                }
+              },
+              "required": [
+                "executionMode"
+              ]
+            },
+            "then": {
+              "required": [
+                "backend",
+                "requestKinds",
+                "reconciliation"
+              ],
+              "properties": {
+                "reconciliation": {
+                  "const": "supported"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "group": {
+                  "enum": [
+                    "runtime.job",
+                    "runtime.managed"
+                  ]
+                }
+              },
+              "required": [
+                "group"
+              ]
+            },
+            "then": {
+              "required": [
+                "executionMode",
+                "backend",
+                "requestKinds",
+                "reconciliation",
+                "artifactFormats",
+                "semanticProfiles"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "group": {
+                  "const": "runtime.job"
+                }
+              },
+              "required": [
+                "group"
+              ]
+            },
+            "then": {
+              "properties": {
+                "executionMode": {
+                  "const": "bounded_job"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "group": {
+                  "const": "runtime.managed"
+                }
+              },
+              "required": [
+                "group"
+              ]
+            },
+            "then": {
+              "properties": {
+                "executionMode": {
+                  "const": "managed_operation"
+                }
+              }
+            }
+          }
+        ]
       },
       "minItems": 1
     }

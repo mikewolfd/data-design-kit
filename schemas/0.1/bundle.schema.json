@@ -33,13 +33,13 @@
           "dataset": {
             "$ref": "common.schema.json#/$defs/artifactRef"
           },
-          "plan": {
-            "$ref": "common.schema.json#/$defs/path"
+          "implementation": {
+            "$ref": "common.schema.json#/$defs/implementation"
           }
         },
         "required": [
           "dataset",
-          "plan"
+          "implementation"
         ],
         "additionalProperties": false
       },
@@ -102,7 +102,9 @@
               "configuration",
               "contract-view",
               "bindings",
-              "report"
+              "report",
+              "sql",
+              "job"
             ]
           }
         },
@@ -126,37 +128,7 @@
           "fields": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "logicalName": {
-                  "$ref": "common.schema.json#/$defs/name"
-                },
-                "engineName": {
-                  "$ref": "common.schema.json#/$defs/name"
-                },
-                "position": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "logicalType": {
-                  "$ref": "common.schema.json#/$defs/name"
-                },
-                "physicalType": {
-                  "$ref": "common.schema.json#/$defs/name"
-                },
-                "nullable": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "logicalName",
-                "engineName",
-                "position",
-                "logicalType",
-                "physicalType",
-                "nullable"
-              ],
-              "additionalProperties": false
+              "$ref": "common.schema.json#/$defs/fieldMapping"
             },
             "minItems": 1
           }
@@ -228,6 +200,20 @@
         ],
         "additionalProperties": false
       }
+    },
+    "nativeInputs": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nativeVersion"
+      },
+      "minItems": 0
+    },
+    "reuseRecords": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/reuseRecord"
+      },
+      "minItems": 0
     }
   },
   "required": [

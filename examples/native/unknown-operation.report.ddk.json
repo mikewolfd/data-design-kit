@@ -1,0 +1,86 @@
+{
+  "specVersion": "0.1",
+  "kind": "report",
+  "id": "urn:example:managed-timeout-report",
+  "version": "1.0.0",
+  "decision": "error",
+  "scope": {
+    "projects": [
+      "urn:example:commerce-project"
+    ],
+    "artifacts": [
+      "reviewed-revenue-design"
+    ],
+    "followedReferences": [],
+    "excludedConsumers": []
+  },
+  "coverage": {
+    "requestedGroups": [
+      "runtime.managed",
+      "runtime.qualification"
+    ],
+    "completedProfiles": [],
+    "availableCapabilities": [],
+    "missingCapabilities": [],
+    "mappingLimits": [
+      "No implementation is declared for review-adjustments."
+    ]
+  },
+  "lock": {
+    "verified": false
+  },
+  "tools": {
+    "ddk": {
+      "version": "0.0.0-example"
+    }
+  },
+  "checks": [
+    {
+      "id": "illustration/quality",
+      "requirement": "DDK-ADAPTER-013",
+      "group": "runtime.qualification",
+      "subject": "example-operation-1",
+      "status": "not_run",
+      "required": true,
+      "applicable": true,
+      "evidence": "executed",
+      "reason": "The caller lost its response; the original operation must be reconciled before qualification can proceed.",
+      "diagnostics": []
+    }
+  ],
+  "operationalErrors": [
+    {
+      "code": "EXEC-OUTCOME-UNKNOWN",
+      "severity": "error",
+      "message": "Illustrative timeout prevented trustworthy report completion; execution remains unknown.",
+      "location": {
+        "path": "unknown-operation.report.ddk.json",
+        "pointer": "/operations/0"
+      }
+    }
+  ],
+  "limits": {
+    "maxDocumentBytes": 8388608
+  },
+  "metadata": {
+    "illustrative": true,
+    "observedRuntimeResult": false
+  },
+  "operations": [
+    {
+      "runtime": "docspec",
+      "mode": "managed_operation",
+      "requestIdentity": {
+        "scheme": "urn:example:request",
+        "value": "request-1"
+      },
+      "operationId": "example-operation-1",
+      "reconciliation": "supported",
+      "execution": "unknown",
+      "selection": "unknown",
+      "qualificationRequired": true,
+      "outputs": [],
+      "reason": "Illustrative lost response, not an observed runtime result. Reconcile example-operation-1; do not create a replacement."
+    }
+  ]
+}

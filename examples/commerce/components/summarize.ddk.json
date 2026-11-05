@@ -23,7 +23,12 @@
     }
   },
   "implementation": {
-    "adapter": "datafusion-sql",
-    "path": "../transforms/revenue.sql"
+    "format": "sql",
+    "dialect": "datafusion-sql",
+    "path": "../transforms/revenue.sql",
+    "semantics": {
+      "id": "urn:example:commerce-sql-semantics",
+      "revision": "1"
+    }
   }
 }

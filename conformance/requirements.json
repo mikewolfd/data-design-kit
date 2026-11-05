@@ -36,6 +36,12 @@
     "owner": "WP-01"
   },
   {
+    "id": "DDK-ARCH-001",
+    "title": "Domain and injection boundary",
+    "specification": "docs/specification.md#DDK-ARCH-001",
+    "owner": "WP-02"
+  },
+  {
     "id": "DDK-SYNTAX-001",
     "title": "JSON and YAML",
     "specification": "docs/specification.md#DDK-SYNTAX-001",
@@ -123,6 +129,12 @@
     "id": "DDK-CALL-006",
     "title": "Correlated arguments",
     "specification": "docs/specification.md#DDK-CALL-006",
+    "owner": "WP-03"
+  },
+  {
+    "id": "DDK-CALL-007",
+    "title": "Implementation meaning and runtime placement",
+    "specification": "docs/specification.md#DDK-CALL-007",
     "owner": "WP-03"
   },
   {
@@ -276,6 +288,12 @@
     "owner": "WP-06"
   },
   {
+    "id": "DDK-LOCK-005",
+    "title": "Computation, qualification, and provenance",
+    "specification": "docs/specification.md#DDK-LOCK-005",
+    "owner": "WP-06"
+  },
+  {
     "id": "DDK-RESULT-001",
     "title": "Four check outcomes",
     "specification": "docs/specification.md#DDK-RESULT-001",
@@ -303,6 +321,12 @@
     "id": "DDK-RESULT-005",
     "title": "Initial diagnostic families",
     "specification": "docs/specification.md#DDK-RESULT-005",
+    "owner": "WP-02"
+  },
+  {
+    "id": "DDK-RESULT-006",
+    "title": "Runtime outcomes and uncertain responses",
+    "specification": "docs/specification.md#DDK-RESULT-006",
     "owner": "WP-02"
   },
   {
@@ -339,7 +363,7 @@
     "id": "DDK-ADAPTER-002",
     "title": "Mapping coverage",
     "specification": "docs/specification.md#DDK-ADAPTER-002",
-    "owner": "WP-08"
+    "owner": "WP-09A"
   },
   {
     "id": "DDK-ADAPTER-003",
@@ -357,13 +381,13 @@
     "id": "DDK-ADAPTER-005",
     "title": "Substrait production and consumption",
     "specification": "docs/specification.md#DDK-ADAPTER-005",
-    "owner": "WP-09"
+    "owner": "WP-09B"
   },
   {
     "id": "DDK-ADAPTER-006",
     "title": "Independent plan checks",
     "specification": "docs/specification.md#DDK-ADAPTER-006",
-    "owner": "WP-09"
+    "owner": "WP-09B"
   },
   {
     "id": "DDK-ADAPTER-007",
@@ -381,13 +405,37 @@
     "id": "DDK-ADAPTER-009",
     "title": "Generated bundles",
     "specification": "docs/specification.md#DDK-ADAPTER-009",
-    "owner": "WP-09"
+    "owner": "WP-09A"
   },
   {
     "id": "DDK-ADAPTER-010",
     "title": "Bindings and fixture values",
     "specification": "docs/specification.md#DDK-ADAPTER-010",
     "owner": "WP-10"
+  },
+  {
+    "id": "DDK-ADAPTER-011",
+    "title": "Execution responsibilities and modes",
+    "specification": "docs/specification.md#DDK-ADAPTER-011",
+    "owner": "WP-09A"
+  },
+  {
+    "id": "DDK-ADAPTER-012",
+    "title": "Exact native dataset access",
+    "specification": "docs/specification.md#DDK-ADAPTER-012",
+    "owner": "WP-09A"
+  },
+  {
+    "id": "DDK-ADAPTER-013",
+    "title": "Qualification before managed selection",
+    "specification": "docs/specification.md#DDK-ADAPTER-013",
+    "owner": "WP-12"
+  },
+  {
+    "id": "DDK-ADAPTER-014",
+    "title": "Shared runtime guards for calculation formats",
+    "specification": "docs/specification.md#DDK-ADAPTER-014",
+    "owner": "WP-09B"
   },
   {
     "id": "DDK-SAFE-001",
@@ -448,5 +496,71 @@
     "title": "Release evidence",
     "specification": "docs/specification.md#DDK-TEST-003",
     "owner": "WP-11"
+  },
+  {
+    "id": "DDK-TEST-004",
+    "title": "Product release demonstration",
+    "specification": "docs/specification.md#DDK-TEST-004",
+    "owner": "WP-15"
+  },
+  {
+    "id": "DDK-CATALOG-001",
+    "title": "Fact ownership and scope",
+    "specification": "docs/specification.md#DDK-CATALOG-001",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-002",
+    "title": "ODPS product and port resolution",
+    "specification": "docs/specification.md#DDK-CATALOG-002",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-003",
+    "title": "Dataset, source, and exact version identity",
+    "specification": "docs/specification.md#DDK-CATALOG-003",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-004",
+    "title": "Faithful descriptions and scoped relationships",
+    "specification": "docs/specification.md#DDK-CATALOG-004",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-005",
+    "title": "Observed runs and version-bound evidence",
+    "specification": "docs/specification.md#DDK-CATALOG-005",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-006",
+    "title": "Release composition, selection, and access",
+    "specification": "docs/specification.md#DDK-CATALOG-006",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-007",
+    "title": "Local assembly and output integrity",
+    "specification": "docs/specification.md#DDK-CATALOG-007",
+    "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-008",
+    "title": "DCAT 3 discovery",
+    "specification": "docs/specification.md#DDK-CATALOG-008",
+    "owner": "WP-14"
+  },
+  {
+    "id": "DDK-CATALOG-009",
+    "title": "OpenLineage design and run records",
+    "specification": "docs/specification.md#DDK-CATALOG-009",
+    "owner": "WP-14"
+  },
+  {
+    "id": "DDK-CATALOG-010",
+    "title": "Catalog change analysis",
+    "specification": "docs/specification.md#DDK-CATALOG-010",
+    "owner": "WP-06"
   }
 ]

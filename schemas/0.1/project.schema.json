@@ -38,6 +38,18 @@
               "object": {
                 "type": "string",
                 "minLength": 1
+              },
+              "catalogId": {
+                "$ref": "common.schema.json#/$defs/identifier"
+              },
+              "role": {
+                "enum": [
+                  "original",
+                  "source_record",
+                  "derived",
+                  "application",
+                  "evidence"
+                ]
               }
             },
             "required": [
@@ -55,7 +67,8 @@
                   "component",
                   "design",
                   "definition",
-                  "policy"
+                  "policy",
+                  "product"
                 ]
               },
               "path": {
@@ -130,6 +143,9 @@
           }
         }
       ]
+    },
+    "catalog": {
+      "$ref": "catalog.schema.json#/$defs/configuration"
     }
   },
   "required": [

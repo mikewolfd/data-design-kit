@@ -1,0 +1,55 @@
+{
+  "@context": {
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dcterms": "http://purl.org/dc/terms/"
+  },
+  "@graph": [
+    {
+      "@id": "urn:example:commerce:catalog",
+      "@type": "dcat:Catalog",
+      "dcterms:title": "Commerce example catalog",
+      "dcat:dataset": {
+        "@id": "urn:example:commerce:dataset:daily-revenue"
+      }
+    },
+    {
+      "@id": "urn:example:commerce:dataset:daily-revenue",
+      "@type": "dcat:Dataset",
+      "dcterms:title": "Daily commerce revenue",
+      "dcat:hasVersion": {
+        "@id": "urn:example:commerce:version:daily-revenue:fixture-01"
+      },
+      "dcat:hasCurrentVersion": {
+        "@id": "urn:example:commerce:version:daily-revenue:fixture-01"
+      },
+      "dcterms:source": {
+        "@id": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    },
+    {
+      "@id": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "@type": "dcat:Dataset",
+      "dcterms:title": "Daily commerce revenue, fixture 01",
+      "dcat:isVersionOf": {
+        "@id": "urn:example:commerce:dataset:daily-revenue"
+      },
+      "dcat:version": "fixture-01",
+      "dcat:distribution": {
+        "@id": "urn:example:commerce:representation:revenue-parquet"
+      },
+      "dcterms:isPartOf": {
+        "@id": "urn:example:commerce:release:fixture-01"
+      }
+    },
+    {
+      "@id": "urn:example:commerce:representation:revenue-parquet",
+      "@type": "dcat:Distribution",
+      "dcat:downloadURL": {
+        "@id": "https://data.example.org/commerce/releases/fixture-01/daily_revenue.parquet"
+      },
+      "dcat:mediaType": {
+        "@id": "https://www.iana.org/assignments/media-types/application/vnd.apache.parquet"
+      }
+    }
+  ]
+}

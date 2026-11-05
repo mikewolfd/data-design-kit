@@ -52,7 +52,8 @@
             "order_id"
           ]
         }
-      ]
+      ],
+      "dataGranularityDescription": "One order with its order date, amount, and recorded status."
     },
     {
       "id": "customers",
@@ -79,7 +80,8 @@
             "customer_id"
           ]
         }
-      ]
+      ],
+      "dataGranularityDescription": "One customer identifier and its region."
     },
     {
       "id": "daily_revenue",
@@ -136,7 +138,8 @@
             }
           ]
         }
-      ]
+      ],
+      "dataGranularityDescription": "One row per order date and customer region with matched, non-cancelled orders."
     }
   ]
 }

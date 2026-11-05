@@ -15,6 +15,10 @@ Three designs consume the shared reader. The revenue designs also call the summa
 
 The authored SQL excludes cancelled orders, performs an inner join to customer regions, and sums integer cents by day and region. An unmatched customer is excluded by this explicitly chosen join behavior. Duplicate customer keys are a separate future negative fixture because they can multiply totals while preserving a valid output shape.
 
+The component identifies SQL format, dialect, and semantic requirements. The separate bindings select the proposed DocSpec bounded-job adapter and limits. The first product release tests SQL directly and executes saved Substrait bytes against the same expectations. Managed dataset selection qualifies separately. Binding the orders reader's output supplies test data and does not execute the reader.
+
+The CSV bindings also describe the file-intake example. Current ordinary DocSpec jobs do not directly establish CSV input support. The first fixture runner can encode the explicitly authored fixture rows as temporary JSON Lines with a recorded schema. Running the CSV bindings themselves requires a separately qualified read/conversion path; no such runtime support is claimed here.
+
 ## What comes out
 
 | Day | Region | Amount in cents |
@@ -27,4 +31,6 @@ Expected rows in the fixture were specified independently. The documentation che
 
 ## Verification status
 
-Separate delivery tooling checked document shapes, local paths and digests, future-case traceability, and the SQL/fixture consistency described above. That tooling is outside this repository. Native dlt, Frictionless, Data Contract CLI, DataFusion, and Substrait checks remain planned.
+Separate delivery tooling checked document shapes, local paths and digests, future-case traceability, and the SQL/fixture consistency described above. That tooling is outside this repository. DocSpec integration, native dlt, Frictionless, Data Contract CLI, DataFusion, and Substrait checks remain planned.
+
+See the [catalog example](catalog/README.md) for ODPS ports, exact version and release records, DCAT discovery, and OpenLineage events.

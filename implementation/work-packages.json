@@ -4,15 +4,19 @@
   "workPackages": [
     {
       "id": "WP-00",
-      "title": "Evidence and compatibility",
+      "title": "Public-source baseline and compatibility experiment",
       "status": "planned",
       "dependsOn": [],
       "requirements": [],
-      "planSection": "WP-00 — Evidence and compatibility"
+      "planSection": "WP-00 — Public-source baseline and compatibility experiment",
+      "owners": [
+        "DocSpec runtime",
+        "DDK integration"
+      ]
     },
     {
       "id": "WP-01",
-      "title": "Documents and catalog",
+      "title": "Strict documents, source locations, and artifact index",
       "status": "planned",
       "dependsOn": [
         "WP-00"
@@ -32,11 +36,14 @@
         "DDK-SAFE-001",
         "DDK-SAFE-003"
       ],
-      "planSection": "WP-01 — Documents and catalog"
+      "planSection": "WP-01 — Strict documents, source locations, and artifact index",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-02",
-      "title": "Results and CLI",
+      "title": "Results, decisions, CLI, and capability discovery",
       "status": "planned",
       "dependsOn": [
         "WP-01"
@@ -59,13 +66,18 @@
         "DDK-CLI-003",
         "DDK-CLI-004",
         "DDK-ADAPTER-001",
-        "DDK-SAFE-002"
+        "DDK-SAFE-002",
+        "DDK-ARCH-001",
+        "DDK-RESULT-006"
       ],
-      "planSection": "WP-02 — Results and CLI"
+      "planSection": "WP-02 — Results, decisions, CLI, and capability discovery",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-03",
-      "title": "Interfaces and parameters",
+      "title": "Component interfaces and bounded parameter reasoning",
       "status": "planned",
       "dependsOn": [
         "WP-02"
@@ -76,13 +88,17 @@
         "DDK-CALL-003",
         "DDK-CALL-004",
         "DDK-CALL-005",
-        "DDK-CALL-006"
+        "DDK-CALL-006",
+        "DDK-CALL-007"
       ],
-      "planSection": "WP-03 — Interfaces and parameters"
+      "planSection": "WP-03 — Component interfaces and bounded parameter reasoning",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-04",
-      "title": "Datasets and graphs",
+      "title": "Dataset compatibility, design graphs, and exports",
       "status": "planned",
       "dependsOn": [
         "WP-03"
@@ -98,11 +114,14 @@
         "DDK-GRAPH-003",
         "DDK-GRAPH-004"
       ],
-      "planSection": "WP-04 — Datasets and graphs"
+      "planSection": "WP-04 — Dataset compatibility, design graphs, and exports",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-05",
-      "title": "Policies and shared definitions",
+      "title": "Shared definitions, project policies, and provenance",
       "status": "planned",
       "dependsOn": [
         "WP-04"
@@ -114,14 +133,18 @@
         "DDK-POLICY-004",
         "DDK-POLICY-005"
       ],
-      "planSection": "WP-05 — Policies and shared definitions"
+      "planSection": "WP-05 — Shared definitions, project policies, and provenance",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-06",
-      "title": "Locks and impact",
+      "title": "Locks, dependency-aware impact, and non-weakening",
       "status": "planned",
       "dependsOn": [
-        "WP-05"
+        "WP-05",
+        "WP-13"
       ],
       "requirements": [
         "DDK-IMPACT-001",
@@ -131,13 +154,18 @@
         "DDK-LOCK-001",
         "DDK-LOCK-002",
         "DDK-LOCK-003",
-        "DDK-LOCK-004"
+        "DDK-LOCK-004",
+        "DDK-LOCK-005",
+        "DDK-CATALOG-010"
       ],
-      "planSection": "WP-06 — Locks and impact"
+      "planSection": "WP-06 — Locks, dependency-aware impact, and non-weakening",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-07",
-      "title": "ODCS CLI integration",
+      "title": "Data Contract CLI integration",
       "status": "planned",
       "dependsOn": [
         "WP-06"
@@ -145,43 +173,73 @@
       "requirements": [
         "DDK-ADAPTER-003"
       ],
-      "planSection": "WP-07 — ODCS CLI integration"
+      "planSection": "WP-07 — Data Contract CLI integration",
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-08",
-      "title": "Files and ingestion",
+      "title": "Frictionless files and dlt staging",
       "status": "planned",
       "dependsOn": [
-        "WP-07"
+        "WP-06"
       ],
       "requirements": [
-        "DDK-ADAPTER-002",
         "DDK-ADAPTER-004"
       ],
-      "planSection": "WP-08 — Files and ingestion"
+      "planSection": "WP-08 — Frictionless files and dlt staging",
+      "owners": [
+        "DDK"
+      ]
     },
     {
-      "id": "WP-09",
-      "title": "Substrait and DataFusion",
+      "id": "WP-09A",
+      "title": "DocSpec SQL preparation, jobs, and native bindings",
       "status": "planned",
       "dependsOn": [
         "WP-06",
         "WP-00"
       ],
       "requirements": [
+        "DDK-ADAPTER-002",
+        "DDK-ADAPTER-009",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012"
+      ],
+      "planSection": "WP-09A — DocSpec SQL preparation, jobs, and native bindings",
+      "owners": [
+        "DocSpec runtime",
+        "DDK integration"
+      ]
+    },
+    {
+      "id": "WP-09B",
+      "title": "Saved Substrait through DocSpec",
+      "status": "planned",
+      "dependsOn": [
+        "WP-09A",
+        "WP-00"
+      ],
+      "requirements": [
         "DDK-ADAPTER-005",
         "DDK-ADAPTER-006",
-        "DDK-ADAPTER-009"
+        "DDK-ADAPTER-014"
       ],
-      "planSection": "WP-09 — Substrait and DataFusion"
+      "planSection": "WP-09B — Saved Substrait through DocSpec",
+      "owners": [
+        "DocSpec runtime",
+        "DDK integration"
+      ]
     },
     {
       "id": "WP-10",
-      "title": "Executed examples and portability",
+      "title": "Fixture tests, native output checks, and portability",
       "status": "planned",
       "dependsOn": [
-        "WP-08",
-        "WP-09"
+        "WP-07",
+        "WP-09A",
+        "WP-09B"
       ],
       "requirements": [
         "DDK-ADAPTER-007",
@@ -189,14 +247,23 @@
         "DDK-ADAPTER-010",
         "DDK-SAFE-004"
       ],
-      "planSection": "WP-10 — Executed examples and portability"
+      "planSection": "WP-10 — Fixture tests, native output checks, and portability",
+      "optionalDependsOn": [
+        "WP-08"
+      ],
+      "owners": [
+        "DDK"
+      ]
     },
     {
       "id": "WP-11",
-      "title": "Release qualification",
+      "title": "Release qualification and handoff",
       "status": "planned",
       "dependsOn": [
-        "WP-10"
+        "WP-06",
+        "WP-10",
+        "WP-14",
+        "WP-15"
       ],
       "requirements": [
         "DDK-VERSION-001",
@@ -206,7 +273,104 @@
         "DDK-TEST-002",
         "DDK-TEST-003"
       ],
-      "planSection": "WP-11 — Release qualification"
+      "planSection": "WP-11 — Release qualification and handoff",
+      "optionalDependsOn": [
+        "WP-08",
+        "WP-12"
+      ],
+      "owners": [
+        "DDK"
+      ]
+    },
+    {
+      "id": "WP-12",
+      "title": "Managed candidates and accepted quality gates",
+      "status": "planned",
+      "dependsOn": [
+        "WP-07",
+        "WP-09A",
+        "WP-10"
+      ],
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "planSection": "WP-12 — Managed candidates and accepted quality gates",
+      "owners": [
+        "DocSpec runtime",
+        "DDK integration"
+      ]
+    },
+    {
+      "id": "WP-13",
+      "title": "Product catalog and native metadata",
+      "status": "planned",
+      "dependsOn": [
+        "WP-02"
+      ],
+      "requirements": [
+        "DDK-CATALOG-001",
+        "DDK-CATALOG-002",
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-004",
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "planSection": "WP-13 — Product catalog and native metadata",
+      "owners": [
+        "DDK",
+        "Project metadata owners"
+      ]
+    },
+    {
+      "id": "WP-14",
+      "title": "DCAT and OpenLineage interchange",
+      "status": "planned",
+      "dependsOn": [
+        "WP-13"
+      ],
+      "requirements": [
+        "DDK-CATALOG-008",
+        "DDK-CATALOG-009"
+      ],
+      "planSection": "WP-14 — DCAT and OpenLineage interchange",
+      "owners": [
+        "DDK integration"
+      ]
+    },
+    {
+      "id": "WP-15",
+      "title": "Two product pilots and authoring migration",
+      "status": "planned",
+      "dependsOn": [
+        "WP-06",
+        "WP-10",
+        "WP-14"
+      ],
+      "requirements": [
+        "DDK-TEST-004"
+      ],
+      "planSection": "WP-15 — Two product pilots and authoring migration",
+      "owners": [
+        "DDK",
+        "SpicyRegs/SpicyDocs",
+        "Congressional-tech"
+      ]
     }
-  ]
+  ],
+  "firstRelease": {
+    "workPackage": "WP-11",
+    "requiredProfiles": [
+      "core",
+      "impact",
+      "catalog",
+      "catalog.dcat",
+      "lineage.openlineage",
+      "odcs-cli",
+      "plan.docspec-sql",
+      "execute.docspec-job",
+      "plan.datafusion",
+      "test.fixtures"
+    ]
+  }
 }

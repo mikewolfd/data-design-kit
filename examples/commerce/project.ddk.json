@@ -7,17 +7,23 @@
     "orders": {
       "kind": "dataset",
       "path": "datasets/commerce.odcs.json",
-      "object": "orders"
+      "object": "orders",
+      "catalogId": "urn:example:commerce:dataset:orders",
+      "role": "source_record"
     },
     "customers": {
       "kind": "dataset",
       "path": "datasets/commerce.odcs.json",
-      "object": "customers"
+      "object": "customers",
+      "catalogId": "urn:example:commerce:dataset:customers",
+      "role": "source_record"
     },
     "daily-revenue": {
       "kind": "dataset",
       "path": "datasets/commerce.odcs.json",
-      "object": "daily_revenue"
+      "object": "daily_revenue",
+      "catalogId": "urn:example:commerce:dataset:daily-revenue",
+      "role": "derived"
     },
     "read-orders": {
       "kind": "component",
@@ -50,6 +56,10 @@
     "commerce-policy": {
       "kind": "policy",
       "path": "policies/commerce.ddk.json"
+    },
+    "commerce-product": {
+      "kind": "product",
+      "path": "catalog/product.odps.json"
     }
   },
   "imports": {},
@@ -60,5 +70,82 @@
     "core.calls",
     "core.datasets",
     "core.policies"
-  ]
+  ],
+  "catalog": {
+    "id": "urn:example:commerce:catalog",
+    "ports": [
+      {
+        "product": "commerce-product",
+        "direction": "input",
+        "port": "orders",
+        "version": "1.0.0",
+        "dataset": "orders"
+      },
+      {
+        "product": "commerce-product",
+        "direction": "input",
+        "port": "customers",
+        "version": "1.0.0",
+        "dataset": "customers"
+      },
+      {
+        "product": "commerce-product",
+        "direction": "output",
+        "port": "daily-revenue",
+        "version": "1.0.0",
+        "dataset": "daily-revenue"
+      }
+    ],
+    "relationships": [
+      {
+        "id": "urn:example:commerce:relationship:customer",
+        "source": {
+          "dataset": "orders",
+          "paths": [
+            [
+              {
+                "field": "customer_id"
+              }
+            ]
+          ]
+        },
+        "target": {
+          "dataset": "customers",
+          "paths": [
+            [
+              {
+                "field": "customer_id"
+              }
+            ]
+          ]
+        },
+        "match": "equal",
+        "cardinality": "many_to_one",
+        "scope": "version_pair",
+        "resolution": "unresolved_allowed",
+        "meaning": "Match each order to its customer region. An unmatched order contributes no row to the revenue calculation.",
+        "nulls": "reject"
+      }
+    ],
+    "recipes": [
+      {
+        "id": "urn:example:commerce:recipe:daily-revenue",
+        "sql": "transforms/revenue.sql",
+        "dialect": "datafusion",
+        "inputs": {
+          "orders": "orders",
+          "customers": "customers"
+        },
+        "relationships": [
+          "urn:example:commerce:relationship:customer"
+        ],
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "resultDataset": "daily-revenue"
+      }
+    ]
+  }
 }

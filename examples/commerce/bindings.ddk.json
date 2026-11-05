@@ -19,7 +19,8 @@
           "path": "data/customers.csv",
           "sha256": "41fe6d599518d87dad6cf9591a7186ceaded5a2edf4f81048da500eff3eca7d4"
         }
-      ]
+      ],
+      "kind": "files"
     },
     {
       "origin": {
@@ -33,10 +34,22 @@
           "path": "data/orders.csv",
           "sha256": "f799f8402503d7e13d3c74740a910ce8303ff0dd41e6f9c0d71342dfe06ba906"
         }
-      ]
+      ],
+      "kind": "files"
     }
   ],
   "fixtures": [
     "tests/revenue.fixture.ddk.json"
-  ]
+  ],
+  "execution": {
+    "runtime": "docspec",
+    "adapter": "docspec",
+    "mode": "bounded_job",
+    "connection": {
+      "transport": "subprocess"
+    },
+    "limits": {
+      "maxRuntimeSeconds": 30
+    }
+  }
 }

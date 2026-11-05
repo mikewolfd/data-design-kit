@@ -4,7 +4,9 @@
 
 ## 1. Adapter boundary
 
-An adapter receives validated source artifacts, a requested check inventory, an offline registry, explicit parameters, and optional runtime bindings. It returns check results, mapping coverage, native evidence locations, and generated artifacts. It owns its native-tool interpretation. The DDK result reducer owns the overall decision.
+An adapter receives validated source artifacts, a requested check inventory, an offline registry, explicit parameters, and optional runtime bindings. It returns check results, mapping coverage, native evidence locations, generated artifacts, and runtime outcomes where applicable. It owns its native-tool interpretation. The DDK result reducer owns the overall decision. Application use cases receive adapters through dependency injection at the composition root; the domain does not import their native implementation types.
+
+The [runtime integration design](runtime-integration.md) defines preparation, bounded jobs, quality evaluation, and managed operations as separate responsibilities. DocSpec is the first execution adapter. Data Contract CLI is the first quality evaluator for supported file-backed cases. Exact-native access and quality-gated selection require additional evidence.
 
 Capabilities are read from JSON manifests. Discovering a manifest does not import its implementation. A manifest lists the exact dependency tuple that passed cases, including Git commits and distribution digests for unreleased builds.
 
@@ -22,7 +24,7 @@ Capabilities are read from JSON manifests. Discovering a manifest does not impor
 
 **Responsibilities:** official document validation, property-definition resolution, dataset-version classification, and actual-data schema/quality tests.
 
-**Input:** ODCS 3.2.0 documents, local references, pinned schema revision, explicit data location, requested comparison perspective.
+**Input:** ODCS 3.2.0 documents, local references, pinned schema revision, exact identified dataset view, resolved rule set, and requested comparison perspective.
 
 **Output:** native lint/version/test reports and generated configurations where supported.
 
@@ -33,6 +35,8 @@ GitHub CLI commit `34b12923e0366fa4004c2f90644da41769699e0f` includes PR 1812, w
 Open PRs 1725 and 1726 propose extra-field and order checks. They are candidates for delegation, not current guaranteed features. Their reported case-insensitive name comparison also requires an explicit bridge to DDK's case-sensitive logical field matching.
 
 **Failure cases:** unresolved definition, schema mismatch, unsupported quality engine, unavailable local file, native process failure, differing native/DDK schema revisions.
+
+File-backed quality support and native-candidate quality support are separate claims. The initial path tests identified local Parquet or DuckDB output. A native path must prove that the selected CLI backend reads the exact protected DocSpec candidate without resolving latest or requiring an unnecessary export. No such bridge has been demonstrated in this delivery. Preserve evaluator versions, mapping semantics, complete requested checks, and unsupported outcomes. A CLI report is evaluation evidence; DocSpec must accept it before it can gate managed selection.
 
 ## 3. Frictionless
 
@@ -74,24 +78,28 @@ The initial handoff is local Parquet. The production workflow may use dlt's nati
 | Incremental state | Record the load/snapshot identity; do not infer it from the newest filename |
 | Nested Parquet | Disabled in the initial flat profile pending tests; open PR 4299 is relevant |
 
-## 5. DataFusion and Substrait
+## 5. DocSpec SQL and saved Substrait execution
 
-**Responsibilities:** compile supported authored SQL into a saved Substrait plan, consume that plan, derive output schema, and execute selected fixtures.
+**Responsibilities.** Prepare SQL against explicit input schemas, infer outputs, and execute bounded SQL and saved Substrait jobs for the first product release. Qualify managed operations separately. See the [runtime integration design](runtime-integration.md).
 
-**Initial scope:** one transform component at a time, flat input tables, explicit named bindings, projection, filter, equi-join, and aggregation. More operations require capability evidence. dlt readers and publication steps remain outside the calculation plan.
+**Initial scope:** one SQL transform component at a time, flat input tables, explicit named bindings, projection, filter, equi-join, and aggregation through DocSpec. More operations require capability evidence. dlt readers and publication steps remain outside the calculation. Native input support preserves exact versions, schema interpretation, and native field identities.
 
-### Build sequence
+### SQL sequence
 
 1. Map ODCS fields to explicit Arrow/DataFusion types; stop when precision or semantics are unspecified.
-2. Register schema-only inputs and confirm planning does not scan production rows.
-3. Compile authored SQL using the selected DataFusion version.
-4. Save binary plan bytes and an upstream-generated JSON view.
-5. Record the actual encoded format version, extension identifiers, and source/configuration hashes.
-6. Re-import the saved bytes with named input bindings.
-7. Derive the consumer's output schema and compare each requested export.
-8. Return separate compile, consumer, and output results.
+2. Prepare through DocSpec's schema-only context and confirm no production-row scan.
+3. Record the SQL artifact, dialect, semantic profile, effective parameters, runtime tuple, and inferred output schema.
+4. Bind fixtures or exact file/native inputs and execute a bounded DocSpec job.
+5. Preserve known committed outputs on returned failure; report process-loss uncertainty separately.
+6. Compare independently expected rows and evaluate supported output quality checks.
 
-The Python repository head inspected is `878e5d3b8d373bca19671af43e49dfb1890f8da2`. Its lock names `datafusion-substrait 55.2.0` and the Rust crate `substrait 0.63.0`. Those package numbers do not establish the encoded Substrait standard version. WP-00 must inspect emitted plans and upstream definitions.
+No saved Substrait intermediate is required for this path. Bounded jobs do not imply durable lifecycle tracking. Managed claims name request kind/backend and use native operation identity, reconciliation, protection, candidate qualification, and guarded selection. Ordinary jobs cannot select a managed release merely because they used a catalog.
+
+### Substrait sequence
+
+After SQL integration, qualify a DocSpec producer/consumer tuple. Save binary plan bytes and extension identities, consume those bytes through the same admitted context, and apply normalized-plan function/input restrictions and budgets. Return separate compile, consumer, standard-validation, output, and fixture results. The present DocSpec source has no Substrait job variant or dependency.
+
+DocSpec's inspected local revision pins Rust DataFusion 53.1.0. It is team-owned and unreleased; that pin and its API can change after testing. The earlier Python repository head `878e5d3b8d373bca19671af43e49dfb1890f8da2` names `datafusion-substrait 55.2.0` and Rust crate `substrait 0.63.0`. It remains a separate research candidate, not a mandatory second engine in DDK. Those package numbers do not establish the encoded Substrait standard version. WP-00 and WP-09B must inspect emitted plans and upstream definitions.
 
 An open DataFusion FFI PR about a process-local foreign-plan workaround concerns a different physical serialization boundary. It must not be presented as general portable Substrait support. The initial DDK profile excludes opaque process-local handles and custom physical execution-plan payloads.
 
@@ -109,7 +117,7 @@ Default loose-mode acceptance does not prove full validity. DDK must preserve un
 
 ## 7. Fixture runner and second engine
 
-**Responsibility:** execute independently specified cases using saved plan bytes.
+**Responsibility:** execute independently specified cases using the identified implementation artifact. SQL cases can execute SQL through DocSpec; Substrait cases consume saved plan bytes.
 
 Fixtures use the [fixture schema](../schemas/0.1/fixture.schema.json), with explicit input rows, expected rows, and comparison settings. The default comparison is an unordered multiset, not a set: duplicate rows matter. Optional numeric tolerances are zero unless explicitly configured. Time zones and date semantics must be stated in type mappings.
 
@@ -129,8 +137,20 @@ Every shipped adapter should publish a table with:
 - Source standard and exact revision.
 - Native tool version, source commit, and distribution digest where applicable.
 - Supported operations and field facets.
+- Artifact formats and semantic profiles; execution mode and operation/backend pairs.
+- Native reference schemes, direct quality-access paths, and reconciliation guarantees.
 - Conformance cases actually executed.
 - Known unsupported and indeterminate cases.
 - Data/plan inputs and expected native error translations.
 
 The [example adapter manifest](../examples/adapter-manifest.ddk.json) deliberately declares `experimental-unverified` status and no passing evidence. Its valid document shape is not a support claim.
+
+## 10. Product catalog and standards outputs
+
+The `catalog` profile reads ODPS 1.1.0 product documents and resolves participating ports to the project's ODCS definitions. Load native publication manifests, version records, and run or check receipts through an explicitly selected metadata adapter. Emit the resolved catalog and preserve source inventory, exact reference schemes, scope, and disclosure policy. Profile discovery stays separate from adapter invocation.
+
+The `catalog.dcat` profile writes DCAT 3 JSON-LD. Preserve a dataset's stable identity and exact version relationships. Emit an available distribution or service only for an observed supported representation. Derive a current-version link from the named publication selection. Validate the resulting graph independently.
+
+The `lineage.openlineage` profile writes validated job and run events. Use the same job and dataset identities for definitions and runs. Map observed native run IDs to stable OpenLineage IDs and link those IDs back to native evidence in the catalog. Use the dataset version facet to identify exact versions. Preserve unobserved outcomes and scoped qualification in DDK's records.
+
+Initial exports use local files. Record the event schema and facet versions, DCAT mapping version, ODPS schema revision, and every native adapter's supported input scheme. The [catalog profile requirements](specification.md#catalog) and [example](../examples/commerce/catalog/README.md) define the connection points.

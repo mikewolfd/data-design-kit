@@ -1,0 +1,1331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ddk/0.1/catalog.schema.json",
+  "title": "DDK 0.1 generated data product catalog",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "const": "0.1"
+    },
+    "kind": {
+      "const": "catalog"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "project": {
+      "$ref": "#/$defs/versionedIdentifier"
+    },
+    "audience": {
+      "enum": [
+        "local",
+        "public"
+      ]
+    },
+    "disclosurePolicy": {
+      "$ref": "#/$defs/record"
+    },
+    "sourceInventory": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/inputFile"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "adapters": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/toolIdentity"
+      },
+      "uniqueItems": true
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/product"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "datasets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dataset"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "identities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/identity"
+      },
+      "uniqueItems": true
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationship"
+      },
+      "uniqueItems": true
+    },
+    "recipes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/recipe"
+      },
+      "uniqueItems": true
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/version"
+      },
+      "uniqueItems": true
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sourceOccurrence"
+      },
+      "uniqueItems": true
+    },
+    "representations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/representation"
+      },
+      "uniqueItems": true
+    },
+    "releases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/release"
+      },
+      "uniqueItems": true
+    },
+    "selections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/selection"
+      },
+      "uniqueItems": true
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/run"
+      },
+      "uniqueItems": true
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/check"
+      },
+      "uniqueItems": true
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/outputFile"
+      },
+      "uniqueItems": true
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "productions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/production"
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "specVersion",
+    "kind",
+    "id",
+    "version",
+    "project",
+    "audience",
+    "sourceInventory",
+    "adapters",
+    "products",
+    "datasets",
+    "identities",
+    "relationships",
+    "recipes",
+    "versions",
+    "sources",
+    "representations",
+    "releases",
+    "selections",
+    "runs",
+    "checks",
+    "files",
+    "productions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "record": {
+      "type": "object",
+      "properties": {
+        "uri": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "additionalProperties": false
+    },
+    "exactReference": {
+      "type": "object",
+      "properties": {
+        "scheme": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "authority": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "value": {
+          "type": [
+            "string",
+            "object",
+            "integer"
+          ],
+          "minLength": 1,
+          "minProperties": 1
+        }
+      },
+      "required": [
+        "scheme",
+        "authority",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "versionedIdentifier": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "fieldPath": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "field": {
+                "$ref": "common.schema.json#/$defs/name"
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "each": {
+                "const": true
+              }
+            },
+            "required": [
+              "each"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "minItems": 1
+    },
+    "endpoint": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fieldPath"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "dataset",
+        "paths"
+      ],
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "kind": {
+          "enum": [
+            "key",
+            "row_position",
+            "source_occurrence"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "dataset_version",
+            "release",
+            "source_occurrence",
+            "declared"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/fieldPath"
+              },
+              "virtual": {
+                "type": "boolean"
+              },
+              "physicalType": {
+                "$ref": "common.schema.json#/$defs/name"
+              }
+            },
+            "required": [
+              "path",
+              "virtual",
+              "physicalType"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "meaning": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "dataset",
+        "kind",
+        "scope",
+        "fields",
+        "meaning"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "row_position"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "scope": {
+                "const": "release"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "source": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "target": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/endpoint"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "external": {
+                  "$ref": "common.schema.json#/$defs/identifier"
+                }
+              },
+              "required": [
+                "external"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "match": {
+          "enum": [
+            "equal",
+            "decimal_string_to_integer",
+            "shared_list_value",
+            "identifier",
+            "project_rule"
+          ]
+        },
+        "rule": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "cardinality": {
+          "enum": [
+            "one_to_one",
+            "one_to_many",
+            "many_to_one",
+            "many_to_many",
+            "unknown"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "same_release",
+            "version_pair",
+            "external",
+            "declared"
+          ]
+        },
+        "resolution": {
+          "enum": [
+            "required",
+            "unresolved_allowed",
+            "external"
+          ]
+        },
+        "meaning": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "nulls": {
+          "enum": [
+            "skip",
+            "reject",
+            "match",
+            "unknown"
+          ]
+        },
+        "scopeDescription": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target",
+        "match",
+        "cardinality",
+        "scope",
+        "resolution",
+        "meaning",
+        "nulls"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "match"
+            ],
+            "properties": {
+              "match": {
+                "const": "project_rule"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rule"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "resolution"
+            ],
+            "properties": {
+              "resolution": {
+                "const": "external"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "target": {
+                "type": "object",
+                "properties": {
+                  "external": {
+                    "$ref": "common.schema.json#/$defs/identifier"
+                  }
+                },
+                "required": [
+                  "external"
+                ],
+                "additionalProperties": false
+              },
+              "scope": {
+                "const": "external"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "required": [
+                  "external"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resolution": {
+                "const": "external"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "scope"
+            ],
+            "properties": {
+              "scope": {
+                "const": "declared"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "scopeDescription"
+            ]
+          }
+        }
+      ]
+    },
+    "recipe": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "sql": {
+          "$ref": "common.schema.json#/$defs/path"
+        },
+        "dialect": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "inputs": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "minProperties": 1
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "parameters": {
+          "$ref": "common.schema.json#/$defs/parameterSchema"
+        },
+        "resultGrain": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "resultDataset": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        }
+      },
+      "required": [
+        "id",
+        "sql",
+        "dialect",
+        "inputs",
+        "relationships",
+        "parameters"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "resultGrain"
+          ]
+        },
+        {
+          "required": [
+            "resultDataset"
+          ]
+        }
+      ]
+    },
+    "portBinding": {
+      "type": "object",
+      "properties": {
+        "product": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "direction": {
+          "enum": [
+            "input",
+            "output"
+          ]
+        },
+        "port": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "dataset": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        }
+      },
+      "required": [
+        "product",
+        "direction",
+        "port",
+        "version",
+        "dataset"
+      ],
+      "additionalProperties": false
+    },
+    "product": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "definition": {
+          "$ref": "#/$defs/definitionRecord"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/portBinding"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "alias",
+        "id",
+        "version",
+        "definition",
+        "ports"
+      ],
+      "additionalProperties": false
+    },
+    "dataset": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "role": {
+          "enum": [
+            "original",
+            "source_record",
+            "derived",
+            "application",
+            "evidence"
+          ]
+        },
+        "definition": {
+          "type": "object",
+          "properties": {
+            "contractId": {
+              "$ref": "common.schema.json#/$defs/name"
+            },
+            "version": {
+              "$ref": "common.schema.json#/$defs/name"
+            },
+            "object": {
+              "$ref": "common.schema.json#/$defs/name"
+            },
+            "source": {
+              "$ref": "#/$defs/definitionRecord"
+            }
+          },
+          "required": [
+            "contractId",
+            "version",
+            "object",
+            "source"
+          ],
+          "additionalProperties": false
+        },
+        "title": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "rowMeaning": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "alias",
+        "id",
+        "definition"
+      ],
+      "additionalProperties": false
+    },
+    "version": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "dataset": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "reference": {
+          "$ref": "#/$defs/exactReference"
+        },
+        "retention": {
+          "enum": [
+            "present",
+            "missing",
+            "unknown"
+          ]
+        },
+        "scope": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/coverage"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "dataset",
+        "reference",
+        "retention",
+        "scope",
+        "record",
+        "sources"
+      ],
+      "additionalProperties": false
+    },
+    "sourceOccurrence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "reference": {
+          "$ref": "#/$defs/exactReference"
+        },
+        "content": {
+          "$ref": "#/$defs/exactReference"
+        },
+        "outcome": {
+          "enum": [
+            "retained",
+            "empty",
+            "confirmed_absent",
+            "failed",
+            "unknown"
+          ]
+        },
+        "scope": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        }
+      },
+      "required": [
+        "id",
+        "reference",
+        "outcome",
+        "scope",
+        "record"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "outcome"
+            ],
+            "properties": {
+              "outcome": {
+                "const": "retained"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "content"
+            ]
+          }
+        }
+      ]
+    },
+    "representation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "table",
+            "service"
+          ]
+        },
+        "availability": {
+          "enum": [
+            "available",
+            "unavailable",
+            "unknown"
+          ]
+        },
+        "location": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "mediaType": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "kind",
+        "availability",
+        "record"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "availability"
+            ],
+            "properties": {
+              "availability": {
+                "const": "available"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "location"
+            ]
+          }
+        }
+      ]
+    },
+    "release": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "reference": {
+          "$ref": "#/$defs/exactReference"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "membership": {
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ]
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        }
+      },
+      "required": [
+        "id",
+        "reference",
+        "members",
+        "membership",
+        "record"
+      ],
+      "additionalProperties": false
+    },
+    "selection": {
+      "type": "object",
+      "properties": {
+        "authority": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "purpose": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "release": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        }
+      },
+      "required": [
+        "authority",
+        "purpose",
+        "release",
+        "observedAt",
+        "record"
+      ],
+      "additionalProperties": false
+    },
+    "run": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "reference": {
+          "$ref": "#/$defs/exactReference"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "outcome": {
+          "enum": [
+            "running",
+            "succeeded",
+            "failed",
+            "aborted",
+            "unknown"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        },
+        "openLineageRunId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "production": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        }
+      },
+      "required": [
+        "id",
+        "reference",
+        "inputs",
+        "outputs",
+        "outcome",
+        "observedAt",
+        "record"
+      ],
+      "additionalProperties": false
+    },
+    "check": {
+      "type": "object",
+      "properties": {
+        "subject": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "rule": {
+          "$ref": "#/$defs/versionedIdentifier"
+        },
+        "evaluator": {
+          "$ref": "common.schema.json#/$defs/toolIdentity"
+        },
+        "scope": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "unknown",
+            "not_run"
+          ]
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        },
+        "reason": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "subject",
+        "rule",
+        "evaluator",
+        "scope",
+        "status"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "passed",
+                  "failed"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "record"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "unknown",
+                  "not_run"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ]
+          }
+        }
+      ]
+    },
+    "inputFile": {
+      "type": "object",
+      "properties": {
+        "uri": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "role": {
+          "enum": [
+            "project",
+            "definition",
+            "metadata",
+            "policy",
+            "schema",
+            "recipe",
+            "capability"
+          ]
+        }
+      },
+      "required": [
+        "uri",
+        "sha256",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "outputFile": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "common.schema.json#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "role": {
+          "enum": [
+            "dcat",
+            "openlineage",
+            "consumer",
+            "report"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/portBinding"
+          },
+          "uniqueItems": true
+        },
+        "identities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identity"
+          },
+          "uniqueItems": true
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relationship"
+          },
+          "uniqueItems": true
+        },
+        "recipes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/recipe"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "definitionRecord": {
+      "type": "object",
+      "properties": {
+        "uri": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      },
+      "required": [
+        "uri",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "production": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "identity": {
+          "$ref": "#/$defs/versionedIdentifier"
+        },
+        "definition": {
+          "$ref": "#/$defs/definitionRecord"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "uniqueItems": true
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/artifactRef"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "alias",
+        "identity",
+        "definition",
+        "inputs",
+        "outputs"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "unit": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ]
+        },
+        "observed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        }
+      },
+      "required": [
+        "scope",
+        "unit",
+        "status",
+        "record"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "partial"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "observed",
+              "expected"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "audience"
+        ],
+        "properties": {
+          "audience": {
+            "const": "public"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "disclosurePolicy"
+        ]
+      }
+    }
+  ]
+}

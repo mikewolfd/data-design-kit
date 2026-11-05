@@ -1,0 +1,482 @@
+{
+  "specVersion": "0.1",
+  "kind": "catalog",
+  "id": "urn:example:commerce:catalog",
+  "version": "1.0.0",
+  "project": {
+    "id": "urn:example:commerce-project",
+    "version": "1.0.0"
+  },
+  "audience": "local",
+  "sourceInventory": [
+    {
+      "uri": "https://data.example.org/commerce/evidence/example-metadata.json",
+      "sha256": "8c7dbed2464ec945fda2f96dbbe7bfa66cc8f9608cd6c8081c1735093a78a2c4",
+      "role": "metadata"
+    },
+    {
+      "uri": "urn:example:commerce-policy",
+      "sha256": "98a3e728b49ba5d619afb6e4fbe66eacafff5b4de50092cd529e3a2e2c6c9005",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:commerce:definition:amount-cents",
+      "sha256": "3b3bb80ec245c78d4a44ac8c6b3584584df3016ab7d6c7532a0b08f44c41c021",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:commerce:definition:contract",
+      "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:commerce:definition:product",
+      "sha256": "595691f7b3e3516e693a5746a1b91ee1097e0de649ed17c3f74d5e9f06828540",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:commerce:definition:project",
+      "sha256": "2d86496517a4209136485bb6b026f436b4711b4ebb16a8cc2abe517d3c2de10a",
+      "role": "project"
+    },
+    {
+      "uri": "urn:example:commerce:definition:revenue-sql",
+      "sha256": "5e22039e7aca42c999dbd13a4cda7cc838265ace8ffbe7cd863acd06ca9abec8",
+      "role": "recipe"
+    },
+    {
+      "uri": "urn:example:daily-revenue-design",
+      "sha256": "de196b3f2222f79054f326a440118de168b631871248d9e2a98329b5c2123b29",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:order-preview-design",
+      "sha256": "973fe2a6e4c6cab1db83dcaad95ef97eca9a3917264cf942d00cf987c1c18470",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:read-orders",
+      "sha256": "848ff9005edadaf36e363c9945a9ff42bd38e40e2dc84701da7c1fb71b3f27a6",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:review-adjustments",
+      "sha256": "f02b7a56051ee384d9b48582ec73b82af4d373b3d0d6152145e855b08d667ec0",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:reviewed-revenue-design",
+      "sha256": "20e8ae6ca21a67b4bde13eb966ad5f2510fceb37a5d5b88184d10ece21bbcf60",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:example:summarize",
+      "sha256": "467a65f3185d47aabf0c322fd1c8a772ac3edf92701a06010faea5024f1fa98b",
+      "role": "definition"
+    }
+  ],
+  "adapters": [
+    {
+      "id": "example-commerce-metadata",
+      "version": "illustrative"
+    }
+  ],
+  "products": [
+    {
+      "alias": "commerce-product",
+      "id": "urn:example:commerce:product",
+      "version": "1.0.0",
+      "definition": {
+        "uri": "urn:example:commerce:definition:product",
+        "sha256": "595691f7b3e3516e693a5746a1b91ee1097e0de649ed17c3f74d5e9f06828540"
+      },
+      "ports": [
+        {
+          "product": "commerce-product",
+          "direction": "input",
+          "port": "orders",
+          "version": "1.0.0",
+          "dataset": "orders"
+        },
+        {
+          "product": "commerce-product",
+          "direction": "input",
+          "port": "customers",
+          "version": "1.0.0",
+          "dataset": "customers"
+        },
+        {
+          "product": "commerce-product",
+          "direction": "output",
+          "port": "daily-revenue",
+          "version": "1.0.0",
+          "dataset": "daily-revenue"
+        }
+      ]
+    }
+  ],
+  "datasets": [
+    {
+      "alias": "orders",
+      "id": "urn:example:commerce:dataset:orders",
+      "role": "source_record",
+      "definition": {
+        "contractId": "urn:example:commerce-datasets",
+        "version": "1.0.0",
+        "object": "orders",
+        "source": {
+          "uri": "urn:example:commerce:definition:contract",
+          "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08"
+        }
+      },
+      "rowMeaning": "One order with its order date, amount, and recorded status."
+    },
+    {
+      "alias": "customers",
+      "id": "urn:example:commerce:dataset:customers",
+      "role": "source_record",
+      "definition": {
+        "contractId": "urn:example:commerce-datasets",
+        "version": "1.0.0",
+        "object": "customers",
+        "source": {
+          "uri": "urn:example:commerce:definition:contract",
+          "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08"
+        }
+      },
+      "rowMeaning": "One customer identifier and its region."
+    },
+    {
+      "alias": "daily-revenue",
+      "id": "urn:example:commerce:dataset:daily-revenue",
+      "role": "derived",
+      "definition": {
+        "contractId": "urn:example:commerce-datasets",
+        "version": "1.0.0",
+        "object": "daily_revenue",
+        "source": {
+          "uri": "urn:example:commerce:definition:contract",
+          "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08"
+        }
+      },
+      "rowMeaning": "One row per order date and customer region with matched, non-cancelled orders."
+    }
+  ],
+  "identities": [
+    {
+      "dataset": "orders",
+      "kind": "key",
+      "scope": "dataset_version",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "order_id"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "string"
+        }
+      ],
+      "meaning": "Order identifier within the fixture."
+    },
+    {
+      "dataset": "customers",
+      "kind": "key",
+      "scope": "dataset_version",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "customer_id"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "string"
+        }
+      ],
+      "meaning": "Customer identifier within the fixture."
+    },
+    {
+      "dataset": "daily-revenue",
+      "kind": "key",
+      "scope": "dataset_version",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "order_day"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "date"
+        },
+        {
+          "path": [
+            {
+              "field": "region"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "string"
+        }
+      ],
+      "meaning": "Result key consists of the date and region."
+    }
+  ],
+  "relationships": [
+    {
+      "id": "urn:example:commerce:relationship:customer",
+      "source": {
+        "dataset": "orders",
+        "paths": [
+          [
+            {
+              "field": "customer_id"
+            }
+          ]
+        ]
+      },
+      "target": {
+        "dataset": "customers",
+        "paths": [
+          [
+            {
+              "field": "customer_id"
+            }
+          ]
+        ]
+      },
+      "match": "equal",
+      "cardinality": "many_to_one",
+      "scope": "version_pair",
+      "resolution": "unresolved_allowed",
+      "meaning": "Match each order to its customer region. An unmatched order contributes no row to the revenue calculation.",
+      "nulls": "reject"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "urn:example:commerce:recipe:daily-revenue",
+      "sql": "transforms/revenue.sql",
+      "dialect": "datafusion",
+      "inputs": {
+        "orders": "orders",
+        "customers": "customers"
+      },
+      "relationships": [
+        "urn:example:commerce:relationship:customer"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "resultDataset": "daily-revenue"
+    }
+  ],
+  "versions": [
+    {
+      "id": "urn:example:commerce:version:orders:fixture-01",
+      "dataset": "orders",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:fixture-version",
+        "authority": "https://data.example.org/commerce",
+        "value": "orders-01"
+      },
+      "retention": "present",
+      "scope": "The authored commerce fixture.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "sources": [
+        "urn:example:commerce:occurrence:orders-capture-01"
+      ],
+      "coverage": [
+        {
+          "scope": "The selected orders fixture file.",
+          "unit": "publisher orders",
+          "status": "unknown",
+          "record": {
+            "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+          }
+        }
+      ]
+    },
+    {
+      "id": "urn:example:commerce:version:customers:fixture-01",
+      "dataset": "customers",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:fixture-version",
+        "authority": "https://data.example.org/commerce",
+        "value": "customers-01"
+      },
+      "retention": "present",
+      "scope": "The authored commerce fixture.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "sources": []
+    },
+    {
+      "id": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "dataset": "daily-revenue",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:fixture-version",
+        "authority": "https://data.example.org/commerce",
+        "value": "daily-revenue-01"
+      },
+      "retention": "present",
+      "scope": "The authored commerce fixture.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "sources": []
+    }
+  ],
+  "sources": [
+    {
+      "id": "urn:example:commerce:occurrence:orders-capture-01",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:capture",
+        "authority": "https://data.example.org/commerce",
+        "value": "orders-capture-01"
+      },
+      "content": {
+        "scheme": "urn:example:commerce:scheme:content-sha256",
+        "authority": "https://data.example.org/commerce",
+        "value": "f799f8402503d7e13d3c74740a910ce8303ff0dd41e6f9c0d71342dfe06ba906"
+      },
+      "outcome": "retained",
+      "scope": "The orders fixture file.",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "representations": [
+    {
+      "id": "urn:example:commerce:representation:revenue-parquet",
+      "version": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "kind": "file",
+      "availability": "available",
+      "mediaType": "application/vnd.apache.parquet",
+      "location": "https://data.example.org/commerce/releases/fixture-01/daily_revenue.parquet",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "releases": [
+    {
+      "id": "urn:example:commerce:release:fixture-01",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:release",
+        "authority": "https://data.example.org/commerce",
+        "value": "fixture-01"
+      },
+      "members": [
+        "urn:example:commerce:version:daily-revenue:fixture-01"
+      ],
+      "membership": "complete",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "selections": [
+    {
+      "authority": "https://data.example.org/commerce",
+      "purpose": "public-revenue",
+      "release": "urn:example:commerce:release:fixture-01",
+      "observedAt": "2026-11-05T12:05:00Z",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "urn:example:commerce:run:revenue-fixture-01",
+      "reference": {
+        "scheme": "urn:example:commerce:scheme:job",
+        "authority": "https://data.example.org/commerce",
+        "value": "revenue-fixture-01"
+      },
+      "inputs": [
+        "urn:example:commerce:version:orders:fixture-01",
+        "urn:example:commerce:version:customers:fixture-01"
+      ],
+      "outputs": [
+        "urn:example:commerce:version:daily-revenue:fixture-01"
+      ],
+      "outcome": "succeeded",
+      "observedAt": "2026-11-05T12:05:00Z",
+      "startedAt": "2026-11-05T12:00:00Z",
+      "endedAt": "2026-11-05T12:00:01Z",
+      "record": {
+        "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
+      },
+      "production": "summarize",
+      "openLineageRunId": "1cd0c8e5-a233-5182-9f12-2898d5f0788f"
+    }
+  ],
+  "checks": [
+    {
+      "subject": "urn:example:commerce:version:daily-revenue:fixture-01",
+      "rule": {
+        "id": "urn:example:commerce:rule:fixture-expected-revenue",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "ddk-fixture-runner",
+        "version": "example"
+      },
+      "scope": "The authored commerce fixture.",
+      "status": "not_run",
+      "reason": "The illustrative receipt supplies no saved-plan fixture result."
+    }
+  ],
+  "files": [
+    {
+      "path": "complete.openlineage.json",
+      "sha256": "fa2e544756d9f4adcb7356b0b237e6031962ccfe4c2b2926b66615d7c68b8537",
+      "role": "openlineage"
+    },
+    {
+      "path": "discovery.dcat.json",
+      "sha256": "5c7fd505f72cf40b6ca21e5e9a1e9b3322967e3f40f45455b732bc7bd04f646c",
+      "role": "dcat"
+    },
+    {
+      "path": "job.openlineage.json",
+      "sha256": "386de3cbf9bf56977528b5b9a563b8f0404f1cd9b0fe06dbac5e666ab695108b",
+      "role": "openlineage"
+    },
+    {
+      "path": "start.openlineage.json",
+      "sha256": "1fc9c721f7621ca88fdacc4ee2267dfc716e3b5595ad612e107d1eac83d9053b",
+      "role": "openlineage"
+    }
+  ],
+  "productions": [
+    {
+      "alias": "summarize",
+      "identity": {
+        "id": "urn:example:summarize",
+        "version": "1.0.0"
+      },
+      "definition": {
+        "uri": "urn:example:summarize",
+        "sha256": "467a65f3185d47aabf0c322fd1c8a772ac3edf92701a06010faea5024f1fa98b"
+      },
+      "inputs": [
+        "orders",
+        "customers"
+      ],
+      "outputs": [
+        "daily-revenue"
+      ]
+    }
+  ]
+}

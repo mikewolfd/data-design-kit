@@ -1,0 +1,143 @@
+{
+  "assessmentDate": "2026-11-04",
+  "repository": "team-owned docspec-rs",
+  "sourceCommit": "5a7fa9fc205a20599f16e141670aab71f38d78f5",
+  "releaseStatus": "unreleased; API and dependency baseline may change",
+  "evidenceLevel": "local source inspection; no new runtime qualification",
+  "observations": [
+    {
+      "source": "Cargo.toml",
+      "lines": [
+        42,
+        59
+      ],
+      "observation": "DataFusion pinned to 53.1.0; Arrow 58 and Iceberg 0.10.1. This is not a selected future compatibility tuple."
+    },
+    {
+      "source": "src/job/spec.rs",
+      "lines": [
+        15,
+        36
+      ],
+      "observation": "Job inputs include exact native-table and Iceberg-pin forms."
+    },
+    {
+      "source": "src/job/spec.rs",
+      "lines": [
+        73,
+        116
+      ],
+      "observation": "Job steps are SQL/components, with no Substrait variant or stable managed operation ID."
+    },
+    {
+      "source": "src/job/spec.rs",
+      "lines": [
+        155,
+        159,
+        195,
+        248
+      ],
+      "observation": "Returned failure retains completed outputs; the catalog-injected job has no lifecycle store."
+    },
+    {
+      "source": "src/job.rs",
+      "lines": [
+        90,
+        100,
+        155,
+        167
+      ],
+      "observation": "SQL uses the budgeted context, read-only statement restrictions, and immutable-function validation."
+    },
+    {
+      "source": "src/engine/worker.rs",
+      "lines": [
+        156,
+        172,
+        230,
+        255
+      ],
+      "observation": "Admitted managed work moves into an owned task; a lost caller wait does not establish cancellation."
+    },
+    {
+      "source": "src/engine/validation.rs",
+      "lines": [
+        6,
+        24
+      ],
+      "observation": "Built-in routine validator identity is separate from retained computation, not an external evaluator acceptance API."
+    },
+    {
+      "source": "src/engine/planner.rs",
+      "lines": [
+        340,
+        390
+      ],
+      "observation": "Material processing and routine validation have distinct phase keys."
+    },
+    {
+      "source": "src/engine/pipeline/completion.rs",
+      "lines": [
+        106,
+        161
+      ],
+      "observation": "Guarded native selection checks authority/dependencies; accepting external quality evidence would be new work."
+    },
+    {
+      "source": "src/model/id.rs",
+      "lines": [
+        75,
+        93,
+        145,
+        181,
+        248,
+        251
+      ],
+      "observation": "Native snapshot and dataset-version identities preserve interpretation; retained reference metadata alone does not promise payload availability."
+    },
+    {
+      "source": "src/storage/pinned.rs",
+      "lines": [
+        287,
+        291
+      ],
+      "observation": "Native object metadata verification uses BLAKE3."
+    },
+    {
+      "source": "src/job/export.rs",
+      "lines": [
+        51,
+        59
+      ],
+      "observation": "Actual exported files separately report SHA-256 and MD5."
+    },
+    {
+      "source": "src/engine.rs",
+      "lines": [
+        288,
+        300
+      ],
+      "observation": "Remote operation support is narrower than local; capabilities must name operation/backend pairs."
+    },
+    {
+      "source": "docs/STATUS.md",
+      "lines": [
+        171,
+        190
+      ],
+      "observation": "Existing routine-validation evidence explicitly does not establish arbitrary external validator support."
+    }
+  ],
+  "proposedWork": [
+    "Schema-only planning service and structured integration receipts",
+    "Exact native quality-access bridge",
+    "Accepted candidate qualification before guarded selection",
+    "Substrait through the shared admitted context"
+  ],
+  "unverified": [
+    "No DDK-to-DocSpec integration executed",
+    "No exact-native Data Contract CLI bridge demonstrated",
+    "No Substrait producer/consumer/validator tuple qualified",
+    "No additional backend recovery qualification"
+  ]
+}

@@ -209,37 +209,7 @@
           "evidenceRecords": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "enum": [
-                    "declaration",
-                    "plan",
-                    "native-report",
-                    "dataset-snapshot",
-                    "fixture",
-                    "mapping"
-                  ]
-                },
-                "path": {
-                  "$ref": "common.schema.json#/$defs/path"
-                },
-                "sha256": {
-                  "$ref": "common.schema.json#/$defs/digest"
-                },
-                "tool": {
-                  "type": "string"
-                },
-                "attributes": {
-                  "type": "object"
-                }
-              },
-              "required": [
-                "kind",
-                "path",
-                "sha256"
-              ],
-              "additionalProperties": false
+              "$ref": "common.schema.json#/$defs/evidenceRecord"
             },
             "minItems": 0
           }
@@ -407,6 +377,34 @@
         "affected"
       ],
       "additionalProperties": false
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/runtimeOperation"
+      },
+      "minItems": 0
+    },
+    "nativeReads": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nativeRead"
+      },
+      "minItems": 0
+    },
+    "reuseRecords": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/reuseRecord"
+      },
+      "minItems": 0
+    },
+    "qualifications": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/qualificationRecord"
+      },
+      "minItems": 0
     }
   },
   "required": [

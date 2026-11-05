@@ -1,0 +1,38 @@
+{
+  "eventTime": "2026-11-05T12:00:00Z",
+  "eventType": "START",
+  "producer": "https://example.org/ddk/0.1/examples/commerce",
+  "schemaURL": "https://openlineage.io/spec/2-0-2/OpenLineage.json#/$defs/RunEvent",
+  "run": {
+    "runId": "1cd0c8e5-a233-5182-9f12-2898d5f0788f"
+  },
+  "job": {
+    "namespace": "https://data.example.org/commerce",
+    "name": "urn:example:summarize"
+  },
+  "inputs": [
+    {
+      "namespace": "https://data.example.org/commerce",
+      "name": "urn:example:commerce:dataset:orders",
+      "facets": {
+        "version": {
+          "_producer": "https://example.org/ddk/0.1/examples/commerce",
+          "_schemaURL": "https://openlineage.io/spec/facets/1-0-1/DatasetVersionDatasetFacet.json",
+          "datasetVersion": "urn:example:commerce:version:orders:fixture-01"
+        }
+      }
+    },
+    {
+      "namespace": "https://data.example.org/commerce",
+      "name": "urn:example:commerce:dataset:customers",
+      "facets": {
+        "version": {
+          "_producer": "https://example.org/ddk/0.1/examples/commerce",
+          "_schemaURL": "https://openlineage.io/spec/facets/1-0-1/DatasetVersionDatasetFacet.json",
+          "datasetVersion": "urn:example:commerce:version:customers:fixture-01"
+        }
+      }
+    }
+  ],
+  "outputs": []
+}

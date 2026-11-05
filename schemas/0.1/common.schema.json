@@ -202,6 +202,636 @@
         "location"
       ],
       "additionalProperties": false
+    },
+    "runtimeIdentity": {
+      "type": "object",
+      "properties": {
+        "scheme": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "scheme",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "semanticProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "implementation": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/path"
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dialect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantics": {
+          "$ref": "common.schema.json#/$defs/semanticProfile"
+        }
+      },
+      "required": [
+        "format",
+        "semantics"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "path"
+          ],
+          "not": {
+            "required": [
+              "entrypoint"
+            ]
+          }
+        },
+        {
+          "required": [
+            "entrypoint"
+          ],
+          "not": {
+            "required": [
+              "path"
+            ]
+          }
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "format": {
+                "const": "sql"
+              }
+            },
+            "required": [
+              "format"
+            ]
+          },
+          "then": {
+            "required": [
+              "dialect",
+              "path"
+            ]
+          }
+        }
+      ]
+    },
+    "nativeVersion": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scheme": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "schemeVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digestAlgorithm": {
+          "enum": [
+            "sha256",
+            "blake3"
+          ]
+        },
+        "reference": {
+          "type": "object",
+          "minProperties": 1
+        }
+      },
+      "required": [
+        "runtime",
+        "scheme",
+        "schemeVersion",
+        "namespace",
+        "digestAlgorithm",
+        "reference"
+      ],
+      "additionalProperties": false,
+      "description": "The selected reference scheme owns the native reference shape. Core checks this wrapper only; the runtime validates the native reference, schema interpretation, and protection. This draft supports one declared native digest algorithm per scheme instance."
+    },
+    "fieldMapping": {
+      "type": "object",
+      "properties": {
+        "logicalName": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "engineName": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "logicalType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "physicalType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nullable": {
+          "type": "boolean"
+        },
+        "nativeFieldId": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        }
+      },
+      "required": [
+        "logicalName",
+        "engineName",
+        "position",
+        "logicalType",
+        "physicalType",
+        "nullable"
+      ],
+      "additionalProperties": false
+    },
+    "nativeRead": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "common.schema.json#/$defs/nativeVersion"
+        },
+        "schemaIdentity": {
+          "$ref": "common.schema.json#/$defs/runtimeIdentity"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "common.schema.json#/$defs/fieldMapping"
+              },
+              {
+                "required": [
+                  "nativeFieldId"
+                ]
+              }
+            ]
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "version",
+        "schemaIdentity",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "toolIdentity": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "distributionSha256": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "evidenceRecord": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "declaration",
+                "implementation",
+                "plan",
+                "native-report",
+                "dataset-snapshot",
+                "fixture",
+                "mapping"
+              ]
+            },
+            "path": {
+              "$ref": "common.schema.json#/$defs/path"
+            },
+            "sha256": {
+              "$ref": "common.schema.json#/$defs/digest"
+            },
+            "tool": {
+              "type": "string",
+              "minLength": 1
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "dataset-snapshot"
+            },
+            "nativeVersion": {
+              "$ref": "common.schema.json#/$defs/nativeVersion"
+            },
+            "tool": {
+              "type": "string",
+              "minLength": 1
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "nativeVersion"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "reuseRecord": {
+      "type": "object",
+      "properties": {
+        "authority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "computationKey": {
+          "$ref": "common.schema.json#/$defs/runtimeIdentity"
+        },
+        "semantics": {
+          "$ref": "common.schema.json#/$defs/semanticProfile"
+        },
+        "qualificationKey": {
+          "$ref": "common.schema.json#/$defs/runtimeIdentity"
+        },
+        "candidate": {
+          "$ref": "common.schema.json#/$defs/nativeVersion"
+        },
+        "rules": {
+          "$ref": "common.schema.json#/$defs/file"
+        }
+      },
+      "required": [
+        "authority",
+        "computationKey",
+        "semantics"
+      ],
+      "additionalProperties": false,
+      "dependentRequired": {
+        "qualificationKey": [
+          "candidate",
+          "rules"
+        ]
+      }
+    },
+    "qualificationRecord": {
+      "type": "object",
+      "properties": {
+        "candidate": {
+          "$ref": "common.schema.json#/$defs/nativeVersion"
+        },
+        "rules": {
+          "$ref": "common.schema.json#/$defs/file"
+        },
+        "evaluator": {
+          "$ref": "common.schema.json#/$defs/toolIdentity"
+        },
+        "semantics": {
+          "$ref": "common.schema.json#/$defs/semanticProfile"
+        },
+        "requiredChecks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "passed",
+                  "failed",
+                  "unknown",
+                  "not_run"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/evidenceRecord"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "candidate",
+        "rules",
+        "evaluator",
+        "semantics",
+        "requiredChecks",
+        "checks",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "runtimeOperation": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "bounded_job",
+            "managed_operation"
+          ]
+        },
+        "requestIdentity": {
+          "$ref": "common.schema.json#/$defs/runtimeIdentity"
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reconciliation": {
+          "enum": [
+            "supported",
+            "unsupported"
+          ]
+        },
+        "execution": {
+          "enum": [
+            "not_submitted",
+            "running",
+            "succeeded",
+            "failed",
+            "unknown"
+          ]
+        },
+        "selection": {
+          "enum": [
+            "not_requested",
+            "pending",
+            "selected",
+            "refused",
+            "unknown"
+          ]
+        },
+        "qualificationRequired": {
+          "type": "boolean"
+        },
+        "acceptedQualification": {
+          "$ref": "common.schema.json#/$defs/runtimeIdentity"
+        },
+        "candidate": {
+          "$ref": "common.schema.json#/$defs/nativeVersion"
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/evidenceRecord"
+          },
+          "minItems": 0
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "runtime",
+        "mode",
+        "requestIdentity",
+        "reconciliation",
+        "execution",
+        "selection",
+        "outputs"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "managed_operation"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "operationId",
+              "qualificationRequired"
+            ],
+            "properties": {
+              "reconciliation": {
+                "const": "supported"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "selection": {
+                "const": "not_requested"
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "qualificationRequired"
+                  ]
+                },
+                {
+                  "required": [
+                    "acceptedQualification"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "selection": {
+                "const": "selected"
+              }
+            },
+            "required": [
+              "selection"
+            ]
+          },
+          "then": {
+            "required": [
+              "candidate"
+            ],
+            "properties": {
+              "execution": {
+                "const": "succeeded"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "qualificationRequired": {
+                "const": true
+              },
+              "selection": {
+                "const": "selected"
+              }
+            },
+            "required": [
+              "qualificationRequired",
+              "selection"
+            ]
+          },
+          "then": {
+            "required": [
+              "acceptedQualification"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "execution": {
+                    "const": "unknown"
+                  }
+                },
+                "required": [
+                  "execution"
+                ]
+              },
+              {
+                "properties": {
+                  "selection": {
+                    "const": "unknown"
+                  }
+                },
+                "required": [
+                  "selection"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "reason"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution": {
+                "const": "not_submitted"
+              }
+            },
+            "required": [
+              "execution"
+            ]
+          },
+          "then": {
+            "properties": {
+              "selection": {
+                "const": "not_requested"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

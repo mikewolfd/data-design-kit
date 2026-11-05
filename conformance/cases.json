@@ -1027,14 +1027,18 @@
       "requirements": [
         "DDK-SAFE-004"
       ],
-      "profile": "core",
+      "profile": "integration",
       "runtimeStatus": "planned",
-      "scenario": "Cancel a fixture run, retain configured failure evidence, and remove only the runner-owned successful temporary directory.",
+      "scenario": "Cancel a fixture caller wait; retain configured failure evidence and original native operation identity. Remove only runner-owned temporary data after ownership is established. Do not infer native cancellation or remove protected candidates.",
       "expected": {
         "decision": "error",
         "checkStatus": "not_run",
         "exitCode": 3,
         "diagnostic": "EXEC-CANCELLED"
+      },
+      "expectedRuntime": {
+        "execution": "unknown",
+        "selection": "unknown"
       }
     },
     {
@@ -1074,12 +1078,12 @@
       ],
       "profile": "core",
       "runtimeStatus": "planned",
-      "scenario": "An adapter advertises qualification without a tested version tuple or case results; release qualification rejects that claim.",
+      "scenario": "A first product release has passing offline, catalog, and SQL checks but has no executed saved Substrait fixture. Require the full first release profile set.",
       "expected": {
-        "decision": "failed",
-        "checkStatus": "failed",
-        "exitCode": 1,
-        "diagnostic": "ADAPTER-QUALIFICATION-MISSING"
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-CAPABILITY-MISSING"
       }
     },
     {
@@ -1264,6 +1268,839 @@
       },
       "source": "docs/adapter-profiles.md",
       "qualificationNote": "A future capability may be claimed only if the selected tuple passes this case. This repository has not executed it."
+    },
+    {
+      "id": "CASE-ARCH-OFFLINE-INJECTION",
+      "requirements": [
+        "DDK-ARCH-001",
+        "DDK-CONF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Run core with native packages absent and installed manifests present. Fake runtime adapters fail if imported or invoked. The same application use case accepts explicit test doubles; results match the core-only installation.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-IMPLEMENTATION-SEPARATION",
+      "requirements": [
+        "DDK-CALL-007"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An SQL component declares format, dialect, artifact, and semantic profile; a separate binding supplies runtime endpoint and limits. Core validates shapes without opening implementation code.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-IMPLEMENTATION-LEGACY-CONFIG",
+      "requirements": [
+        "DDK-CALL-007"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A component still uses implementation.adapter and embeds endpoint configuration instead of declaring format and semantics. Its shape fails.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-SCHEMA"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-PREPARE-SCHEMA-ONLY",
+      "requirements": [
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "plan.docspec-sql",
+      "runtimeStatus": "planned",
+      "scenario": "Prepare the commerce SQL through DocSpec with explicit schemas and instrumented production readers that refuse a scan. Inferred names/types/nullability match independent expectations and no production reader is invoked.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-SQL-WITHOUT-SUBSTRAIT",
+      "requirements": [
+        "DDK-ADAPTER-005",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "execute.docspec-job",
+      "runtimeStatus": "planned",
+      "scenario": "Execute the commerce SQL through the bounded DocSpec adapter with Substrait producer/validator dependencies absent. Fixtures pass; no Substrait capability or managed selection is claimed.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-JOB-PARTIAL-OUTPUTS",
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-RESULT-006"
+      ],
+      "profile": "execute.docspec-job",
+      "runtimeStatus": "planned",
+      "scenario": "A bounded job commits output A and fails on output B. Preserve A identity in the returned failure; record known execution failure and no managed selection. Do not advertise durable recovery.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-JOB-FAILED"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "execution": "failed",
+        "selection": "not_requested",
+        "knownOutputs": [
+          "A"
+        ],
+        "reconciliation": "unsupported"
+      }
+    },
+    {
+      "id": "CASE-JOB-PROCESS-LOSS",
+      "requirements": [
+        "DDK-RESULT-006"
+      ],
+      "profile": "execute.docspec-job",
+      "runtimeStatus": "planned",
+      "scenario": "Terminate an ordinary job process after submission with no completion response. Report unknown outcome and only observed outputs; do not invent durable tracking or claim no work ran.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-OUTCOME-UNKNOWN"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "execution": "unknown",
+        "selection": "not_requested",
+        "reconciliation": "unsupported"
+      }
+    },
+    {
+      "id": "CASE-NATIVE-EXACT-READ",
+      "requirements": [
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Bind a complete native version, then advance latest. Execute against the original version and record its exact schema identity, field IDs, name/order/type mappings, and native digest algorithm without export/reimport.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-NATIVE-FIELD-IDENTITY",
+      "requirements": [
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Rename and reorder fields in a newer schema while executing a pinned older version. Retain the original field-ID/name binding; refuse ambiguous mappings rather than silently rebinding by position.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-NATIVE-DIGEST-SCHEME",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-RESULT-004"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Label a DocSpec BLAKE3 native reference as SHA-256 while retaining the same 64 hex characters. The selected reference-scheme validator refuses the contradictory algorithm.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-NATIVE-IDENTITY"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-NATIVE-UNAVAILABLE",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-SAFE-004"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "The exact native input or its required protection is unavailable. Refuse execution before dependent work; do not substitute latest or create an export.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-NATIVE-UNAVAILABLE"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-NATIVE-QUALITY-BRIDGE",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Run the selected CLI evaluator against an exact protected unselected candidate while latest changes. Observe the original candidate identity and no boundary-only export; retain native query evidence.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-NATIVE-QUALITY-UNAVAILABLE",
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "File-backed CLI tests pass but no exact-native candidate access exists. A requested managed quality gate remains unavailable; it cannot inherit qualification from file-backed success.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-QUALITY-ACCESS-MISSING"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-REUSE-RULE-CHANGE",
+      "requirements": [
+        "DDK-LOCK-005",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Change only resolved quality rules/evaluator semantics in a new qualification request for the same retained candidate. Native processing completion count is unchanged; qualification reruns and keeps original computation provenance.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-REUSE-ENDPOINT",
+      "requirements": [
+        "DDK-CALL-007",
+        "DDK-LOCK-005"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Move to another endpoint exposing the same exact native inputs and established equivalent semantic profile. The component identity stays unchanged and native computation may be reused; provenance records the new endpoint.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-REUSE-SEMANTIC-CHANGE",
+      "requirements": [
+        "DDK-CALL-007",
+        "DDK-LOCK-005"
+      ],
+      "profile": "integration",
+      "runtimeStatus": "planned",
+      "scenario": "Change overflow/function or time-zone semantics with unchanged SQL bytes and inputs. The old computation identity cannot authorize reuse; required reuse-equivalence checking fails.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-SEMANTICS-MISMATCH"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-GATE-EXACT-CANDIDATE",
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Submit passing evidence for candidate A to qualify candidate B. Reject acceptance and preserve the previously selected release.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-QUALIFICATION-MISMATCH"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "selection": "refused"
+      }
+    },
+    {
+      "id": "CASE-GATE-COVERAGE",
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Evidence lacks one required rule and duplicates another passed check. Refuse qualification even though the native process exited successfully.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-QUALIFICATION-COVERAGE"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "selection": "refused"
+      }
+    },
+    {
+      "id": "CASE-GATE-UNKNOWN",
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "One required evaluator result is unknown. Qualification remains incomplete and no managed candidate is selected.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "EXEC-QUALIFICATION-UNKNOWN"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "selection": "pending"
+      }
+    },
+    {
+      "id": "CASE-GATE-ATOMIC-AUTHORITY",
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Accept evidence for the exact candidate/rules, then advance an applicable authority or policy precondition before selection. Each supported selection branch refuses stale promotion and retains completed work.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-SELECTION-STALE"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "selection": "refused"
+      }
+    },
+    {
+      "id": "CASE-GATE-AUDIT-ONLY",
+      "requirements": [
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "A quality test ran only after managed selection. Reject a claim that this report established a pre-selection quality gate.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-QUALIFICATION-AUDIT-ONLY"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-MANAGED-LOST-ACK",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Lose the caller response after managed selection. The first report records uncertainty; recreate the adapter and reconcile the original operation/request identity. Return the original selected candidate without repeating completed native phases.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case.",
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "sameOperationId": true,
+        "newProcessingCompletions": 0
+      }
+    },
+    {
+      "id": "CASE-MANAGED-ID-CONFLICT",
+      "requirements": [
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Retry an existing managed operation ID with different request content. The native runtime refuses the conflict; DDK does not allocate a replacement ID automatically.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-REQUEST-CONFLICT"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-MANAGED-BACKEND-SCOPE",
+      "requirements": [
+        "DDK-ADAPTER-001",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Request an operation/backend pair outside the manifest tested request kinds. Required managed execution remains unavailable before submission, even though another managed operation is supported.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-OPERATION-UNSUPPORTED"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-SUBSTRAIT-RUNTIME-GUARDS",
+      "requirements": [
+        "DDK-ADAPTER-014"
+      ],
+      "profile": "plan.datafusion",
+      "runtimeStatus": "planned",
+      "scenario": "Decode a saved Substrait plan containing an unapproved function or external table reference. Apply normalized-plan guards in the same DocSpec context and refuse execution before effects.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-PLAN-RESTRICTED"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-SUBSTRAIT-BUDGETS",
+      "requirements": [
+        "DDK-ADAPTER-014",
+        "DDK-SAFE-003"
+      ],
+      "profile": "plan.datafusion",
+      "runtimeStatus": "planned",
+      "scenario": "Consume saved bytes under a deliberately insufficient admitted memory/spill budget. Preserve bounded diagnostics and a known resource refusal; report the limit scope accurately.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": "EXEC-RESOURCE-LIMIT"
+      },
+      "qualificationNote": "Future runtime acceptance case. Documentation validation does not execute this case."
+    },
+    {
+      "id": "CASE-GATE-ACCEPTED-SELECTION",
+      "requirements": [
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "The configured evaluator passes every required rule for the exact retained candidate. Native acceptance validates candidate, rules, evaluator and semantics; guarded selection records the accepted qualification identity and exact selected candidate.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "qualificationAccepted": true
+      },
+      "qualificationNote": "Future runtime acceptance case. A well-formed illustrative report does not execute native acceptance or selection."
+    },
+    {
+      "id": "CASE-CATALOG-001",
+      "requirements": [
+        "DDK-CATALOG-001",
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain two original occurrences with equal content digests and different capture contexts. The catalog preserves both occurrences, their shared content reference, and the exact definition and source bindings.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-002",
+      "requirements": [
+        "DDK-CATALOG-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Load contradictory observed values from the same authority for one version and scope. Report a conflict and retain the cited origins.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-AUTHORITY-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003",
+      "requirements": [
+        "DDK-CATALOG-002"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Resolve the commerce ODPS ports through the pinned schema and explicit selections of separate objects in one ODCS contract.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004",
+      "requirements": [
+        "DDK-CATALOG-002"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Resolve an ODPS port whose contract and version identify multiple registered objects but whose explicit object binding is missing.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-PORT-AMBIGUOUS"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-005",
+      "requirements": [
+        "DDK-CATALOG-002",
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Bind an ODPS port to the correct logical dataset at the wrong ODCS definition version.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-PORT-VERSION"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-006",
+      "requirements": [
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Import an opaque externally assigned version and a separate byte digest. Preserve their native scheme and authority and resolve the representation against the same exact version.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-007",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Preserve a nested list element path and a literal field name containing a dot. Check the intended nested endpoint and accept a valid semantic self-relation.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-008",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-CATALOG-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Resolve a release-local virtual row position against a different release.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RELEASE-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-009",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Validate a relationship that requires a two-part dated key but supplies only the document number.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-KEY-INCOMPLETE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-010",
+      "requirements": [
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Load valid check evidence for an older output under a different rule version. The current required check remains unresolved.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-EVIDENCE-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-011",
+      "requirements": [
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Attach a successful run receipt and a required check with no execution evidence. Keep discovery available and qualification incomplete.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-EVIDENCE-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refresh from unchanged metadata. Reuse evidence at its original assurance level, verify zero data-payload reads and byte-identical catalog outputs.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-013",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Move the publisher selection to a new release. An existing release-local binding and historical run continue to resolve the original inputs.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014",
+      "requirements": [
+        "DDK-CATALOG-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Display a valid empty published table, an unknown expected population, a confirmed absence, and an acquisition failure with distinct observations and access facts.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Require a catalog export whose adapter is missing. Preserve the prior complete output set and report the missing capability.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-CAPABILITY-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-016",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Generate a public catalog with a disclosure policy. Restrict private locations and evidence while retaining permitted version identifiers and public links.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-017",
+      "requirements": [
+        "DDK-CATALOG-008"
+      ],
+      "profile": "catalog.dcat",
+      "runtimeStatus": "planned",
+      "scenario": "Parse the generated DCAT JSON-LD with an independent reader. Navigate catalog, dataset, version and available distribution or service. Verify the current-version link against the cited selection.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-018",
+      "requirements": [
+        "DDK-CATALOG-008"
+      ],
+      "profile": "catalog.dcat",
+      "runtimeStatus": "planned",
+      "scenario": "Request discovery for a historical version with no advertised access. Preserve the version description and omit an available distribution.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-019",
+      "requirements": [
+        "DDK-CATALOG-009"
+      ],
+      "profile": "lineage.openlineage",
+      "runtimeStatus": "planned",
+      "scenario": "Validate the job and observed run events and supported version facets against pinned schemas. Match the run ID to its native reference and all observed inputs and outputs to exact versions.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-020",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-009"
+      ],
+      "profile": "lineage.openlineage",
+      "runtimeStatus": "planned",
+      "scenario": "Load only a declared job and a native run with an unresolved terminal outcome. Emit the declared job and supported observed events, and keep terminal coverage unresolved.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-021",
+      "requirements": [
+        "DDK-CATALOG-010"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Change a loaded relationship and required quality rule while keeping the data and production definition fixed. Report affected consumers, required requalification and regenerated metadata.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-022",
+      "requirements": [
+        "DDK-CATALOG-010"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Request assurance that all consumers were checked while one known consumer project is outside the loaded scope.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-IMPACT-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-TEST-004",
+      "requirements": [
+        "DDK-TEST-004",
+        "DDK-VERSION-003"
+      ],
+      "profile": "product-release",
+      "runtimeStatus": "planned",
+      "scenario": "Run both pilot workflows. Validate ODPS and DCAT access, observed and design OpenLineage, exact source and release links, and checked queries. Execute SQL and saved Substrait against independent expectations. Verify wrong-version, incomplete-key, and missing-evidence diagnostics, reused metadata, and consolidated maintained definitions.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

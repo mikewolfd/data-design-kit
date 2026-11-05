@@ -5,6 +5,13 @@
 - Keep document validation, declared compatibility, inferred plan properties, and executed tests distinct. A declaration is an assumption until stronger evidence exists.
 - Preserve explicit `unknown` and `not_run` results. Required checks without sufficient evidence must prevent an overall passing result.
 - Core checks must work offline without importing implementation modules, reading production rows, or selecting an execution engine.
+- Keep one maintained owner per catalog fact. Preserve exact native versions, source occurrences, scoped identities, and publisher-owned selections in generated outputs.
+- The first product release requires ODPS, DCAT 3, OpenLineage, and saved Substrait execution together with the profiles in DDK-VERSION-003.
+- Keep domain rules independent of native implementation types. Inject concrete adapters at the application composition root; add interfaces for working use cases only.
+- DocSpec owns execution, durable phases, reconciliation, native protection, and managed selection. Do not duplicate those authorities in DDK. Ordinary jobs do not imply managed recovery.
+- Separate implementation format and semantics from runtime placement and limits. Preserve native reference schemes, digest algorithms, schema interpretation, and field identities.
+- Keep computation reuse, qualification reuse, and full provenance distinct. Required quality gates need runtime-accepted evidence for the exact candidate before guarded selection.
+- Preserve original native operation identities on timeout. Check status is separate from execution and selection outcomes; uncertainty is not proof that nothing ran.
 - Reuse maintained upstream formats and libraries. Keep new formats limited to composition, interface bindings, policies, and reporting.
 - Schema files are normative for document shape; the specification owns algorithms and semantics. Resolve inconsistencies before claiming conformance.
 - Add independent conformance examples for new behavior. Never derive expected business results from the transformation under test.
