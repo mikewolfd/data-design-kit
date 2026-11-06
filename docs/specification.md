@@ -709,6 +709,8 @@ Catalogs connect declared product meaning to exact data and evidence. The [catal
 
 A catalog MUST identify the project revision, loaded definitions, exact source records, and adapter versions used to assemble it. References within the catalog MUST resolve to unique records within the declared scope or retain an explicit unresolved diagnostic. Maintained definitions own intended meaning and behavior. Acquisition records own capture and occurrence facts. Native execution and storage records own execution and retained-version facts. Publication records own release membership and selection. The catalog MUST cite the owner of each observed fact and preserve unresolved references and scope limits. Conflicting claims from the same authority for the same identity MUST produce a diagnostic. Claims from distinct scopes MUST remain distinguishable.
 
+When retaining project extensions, keep each declaring project's identifier, exact version, import namespace, and namespaced values together. Assembly MUST NOT merge values from different declaring scopes or infer domain behavior from an unrecognized extension.
+
 <a id="DDK-CATALOG-002"></a>
 ### DDK-CATALOG-002 — ODPS product and port resolution
 
@@ -726,6 +728,8 @@ Catalog descriptions MUST preserve nested paths, list element traversal, meaning
 
 The initial shared match rule is `equal`. Pair components in declared order and require every component to match. Supported comparisons use exact integer values, identical Unicode code-point sequences for strings, identical bytes for binary values, and the same calendar day for date values in the same declared calendar. Preserve declared type and scope and require compatible types. Apply the declared null policy before comparison. `skip` yields no match for a pair with a null key component, `reject` treats that key as invalid, and `match` matches null only to null at the same component. Treat a missing path as unresolved unless the owning definition supplies its interpretation. Report unresolved null handling or unsupported types as `unknown`. A list traversal selects elements for comparison and retains occurrence context. Project-specific conversions, list overlap rules, and other comparison semantics use `project_rule` with an exact versioned rule reference. The offline checker MUST validate supported endpoints and key rules and report unsupported reasoning as `unknown`. A supported comparison describes expected behavior. It takes executed evidence to establish actual matches or cardinality.
 
+An external endpoint MUST retain its external identifier and declared resolution meaning. It does not become a local dataset alias or authorize fetching the target. The shared checker MUST retain an unsupported external comparison as `unknown`. Several identities MAY use the same virtual field when its path, type, and scope agree; conflicting meanings MUST fail resolution.
+
 <a id="DDK-CATALOG-005"></a>
 ### DDK-CATALOG-005 — Observed runs and version-bound evidence
 
@@ -740,12 +744,18 @@ A release MUST name its native identity and exact version membership within the 
 
 Retention, successful parsing, qualification, representation availability, and selection MUST be reported from their respective evidence. A valid empty output, known absence, unresolved coverage, and acquisition failure MUST remain distinguishable. Supported query examples MUST identify their dialect, input datasets, parameter schema, and result grain or the dataset definition that owns that grain. Discovery MUST treat examples as documentation.
 
+Recipes MAY carry a title, ordered notes, and `contextualRelationships` for explanatory links. Each contextual link MUST resolve to a declared relationship. It MUST NOT add an unread endpoint to the recipe's inputs or execution binding. When positional parameters are used, `parameterOrder` MUST name every parameter property exactly once in the intended order. Consumers MUST preserve that order and MUST NOT infer it from object keys or the schema's `required` array.
+
 <a id="DDK-CATALOG-007"></a>
 ### DDK-CATALOG-007 — Local assembly and output integrity
 
 The catalog command MUST take an explicit project and output set. It MUST support a definition-only build with no metadata adapter and no inferred availability. When supplied, `--metadata` names a local input and `--metadata-adapter` selects its reader. Each `--export` names a generated companion format. Adapters MUST read existing owner records where available and preserve their assurance and scope. Ordinary assembly MUST reuse admitted metadata without opening, rehashing, or copying data payloads or rerunning their checks.
 
 Resolve authored recipe SQL against its declaring document. Publish each included recipe as a companion file with the original SQL bytes and a digest under `files`. The generated recipe's `sql` path MUST resolve relative to the catalog to that file. Its original source and digest MUST appear in the input inventory. Any other retained relative path MUST carry its resolution origin. Companion paths MUST resolve uniquely inside the output set. The public view MUST apply an explicit disclosure policy to SQL, locations, identifiers, and evidence links before writing them. A recipe whose SQL cannot be disclosed MUST be omitted from the public view with a diagnostic.
+
+The disclosure policy shape is defined by `catalog.schema.json#/$defs/disclosurePolicy`. Public definition disclosure MUST name allowed field paths for each disclosed dataset. Retain only those fields, necessary structural ancestors, supported types and nullability, and explicitly allowed descriptions. Mark the disclosed paths so consumers can identify a partial definition. The root object name MUST follow the disclosed object identity. Unlisted siblings, private native references, and custom properties remain withheld. Project extensions require an explicit grant for the source project's exact identifier and version and the selected extension namespaces; granting one scope MUST NOT merge it with another.
+
+A programmatic assembler MAY return an admitted catalog and its exact companion bytes while required checks remain incomplete or failed. Their presence MUST NOT establish qualification or authorize publication. Preserve the report and every required outcome. Public results MUST filter both content and diagnostics for the requested audience, including failures before assembly. Complete publishable output sets MUST be available only for passing results. An optional filesystem writer MUST use the same admitted bytes and preserve the previous complete output set on failure.
 
 The inventory MUST identify source definition bytes, native metadata inputs, audience policy, and mapping adapter identities. Identical inputs and mappings MUST produce reproducible catalog content and artifact digests. A successful build MUST inventory generated files and their digests and atomically replace the complete output set. Missing required formats MUST preserve the prior complete output set and follow DDK-CLI-004.
 
@@ -767,6 +777,8 @@ Record the event run ID in `openLineageRunId`. The catalog and pinned mapping in
 ### DDK-CATALOG-010 — Catalog change analysis
 
 An impact analyzer claiming catalog coverage MUST compare exact definition revisions, declared relationships, supported access, and requested policy rules for the loaded products. It MUST identify affected known consumers and check obligations and distinguish changes requiring computation, requalification, or metadata regeneration. A consumer or evidence scope outside the loaded inventory MUST remain explicitly unresolved.
+
+Recipe titles, notes, and contextual links affect documentation and applicable reader checks. A contextual endpoint alone does not establish a computation dependency. If the same dataset is also a real input, retain the stronger input obligations. A change to a scoped extension requires metadata regeneration; unknown domain effects MUST remain unresolved rather than becoming a blanket computation invalidation.
 
 <a id="references"></a>
 ## 20. References

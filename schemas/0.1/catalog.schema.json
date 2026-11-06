@@ -176,6 +176,47 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "disclosureIdentifiers": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/identifier"}
+    },
+    "disclosurePolicy": {
+      "type": "object",
+      "properties": {
+        "identifiers": {"$ref": "#/$defs/disclosureIdentifiers"},
+        "locations": {"$ref": "#/$defs/disclosureIdentifiers"},
+        "evidence": {"$ref": "#/$defs/disclosureIdentifiers"},
+        "recipes": {"$ref": "#/$defs/disclosureIdentifiers"},
+        "nativeReferences": {"$ref": "#/$defs/disclosureIdentifiers"},
+        "aliases": {
+          "type": "array",
+          "items": {"$ref": "common.schema.json#/$defs/name"}
+        },
+        "descriptions": {"type": "boolean"},
+        "definitionFields": {
+          "type": "object",
+          "propertyNames": {"$ref": "common.schema.json#/$defs/identifier"},
+          "additionalProperties": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/fieldPath"},
+            "uniqueItems": true
+          }
+        },
+        "projectExtensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "project": {"$ref": "#/$defs/versionedIdentifier"},
+              "extensions": {"$ref": "#/$defs/disclosureIdentifiers"}
+            },
+            "required": ["project", "extensions"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "record": {
       "type": "object",
       "properties": {
@@ -549,6 +590,17 @@
         "id": {
           "$ref": "common.schema.json#/$defs/identifier"
         },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "sql": {
           "$ref": "common.schema.json#/$defs/path"
         },
@@ -572,8 +624,24 @@
           },
           "uniqueItems": true
         },
+        "contextualRelationships": {
+          "description": "Informational relationship references; these do not declare recipe execution inputs or matching requirements.",
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
         "parameters": {
           "$ref": "common.schema.json#/$defs/parameterSchema"
+        },
+        "parameterOrder": {
+          "description": "Explicit positional parameter order; every named parameter property occurs exactly once.",
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "uniqueItems": true
         },
         "resultGrain": {
           "$ref": "common.schema.json#/$defs/name"

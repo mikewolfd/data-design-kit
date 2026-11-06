@@ -4,6 +4,14 @@
 
 The [local release record](local-release.md) identifies the package, exact sources, dependencies, and evidence. Development identity comes from local build and installer records; exact manifest qualification, expectation-source binding, case outcomes, and relocation now have installed regression coverage. The [dev1 record](local-release-dev1.md) preserves the earlier capture separately. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete work. Their [shared runtime plan](replacement-runtime-plan.md) covers broader managed operations, exact nested views, bounded quality, retained multi-table work, migration, and publication recovery. Those extensions are planned and unqualified; dev2 remains available for independent application work.
 
+## Successor work
+
+The [catalog API](catalog-api.md) exposes admitted definitions and exact companion bytes from one assembly. Public reports remain audience-safe on early and incomplete failures; complete controls require a passing result. Recipes retain titles, ordered notes, contextual links, and explicit parameter order. Public definitions use field-path grants, and extensions retain each declaring project's scope. External targets remain external; required unsupported relationship reasoning stays unknown. The focused source run passed 71 catalog, impact, and external-reference tests. Three separate reducer tests passed for unsupported operations and a changed Update base.
+
+The DocSpec integration adds a distinct `prepare_update` action using native Update for local, independent source-only bases. It reuses native computation, exact candidate access, quality acceptance, selection, and historical reconciliation. Final compiler-pinned execution and installed-package qualification are still in progress. Earlier small native and wrapper runs remain evidence for their recorded binary; a toolchain-path mismatch prevents attributing those runs to the intended Rust compiler.
+
+The full replacements still require bounded quality over larger candidates, richer native types and views, retained multi-output execution, native accepted-evidence catalog mapping, exact consumer membership, old-state admission, and publication recovery. Separate greybeard and ETL reviewers are active in the shared-runtime, SpicyRegs, and congressional-tech sessions. Their findings feed the responsible implementation owner and remain distinct from executed acceptance.
+
 ## Working paths
 
 | Capability | What is implemented | Evidence boundary |

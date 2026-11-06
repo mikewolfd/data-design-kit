@@ -2,6 +2,8 @@
 
 **Status.** November 6, 2026. Version `0.1.0-dev.2` passed installed qualification: 226 tests, no failures or skips, and 154 case/profile combinations across 13 profiles. The portable macOS arm64 archive passed checksum verification, fresh installation and lock checks, relocated evidence checks, and four connected-workflow cases. Publication awaits a destination. [Package, installation, and evidence](docs/local-release.md).
 
+The `0.1.0-dev.3` successor source adds a direct catalog API, scoped public definition disclosure, recipe context and parameter order, and external-reference loading. Its 71 focused catalog tests passed; installed qualification is pending. Native managed Update is undergoing separate runtime and wrapper qualification. These changes do not expand the frozen dev2 release claim. [Current work](docs/implementation-status.md#successor-work).
+
 Data Design Kit (DDK) uses maintained data definitions to check designs, test transformations, and generate a catalog of exact versions, access methods, relationships, and evidence. Maintainers can use the same definitions to assess changes and supply documentation and consumer metadata. The adopted [build strategy](docs/build-strategy-without-pilots.md) connects local commerce inputs, real execution and quality receipts, and a generated catalog reader. Nested/scoped identities and one typed managed operation have separate acceptance cases. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete delivery work.
 
 The first product release requires ODPS product definitions, ODCS dataset definitions, DCAT 3 discovery, OpenLineage job and run events, and a qualified Substrait execution path through DocSpec. It also includes SQL and fixture tests, supported ODCS output checks, and change analysis. Native systems supply the records of capture, computation, retention, and publication.
@@ -14,6 +16,7 @@ The first product release requires ODPS product definitions, ODCS dataset defini
 - [Build strategy without pilots](docs/build-strategy-without-pilots.md): adopted parallel implementation route using a local reference workflow.
 - [Adapter profiles](docs/adapter-profiles.md): exact boundaries for third-party integrations and proposed capability negotiation.
 - [Runtime integration](docs/runtime-integration.md): injected services, bounded versus managed execution, native bindings, and quality-gated selection.
+- [Catalog API](docs/catalog-api.md): admitted definitions, exact companion bytes, public disclosure, and qualification boundaries.
 - [Architecture decisions](docs/architecture-decisions.md): decisions and alternatives behind the draft.
 - [Research and references](docs/references.md): public sources, observed versions, licensing, and unresolved compatibility.
 - [Conformance cases](conformance/cases.json): independently specified runtime cases and their evidence.

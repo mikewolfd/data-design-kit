@@ -1,9 +1,12 @@
 """Assemble a local product catalog from loaded definitions and admitted metadata."""
 
 from collections import defaultdict
+from collections.abc import Mapping
 from copy import deepcopy
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from types import MappingProxyType
 
 from .catalog_access import (
     CatalogError, compare_equal, field_at, field_type, relationship_keys,
@@ -11,7 +14,7 @@ from .catalog_access import (
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, owner_record, stable_id
-from .catalog_output import public_view, read_disclosure, write_output_set
+from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
 from .core import check_inventory, load_project
 from .documents import (
     FORMAT_CHECKER, OPENLINEAGE_SCHEMA, OPENLINEAGE_VERSION_FACET, ODCS_SCHEMA, ODPS_SCHEMA, REPOSITORY,
@@ -31,6 +34,33 @@ CHECK_IDS = {name: f"DDK-CATALOG-{number:03d}" for name, number in {
     "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9,
 }.items()}
 DETAILS = "urn:ddk:catalog:assembly"
+
+
+@dataclass(frozen=True)
+class CatalogResult:
+    """One assembly's report, admitted view, and exact retained companion bytes.
+
+    ``report`` follows the requested audience; ``local_report`` retains internal
+    diagnostics and must not be published. ``catalog`` is absent when structural
+    admission did not complete. Its
+    presence does not establish qualification: callers must preserve ``report``
+    and its check outcomes. Companions use the paths inventoried by the catalog;
+    both the view and its companions have the requested disclosure applied.
+    ``artifacts`` contains the complete standard output bytes only for a passed
+    result. Inspecting an incomplete result does not make it publishable.
+    """
+
+    report: dict
+    catalog: dict | None
+    companions: Mapping[str, bytes]
+    artifacts: Mapping[str, bytes]
+    local_report: dict
+
+
+def _result(report, catalog=None, companions=None, artifacts=None, *, public=False):
+    view_report = public_report(report, catalog) if public else report
+    return CatalogResult(view_report, catalog, companions or MappingProxyType({}),
+                         artifacts or MappingProxyType({}), report)
 
 
 def _bytes(value):
@@ -197,6 +227,8 @@ class Assembly:
             for declaration in configuration.get("recipes", ()):
                 self.recipe(declaration, namespace, document.path)
         for recipe, _ in self.queries.values():
+            if any(link not in self.relationships for link in recipe.get("contextualRelationships", ())):
+                raise CatalogError("CATALOG-RECIPE-RELATIONSHIP", "A recipe references an unknown contextual relationship.")
             for link in recipe["relationships"]:
                 relationship = self.relationships.get(link)
                 if relationship is None:
@@ -254,11 +286,13 @@ class Assembly:
                 if field is not None:
                     fields.append(field_type(field))
                     continue
-                virtual = [(identity["scope"], item["physicalType"]) for identity in self.identities[alias]
-                           for item in identity["fields"] if item["virtual"] and item["path"] == key_path]
-                if len(virtual) != 1:
+                virtual = {(identity["scope"], item["physicalType"]) for identity in self.identities[alias]
+                           for item in identity["fields"] if item["virtual"] and item["path"] == key_path}
+                if len(virtual) > 1:
+                    raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "A virtual field has conflicting scope or type declarations.")
+                if not virtual:
                     raise CatalogError("CATALOG-KEY-PATH", "A relationship endpoint does not resolve to one declared field.")
-                scope, physical = virtual[0]
+                scope, physical = next(iter(virtual))
                 if scope == "release" and row["scope"] != "same_release":
                     raise CatalogError("CATALOG-RELEASE-SCOPE", "A release-local identity requires the same exact release.")
                 fields.append(field_type({"physicalType": physical, "logicalType": physical}))
@@ -289,6 +323,8 @@ class Assembly:
         row = deepcopy(declaration)
         if row["id"] in self.queries:
             raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "A recipe ID is declared more than once.")
+        if "parameterOrder" in row and set(row["parameterOrder"]) != row["parameters"].get("properties", {}).keys():
+            raise CatalogError("CATALOG-RECIPE-PARAMETERS", "Parameter order must name every parameter property exactly once.")
         row["inputs"] = {name: self.alias(alias, namespace) for name, alias in row["inputs"].items()}
         if "resultDataset" in row:
             row["resultDataset"] = self.alias(row["resultDataset"], namespace)
@@ -331,6 +367,11 @@ class Assembly:
         details = {
             "datasetDefinitions": {alias: self.dataset_schemas[alias] for alias in sorted(self.datasets)},
             "scope": self.inventory.scope,
+            "projectExtensions": [
+                {"project": {"id": document.value["id"], "version": document.value["version"]},
+                 "namespace": namespace, "extensions": deepcopy(document.value["extensions"])}
+                for namespace, document in sorted(self.inventory.projects.items()) if document.value.get("extensions")
+            ],
         }
         if self.metadata:
             details["recordOwners"] = self.metadata.owners
@@ -510,13 +551,18 @@ class Assembly:
                 self.check("lineage.openlineage", "export", error)
 
 
-def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
-                  current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                  permitted_roots=(), limits=None):
-    """Build and optionally publish a catalog as one complete, replaceable output directory."""
+def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
+                     current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
+                     permitted_roots=(), limits=None):
+    """Load once and return admitted metadata with its report and companions.
+
+    An admitted view remains inspectable when qualification is incomplete or
+    failed. Only a passed report permits atomic publication to ``output``.
+    """
     if isinstance(exports, str):
         exports = (exports,)
     profiles = sorted({EXPORTS.get(name, name) for name in exports})
+    public = audience == "public" or disclosure_policy is not None
     inventory = load_project(project_path, permitted_roots, limits)
     assembly = Assembly(inventory, profiles)
     report = inventory.report
@@ -524,14 +570,17 @@ def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports
     core = check_inventory(inventory, (*required_groups, "catalog.assembly", *profiles),
                            handled_groups=(*GROUPS, *profiles))
     if core["decision"] != "passed":
-        return core
+        return _result(core, public=public)
     for profile in profiles:
         if profile not in EXPORTS.values():
             report.missing_capabilities.add(profile)
             error = CatalogError("ADAPTER-CAPABILITY-MISSING", f"No adapter supports export {profile!r}.", status="not_run")
             assembly.check("exports", profile, error, required=True)
     if report.missing_capabilities:
-        return report.build()
+        return _result(report.build(), public=public)
+    admitted = None
+    companions = MappingProxyType({})
+    artifacts = MappingProxyType({})
     step = "products"
     failure_path = inventory.path
     try:
@@ -605,7 +654,16 @@ def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports
         assembly.catalog["files"] = [{"path": name, "role": role, "sha256": sha256(data).hexdigest()}
                                      for name, (role, data) in sorted(assembly.files.items())]
         _schema(assembly.catalog, "catalog")
+        admitted = assembly.catalog
+        companions = MappingProxyType({name: data for name, (_, data) in assembly.files.items()})
         result = report.build()
+        prepared = None
+        if result["decision"] == "passed":
+            prepared = prepare_output_set(
+                assembly.catalog, assembly.files, result, profiles,
+                assembly.metadata.adapter if assembly.metadata else None, inventory,
+            )
+            artifacts = MappingProxyType({name: data for name, (_, data) in prepared.items()})
         # Qualification can remain unresolved while the assembled discovery record is inspectable.
         if output is None or result["decision"] != "passed":
             report.metadata["catalog"] = assembly.catalog
@@ -613,12 +671,27 @@ def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports
             report.metadata["generatedFiles"] = write_output_set(
                 output, assembly.catalog, assembly.files, result, profiles,
                 assembly.metadata.adapter if assembly.metadata else None, inventory,
+                prepared=prepared,
             )
-        return report.build()
+        return _result(report.build(), admitted, companions, artifacts, public=public)
     except (CatalogError, DocumentError) as exc:
         error = exc if isinstance(exc, CatalogError) else CatalogError(exc.code, str(exc), exc.pointer)
         assembly.check(step, "build", error, path=failure_path, required=True, related=error.related)
     except (OSError, ResourceLimit) as exc:
         report.error(diagnostic("EXEC-RESOURCE-LIMIT" if isinstance(exc, ResourceLimit) else "CATALOG-IO",
                                 str(exc), path=failure_path))
-    return report.build()
+    if admitted is not None:
+        admitted["files"] = [{"path": name, "role": role, "sha256": sha256(data).hexdigest()}
+                             for name, (role, data) in sorted(assembly.files.items())]
+    return _result(report.build(), admitted, companions, public=public)
+
+
+def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
+                  current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
+                  permitted_roots=(), limits=None):
+    """Build and optionally publish a catalog; return its checking report."""
+    return assemble_catalog(
+        project_path, metadata=metadata, metadata_adapter=metadata_adapter, exports=exports, output=output,
+        current_selection=current_selection, disclosure_policy=disclosure_policy, audience=audience,
+        required_groups=required_groups, permitted_roots=permitted_roots, limits=limits,
+    ).local_report

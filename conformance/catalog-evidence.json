@@ -6,10 +6,10 @@
     "lineage.openlineage"
   ],
   "verification": {
-    "scope": "Executed catalog assembly, consumer, and impact tests over independent fixtures. Case verification is separate from the complete product workflow.",
-    "tests": "tests/catalog tests/core/test_catalog_impact.py",
-    "passedTests": 30,
-    "passedCases": 29,
+    "scope": "Executed catalog assembly, consumer, disclosure, external-reference, and impact tests over independent fixtures. This source-checkout evidence is separate from installed package and native application qualification.",
+    "tests": "tests/catalog tests/core/test_catalog_impact.py tests/core/test_catalog_recipe_metadata.py tests/core/test_external_relationships.py",
+    "passedTests": 71,
+    "passedCases": 40,
     "statusMeaning": "Verified means that the test exercised the behavior and observed the expected decision and diagnostic. An expected failed or incomplete decision is a verified negative case.",
     "standards": "RDFLib parses exported DCAT graphs. The pinned OpenLineage schemas validate exported events and version facets. A local independent receiver checks OpenLineage identity and replay."
   },
@@ -348,6 +348,137 @@
         "tests/catalog/test_catalog.py::test_required_project_rule_remains_unknown_with_declared_relationship"
       ],
       "evidence": "Requires a versioned project rule and verifies its unavailable evaluator leaves the comparison unknown while retaining the declaration."
+    },
+    {
+      "id": "CASE-CATALOG-030",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_result_reads_each_recipe_once_and_retains_exact_standard_outputs"
+      ],
+      "evidence": "Assemble once, count one read of each recipe SQL source, retain its exact bytes and all requested standard outputs, and verify that the atomic writer uses those retained bytes."
+    },
+    {
+      "id": "CASE-CATALOG-031",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_admitted_view_preserves_required_quality_status_without_publishing[unknown]",
+        "tests/catalog/test_catalog_result.py::test_unknown_supported_reasoning_keeps_admitted_catalog_and_sql"
+      ],
+      "evidence": "A required check is unknown. Return admitted definitions and companions with their unchanged check status, no publishable controls, and the previous complete output intact."
+    },
+    {
+      "id": "CASE-CATALOG-032",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-RELATIONSHIP",
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_invalid_structure_has_no_admitted_view_or_companions[missing-context]"
+      ],
+      "evidence": "A contextual relationship does not resolve. Refuse structural admission and return neither catalog nor companion bytes."
+    },
+    {
+      "id": "CASE-CATALOG-033",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_contextual_relationships_preserve_notes_without_binding_unread_tables",
+        "tests/catalog/test_catalog_result.py::test_positional_parameter_order_is_authored_and_survives_binding"
+      ],
+      "evidence": "Retain a recipe title, ordered notes, explicit positional parameter order, and resolved contextual relationships. Preserve actual query inputs without adding contextual endpoints."
+    },
+    {
+      "id": "CASE-CATALOG-034",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_public_definition_paths_keep_selected_meaning_and_shape_without_private_siblings",
+        "tests/catalog/test_catalog_result.py::test_public_field_grants_do_not_disclose_original_object_name"
+      ],
+      "evidence": "Disclose selected nested and list field paths with necessary ancestors, types and nullability. Withhold unlisted siblings, native properties and the original private root object name; retain explicit partial-path scope."
+    },
+    {
+      "id": "CASE-CATALOG-035",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_project_extensions_keep_each_declaring_scope_without_semantic_interpretation",
+        "tests/catalog/test_catalog_result.py::test_public_extensions_require_an_exact_source_project_and_namespace_grant"
+      ],
+      "evidence": "Retain root and imported project extensions separately with exact declaring identities and namespace. Public extension access requires the exact source revision and explicit extension namespace grant."
+    },
+    {
+      "id": "CASE-CATALOG-036",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_one_virtual_field_can_support_row_position_and_an_additional_unique_key[None]"
+      ],
+      "evidence": "The same virtual field supports a row-position identity and an additional unique key with identical path, type and scope. Resolve it once without inventing a physical ODCS property or losing the original key."
+    },
+    {
+      "id": "CASE-CATALOG-037",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-AUTHORITY-CONFLICT",
+      "tests": [
+        "tests/catalog/test_catalog_result.py::test_one_virtual_field_can_support_row_position_and_an_additional_unique_key[scope]",
+        "tests/catalog/test_catalog_result.py::test_one_virtual_field_can_support_row_position_and_an_additional_unique_key[type]"
+      ],
+      "evidence": "Two virtual declarations of one path disagree about type or scope. Refuse the relationship and catalog admission."
+    },
+    {
+      "id": "CASE-CATALOG-038",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-MATCH-UNSUPPORTED",
+      "tests": [
+        "tests/core/test_external_relationships.py::test_external_target_keeps_only_local_dependency_and_core_stays_offline",
+        "tests/core/test_external_relationships.py::test_external_relationship_is_retained_with_unknown_resolution[True-incomplete]",
+        "tests/core/test_external_relationships.py::test_imported_external_relationship_keeps_its_local_namespace"
+      ],
+      "evidence": "Load an external target without treating it as a local alias or fetching it. Retain the relationship, local import scope and unknown shared comparison; a required comparison keeps the build incomplete."
+    },
+    {
+      "id": "CASE-CATALOG-039",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/core/test_catalog_recipe_metadata.py::test_recipe_title_ordered_notes_and_context_are_metadata_with_reader_rechecks",
+        "tests/core/test_catalog_recipe_metadata.py::test_contextual_table_shape_change_refreshes_docs_without_claiming_consumption",
+        "tests/core/test_catalog_recipe_metadata.py::test_real_input_dependency_retains_computation_review_alongside_context",
+        "tests/core/test_catalog_recipe_metadata.py::test_calculation_and_required_rule_changes_keep_distinct_obligations"
+      ],
+      "evidence": "Changing recipe documentation or contextual endpoint meaning requires metadata and reader review. Actual input and production changes retain their stronger computation obligations; rule changes require qualification separately."
+    },
+    {
+      "id": "CASE-CATALOG-040",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/core/test_catalog_recipe_metadata.py::test_scoped_unknown_extension_change_is_metadata_with_unresolved_domain_impact"
+      ],
+      "evidence": "Change one scoped opaque project extension. Record the metadata change and unresolved domain impact without inventing a computation dependency."
     }
   ],
   "additionalReceiptTests": [

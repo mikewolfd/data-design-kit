@@ -309,6 +309,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 **Dependencies:** WP-02. **Owners:** DDK and project metadata owners. **Output:** ODPS-backed catalog and its exact input inventory.
 
 - Resolve product ports to registered ODCS objects and validate identities, relationships, and recipes. Support definition-only discovery and relocatable companion recipes.
+- Expose the admitted catalog, audience-safe report, and exact companion bytes from the same assembly. Preserve incomplete qualification and generate complete controls only for passing results. Support explicitly scoped definition and extension disclosure without reconstructing application metadata from source files.
 - Implement an explicitly selected local metadata adapter that reads actual staging, DocSpec execution, and quality receipts from the reference workflow. Preserve each observed fact's owner, exact identity, coverage, and custody. Illustrative example receipts qualify shape tests only.
 - Add independent nested/list paths, binary and composite keys, scoped row positions, and wrong-release negatives without project-specific consumers.
 - Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Verify deterministic refresh with zero data-payload opens or repeated data checks.

@@ -104,12 +104,29 @@ class Snapshot:
         self.quality_inventory = rules if rules is not None else details.get("requiredQualityChecks")
         self.records = {}
         self.dependents = defaultdict(set)
+        self.contextual_dependents = defaultdict(set)
         self.unresolved = set()
         self.datasets = {}
         self.versions = {}
         self.releases = {}
         self.unevidenced_rules = set()
         recipe_digests = {row["path"]: row["sha256"] for row in value["files"]}
+
+        extensions = details.get("projectExtensions", [])
+        if not isinstance(extensions, list):
+            raise DocumentError("CATALOG-IMPACT-SCOPE", "Scoped project extensions must be listed separately by source project.")
+        for source in extensions:
+            if (not isinstance(source, dict) or not isinstance(source.get("project"), dict)
+                    or not isinstance(source.get("namespace"), str) or not isinstance(source.get("extensions"), dict)):
+                raise DocumentError("CATALOG-IMPACT-SCOPE", "A project extension needs its declaring project, namespace, and values.")
+            for namespace, meaning in source["extensions"].items():
+                identity = _identity("project-extension", source["project"], source["namespace"], namespace)
+                self.add("project-extension", identity, identity, {
+                    "project": source["project"], "namespace": source["namespace"], "extension": namespace, "value": meaning,
+                })
+                # DDK preserves unknown extension meaning without inventing
+                # domain consumers, execution dependencies, or reuse decisions.
+                self.unresolved.add(identity)
 
         for row in value["datasets"]:
             alias = row["alias"]
@@ -152,6 +169,9 @@ class Snapshot:
             for relationship in row["relationships"]:
                 target = ("relationship", relationship)
                 self.link(target if target in self.records else None, node, relationship)
+            for relationship in row.get("contextualRelationships", ()):
+                target = ("relationship", relationship)
+                self.link(target if target in self.records else None, node, relationship, contextual=True)
         for row in value["productions"]:
             node = self.add("production", row["alias"], row["identity"]["id"], row, row["identity"]["version"])
             for alias in (*row["inputs"], *row["outputs"]):
@@ -207,11 +227,11 @@ class Snapshot:
         self.records[node] = Record(identity, value, revision)
         return node
 
-    def link(self, source, target, subject):
+    def link(self, source, target, subject, *, contextual=False):
         if source is None or target is None:
             self.unresolved.add(subject)
         else:
-            self.dependents[source].add(target)
+            (self.contextual_dependents if contextual else self.dependents)[source].add(target)
 
     def _dataset_for(self, version):
         return self.datasets.get(self.records[version].value["dataset"]) if version is not None else None
@@ -253,9 +273,12 @@ def _change(kind, key, old, new, base, candidate):
 
 def _routes(base, candidate, changed, limit):
     dependencies = defaultdict(set)
+    contextual = defaultdict(set)
     for snapshot in (base, candidate):
         for source, consumers in snapshot.dependents.items():
             dependencies[source].update(consumers)
+        for source, consumers in snapshot.contextual_dependents.items():
+            contextual[source].update(consumers)
 
     def label(node):
         return f"{node[0]}:{node[1]}"
@@ -263,18 +286,26 @@ def _routes(base, candidate, changed, limit):
     reached = defaultdict(list)
     traversed = 0
     for source in sorted(changed):
-        queue = deque([(source, [label(source)])])
-        seen = {source}
+        initial = frozenset(changed[source])
+        queue = deque([(source, [label(source)], initial)])
+        seen = {(source, initial)}
         while queue:
-            node, path = queue.popleft()
-            for consumer in sorted(dependencies[node] - seen):
+            node, path, obligations = queue.popleft()
+            for consumer in sorted(dependencies[node] | contextual[node]):
+                # Informational references require a reader/metadata refresh,
+                # without claiming that the referenced table was consumed.
+                next_obligations = (frozenset((METADATA, REBIND))
+                                    if consumer not in dependencies[node] else obligations)
+                state = (consumer, next_obligations)
+                if state in seen or label(consumer) in path:
+                    continue
                 traversed += 1
                 if traversed > limit:
                     raise ResourceLimit("Catalog impact dependency paths exceed the configured graph edge limit.")
-                seen.add(consumer)
+                seen.add(state)
                 route = [*path, label(consumer)]
-                reached[label(consumer)].append((route, changed[source]))
-                queue.append((consumer, route))
+                reached[label(consumer)].append((route, next_obligations))
+                queue.append((consumer, route, next_obligations))
     return reached
 
 
@@ -410,7 +441,8 @@ def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), req
                 "identity": identity, "obligations": consequences,
                 "computation": "review-required" if COMPUTE in consequences else "unaffected-by-this-change",
             }
-            if kind in {"native-version", "representation", "publisher-release", "publisher-selection", "requested-quality"}:
+            if kind in {"native-version", "representation", "publisher-release", "publisher-selection", "requested-quality",
+                        "project-extension"}:
                 details[f"{kind}:{key}"].update({
                     "baseRecord": base_record.value if base_record else None,
                     "candidateRecord": candidate_record.value if candidate_record else None,

@@ -1,6 +1,7 @@
 """Disclosure and complete local output-set replacement."""
 
 import ctypes
+from collections import defaultdict
 from copy import deepcopy
 import fcntl
 from hashlib import file_digest, sha256
@@ -11,32 +12,58 @@ from shutil import rmtree
 import sys
 from tempfile import mkdtemp
 
-from .catalog_access import CatalogError
-from .documents import FORMAT_CHECKER, json_dumps, read_json, validate_document
+from .catalog_access import CatalogError, field_at
+from .documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
 from .locks import build_lock
 from .results import VERSION
 
 MANIFEST = "urn:ddk:catalog:output-set"
-POLICY_FIELDS = {"identifiers", "aliases", "locations", "evidence", "recipes", "nativeReferences", "descriptions"}
+POLICY_LISTS = {"identifiers", "aliases", "locations", "evidence", "recipes", "nativeReferences"}
+FIELD_SHAPE = {"name", "logicalType", "required"}
+FIELD_DESCRIPTIONS = {"businessName", "description", "dataGranularityDescription"}
 
 
 def read_disclosure(document):
     value = document.value
-    if not isinstance(value, dict) or value.keys() - POLICY_FIELDS:
-        raise CatalogError("CATALOG-DISCLOSURE", "The disclosure policy contains unknown settings.")
-    policy = {}
-    for field in POLICY_FIELDS - {"descriptions"}:
-        entries = value.get(field, [])
-        if not isinstance(entries, list) or any(not isinstance(item, str) or not item for item in entries):
-            raise CatalogError("CATALOG-DISCLOSURE", f"The {field} setting needs a list of exact strings.")
-        if field != "aliases" and any(not FORMAT_CHECKER.conforms(item, "uri") for item in entries):
-            raise CatalogError("CATALOG-DISCLOSURE", f"The {field} setting needs absolute identifiers.")
-        policy[field] = frozenset(entries)
+    registry, schemas, _ = schema_registry()
+    validator = schema_validator({"$ref": f"{schemas['catalog']['$id']}#/$defs/disclosurePolicy"}, resource_registry=registry)
+    if error := next(validator.iter_errors(value), None):
+        raise CatalogError("CATALOG-DISCLOSURE", error.message)
+    policy = {field: frozenset(value.get(field, [])) for field in POLICY_LISTS}
     policy["descriptions"] = value.get("descriptions", False)
-    if not isinstance(policy["descriptions"], bool):
-        raise CatalogError("CATALOG-DISCLOSURE", "The descriptions setting must be true or false.")
+    policy["definitionFields"] = deepcopy(value.get("definitionFields", {}))
+    extensions = value.get("projectExtensions", [])
+    seen = set()
+    for entry in extensions:
+        key = json_dumps(entry["project"])
+        if key in seen:
+            raise CatalogError("CATALOG-DISCLOSURE", "A source project has more than one extension disclosure grant.")
+        seen.add(key)
+    policy["projectExtensions"] = deepcopy(extensions)
     policy["record"] = {"uri": document.path.as_uri(), "sha256": document.sha256}
     return policy
+
+
+def _definition_view(definition, paths, descriptions):
+    """Keep explicit leaves and the minimum structure needed to locate them."""
+    result = {key: deepcopy(value) for key, value in definition.items() if key in FIELD_SHAPE}
+    # A composite physical spelling can embed unlisted child names. Scalar
+    # physical types remain exact; recursive logical structure describes parents.
+    if "physicalType" in definition and not {"properties", "items"} & definition.keys():
+        result["physicalType"] = definition["physicalType"]
+    if descriptions and [] in paths:
+        result.update({key: deepcopy(value) for key, value in definition.items() if key in FIELD_DESCRIPTIONS})
+    properties = []
+    for field in definition.get("properties", ()):
+        descendants = [path[1:] for path in paths if path and path[0].get("field") == field["name"]]
+        if descendants:
+            properties.append(_definition_view(field, descendants, descriptions))
+    if properties:
+        result["properties"] = properties
+    elements = [path[1:] for path in paths if path and path[0].get("each") is True]
+    if elements:
+        result["items"] = _definition_view(definition["items"], elements, descriptions)
+    return result
 
 
 def _hide_uri(record, allowed):
@@ -82,10 +109,53 @@ def public_view(catalog, policy, details_key):
         if not policy["descriptions"]:
             for key in ("title", "rowMeaning"):
                 dataset.pop(key, None)
-            definition["object"] = _alias(definition["object"], policy["aliases"])
+        else:
+            object_name = catalog.get("extensions", {}).get(details_key, {}).get("datasetDefinitions", {}).get(alias, {}).get("name")
+            if dataset.get("title") == object_name and object_name not in policy["aliases"]:
+                dataset.pop("title", None)
+        definition["object"] = _alias(definition["object"], policy["aliases"])
         definition["source"] = _hide_uri(definition["source"], policy["evidence"])
         datasets.append(dataset)
     view["datasets"] = datasets
+    details = view["extensions"][details_key]
+    authored_details = catalog.get("extensions", {}).get(details_key, {})
+    dataset_ids = {row["id"]: row["alias"] for row in catalog["datasets"]}
+    disclosed_definitions = {}
+    disclosed_paths = {}
+    for identifier, paths in policy["definitionFields"].items():
+        alias = dataset_ids.get(identifier)
+        definition = authored_details.get("datasetDefinitions", {}).get(alias)
+        if alias not in aliases or definition is None:
+            raise CatalogError("CATALOG-DISCLOSURE", "An allowed definition must name a disclosed dataset in this catalog.")
+        if any(field_at(definition, path) is None for path in paths):
+            raise CatalogError("CATALOG-DISCLOSURE", "An allowed definition field path does not resolve.")
+        if paths:
+            disclosed_definitions[aliases[alias]] = _definition_view(definition, paths, policy["descriptions"])
+            disclosed_definitions[aliases[alias]]["name"] = next(
+                row["definition"]["object"] for row in datasets if row["id"] == identifier)
+            disclosed_paths[aliases[alias]] = deepcopy(paths)
+    if disclosed_definitions:
+        details["datasetDefinitions"] = disclosed_definitions
+        details["disclosedDefinitionPaths"] = disclosed_paths
+    extension_grants = {json_dumps(row["project"]): set(row["extensions"]) for row in policy["projectExtensions"]}
+    known_extensions = defaultdict(set)
+    disclosed_extensions = []
+    for row in authored_details.get("projectExtensions", ()):
+        key = json_dumps(row["project"])
+        known_extensions[key].update(row["extensions"])
+        permitted = extension_grants.get(key, set())
+        if permitted:
+            if row["project"]["id"] not in ids:
+                raise CatalogError("CATALOG-DISCLOSURE", "A disclosed extension's source project identifier must be permitted.")
+            disclosed_extensions.append({
+                "project": deepcopy(row["project"]),
+                "namespace": _alias(row["namespace"], policy["aliases"]) if row["namespace"] else "",
+                "extensions": {key: deepcopy(value) for key, value in row["extensions"].items() if key in permitted},
+            })
+    if any(key not in known_extensions or names - known_extensions[key] for key, names in extension_grants.items()):
+        raise CatalogError("CATALOG-DISCLOSURE", "An extension disclosure grant names an unknown project or namespace.")
+    if disclosed_extensions:
+        details["projectExtensions"] = disclosed_extensions
     products = []
     for product in view["products"]:
         if product["id"] not in ids:
@@ -126,6 +196,12 @@ def public_view(catalog, policy, details_key):
             omitted.append(recipe["id"])
             continue
         recipe["inputs"] = {name: aliases[alias] for name, alias in recipe["inputs"].items()}
+        if "contextualRelationships" in recipe:
+            recipe["contextualRelationships"] = [identifier for identifier in recipe["contextualRelationships"]
+                                                 if identifier in relationships]
+        if not policy["descriptions"]:
+            for key in ("title", "notes"):
+                recipe.pop(key, None)
         if "resultDataset" in recipe:
             recipe["resultDataset"] = aliases[recipe["resultDataset"]]
         recipes.append(recipe)
@@ -181,26 +257,38 @@ def _data(value):
     return (json_dumps(value) + "\n").encode("utf-8")
 
 
-def _public_report(report, catalog):
+def public_report(report, catalog=None):
+    """Keep check outcomes while withholding local diagnostics and input scope."""
     public = deepcopy(report)
+    catalog_id = catalog["id"] if catalog is not None else "urn:ddk:catalog:withheld"
     public["scope"] = {
-        "projects": [catalog["project"]["id"]], "artifacts": sorted(item["alias"] for item in catalog["datasets"]),
+        "projects": [catalog["project"]["id"]] if catalog is not None else ["urn:ddk:project:withheld"],
+        "artifacts": sorted(item["alias"] for item in catalog["datasets"]) if catalog is not None else [],
         "followedReferences": [], "excludedConsumers": [],
     }
-    public["id"] = "urn:ddk:report:" + sha256(catalog["id"].encode()).hexdigest()
+    public["id"] = "urn:ddk:report:" + sha256(catalog_id.encode()).hexdigest()
+
+    def withhold(item):
+        item["location"] = {"path": "catalog.ddk.json", "pointer": ""}
+        item.pop("related", None)
+        if item["code"] != "CATALOG-RECIPE-WITHHELD":
+            item["message"] = "Details withheld by the disclosure policy."
+
     for index, check in enumerate(public["checks"]):
         check["id"] = f"catalog-check-{index + 1}"
-        check["subject"] = catalog["id"]
+        check["subject"] = catalog_id
         for item in check["diagnostics"]:
-            item["location"] = {"path": "catalog.ddk.json", "pointer": ""}
-            item.pop("related", None)
-            if item["code"] != "CATALOG-RECIPE-WITHHELD":
-                item["message"] = "Details withheld by the disclosure policy."
+            withhold(item)
         if "reason" in check and all(item["code"] != "CATALOG-RECIPE-WITHHELD" for item in check["diagnostics"]):
             check["reason"] = "Details withheld by the disclosure policy."
         check.pop("evidenceRecords", None)
         if check["evidence"] == "executed":
             check["evidence"] = "declared"
+    for item in public["operationalErrors"]:
+        withhold(item)
+    if public["coverage"]["mappingLimits"]:
+        public["coverage"]["mappingLimits"] = ["Mapping and evidence limits are retained in the local report."]
+    public["lock"] = {"verified": public["lock"].get("verified", False)}
     public.pop("metadata", None)
     return public
 
@@ -282,13 +370,11 @@ def _lock(inventory, catalog, exports, metadata_adapter, generated):
     return lock
 
 
-def write_output_set(output, catalog, companions, report, exports, metadata_adapter, inventory):
-    output = Path(output).absolute()
-    if output.resolve() == inventory.path.parent:
-        raise CatalogError("CATALOG-OUTPUT-UNOWNED", "The project directory cannot be the generated output set.")
+def prepare_output_set(catalog, companions, report, exports, metadata_adapter, inventory):
+    """Prepare the standard control files from admitted in-memory inputs."""
     files = dict(companions)
     if catalog["audience"] == "public":
-        report = _public_report(report, catalog)
+        report = public_report(report, catalog)
     issues = validate_document(report, "report")
     if issues:
         raise CatalogError("CATALOG-REPORT-SCHEMA", issues[0].message, issues[0].pointer)
@@ -299,6 +385,15 @@ def write_output_set(output, catalog, companions, report, exports, metadata_adap
         raise CatalogError("CATALOG-OUTPUT-SCHEMA", issues[0].message, issues[0].pointer)
     files["catalog.ddk.json"] = ("catalog", _data(catalog))
     files["catalog.lock.json"] = ("lock", _data(_lock(inventory, catalog, exports, metadata_adapter, _inventory(files))))
+    return files
+
+
+def write_output_set(output, catalog, companions, report, exports, metadata_adapter, inventory, *, prepared=None):
+    output = Path(output).absolute()
+    if output.resolve() == inventory.path.parent:
+        raise CatalogError("CATALOG-OUTPUT-UNOWNED", "The project directory cannot be the generated output set.")
+    files = (prepare_output_set(catalog, companions, report, exports, metadata_adapter, inventory)
+             if prepared is None else prepared)
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(mkdtemp(prefix=".ddk-catalog-", dir=output.parent))
     try:

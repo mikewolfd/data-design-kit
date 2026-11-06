@@ -49,10 +49,11 @@ def _catalog_dependencies(inventory):
                     if "resultDataset" in item:
                         references.append(item["resultDataset"])
                 else:
-                    references = [item["source"]["dataset"], item["target"]["dataset"]]
+                    references = [endpoint["dataset"] for endpoint in (item["source"], item["target"])
+                                  if "dataset" in endpoint]
                 for reference in references:
                     inventory.dependency(item["id"], scoped_alias(reference, namespace))
-                for relationship in item.get("relationships", []):
+                for relationship in (*item.get("relationships", ()), *item.get("contextualRelationships", ())):
                     inventory.dependency(item["id"], relationship)
 
 

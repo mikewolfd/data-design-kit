@@ -1,5 +1,15 @@
 # DDK verification
 
+## November 6, 2026 catalog successor checks
+
+The source implementation passed 71 focused catalog, public-disclosure, impact, and external-reference tests. The [integrated run](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/integrated-01.xml) retains those passes alongside two passing reducer cases and one failed reducer-fixture assertion. The [corrected reducer run](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/refusal-tests-02.xml) passed all three reducer cases. A [focused diagnostic assertion](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/diagnostic-01.xml) passed after independent review tightened the new conformance claims. These are source-checkout checks, not installed release qualification.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/document-audit-01/document-audit.json) passed 16 schema shapes, five adapter declarations, nine upstream identities, 94 requirements with one owner each, 17 work packages, and all maintained test selectors. The case registry now includes 152 cases. New catalog expectations describe one SQL read with retained output bytes, audience-safe failure reports, scoped extension disclosure, positional parameters, virtual identity consistency, and external-target behavior.
+
+Actual assembly of the retained congressional definitions produced an admitted catalog and 16 SQL companions, with 38 relationship checks passed and 32 unknown. The overall result remained incomplete and exposed no publishable controls. The [report and input/source identities](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/congress-relationships-01/summary.json) keep that application observation separate from native data qualification.
+
+Separate greybeard and ETL reviewers cover this session and both application sessions. Review accepted the catalog source and identified remaining managed-evidence mapping, complete membership, bounded-quality, and acceptance-retry work. Native managed Update and its final toolchain qualification remain separate from this catalog increment. Frozen dev2 evidence below retains its original meaning.
+
 ## November 6, 2026 shared-runtime planning checkpoint
 
 The [full replacement runtime plan](replacement-runtime-plan.md) records the concrete shared work requested by SpicyRegs and congressional-tech. Source inspection and an [independent greybeard/ETL/semi-formal review](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/document-checkpoint-01/independent-review.md) identified four design corrections: qualification of a recomposed candidate, complete multi-view check bindings, publication authorization and historical outcomes, and checkpoint retirement. The plan incorporates those corrections and keeps the affected protocols and their execution evidence pending.

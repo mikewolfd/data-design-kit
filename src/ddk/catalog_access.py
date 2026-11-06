@@ -179,7 +179,8 @@ def resolve_query(catalog, recipe_id, *, release=None, selection=None, versions=
         if relationship["scope"] in {"external", "declared"}:
             raise CatalogError("CATALOG-BINDING-UNRESOLVED", "The recipe uses a relationship with unsupported scope.",
                                status="unknown")
-    return {"recipe": recipe_id, "dialect": recipe["dialect"], "parameters": deepcopy(parameters), **binding}
+    return {"recipe": recipe_id, "dialect": recipe["dialect"], "parameters": deepcopy(parameters),
+            **({"parameterOrder": list(recipe["parameterOrder"])} if "parameterOrder" in recipe else {}), **binding}
 
 
 def run_checked_query(catalog_path, recipe_id, reader, **binding_args):

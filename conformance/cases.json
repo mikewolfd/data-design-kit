@@ -2225,6 +2225,176 @@
         "exitCode": 2,
         "diagnostic": "TEST-WORKFLOW-INCOMPLETE"
       }
+    },
+    {
+      "id": "CASE-CATALOG-030",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Assemble once, count one read of each recipe SQL source, retain its exact bytes and all requested standard outputs, and verify that the atomic writer uses those retained bytes.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-031",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A required check is unknown. Return admitted definitions and companions with their unchanged check status, no publishable controls, and the previous complete output intact.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-032",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A contextual relationship does not resolve. Refuse structural admission and return neither catalog nor companion bytes.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-RELATIONSHIP"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-033",
+      "requirements": [
+        "DDK-CATALOG-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain a recipe title, ordered notes, explicit positional parameter order, and resolved contextual relationships. Preserve actual query inputs without adding contextual endpoints.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-034",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Disclose selected nested and list field paths with necessary ancestors, types and nullability. Withhold unlisted siblings, native properties and the original private root object name; retain explicit partial-path scope.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-035",
+      "requirements": [
+        "DDK-CATALOG-001",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain root and imported project extensions separately with exact declaring identities and namespace. Public extension access requires the exact source revision and explicit extension namespace grant.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-036",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The same virtual field supports a row-position identity and an additional unique key with identical path, type and scope. Resolve it once without inventing a physical ODCS property or losing the original key.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-037",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Two virtual declarations of one path disagree about type or scope. Refuse the relationship and catalog admission.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-AUTHORITY-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-038",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Load an external target without treating it as a local alias or fetching it. Retain the relationship, local import scope and unknown shared comparison; a required comparison keeps the build incomplete.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-MATCH-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-039",
+      "requirements": [
+        "DDK-CATALOG-010"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Changing recipe documentation or contextual endpoint meaning requires metadata and reader review. Actual input and production changes retain their stronger computation obligations; rule changes require qualification separately.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-040",
+      "requirements": [
+        "DDK-CATALOG-001",
+        "DDK-CATALOG-010"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Change one scoped opaque project extension. Record the metadata change and unresolved domain impact without inventing a computation dependency.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }
