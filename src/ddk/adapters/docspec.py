@@ -14,6 +14,7 @@ from uuid import uuid4
 from time import monotonic
 
 from ddk.adapters.native import SecretRedaction, file_sha256, request_transport, run_bounded, write_json
+from ddk.adapters.docspec_schema import PRIMITIVE_PROFILE, RECURSIVE_PROFILE, source_native_read
 
 
 RUNTIME = "docspec"
@@ -47,9 +48,13 @@ class DocSpecAdapter:
     """Prepare and execute through an explicitly selected DocSpec executable."""
 
     def __init__(self, executable, limits, *, timeout=120, evidence_dir=None,
-                 capture_bytes=DEFAULT_CAPTURE_BYTES, source_commit=None, secret_values=()):
+                 capture_bytes=DEFAULT_CAPTURE_BYTES, source_commit=None, secret_values=(),
+                 native_mapping_profile=PRIMITIVE_PROFILE):
         if not math.isfinite(timeout) or timeout <= 0 or capture_bytes <= 0:
             raise ValueError("DocSpec timeout and capture size must be positive")
+        if native_mapping_profile not in {PRIMITIVE_PROFILE, RECURSIVE_PROFILE}:
+            raise ValueError("Select an explicitly supported native mapping profile")
+        self.native_mapping_profile = native_mapping_profile
         self.executable = Path(executable).resolve(strict=True)
         self.timeout = timeout
         self.capture_bytes = capture_bytes
@@ -134,7 +139,7 @@ class DocSpecAdapter:
         evidence = {"kind": "native-report", "path": str(receipt_path),
                     "sha256": sha256(data).hexdigest(), "tool": RUNTIME}
         try:
-            observed = _native_read(version, receipt)
+            observed = _native_read(version, receipt, self.native_mapping_profile)
         except ValueError as exc:
             return {"status": "unknown", "result": receipt, "evidence": evidence,
                     "error": _error("DOCSPEC-NATIVE-SCHEMA", str(exc))}
@@ -244,7 +249,7 @@ class DocSpecAdapter:
                 version = native_versions.get(observation["name"])
                 if version is None or observation["version"] != version["reference"]:
                     raise ValueError("Native job observation disagrees with the admitted binding")
-                native_reads.append(_native_read(version, observation))
+                native_reads.append(_native_read(version, observation, self.native_mapping_profile))
             if status == "succeeded" and len(native_reads) != len(native_versions):
                 raise ValueError("Native job returned incomplete version observations")
             if operation_context is not None and (status == "succeeded" or result):
@@ -458,7 +463,11 @@ _LOGICAL_TYPES = {
 }
 
 
-def _native_read(version, receipt):
+def _native_read(version, receipt, profile=PRIMITIVE_PROFILE):
+    if profile == RECURSIVE_PROFILE:
+        return source_native_read(version, receipt)
+    if profile != PRIMITIVE_PROFILE:
+        raise ValueError("Unsupported native mapping profile")
     fields = []
     for position, field in enumerate(receipt["schema"]["fields"]):
         physical = field["data_type"]
