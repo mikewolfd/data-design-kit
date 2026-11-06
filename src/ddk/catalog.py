@@ -3,7 +3,7 @@
 from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 from hashlib import sha256
 from pathlib import Path
 from types import MappingProxyType
@@ -13,6 +13,7 @@ from .catalog_access import (
     resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
+from .catalog_delivery import PAIRED_VIEW, paired_view_record
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
 from .catalog_semantics import admit_profile, resolved_key, resolved_relationship
@@ -58,12 +59,15 @@ class CatalogResult:
     artifacts: Mapping[str, bytes]
     local_report: dict
     local_catalog: dict | None = None
+    local_artifacts: Mapping[str, bytes] = dataclass_field(default_factory=lambda: MappingProxyType({}))
 
 
-def _result(report, catalog=None, companions=None, artifacts=None, *, public=False, local_catalog=None):
+def _result(report, catalog=None, companions=None, artifacts=None, *, public=False, local_catalog=None,
+            local_artifacts=None):
     view_report = public_report(report, catalog) if public else report
     return CatalogResult(view_report, catalog, companions or MappingProxyType({}),
-                         artifacts or MappingProxyType({}), report, local_catalog)
+                         artifacts or MappingProxyType({}), report, local_catalog,
+                         local_artifacts or MappingProxyType({}))
 
 
 def _bytes(value):
@@ -319,7 +323,7 @@ class Assembly:
                 fields.append(resolved_key(key_path, {"physicalType": physical, "logicalType": physical}, scope))
             keys[side] = fields
         if "target" in keys:
-            if len(keys["source"]) != len(keys["target"]):
+            if row["match"] == "equal" and len(keys["source"]) != len(keys["target"]):
                 raise CatalogError("CATALOG-KEY-INCOMPLETE", "Both endpoints must supply every ordered key component.")
             for side, cardinalities in (("source", {"one_to_one", "one_to_many"}),
                                         ("target", {"one_to_one", "many_to_one"})):
@@ -599,7 +603,7 @@ class Assembly:
 
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                     permitted_roots=(), limits=None, relationship_profile=None):
+                     permitted_roots=(), limits=None, relationship_profile=None, include_private_artifacts=False):
     """Load once and return admitted metadata with its report and companions.
 
     An admitted view remains inspectable when qualification is incomplete or
@@ -609,6 +613,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         exports = (exports,)
     profiles = sorted({EXPORTS.get(name, name) for name in exports})
     public = audience == "public" or disclosure_policy is not None
+    if type(include_private_artifacts) is not bool or (include_private_artifacts and not public):
+        raise ValueError("Private access artifacts require an explicitly requested public assembly")
     inventory = load_project(project_path, permitted_roots, limits)
     assembly = Assembly(inventory, profiles)
     report = inventory.report
@@ -628,6 +634,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     local_admitted = None
     companions = MappingProxyType({})
     artifacts = MappingProxyType({})
+    local_artifacts = MappingProxyType({})
     step = "products"
     failure_path = inventory.path
     try:
@@ -713,6 +720,30 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 assembly.metadata.adapter if assembly.metadata else None, inventory,
             )
             artifacts = MappingProxyType({name: data for name, (_, data) in prepared.items()})
+            if include_private_artifacts:
+                if set(profiles) - {"catalog.dcat"}:
+                    raise CatalogError("CATALOG-PRIVATE-EXPORT-UNSUPPORTED",
+                                       "Paired private preparation supports the declared DCAT export only.")
+                # Reuse the same admitted source and SQL bytes. No second load,
+                # row scan, public-to-private guess or publication takes place.
+                private_catalog = deepcopy(local_admitted)
+                private_files = {recipe["sql"]: ("recipe", assembly.queries[recipe["id"]][1])
+                                 for recipe in private_catalog["recipes"]}
+                if "catalog.dcat" in profiles:
+                    private_files["discovery.dcat.json"] = ("dcat", _bytes(dcat_document(private_catalog)))
+                private_prepared = prepare_output_set(
+                    private_catalog, private_files, result, profiles,
+                    assembly.metadata.adapter if assembly.metadata else None, inventory,
+                )
+                from .documents import parse_json
+
+                private_lock = parse_json(private_prepared["catalog.lock.json"][1])
+                private_lock["extensions"][PAIRED_VIEW] = paired_view_record(
+                    assembly.catalog, private_catalog, artifacts["catalog.lock.json"],
+                )
+                _schema(private_lock, "lock")
+                private_prepared["catalog.lock.json"] = ("lock", _bytes(private_lock))
+                local_artifacts = MappingProxyType({name: data for name, (_, data) in private_prepared.items()})
         # Qualification can remain unresolved while the assembled discovery record is inspectable.
         if output is None or result["decision"] != "passed":
             report.metadata["catalog"] = assembly.catalog
@@ -722,7 +753,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 assembly.metadata.adapter if assembly.metadata else None, inventory,
                 prepared=prepared,
             )
-        return _result(report.build(), admitted, companions, artifacts, public=public, local_catalog=local_admitted)
+        return _result(report.build(), admitted, companions, artifacts, public=public, local_catalog=local_admitted,
+                       local_artifacts=local_artifacts)
     except (CatalogError, DocumentError) as exc:
         error = exc if isinstance(exc, CatalogError) else CatalogError(exc.code, str(exc), exc.pointer)
         assembly.check(step, "build", error, path=failure_path, required=True, related=error.related)

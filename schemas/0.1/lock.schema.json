@@ -17,7 +17,32 @@
       "$ref": "common.schema.json#/$defs/version"
     },
     "extensions": {
-      "$ref": "common.schema.json#/$defs/extensions"
+      "$ref": "common.schema.json#/$defs/extensions",
+      "properties": {
+        "urn:ddk:catalog:paired-public-view:1": {
+          "type": "object",
+          "properties": {
+            "catalog": {"$ref": "common.schema.json#/$defs/identifier"},
+            "publicLockSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "datasets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {"$ref": "common.schema.json#/$defs/identifier"},
+                  "publicAlias": {"type": "string", "minLength": 1},
+                  "localAlias": {"type": "string", "minLength": 1}
+                },
+                "required": ["id", "publicAlias", "localAlias"],
+                "additionalProperties": false
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": ["catalog", "publicLockSha256", "datasets"],
+          "additionalProperties": false
+        }
+      }
     },
     "project": {
       "$ref": "common.schema.json#/$defs/identifier"

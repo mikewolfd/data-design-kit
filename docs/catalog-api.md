@@ -19,12 +19,17 @@ result = assemble_catalog(
 | `catalog` | Structurally admitted, audience-filtered catalog, or `None` when admission failed |
 | `companions` | Immutable mapping of catalog-relative paths to exact admitted SQL and other companion bytes |
 | `artifacts` | Immutable mapping containing the complete standard output set, populated only when the report passes |
+| `local_artifacts` | Explicitly requested private standard output set from the same assembly; never deliver through public artifact routes |
 
 An admitted catalog can accompany `failed`, `unknown`, or `not_run` qualification. Check the report before treating data as qualified. `artifacts` includes `catalog.ddk.json`, `catalog.report.json`, `catalog.lock.json`, and the requested companions. Passing these files to a publisher does not replace that publisher's authority or DocSpec's guarded selection.
 
 The existing `build_catalog` function delegates to the same assembly and returns `local_report` for compatibility. Supplying `output` uses the existing atomic directory writer and the same prepared bytes. A missing required result leaves the prior output set intact. Callers do not need to rebuild source definitions or reopen SQL to construct discovery metadata.
 
 Use `local_catalog` for private writer validation that needs complete definitions while `catalog` supplies the public view. Both come from the same captured source snapshot. A public disclosure failure can leave the admitted private metadata available; structural admission failure leaves it `None`. This private field does not prepare another output set, and its presence does not establish qualification. `companions` and `artifacts` continue to follow the requested audience.
+
+For a service that must keep native storage references private, request `include_private_artifacts=True` on an explicit public assembly. A passing result then supplies `local_artifacts` as a second standard set, using the same admitted definitions, metadata and original SQL bytes. The private lock records `urn:ddk:catalog:paired-public-view:1`: the exact public lock SHA-256, catalog ID, and explicit public/local aliases for each disclosed dataset ID. The public set contains neither that mapping nor the private lock. No second source load or data scan occurs. This option does not write the private set; stage each immutable set and configure both externally selected lock pins before starting a reader.
+
+`ddk.catalog_delivery.load_catalog_artifacts` captures a complete standard set under byte and file limits, checks its schemas and digests, and rejects mixed, missing, extra, linked or special files. It never follows source-inventory locations or reads data payloads. `verify_catalog_pair(public, local)` requires both external pins and the private lock's exact public association; it also checks version, representation, recipe-input and SQL meaning. It returns the assembly's explicit alias mapping. Consumers must authorize client IDs from the public view and compare the observed native field tree against the public disclosed definition. The full private definition does not grant access to withheld fields. Partial field disclosure requires provider-level projection before unrestricted SQL can be offered.
 
 ## Recipes and definitions
 
@@ -40,7 +45,7 @@ The identity uses the existing tool-identity shape: an absolute `id`, exact `ver
 
 `ResolvedRelationship` contains the immutable declaration, ordered source keys, and ordered target keys, or `None` for an external target. Each `ResolvedKey` retains its path, native definition, shared comparison type when supported, and virtual scope. Return `RelationshipAssessment("supported", reason)`, `"failed"`, or `"unknown"`. Unsupported exact versions, types, and meanings must remain unknown.
 
-DDK checks paths, complete keys, key counts, scopes, known equality types, and null policy before calling the profile. It calls the profile only when additional declaration reasoning is needed. Exceptions and malformed results preserve unknown outcomes. The offline core neither loads nor invokes the profile; the application supplies it at catalog assembly.
+DDK checks paths, complete keys, scopes and null policy before calling the profile. The shared `equal` rule also requires equal key counts and compatible known comparison types. A `project_rule` profile owns its matching shape, including different source and target component counts; complete unique endpoint keys still apply. DDK calls the profile only when additional declaration reasoning is needed. Exceptions and malformed results preserve unknown outcomes. The offline core neither loads nor invokes the profile; the application supplies it at catalog assembly.
 
 Assembly details retain `relationshipProfile` and `relationshipAssessments`, with the selected identity also in adapter and lock provenance. Support describes expected comparison or reference construction. It establishes no actual matches, cardinality, data quality, or remote existence; external construction records `externalExistence: "not_assessed"`. Profile or assessment changes require metadata and applicable reader review, with unresolved domain effects kept separate from computation changes.
 
