@@ -29,7 +29,7 @@ Use `local_catalog` for private writer validation that needs complete definition
 
 For a service that must keep native storage references private, request `include_private_artifacts=True` on an explicit public assembly. A passing result then supplies `local_artifacts` as a second standard set, using the same admitted definitions, metadata and original SQL bytes. The private lock records `urn:ddk:catalog:paired-public-view:1`: the exact public lock SHA-256, catalog ID, and explicit public/local aliases for each disclosed dataset ID. The public set contains neither that mapping nor the private lock. No second source load or data scan occurs. This option does not write the private set; stage each immutable set and configure both externally selected lock pins before starting a reader.
 
-`ddk.catalog_delivery.load_catalog_artifacts` captures a complete standard set under byte and file limits, checks its schemas and digests, and rejects mixed, missing, extra, linked or special files. It never follows source-inventory locations or reads data payloads. `verify_catalog_pair(public, local)` requires both external pins and the private lock's exact public association; it also checks version, representation, recipe-input and SQL meaning. It returns the assembly's explicit alias mapping. Consumers must authorize client IDs from the public view and compare the observed native field tree against the public disclosed definition. The full private definition does not grant access to withheld fields. Partial field disclosure requires provider-level projection before unrestricted SQL can be offered.
+`ddk.catalog_delivery.load_catalog_artifacts` captures a complete standard set under byte and file limits, checks its schemas and digests, and rejects mixed, missing, extra, linked or special files. It never follows source-inventory locations or reads data payloads. `verify_catalog_pair(public, local)` requires both external pins and the private lock's exact public association; it also checks version, representation, release membership, selection, recipe-input and SQL meaning. It returns the assembly's explicit alias mapping. Consumers must authorize client IDs from the public view and compare the observed native field tree against the public disclosed definition. The full private definition does not grant access to withheld fields. Partial field disclosure requires provider-level projection before unrestricted SQL can be offered.
 
 ## Recipes and definitions
 
@@ -52,6 +52,16 @@ A `row_position` identity supplies its declared complete key within the same rel
 Assembly details retain `relationshipProfile` and `relationshipAssessments`, with the selected identity also in adapter and lock provenance. Support describes expected comparison or reference construction. It establishes no actual matches, cardinality, data quality, or remote existence; external construction records `externalExistence: "not_assessed"`. Profile or assessment changes require metadata and applicable reader review, with unresolved domain effects kept separate from computation changes.
 
 ## Public views
+
+An explicitly disclosed release retains its membership even when its native
+reference is private. Like a version, it carries either `reference` or
+`referenceDisclosure: "withheld"`. Listing its identifier in `nativeReferences`
+also grants its complete native reference. If any member version is withheld,
+a complete release becomes partial; partial and unknown membership stay as
+declared. Selection records still require their own disclosed authority and
+release. Neither membership disclosure nor a withheld reference grants data
+access or establishes publication. Local owner observations require the exact
+reference before disclosure.
 
 Select a public view with an explicit disclosure policy. Its shape is defined in the [catalog schema](../schemas/0.1/catalog.schema.json). Existing identifier, alias, description, recipe, access, and evidence rules still apply. Definitions and project extensions remain withheld unless granted:
 

@@ -496,6 +496,8 @@ class Assembly:
         facts = {}
         for section in ("sources", "versions", "releases", "runs"):
             for row in self.catalog[section]:
+                if "reference" not in row:
+                    raise CatalogError("CATALOG-NATIVE-REFERENCE", "Local owner observations need exact references before public disclosure.")
                 key = (section, json_dumps(row["reference"]), row.get("scope", ""), row.get("dataset", ""))
                 old = facts.setdefault(key, row)
                 if old != row:

@@ -284,8 +284,11 @@ def public_view(catalog, policy, details_key):
     ]
     releases = []
     for item in view["releases"]:
-        if item["id"] not in ids or item["id"] not in policy["nativeReferences"]:
+        if item["id"] not in ids:
             continue
+        if item["id"] not in policy["nativeReferences"]:
+            item.pop("reference")
+            item["referenceDisclosure"] = "withheld"
         if set(item["members"]) - version_ids:
             item["membership"] = "partial" if item["membership"] == "complete" else item["membership"]
             item["members"] = [member for member in item["members"] if member in version_ids]

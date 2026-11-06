@@ -168,7 +168,8 @@ def verify_catalog_pair(public, local):
                 normalized[side]["dataset"] = aliases[normalized[side]["dataset"]]
         _need(relationships.get(row["id"]) == normalized,
               "Paired relationship changed its endpoint, matching, scope or resolution meaning")
-    for section in ("versions", "representations", "recipes"):
+    public_versions = {row["id"] for row in p["versions"]}
+    for section in ("versions", "representations", "recipes", "releases"):
         private = {row["id"]: row for row in q[section]}
         _need(len(private) == len(q[section]) and len({row["id"] for row in p[section]}) == len(p[section]),
               "Access record identities must be unique in each catalog view")
@@ -182,6 +183,14 @@ def verify_catalog_pair(public, local):
             elif section == "representations":
                 _need(all(row.get(key) == source.get(key) for key in ("version", "kind", "availability", "location", "mediaType")),
                       "Paired representation changed its exact access meaning")
+            elif section == "releases":
+                members = [member for member in source["members"] if member in public_versions]
+                membership = source["membership"]
+                if len(members) != len(source["members"]) and membership == "complete":
+                    membership = "partial"
+                _need(row["members"] == members and row["membership"] == membership
+                      and ("reference" not in row or row["reference"] == source["reference"]),
+                      "Paired release changed its membership, completeness or native identity")
             else:
                 _need({key: aliases[alias] for key, alias in row["inputs"].items()} == source["inputs"],
                       "Paired recipe changed its named input mapping")
@@ -189,4 +198,11 @@ def verify_catalog_pair(public, local):
                       and all(row.get(key) == source.get(key) for key in ("sql", "dialect", "parameters", "parameterOrder", "relationships", "resultGrain"))
                       and public.companions[row["sql"]] == local.companions[source["sql"]],
                       "Paired recipe changed its SQL or parameter meaning")
+    selection_keys = ("authority", "purpose", "release", "observedAt")
+    for row in p["selections"]:
+        matches = [source for source in q["selections"]
+                   if all(row.get(key) == source.get(key) for key in selection_keys)]
+        _need(len(matches) == 1, "Paired selection changed its authority, purpose, release or observation")
+    _need(p.get("currentSelection") == q.get("currentSelection"),
+          "Paired catalogs request different current selections")
     return deepcopy(aliases)

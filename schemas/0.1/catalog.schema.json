@@ -999,7 +999,14 @@
     },
     "release": {
       "type": "object",
+      "oneOf": [
+        {"required": ["reference"]},
+        {"required": ["referenceDisclosure"]}
+      ],
       "properties": {
+        "referenceDisclosure": {
+          "const": "withheld"
+        },
         "id": {
           "$ref": "common.schema.json#/$defs/identifier"
         },
@@ -1026,7 +1033,6 @@
       },
       "required": [
         "id",
-        "reference",
         "members",
         "membership",
         "record"
