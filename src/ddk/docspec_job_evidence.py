@@ -13,7 +13,7 @@ from hashlib import sha256
 from pathlib import Path
 import re
 
-from .documents import DocumentError, freeze_json, parse_json
+from .documents import DocumentError, freeze_json, json_dumps, parse_json
 
 CANDIDATE_SCHEME = "urn:docspec:whole-job-candidate"
 COMPLETION_PROFILE = "urn:docspec:whole-job-completion:1"
@@ -226,6 +226,12 @@ def verify_completed_job(result, *, require_accepted=False):
     elif require_accepted:
         raise JobEvidenceError("DOCSPEC-JOB-ACCEPTANCE-MISSING", "The completed native candidate has no accepted qualification.",
                                status="not_run")
+    if admitted_request["policy_id"] == result["policy_id"]:
+        _require(admitted_request["policy"]["sha256"] == result["policy"]["sha256"],
+                 "The original policy ID has different admitted policy bytes.")
+        if accepted is not None:
+            _require(all(admitted_request[key] == accepted[key] for key in ("expected_epoch", "expected_selection")),
+                     "The original policy ID has different accepted authority conditions.")
     _require(isinstance(result["selection"], str) and result["selection"] in {"pending", "selected", "refused"},
              "Unsupported native selection observation.")
     _require(result["selection"] != "selected" or accepted is not None, "Native selection lacks its accepted qualification.")
@@ -452,6 +458,7 @@ class SchemaInterpretation:
     status: str
     reasons: tuple
     fields: tuple
+    obligations: tuple
 
 
 def interpret_output_schema(schema_bytes, declaration):
@@ -465,15 +472,29 @@ def interpret_output_schema(schema_bytes, declaration):
     from .definitions import enum_values
 
     pa, schema = _read_schema(schema_bytes)
-    findings, mappings = [], []
+    findings, mappings, obligations = [], [], []
 
     def note(status, reason):
         findings.append((status, reason))
 
-    def restrictions(node):
-        if (enum_values(node) is not None or any(node.get(key) for key in ("unique", "primaryKey", "quality", "relationships"))
-                or node.get("logicalTypeOptions")):
-            note("unknown", "Authored value constraints require their own exact evidence; Arrow schema does not evaluate them.")
+    def obligation(facet, path, reason):
+        obligations.append(freeze_json({"facet": facet, "paths": [deepcopy(path)], "reason": reason}))
+
+    def restrictions(node, path):
+        reason = "Authored value constraints require their own exact evidence; Arrow schema does not evaluate them."
+        if node.get("unique"):
+            obligation("key_unique", path, reason)
+        if enum_values(node) is not None:
+            obligation("enum", path, reason)
+        for index, _rule in enumerate(node.get("quality", [])):
+            obligation(f"quality/{index}", path, reason)
+        if node.get("relationships"):
+            obligation("relationships", path, reason)
+        for key, value in node.get("logicalTypeOptions", {}).items():
+            binary_format = (key == "format" and value == "binary" and isinstance(node.get("physicalType"), str)
+                             and re.fullmatch(r"fixed\[\d+\]", node["physicalType"]))
+            if not binary_format:
+                obligation(f"logicalTypeOptions/{key}", path, reason)
         for item in node.get("customProperties", []):
             if re.sub(r"[^a-z]", "", str(item.get("property", "")).lower()) in {"nativefieldid", "fieldid", "icebergfieldid"}:
                 note("unknown", "An authored native field-ID mapping has no selected supported interpretation.")
@@ -534,7 +555,7 @@ def interpret_output_schema(schema_bytes, declaration):
             note("failed", "A retained native field has a different explicit physical type.")
 
     def visit(node, field, logical_path, native_path, position):
-        restrictions(node)
+        restrictions(node, logical_path)
         actual = field.type
         if pa.types.is_dictionary(actual):
             actual = actual.value_type
@@ -542,7 +563,7 @@ def interpret_output_schema(schema_bytes, declaration):
         mappings.append(freeze_json({"logicalPath": logical_path, "nativePath": native_path, "position": position,
                                      "nativeType": str(field.type), "nullable": field.nullable}))
         if node.get("required", False) and field.nullable:
-            note("failed", "A retained native field permits nulls where the authored field requires a value.")
+            obligation("required", logical_path, "Nullable Arrow metadata does not establish the authored nonnull row obligation.")
         binary = pa.types.is_binary(actual) or pa.types.is_large_binary(actual) or pa.types.is_fixed_size_binary(actual)
         physical_binary = isinstance(node.get("physicalType"), str) and (node["physicalType"].startswith("fixed[") or node["physicalType"] in {"binary", "large_binary"})
         compatible = {
@@ -579,7 +600,76 @@ def interpret_output_schema(schema_bytes, declaration):
                 index, field = observed[name]
                 visit(node, field, [*logical_path, {"field": node["name"]}], [*native_path, {"field": name}], index)
 
-    restrictions(declaration)
+    restrictions(declaration, [])
     fields(declaration.get("properties", []), schema, [], [])
     status = "failed" if any(item[0] == "failed" for item in findings) else "unknown" if findings else "passed"
-    return SchemaInterpretation(status, tuple(dict.fromkeys(reason for _status, reason in findings)), tuple(mappings))
+    return SchemaInterpretation(status, tuple(dict.fromkeys(reason for _status, reason in findings)), tuple(mappings), tuple(obligations))
+
+
+def native_export_uniqueness(evidence, original_job, output, paths, interpretation, tool):
+    """Interpret profile-1 export's complete visible sort tuple, never a subset."""
+    runtime = evidence.manifest["runtime"]
+    if (original_job is None or interpretation.status != "passed" or evidence.manifest["profile"] != COMPLETION_PROFILE
+            or runtime.get("processor") != "docspec.whole-job.v1" or not _digest(tool.get("distributionSha256"))
+            or runtime.get("binary_sha256") != tool["distributionSha256"]
+            or not paths or any(len(path) != 1 or "field" not in path[0] for path in paths)):
+        return None
+    original = next((item for item in original_job["outputs"] if item["name"] == output), None)
+    retained = next((item for item in evidence.view_set["outputs"] if item["name"] == output), None)
+    if original is None or retained is None:
+        return None
+    settings = _export_settings(original.get("settings"))
+    if settings is None or settings != _export_settings(retained.get("settings")):
+        return None
+    pa, schema = _read_schema(_decode(evidence.manifest["schemas"][retained["schema_sha256"]], "export schema"))
+    if settings["columns"] and settings["columns"] != schema.names:
+        return None
+    mapped = {json_dumps(field["logicalPath"]): field for field in interpretation.fields}
+    names = []
+    for path in paths:
+        field = mapped.get(json_dumps(path))
+        if field is None or len(field["nativePath"]) != 1 or "field" not in field["nativePath"][0]:
+            return None
+        name = field["nativePath"][0]["field"]
+        if schema.names.count(name) != 1:
+            return None
+        kind = schema.field(name).type
+        if not (pa.types.is_integer(kind) or pa.types.is_boolean(kind) or pa.types.is_string(kind)
+                or pa.types.is_large_string(kind) or pa.types.is_date(kind) or pa.types.is_fixed_size_binary(kind)):
+            return None
+        names.append(name)
+    if len(set(names)) != len(names) or names != [sort["field"] for sort in settings["order_by"]]:
+        return None
+    return {"profile": "urn:ddk:interpretation:docspec-ordered-export:1", "output": output,
+            "completion": deepcopy(retained["completion"]), "schemaSha256": retained["schema_sha256"],
+            "sortFields": names, "jobSha256": evidence.manifest["job"]["sha256"]}
+
+
+def _export_settings(value):
+    """Only the frozen native profile-1 defaults/set semantics are normalized."""
+    fields = {"profile", "row_group_rows", "order_by", "columns", "dictionary_columns", "delta_columns", "key_column", "created_by", "footer_limit"}
+    if not isinstance(value, dict) or set(value) - fields or fields - {"columns"} - value.keys():
+        return None
+    result = deepcopy(value)
+    if (not isinstance(result["profile"], str) or result["profile"] not in {"whole", "ranged", "lookup"}
+            or not isinstance(result["order_by"], list) or not result["order_by"]
+            or not _integer(result["row_group_rows"], 1) or not _integer(result["footer_limit"], 1)
+            or not isinstance(result["created_by"], str) or not result["created_by"]):
+        return None
+    order = []
+    for sort in result["order_by"]:
+        if (not isinstance(sort, dict) or set(sort) - {"field", "direction", "nulls"}
+                or not isinstance(sort.get("field"), str) or not sort["field"]
+                or not isinstance(sort.get("direction", "asc"), str) or sort.get("direction", "asc") not in {"asc", "desc"}
+                or not isinstance(sort.get("nulls", "nulls_last"), str) or sort.get("nulls", "nulls_last") not in {"nulls_first", "nulls_last"}):
+            return None
+        order.append({"field": sort["field"], "direction": sort.get("direction", "asc"), "nulls": sort.get("nulls", "nulls_last")})
+    result["order_by"] = order
+    result.setdefault("columns", [])
+    for name in ("columns", "dictionary_columns", "delta_columns"):
+        if (not isinstance(result[name], list) or not all(isinstance(item, str) for item in result[name])
+                or len(set(result[name])) != len(result[name])):
+            return None
+        if name != "columns":
+            result[name] = sorted(result[name])
+    return result

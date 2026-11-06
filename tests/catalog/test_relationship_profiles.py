@@ -281,6 +281,59 @@ def test_release_local_virtual_scope_remains_a_ddk_guard(project):
     assert any(diagnostic["code"] == "CATALOG-RELEASE-SCOPE" for check in result.report["checks"] for diagnostic in check["diagnostics"])
 
 
+@pytest.mark.parametrize("scope", ["same_release", "version_pair"])
+def test_row_position_supplies_its_declared_key_without_a_duplicate_virtual_key(project, scope):
+    value = json.loads(project.read_bytes())
+    value["catalog"]["identities"] = [
+        {"dataset": dataset, "kind": "row_position", "scope": "release",
+         "meaning": "Zero-based position within the exact release; no observed reader claim.",
+         "fields": [{"path": field_path("position"), "virtual": True, "physicalType": "integer"}]}
+        for dataset in ("left", "right")
+    ]
+    relationship = value["catalog"]["relationships"][0]
+    relationship.update(cardinality="one_to_one", scope=scope)
+    for side in ("source", "target"):
+        relationship[side]["paths"] = [field_path("position")]
+    save(project, value)
+    result = assemble(project)
+    if scope == "same_release":
+        assert result.report["decision"] == "passed", result.report
+        check = relationship_check(result)
+        assert check["status"] == "passed" and check["evidence"] == "inferred"
+        assert "evidenceRecords" not in check
+        assert not result.catalog["checks"] and not result.catalog["runs"] and not result.catalog["versions"]
+        # Existing physical primary keys remain independently declared.
+        keys = [identity for identity in result.catalog["identities"] if identity["kind"] == "key"]
+        assert len(keys) == 2
+        assert all(identity["fields"][0]["path"] == field_path("record_id") for identity in keys)
+    else:
+        assert result.report["decision"] == "failed"
+        assert any(item["code"] == "CATALOG-RELEASE-SCOPE" for check in result.report["checks"] for item in check["diagnostics"])
+
+
+@pytest.mark.parametrize("virtual", [False, True])
+@pytest.mark.parametrize("scope", ["same_release", "version_pair"])
+def test_physical_row_position_keeps_release_scope_even_with_a_virtual_name_collision(project, virtual, scope):
+    value = json.loads(project.read_bytes())
+    value["catalog"]["identities"] = [
+        {"dataset": dataset, "kind": "row_position", "scope": "release", "meaning": "Position in one exact release.",
+         "fields": [{"path": field_path("number"), "virtual": virtual, "physicalType": "integer"}]}
+        for dataset in ("left", "right")
+    ]
+    relationship = value["catalog"]["relationships"][0]
+    relationship.update(cardinality="one_to_one", scope=scope)
+    for side in ("source", "target"):
+        relationship[side]["paths"] = [field_path("number")]
+    save(project, value)
+    result = assemble(project)
+    if scope == "same_release":
+        assert result.report["decision"] == "passed", result.report
+        assert relationship_check(result)["evidence"] == "inferred"
+    else:
+        assert result.report["decision"] == "failed", result.report
+        assert any(item["code"] == "CATALOG-RELEASE-SCOPE" for check in result.report["checks"] for item in check["diagnostics"])
+
+
 @pytest.mark.parametrize("malformed", [None, {"status": "supported", "reason": "untyped"},
                                        RelationshipAssessment("passed", "Not the supported status vocabulary."),
                                        RelationshipAssessment([], "Not a scalar status."),

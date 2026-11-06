@@ -74,6 +74,7 @@ def _schemas():
     pa = pytest.importorskip("pyarrow")
     return {
         "orders": pa.schema([
+            pa.field("source_occurrence", pa.int64(), nullable=False),
             pa.field("id", pa.int64(), nullable=False),
             pa.field("customer", pa.int64(), nullable=False),
             pa.field("amount", pa.int64(), nullable=True),
@@ -138,11 +139,11 @@ def test_whole_job_preparation_refuses_changed_job_bytes(runtime, tmp_path):
 
 # Independently authored business expectations, never calculated from fixture SQL.
 ORDERS = [
-    {"id": 1, "customer": 10, "amount": 100},
-    {"id": 1, "customer": 10, "amount": 100},
-    {"id": 3, "customer": 20, "amount": None},
-    {"id": 4, "customer": 99, "amount": -25},
-    {"id": 5, "customer": 30, "amount": 0},
+    {"source_occurrence": 1, "id": 1, "customer": 10, "amount": 100},
+    {"source_occurrence": 2, "id": 1, "customer": 10, "amount": 100},
+    {"source_occurrence": 3, "id": 3, "customer": 20, "amount": None},
+    {"source_occurrence": 4, "id": 4, "customer": 99, "amount": -25},
+    {"source_occurrence": 5, "id": 5, "customer": 30, "amount": 0},
 ]
 CUSTOMERS = [{"customer": 10, "region": "east"}, {"customer": 20, "region": "west"},
              {"customer": 30, "region": "east"}]
@@ -162,8 +163,21 @@ def _retained_request(runtime, tmp_path, *, wrong_counter=False):
     pa = pytest.importorskip("pyarrow")
     pq = pytest.importorskip("pyarrow.parquet")
     job = _whole_job(tmp_path)
+    # Native exports require unique sort keys. Keep source occurrence only for
+    # ordering; the exported business rows still contain the intentional duplicate.
+    job["steps"][0]["sql"] = (
+        "SELECT o.source_occurrence, o.id, c.region, o.amount "
+        "FROM orders o LEFT JOIN customers c ON o.customer = c.customer"
+    )
+    job["outputs"][0]["settings"].update({"order_by": [{"field": "source_occurrence"}],
+                                         "columns": ["id", "region", "amount"]})
+    job["queries"] = [
+        {"name": "invariants", "sql": 'SELECT COUNT(*) - 5 AS row_delta FROM outputs."joined"'},
+        {"name": "null_counters", "sql": 'SELECT COUNT(*) - 1 AS missing_delta FROM outputs."joined" WHERE amount IS NULL'},
+        {"name": "facets", "sql": 'SELECT region, COUNT(*) AS count FROM outputs."joined" GROUP BY region'},
+    ]
     if wrong_counter:
-        job["queries"][0]["sql"] = "SELECT COUNT(*) - 4 AS row_delta FROM joined"
+        job["queries"][0]["sql"] = 'SELECT COUNT(*) - 4 AS row_delta FROM outputs."joined"'
     preparation = _preparation(tmp_path, job)
     response = runtime.prepare_job(preparation)
     assert response["status"] == "succeeded", response

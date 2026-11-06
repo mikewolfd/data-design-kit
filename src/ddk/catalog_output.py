@@ -97,6 +97,9 @@ def public_view(catalog, policy, details_key):
     profile = catalog.get("extensions", {}).get(details_key, {}).get("relationshipProfile")
     if profile is not None and profile["identity"]["id"] not in ids:
         raise CatalogError("CATALOG-DISCLOSURE", "The selected relationship profile identifier must be permitted for a public view.")
+    native_profile = catalog.get("extensions", {}).get(details_key, {}).get("nativeRuleProfile")
+    if native_profile is not None and native_profile["identity"]["id"] not in ids:
+        raise CatalogError("CATALOG-DISCLOSURE", "The selected native rule generator identifier must be permitted for a public view.")
     view["audience"] = "public"
     view["disclosurePolicy"] = _hide_uri(policy["record"], policy["evidence"])
     view["extensions"] = {details_key: {"scope": {
@@ -112,6 +115,11 @@ def public_view(catalog, policy, details_key):
                 "status": "unknown", "reason": "Individual assessments and their consumer coverage are withheld by disclosure.",
             },
         })
+    if native_profile is not None:
+        disclosed_native = {"identity": deepcopy(native_profile["identity"])}
+        if "source" in native_profile:
+            disclosed_native["source"] = _hide_uri(deepcopy(native_profile["source"]), policy["evidence"])
+        view["extensions"][details_key]["nativeRuleProfile"] = disclosed_native
     view["sourceInventory"] = list({
         json_dumps(redacted): redacted for item in view["sourceInventory"]
         if (redacted := _hide_uri(item, policy["evidence"]))

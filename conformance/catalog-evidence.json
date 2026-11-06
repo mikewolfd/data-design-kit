@@ -694,6 +694,279 @@
         "tests/catalog/test_definition_physical_types.py::test_private_catalog_keeps_unresolved_qualification_and_rejects_structural_failure"
       ],
       "evidence": "An unresolved required qualification keeps admitted private metadata available while public artifacts remain unavailable and the report incomplete. A separate structural failure leaves both catalogs absent."
+    },
+    {
+      "id": "CASE-CATALOG-058",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_exact_complete_metadata_retains_private_members_and_actual_native_result",
+        "tests/catalog/test_managed_jobs.py::test_original_prepare_witness_retains_every_field_and_verifies_original_bytes",
+        "tests/catalog/test_managed_jobs.py::test_catalog_maps_scoped_output_without_opening_payloads_or_caller_job",
+        "tests/catalog/test_managed_jobs.py::test_mapped_catalog_facts_keep_normative_shapes",
+        "tests/catalog/test_managed_jobs.py::test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads"
+      ],
+      "evidence": "Map exact retained native metadata into an actual catalog with complete scoped membership, original request bytes, captured definitions and deterministic controls. Open no payload or caller JobSpec; preserve private members in their native record and unknown row-consumption coverage. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-059",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_wrong_candidate_incomplete_membership_and_caller_booleans_refuse",
+        "tests/catalog/test_managed_jobs.py::test_resealed_incomplete_or_wrong_native_acceptance_refuses",
+        "tests/catalog/test_managed_jobs.py::test_resealed_prepare_file_pin_cannot_disagree_with_retained_inputs"
+      ],
+      "evidence": "Refuse changed candidates, incomplete native output/report membership, altered original bytes, caller pass booleans and resealed acceptance with wrong checks, evaluator, semantics or retained input pins. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-060",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-NATIVE-MEMBERSHIP",
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_catalog_requires_complete_unambiguous_native_dispositions"
+      ],
+      "evidence": "Require every native input and output to have exactly one catalog mapping or explicit out-of-catalog reason; refuse omitted, overlapping or unknown members. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-061",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_missing_acceptance_preserves_completion_and_required_unknown",
+        "tests/catalog/test_managed_jobs.py::test_real_assembly_missing_acceptance_stays_incomplete_and_preserves_prior_controls"
+      ],
+      "evidence": "Retain completed native computation when accepted qualification is absent. Keep required quality unknown, expose no publishable artifacts and preserve previously written controls. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-062",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_incomplete_execution_preserves_known_outputs_and_uncertainty[pending-not_run]",
+        "tests/catalog/test_managed_jobs.py::test_incomplete_native_observation_never_invents_a_current_production_binding[pending]"
+      ],
+      "evidence": "An admitted pending job can retain known sealed outputs without claiming a completed or qualified candidate. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-063",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_incomplete_execution_preserves_known_outputs_and_uncertainty[unknown-unknown]",
+        "tests/catalog/test_managed_jobs.py::test_incomplete_execution_preserves_known_outputs_and_uncertainty[failed-unknown]",
+        "tests/catalog/test_managed_jobs.py::test_incomplete_native_observation_never_invents_a_current_production_binding[unknown]",
+        "tests/catalog/test_managed_jobs.py::test_incomplete_native_observation_never_invents_a_current_production_binding[failed]"
+      ],
+      "evidence": "Retain known outputs and unresolved qualification when native execution is unknown or failed; preserve the native failed outcome separately from missing quality evidence. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-064",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_old_native_acceptance_cannot_qualify_changed_authored_definitions[constraint-incomplete]",
+        "tests/catalog/test_managed_jobs.py::test_old_native_acceptance_cannot_qualify_changed_authored_definitions[production-incomplete]",
+        "tests/catalog/test_managed_jobs.py::test_changed_resolved_source_custody_cannot_requalify_identical_effective_schema"
+      ],
+      "evidence": "Changed authored constraints, production identity or original definition custody cannot inherit old native acceptance, even if effective schema bytes remain equal. Do not attach the old run to the current production. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-065",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_old_native_acceptance_cannot_qualify_changed_authored_definitions[schema-failed]",
+        "tests/catalog/test_managed_jobs.py::test_actual_assembly_rejects_extra_observed_native_output_field",
+        "tests/catalog/test_managed_jobs.py::test_actual_assembly_rejects_nested_type_nullability_and_membership_mismatch[child_type]",
+        "tests/catalog/test_managed_jobs.py::test_actual_assembly_rejects_nested_type_nullability_and_membership_mismatch[missing_child]"
+      ],
+      "evidence": "Known output field, type or membership mismatches fail schema interpretation even when the separate native policy passed. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-066",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_exact_nested_native_interpretation_preserves_dictionary_fixed_width_and_positions",
+        "tests/catalog/test_managed_jobs.py::test_binary_format_with_exact_fixed_width_is_schema_evidence"
+      ],
+      "evidence": "Preserve supported nested field positions, dictionary strings, exact fixed binary width and explicit timestamp semantics in output-schema interpretation. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-067",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_exact_capture_does_not_turn_unsupported_authored_interpretation_into_pass",
+        "tests/catalog/test_managed_jobs.py::test_actual_assembly_rejects_nested_type_nullability_and_membership_mismatch[child_nullability]",
+        "tests/catalog/test_managed_jobs.py::test_actual_assembly_rejects_nested_type_nullability_and_membership_mismatch[list_element_nullability]"
+      ],
+      "evidence": "Unsupported authored meanings and unmatched value constraints remain unknown. Nullable nested observations preserve compatible schema facts while leaving required row properties unresolved. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-068",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_source_backed_public_rule_api_qualifies_required_rows_without_rewriting_nullable_schema",
+        "tests/catalog/test_managed_jobs.py::test_ordered_primary_key_has_distinct_unique_and_null_rejection_bound_to_same_counter"
+      ],
+      "evidence": "Use an explicitly supplied generator and original JobSpec to bind authored required, ordered key uniqueness and key nonnull facets to exact accepted report counters. Preserve nullable schema observations and open no payload or caller JobSpec. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-069",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_actual_assembly_refuses_wrong_native_facet_binding",
+        "tests/catalog/test_managed_jobs.py::test_generated_valid_plus_unauthored_extra_binding_cannot_be_silently_ignored",
+        "tests/catalog/test_managed_jobs.py::test_explicit_profile_receives_immutable_definition_and_original_job_arguments"
+      ],
+      "evidence": "Wrong writer, SQL, field, counter, original job, source or profile and missing, duplicate or unauthored bindings cannot qualify authored facets. Callback inputs remain immutable. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-070",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_authored_primary_key_survives_a_separate_project_alternate_key",
+        "tests/catalog/test_managed_jobs.py::test_ambiguous_primary_order_stays_unknown_when_alternate_project_key_masks_core_derivation"
+      ],
+      "evidence": "Retain authored primary-key obligations independently of an alternate catalog key. Missing or duplicate primary positions remain unresolved rather than disappearing behind the alternate key. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-071",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_public_native_facet_claim_requires_generator_identity_and_explicit_source_disclosure[True-False]",
+        "tests/catalog/test_managed_jobs.py::test_public_native_facet_claim_requires_generator_identity_and_explicit_source_disclosure[True-True]",
+        "tests/catalog/test_managed_jobs.py::test_real_public_assembly_withholds_private_members_paths_and_diagnostics"
+      ],
+      "evidence": "Public native facet claims retain the explicitly granted generator identity separately from the native evaluator. Source locations require an evidence grant; private native members and diagnostics remain withheld. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-072",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-DISCLOSURE",
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_public_native_facet_claim_requires_generator_identity_and_explicit_source_disclosure[False-False]"
+      ],
+      "evidence": "A public native facet claim without an explicit generator identifier grant refuses disclosure and produces safe public diagnostics. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-073",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_exact_complete_visible_export_sort_tuple_supplies_unique_evidence_only"
+      ],
+      "evidence": "An exact supported native export can establish uniqueness only for the entire visible ordered key. Same-output schema and accepted required-field facts separately establish every component of a nonnull key. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-074",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_extra_hidden_source_occurrence_sort_cannot_prove_visible_business_key_unique",
+        "tests/catalog/test_managed_jobs.py::test_export_unique_does_not_discharge_nonnull_without_authored_required_binding",
+        "tests/catalog/test_managed_jobs.py::test_export_unique_requires_matching_native_processor_binary_and_settings"
+      ],
+      "evidence": "A hidden additional sort field, mismatched runtime or settings, or missing nonnull evidence prevents full key qualification. Unique larger tuples never prove a visible key subset unique; uniqueness alone never proves nonnull. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-075",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_row_position_supplies_its_declared_key_without_a_duplicate_virtual_key[same_release]",
+        "tests/catalog/test_relationship_profiles.py::test_physical_row_position_keeps_release_scope_even_with_a_virtual_name_collision[same_release-False]",
+        "tests/catalog/test_relationship_profiles.py::test_physical_row_position_keeps_release_scope_even_with_a_virtual_name_collision[same_release-True]"
+      ],
+      "evidence": "A declared row_position supplies its complete same-release key even when physical keys also exist, without a duplicate virtual key declaration or fabricated executed uniqueness evidence. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-076",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RELEASE-SCOPE",
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_row_position_supplies_its_declared_key_without_a_duplicate_virtual_key[version_pair]",
+        "tests/catalog/test_relationship_profiles.py::test_physical_row_position_keeps_release_scope_even_with_a_virtual_name_collision[version_pair-False]",
+        "tests/catalog/test_relationship_profiles.py::test_physical_row_position_keeps_release_scope_even_with_a_virtual_name_collision[version_pair-True]"
+      ],
+      "evidence": "A row_position identity cannot authorize a version-pair relationship outside its same-release scope. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-077",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_nested_authored_primary_key_remains_required_unknown"
+      ],
+      "evidence": "Nested authored primary keys inside objects and list elements remain required unknown until their scoped native interpretation is supported; nullable schema metadata and an unrelated accepted policy cannot erase them. Independent metadata fixtures establish translation only; native execution qualification remains separate."
+    },
+    {
+      "id": "CASE-CATALOG-078",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_original_policy_id_cannot_change_policy_bytes_or_authority_conditions"
+      ],
+      "evidence": "The original native policy ID cannot acquire different original policy bytes or accepted authority conditions, even when metadata witnesses are coherently resealed. Independently authored metadata and actual assembler checks; native execution has separate evidence."
+    },
+    {
+      "id": "CASE-CATALOG-079",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_distinct_requalification_policy_preserves_original_request_with_new_authority"
+      ],
+      "evidence": "A distinct native requalification policy ID may retain the original prepare request while binding a new policy and authority pair. Do not require original and requalified policies to be equal. Independently authored metadata and actual assembler checks; native execution has separate evidence."
     }
   ],
   "additionalReceiptTests": [
