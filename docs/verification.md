@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 native SQL evidence and publication plan review
+
+Separate greybeard and ETL reviewers checked the remaining shared-runtime boundaries against DocSpec, the congressional producer and retained metadata. The [review dispositions](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-sql-evidence/review-dispositions.json) record the two concrete verifier routes, native completion identity, typed blocking-report coverage, exact catalog/output membership, material dependency interpretation and durable input protection. The plan now leads with retained whole-job execution because based Update is already qualified.
+
+The publication policy preserves an accepted frozen intent across later native selection changes while retaining the original publisher token and same-attempt reconciliation. Later publication observations remain separate from the catalog bytes hashed into release identity. This policy and native SQL acceptance require implementation and runtime qualification. The reviews changed no runtime behavior, opened no data payloads and ran no native jobs or tests.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-sql-evidence/document-audit-01/document-audit.json) checks schema shapes, links, upstream digests and requirement/test traceability. Dev5's qualified package and runtime claims remain unchanged.
+
 ## November 6, 2026 dev5 installed catalog and managed Update qualification
 
 The [dev5 package](local-release-dev5.md) passed all 358 installed tests with zero failures, errors or skips and 11 RDFLib warnings in 187.88 seconds. [Qualification](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/distribution/qualified-02/release-qualification.ddk.json) passed 187 case/profile combinations covering 170 cases and 13 declared profiles. The frozen DDK source is `5e90d70f74ef88053a75b8d991caf262ad74bbd0`; the full native runtime is the separately gate-tested `d96e00172d7d4be26da4532cda35aa05f2a3709e`.

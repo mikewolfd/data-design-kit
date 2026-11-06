@@ -201,6 +201,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 **Dependencies:** WP-05 and WP-13. **Output:** reproducible checks and catalog-aware change analysis.
 
 - Generate locks from actual source bytes and every followed local reference. Record distribution hashes and source commits for development builds, even if their package version matches a released version. Preserve native input references and runtime-issued computation/qualification keys independently from provenance; do not create a second native phase cache.
+- For application replacement, define and verify which dependencies affect computation, qualification and metadata separately from the complete provenance lock. A whole-lock fingerprint refusal alone proves neither data incompatibility nor safe reuse. Preserve existing guards and retained pins until the successor interpretation establishes the relevant obligations.
 - Verify locked runs before using caches. Detect a changed transitive definition and a changed resolver or schema revision.
 - Compare explicit base and candidate catalogs by identity. Separate content changes, declared version changes, and optionally formatting-only differences.
 - Compute affected consumers using the union of base and candidate dependency relationships; removed edges must not hide former consumers.
@@ -303,6 +304,8 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - A changed qualification request may reuse native computed values. Keep computation keys, qualification keys, and full provenance distinct. Do not mutate the original request silently.
 - Record accepted native qualification identity, known outputs, execution outcome, selection outcome, and reconciliation capability. Reconcile lost responses under the original native operation ID.
 
+**Replacement extension, not yet qualified:** retain the supported DCC verifier and add a concrete verifier for the application's complete native SQL report inventory. Bind original rules, trusted evaluator/version and semantics, exact candidate/view sets, completed execution and applicable reads, and every required outcome. Native rules need not be re-executed through DCC materialization to qualify them. This adds no generic passed-boolean acceptance and no DCC semantic-equivalence claim. The [shared runtime plan](replacement-runtime-plan.md) records the separate implementation and acceptance work.
+
 **Acceptance:** rule-only change performs no new computation; stale or incomplete qualification blocks selection; concurrent authority changes cannot select stale candidates; lost acknowledgment returns the original outcome without repeating completed work. File-backed quality results alone do not qualify native access. Report the managed profile as unqualified until exact-native evidence acceptance passes. Its release evidence is separate from bounded job evidence.
 
 ### WP-13 — Product catalog and native metadata
@@ -312,6 +315,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Resolve product ports to registered ODCS objects and validate identities, relationships, and recipes. Support definition-only discovery and relocatable companion recipes.
 - Expose the admitted catalog, audience-safe report, and exact companion bytes from the same assembly. Preserve incomplete qualification and generate complete controls only for passing results. Support explicitly scoped definition and extension disclosure without reconstructing application metadata from source files.
 - Implement an explicitly selected local metadata adapter that reads actual staging, DocSpec execution, and quality receipts from the reference workflow. Preserve each observed fact's owner, exact identity, coverage, and custody. Illustrative example receipts qualify shape tests only.
+- Add the replacement managed mapper from native accepted records with exact candidate and complete output membership; retain the ordinary file-backed mapper's own evidence verification. Freeze release catalog bytes before publication and represent later publisher observations separately when catalog bytes contribute to release identity.
 - Add independent nested/list paths, binary and composite keys, scoped row positions, and wrong-release negatives without project-specific consumers.
 - Allow an explicitly supplied application profile to reason about additional declared relationships after shared structural guards. Retain its exact provenance, preserve unsupported reasoning, and keep data observations and external existence outside this static interface.
 - Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Verify deterministic refresh with zero data-payload opens or repeated data checks.
