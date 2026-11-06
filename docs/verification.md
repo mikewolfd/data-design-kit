@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 dev3 installed catalog qualification
+
+The [dev3 catalog increment](local-release-dev3.md) passed 266 installed tests with zero failures, errors, or skips and 11 RDFLib warnings. Its [qualification report](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/distribution/qualified-02/release-qualification.ddk.json) passes 165 case/profile combinations covering 148 cases and 13 declared profiles. Two builds produced identical wheel bytes from source `3823b24c2fff08da4da3ad7f6c6b79903ef2b372`. Source and external inputs remained unchanged. Core-only identity and locked checking passed separately.
+
+Independent review accepted the exact source, wheel, installations, evidence references, and maintained selectors. The actual installed congressional probe preserves 32 unsupported relationship checks and prevents publication. Native code and source-only Build capability remain on the qualified dev2 tuple; managed Update is separate pending work. Both application owners received the same [qualified handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/handoff.json).
+
+The user clarified that both replacements are greenfield and all producers and readers update together. The shared plan now removes legacy reader/controller compatibility while retaining exact new-stack identity, qualification, recovery, and consumer acceptance. This scope change is a planning decision, not runtime evidence.
+
 ## November 6, 2026 catalog successor checks
 
 The source implementation passed 71 focused catalog, public-disclosure, impact, and external-reference tests. The [integrated run](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/integrated-01.xml) retains those passes alongside two passing reducer cases and one failed reducer-fixture assertion. The [corrected reducer run](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/refusal-tests-02.xml) passed all three reducer cases. A [focused diagnostic assertion](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/diagnostic-01.xml) passed after independent review tightened the new conformance claims. These are source-checkout checks, not installed release qualification.
