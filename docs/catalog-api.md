@@ -108,6 +108,6 @@ The supported DocSpec ordered-export interpretation can establish `key_unique` w
 
 Public assembly requires an explicit identifier grant for the selected native-rule profile, just as for a relationship profile. Source locations follow the evidence disclosure policy. Generator identity and the native evaluator remain distinct in provenance.
 
-These APIs have focused source tests. The retained native workflow, concrete application generators and their release tuples require separate installed and runtime qualification; the [verification record](verification.md) identifies the evidence collected so far.
+These APIs passed installed metadata/translation qualification in the [dev6 catalog package](local-release-dev6.md). The retained native workflow, concrete application generators and their release tuples require separate qualification; the [verification record](verification.md) identifies their focused development evidence and remaining gaps.
 
 Static relationship support and executed data checks answer different questions. A native invariant does not make an unsupported comparison rule interpretable. Missing rule support and missing candidate evidence remain separate incomplete results. The [replacement plan](replacement-runtime-plan.md) tracks the additional relationship and multi-output profiles needed by the applications.
