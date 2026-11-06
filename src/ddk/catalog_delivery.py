@@ -14,7 +14,7 @@ import stat
 from types import MappingProxyType
 
 from .catalog_access import CatalogError
-from .documents import parse_json, validate_document
+from .documents import freeze_json, parse_json, validate_document
 
 
 OUTPUT_SET = "urn:ddk:catalog:output-set"
@@ -111,7 +111,7 @@ def load_catalog_artifacts(directory, *, expected_lock_sha256=None, audience=Non
     _need(audience is None or catalog["audience"] == audience, "Catalog audience differs from the requested boundary")
     _need(_read(root, "catalog.lock.json", max_lock_bytes) == lock_bytes,
           "Catalog directory changed while its artifact set was captured")
-    return CatalogArtifacts(root, catalog, report, lock, digest, MappingProxyType(companions),
+    return CatalogArtifacts(root, freeze_json(catalog), freeze_json(report), freeze_json(lock), digest, MappingProxyType(companions),
                             MappingProxyType({**content, "catalog.lock.json": lock_bytes}),
                             expected_lock_sha256 is not None)
 

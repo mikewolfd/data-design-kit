@@ -105,6 +105,17 @@ Use `report` for public responses, including early and incomplete failures. `loc
 
 ## Required candidate integration
 
+`run_checked_query` accepts the `CatalogArtifacts` object returned by
+`load_catalog_artifacts`, as well as its existing path argument. A captured read
+requires the external lock pin and uses that capture's exact recipe and SQL
+bytes. It performs no catalog, lock or SQL file reopen. The loader freezes the
+captured catalog, report and lock recursively. A later delivery-directory
+replacement cannot silently change a running reader's selected metadata.
+The injected reader still admits the exact data references and retains native
+read evidence. Public captures with withheld native references still refuse;
+the application must verify its private/public pair and preserve the public
+request's scope before using its private capture.
+
 Use admitted definitions and companions to prepare the native request. Execute through DocSpec and retain its exact candidate and diagnostics. Accept the required evidence against that candidate, then assemble the qualified catalog from the accepted owner records. Finalize complete controls and select or publish through the existing authorities.
 
 The successor source adds `ddk.catalog_managed_jobs.managed_job_definition` and `managed_job_metadata`. Capture the admitted production, resolved dataset definitions and original source identities before native preparation. Map every native input and output to a catalog dataset or an explicit out-of-catalog reason. Pass the captured definition identity to DocSpec unchanged. It binds interpretation and is not a native computation or reuse key.

@@ -90,6 +90,61 @@ def test_pair_reuses_one_source_read_without_private_disclosure(inputs, tmp_path
     assert len(local.catalog["extensions"][details]["datasetDefinitions"]["daily-revenue"]["properties"]) > 1
 
 
+def test_captured_recipe_uses_the_admitted_bytes_without_any_metadata_reopen(inputs, tmp_path, monkeypatch):
+    from ddk.catalog_access import run_checked_query
+    import shutil
+
+    public, local = captured(inputs, tmp_path)
+    recipe = local.catalog["recipes"][0]
+    expected = local.companions[recipe["sql"]]
+    versions = {name: next(row["id"] for row in local.catalog["versions"] if row["dataset"] == alias)
+                for name, alias in recipe["inputs"].items()}
+    with pytest.raises(TypeError):
+        local.catalog["datasets"][0]["definition"]["object"] = "changed"
+    with pytest.raises(TypeError):
+        local.lock["extensions"].clear()
+    with pytest.raises(TypeError):
+        local.report["checks"].append({})
+    # Captured metadata remains the selected meaning if the delivery directory
+    # is replaced/removed. Native data custody remains the injected owner's job.
+    shutil.rmtree(local.directory)
+    calls = []
+    def reader(request):
+        assert request["sql"] == expected
+        assert {name: row["id"] for name, row in request["inputs"].items()} == versions
+        calls.append(request)
+        return {"result": [{"amount_cents": 42}], "receipt": {"id": "independent-read-fixture"}}
+    def no_reopen(*args, **kwargs):
+        raise AssertionError("Captured query must not reopen catalog, lock, SQL or data")
+    monkeypatch.setattr(Path, "open", no_reopen)
+    result = run_checked_query(local, recipe["id"], reader, versions=versions)
+    assert result["sqlSha256"] == sha256(expected).hexdigest() and len(calls) == 1
+    with pytest.raises(ValueError, match="externally pinned"):
+        run_checked_query(replace(local, externally_pinned=False), recipe["id"], reader, versions=versions)
+    public_recipe = public.catalog["recipes"][0]
+    with pytest.raises(ValueError, match="native reference"):
+        run_checked_query(public, public_recipe["id"], reader, versions=versions)
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("mutation", ["missing", "changed", "oversized"])
+def test_captured_recipe_refuses_unavailable_or_different_sql_before_reader(inputs, tmp_path, mutation):
+    from ddk.catalog_access import run_checked_query
+    from ddk.documents import DEFAULT_LIMITS, ResourceLimit
+
+    _, local = captured(inputs, tmp_path)
+    recipe = local.catalog["recipes"][0]
+    versions = {name: next(row["id"] for row in local.catalog["versions"] if row["dataset"] == alias)
+                for name, alias in recipe["inputs"].items()}
+    companions = dict(local.companions)
+    if mutation == "missing":
+        del companions[recipe["sql"]]
+    else:
+        companions[recipe["sql"]] = b"SELECT 1" if mutation == "changed" else b" " * (DEFAULT_LIMITS["maxDocumentBytes"] + 1)
+    with pytest.raises(ResourceLimit if mutation == "oversized" else ValueError):
+        run_checked_query(replace(local, companions=companions), recipe["id"], lambda request: pytest.fail("must not execute"), versions=versions)
+
+
 @pytest.mark.parametrize("mutation", ["wrong-public-pin", "unpinned", "definition", "version", "relationship-scope", "relationship-rule", "relationship-path", "input-alias", "sql"])
 def test_pair_refuses_mixed_or_changed_access_meaning(inputs, tmp_path, mutation):
     public, local = captured(inputs, tmp_path)
