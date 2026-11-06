@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 dev5 installed catalog and managed Update qualification
+
+The [dev5 package](local-release-dev5.md) passed all 358 installed tests with zero failures, errors or skips and 11 RDFLib warnings in 187.88 seconds. [Qualification](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/distribution/qualified-02/release-qualification.ddk.json) passed 187 case/profile combinations covering 170 cases and 13 declared profiles. The frozen DDK source is `5e90d70f74ef88053a75b8d991caf262ad74bbd0`; the full native runtime is the separately gate-tested `d96e00172d7d4be26da4532cda35aa05f2a3709e`.
+
+Two builds produced identical wheels. [Identity verification](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/distribution/qualified-02/identity-verification.json) matched 149 source files to the commit, 108 wheel members to both installations, and 102 code/resource members to source. Source and external inputs remained unchanged. Core-only checking and locks passed; [manifest discovery](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/distribution/qualified-02/core-qualified-discovery.json) verified all five qualified manifests without importing native engines or catalog dependencies. Separate greybeard and ETL reviews closed the source findings before capture.
+
+The [handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/handoff.json) records the public-type grants, separate private/public views, managed Update scope and exact native binary. The earlier capture remains failed and is described below. Streaming quality, whole-job preparation and full replacement acceptance remain separate, incomplete work; none is added to this package claim.
+
 ## November 6, 2026 process cleanup repair
 
 The first dev5 installed capture retained 347 passes and one failed process-loss check. Its [qualification report](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/distribution/qualified-01/release-qualification.ddk.json) remains failed. A one-millisecond timeout received an OS permission error; five direct repeats timed out as expected. The original failing syscall remains unresolved.

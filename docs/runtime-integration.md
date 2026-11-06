@@ -70,7 +70,7 @@ Current ordinary DocSpec inputs include Parquet, explicitly schematized JSON Lin
 
 ## Managed quality-gated path
 
-The dev2 release qualifies the independent, unbased typed Build operation. The successor source adds `prepare_update` with a native `UpdateSpec` for a selected independent, source-only local base. Both use DocSpec's existing native lifecycle and quality gate. Installed successor qualification remains separate from the focused tests recorded in [implementation status](implementation-status.md).
+The dev2 release qualifies the independent, unbased typed Build operation. Dev5 adds `prepare_update` with a native `UpdateSpec` for a selected independent, source-only local base. Both use DocSpec's existing native lifecycle and quality gate. The [dev5 package](local-release-dev5.md) qualifies this bounded scope; [implementation status](implementation-status.md) separates broader pending work.
 
 1. Record the stable operation ID and native request identity before submission. Capture required rules and applicable policy preconditions.
 2. DocSpec admits and prepares a retained candidate through its native lifecycle.

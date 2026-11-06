@@ -1,6 +1,6 @@
 # Shared runtime work for the full replacements
 
-**November 6, 2026. Both replacements are greenfield; full replacement qualification remains incomplete.** SpicyRegs and congressional-tech will update their producers and readers together. The qualified [dev4 catalog package](local-release-dev4.md) is ready for integration. External publication awaits a destination.
+**November 6, 2026. Both replacements are greenfield; full replacement qualification remains incomplete.** SpicyRegs and congressional-tech will update their producers and readers together. The qualified [dev5 catalog and managed Update package](local-release-dev5.md) is ready for integration. External publication awaits a destination.
 
 Build one new path through definitions, execution, qualification, publication, and consumers. Remove old-reader compatibility, legacy metadata decoders, fallback controllers, and migration of old lifecycle journals from delivery scope. Valid retained originals and native results can still supply exact inputs when identity and interpretation are established. The new stack must preserve its own retry, recovery, qualification, and selection guarantees.
 
@@ -10,7 +10,7 @@ Extend the existing DocSpec services and DDK adapters, then give both applicatio
 
 The inspected DDK implementation is `8e9a53e81ec6258f2068557ff5e4788c80c32995`; its documentation checkpoint is `3d2622b`. DocSpec is `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. Their existing qualification covers the boundaries in [implementation status](implementation-status.md).
 
-DocSpec already has typed Build, Update, Backfill, Refresh, and Evidence operations, protected group readers, retained completions, generation membership, and export recovery. Its qualified DDK managed interface exposes one local source-only Build family. DDK's native mapper accepts a flat scalar subset, and native quality captures the complete Arrow stream before decoding the complete table. These narrower interfaces explain several adoption gaps; the underlying services provide substantial reusable work.
+DocSpec already has typed Build, Update, Backfill, Refresh, and Evidence operations, protected group readers, retained completions, generation membership, and export recovery. Its qualified DDK managed interface exposes local independent source-only Build and based Update. DDK's native mapper accepts a flat scalar subset, and native quality captures the complete Arrow stream before decoding the complete table. These narrower interfaces explain several adoption gaps; the underlying services provide substantial reusable work.
 
 The source-grounded investigations retain detailed evidence and proposed cases:
 
@@ -21,7 +21,7 @@ The source-grounded investigations retain detailed evidence and proposed cases:
 
 These investigations are static evidence. Their proposed executions have status `not_run`.
 
-The successor source now provides the [admitted catalog API](catalog-api.md), public field-path disclosure, recipe context and parameter ordering, scoped project extensions, and external-target loading. Its focused catalog checks passed. The first managed source-only Update increment passed the compiler-pinned native gate and focused recovery checks; successor installed qualification remains pending. The [implementation status](implementation-status.md#successor-work) records these narrower results separately from the broader plan below.
+The successor source now provides the [admitted catalog API](catalog-api.md), public field-path disclosure, recipe context and parameter ordering, scoped project extensions, and external-target loading. Its focused catalog checks passed. The first managed source-only Update increment passed the compiler-pinned native gate and dev5 installed qualification. The [implementation status](implementation-status.md#successor-work) records these narrower results separately from the broader plan below.
 
 ## Owners and shared work
 
