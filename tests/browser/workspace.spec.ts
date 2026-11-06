@@ -22,7 +22,7 @@ test('discovery opens no rows; exact numbers, missing, null and empty survive pa
   });
   await open(page);
   expect(rows).toHaveLength(0);
-  await page.getByRole('tab', { name: 'Data', exact: true }).click();
+  await page.getByRole('tab', { name: 'View data', exact: true }).click();
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: '0.200000000000000001', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'missing', exact: true }).first()).toBeVisible();
@@ -39,7 +39,7 @@ test('discovery opens no rows; exact numbers, missing, null and empty survive pa
   await page.getByText('Visible fields (').click();
   await page.getByRole('checkbox', { name: 'concentration', exact: true }).uncheck();
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export this page ↓', exact: true }).click();
+  await page.getByRole('button', { name: 'Download this page (JSON) ↓', exact: true }).click();
   const file = await (await download).path();
   const fs = await import('node:fs/promises');
   const saved = JSON.parse(await fs.readFile(file!, 'utf8'));
@@ -76,9 +76,12 @@ test('exact decimal filtering and error retry keep request context', async ({ pa
   await page.getByRole('button', { name: 'Retry read', exact: true }).click();
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
   await expect(page.locator('.data-table tbody tr')).toHaveCount(1);
+  await expect(page.locator('.result-bar [role="status"]')).toHaveText(
+    '1 record on this page · 1 matching record',
+  );
   await page.getByLabel('Equals', { exact: true }).fill('999');
   await page.getByRole('button', { name: 'Apply filter', exact: true }).click();
-  await expect(page.getByText('No matching records', { exact: true })).toBeVisible();
+  await expect(page.getByText('No records match this filter', { exact: true })).toBeVisible();
 });
 
 test('supported recipe consumes only real inputs and exports exact parameters', async ({
@@ -88,7 +91,7 @@ test('supported recipe consumes only real inputs and exports exact parameters', 
   const data = await snapshot(request);
   await open(page, 'Connections');
   await page
-    .getByRole('combobox', { name: 'Exact release', exact: true })
+    .getByRole('combobox', { name: 'Named release', exact: true })
     .selectOption(
       data.catalog.releases.find((r: any) =>
         r.members.some((v: string) => v.endsWith('observations:v2')),
@@ -98,9 +101,9 @@ test('supported recipe consumes only real inputs and exports exact parameters', 
   await page.getByRole('button', { name: 'Run query', exact: true }).click();
   await expect(page.locator('.recipe .data-table tbody tr')).toHaveCount(3);
   await expect(page.getByRole('cell', { name: '9007199254740999', exact: true })).toBeVisible();
-  await page.getByText('Reader-issued execution record', { exact: true }).click();
+  await page.getByText('Technical execution record', { exact: true }).click();
   await expect(page.locator('.recipe')).toContainText('"inputs": [\n    "records"');
-  await page.getByText('Inspect the exact SQL companion', { exact: true }).click();
+  await page.getByText('View SQL', { exact: true }).click();
   await expect(page.locator('.sql-preview pre')).toContainText('SELECT');
 });
 
@@ -112,14 +115,17 @@ test('historical relationship navigation keeps target version and release', asyn
   const old = data.catalog.versions.find((v: any) => v.id.endsWith('observations:v1'));
   await page.goto(`${root}&tab=Connections&version=${encodeURIComponent(old.id)}`);
   await page
-    .getByRole('button', { name: 'Synthetic station register · same release ↗', exact: true })
+    .getByRole('button', {
+      name: 'Synthetic station register · version in the same release ↗',
+      exact: true,
+    })
     .click();
   await expect(
     page.getByRole('heading', { name: 'Synthetic station register', exact: true }),
   ).toBeVisible();
   expect(new URL(page.url()).searchParams.get('version')).toMatch(/stations:v1$/);
   expect(new URL(page.url()).searchParams.get('release')).toBeTruthy();
-  await page.getByRole('tab', { name: 'Data', exact: true }).click();
+  await page.getByRole('tab', { name: 'View data', exact: true }).click();
   await expect(page.locator('.data-table')).toContainText('historical');
 });
 
@@ -129,27 +135,29 @@ test('withheld and unresolved versions remain refused or unknown', async ({ page
   await page
     .getByRole('combobox', { name: 'Data version', exact: true })
     .selectOption(data.catalog.versions.find((v: any) => v.id.endsWith(':withheld')).id);
-  await expect(page.getByText('Access refused', { exact: true })).toBeVisible();
+  await expect(page.getByText('This version is withheld', { exact: true })).toBeVisible();
   await page
     .getByRole('combobox', { name: 'Data version', exact: true })
     .selectOption(data.catalog.versions.find((v: any) => v.id.endsWith(':unresolved')).id);
-  await expect(page.getByText('Access is unknown', { exact: true })).toBeVisible();
-  await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
+  await expect(page.getByText('Record availability is unknown', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Checks & sources', exact: true }).click();
   await expect(page.getByText(/required checks? (is|are) unresolved or failed/)).toBeVisible();
-  await expect(page.getByText('Data qualification is unknown', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('No checks are recorded for this data version', { exact: true }),
+  ).toBeVisible();
 });
 
 test('comparison uses genuine pinned DDK impact and distinguishes reuse', async ({ page }) => {
   await open(page, 'Compare');
   await expect(
-    page.getByRole('heading', { name: 'Recorded change obligations', exact: true }),
+    page.getByRole('heading', { name: 'Follow-up work identified by the report', exact: true }),
   ).toBeVisible();
   await expect(page.getByText('metadata regeneration', { exact: false }).first()).toBeVisible();
   await expect(
-    page.getByText('Runtime reuse remains a separate decision', { exact: true }),
+    page.getByText('The report does not carry out these updates', { exact: true }),
   ).toBeVisible();
   await page.getByText('Computation and qualification reuse evidence', { exact: true }).click();
-  await expect(page.getByRole('tabpanel', { name: 'Compare' })).toContainText(
+  await expect(page.getByRole('tabpanel', { name: 'Compare versions' })).toContainText(
     'Both snapshots need runtime-issued identities',
   );
 });
@@ -164,11 +172,11 @@ test('same-catalog history digest mismatch cannot display a different snapshot',
     history.pushState({}, '', u);
     dispatchEvent(new PopStateEvent('popstate'));
   });
-  await expect(page.getByRole('alert')).toContainText('different catalog bytes');
+  await expect(page.getByRole('alert')).toContainText('different catalog copy');
   await expect(
     page.getByRole('heading', { name: 'Watershed observations', exact: true }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Open the configured snapshot', exact: true }).click();
+  await page.getByRole('button', { name: 'Open the catalog available here', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Watershed observations', exact: true }),
   ).toBeVisible();
@@ -194,10 +202,10 @@ test('keyboard tab activation, no console errors and desktop accessibility', asy
   await open(page);
   await page.getByRole('tab', { name: 'Overview', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Data', exact: true })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'View data', exact: true })).toBeFocused();
   await expect(page.getByRole('tabpanel', { name: 'Overview' })).toBeVisible();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('tabpanel', { name: 'Data' })).toBeVisible();
+  await expect(page.getByRole('tabpanel', { name: 'View data' })).toBeVisible();
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
   expect(
     (
@@ -215,6 +223,15 @@ for (const width of [390, 320])
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page, 'Data');
     await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
+    for (const control of [
+      page.getByRole('combobox', { name: 'Catalog', exact: true }),
+      page.getByRole('searchbox', { name: 'Search this catalog', exact: true }),
+    ]) {
+      const bounds = await control.boundingBox();
+      expect(bounds!.width, 'Discovery controls need room for readable text').toBeGreaterThan(
+        width * 0.6,
+      );
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
@@ -244,7 +261,9 @@ test('real application catalogs preserve discovery-only scope', async ({ page, r
     expect(data.capabilities.query).toBe(false);
     if (id === 'spicy-regs') {
       expect(data.catalog.versions).toHaveLength(0);
-      await expect(page.getByText('Choose an exact data version', { exact: true })).toBeVisible();
+      await expect(
+        page.getByText('Records are not available in this portal', { exact: true }),
+      ).toBeVisible();
     } else expect(data.catalog.datasets.length).toBeGreaterThanOrEqual(23);
   }
 });
@@ -257,19 +276,39 @@ test('incoming same-release links return to historical source; skip link and all
   const old = data.catalog.versions.find((v: any) => v.id.endsWith('observations:v1'));
   await page.goto(`${root}&tab=Connections&version=${encodeURIComponent(old.id)}`);
   await page
-    .getByRole('button', { name: 'Synthetic station register · same release ↗', exact: true })
+    .getByRole('button', {
+      name: 'Synthetic station register · version in the same release ↗',
+      exact: true,
+    })
     .click();
-  await page.getByRole('tab', { name: 'Connections', exact: true }).click();
+  await page.getByRole('tab', { name: 'Related data', exact: true }).click();
   await page
-    .getByRole('button', { name: 'Watershed observations · same release ↗', exact: true })
+    .getByRole('button', {
+      name: 'Watershed observations · version in the same release ↗',
+      exact: true,
+    })
     .click();
   expect(new URL(page.url()).searchParams.get('version')).toBe(old.id);
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ['Overview', 'Connections', 'Evidence', 'Activity', 'Compare']) {
-    await page.getByRole('tab', { name: tab, exact: true }).click();
+    await page
+      .getByRole('tab', {
+        name:
+          (
+            {
+              Data: 'View data',
+              Connections: 'Related data',
+              Evidence: 'Checks & sources',
+              Activity: 'History',
+              Compare: 'Compare versions',
+            } as Record<string, string>
+          )[tab] || tab,
+        exact: true,
+      })
+      .click();
     if (tab === 'Compare')
       await expect(
-        page.getByRole('heading', { name: 'Recorded change obligations', exact: true }),
+        page.getByRole('heading', { name: 'Follow-up work identified by the report', exact: true }),
       ).toBeVisible();
     expect(
       (
@@ -302,16 +341,14 @@ test('nested scalar-list paths and source discovery retain their meaning', async
     page.locator('.field-meta').filter({ hasText: '["readings"][each]["flags"][each]["flag"]' }),
   ).toHaveCount(0);
   await page
-    .getByRole('searchbox', { name: 'Find a dataset', exact: true })
+    .getByRole('searchbox', { name: 'Search this catalog', exact: true })
     .fill('no-such-dataset');
   await expect(page.getByText('No datasets match these filters.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Datasets' }).getByRole('button')).toHaveCount(
     2,
   );
-  await expect(
-    page.getByRole('combobox', { name: 'Source occurrence', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Source capture', exact: true })).toBeVisible();
 });
 
 test('explicit-version recipe binding runs without treating context as an input', async ({
@@ -320,7 +357,9 @@ test('explicit-version recipe binding runs without treating context as an input'
 }) => {
   const data = await snapshot(request);
   await open(page, 'Connections');
-  await page.getByRole('combobox', { name: 'Input binding', exact: true }).selectOption('versions');
+  await page
+    .getByRole('combobox', { name: 'Data versions to use', exact: true })
+    .selectOption('versions');
   await page
     .getByRole('combobox', { name: 'Version for records', exact: true })
     .selectOption(data.catalog.versions.find((v: any) => v.id.endsWith('observations:v2')).id);
@@ -342,10 +381,10 @@ test('unknown pagination stays explicit and long nested values keep accessible s
     await route.fulfill({ response, json: value });
   });
   await open(page, 'Data');
-  await expect(page.getByText('Continuation is unknown', { exact: true })).toBeVisible();
+  await expect(page.getByText('More records: unknown', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Inspect record 01', exact: true }).click();
   await expect(
-    page.getByText('First 50 occurrences displayed. The page export retains the complete value.', {
+    page.getByText('First 50 items displayed. Downloading the result retains the complete value.', {
       exact: true,
     }),
   ).toBeVisible();

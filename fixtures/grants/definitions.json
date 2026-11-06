@@ -2,7 +2,7 @@
   "awards": {
     "name": "awards",
     "businessName": "Public-service grants",
-    "description": "One synthetic grant award with repeated payment records",
+    "description": "Explore example grant awards and their listed payment records. These synthetic records do not describe real grants.",
     "properties": [
       {
         "name": "id",
@@ -18,13 +18,13 @@
       {
         "name": "amount",
         "logicalType": "number",
-        "description": "Exact awarded currency amount",
+        "description": "Example awarded amount. Currency is not specified; keep this separate from payment amounts.",
         "physicalType": "decimal128(30,8)"
       },
       {
         "name": "payments",
         "logicalType": "array",
-        "description": "Repeated payments; null differs from empty",
+        "description": "Listed payment records for the award. Payment timing and reconciliation to the award amount are not defined in this example.",
         "items": {
           "name": "payment",
           "logicalType": "object",
@@ -33,16 +33,16 @@
             {
               "name": "amount",
               "logicalType": "number",
-              "description": "Exact payment amount"
+              "description": "Amount listed for this payment record. Currency is not specified."
             },
             {
               "name": "tags",
               "logicalType": "array",
-              "description": "Nested tags",
+              "description": "Labels attached to a payment record. Repeated labels remain separate.",
               "items": {
                 "name": "tag",
                 "logicalType": "string",
-                "description": "Tag"
+                "description": "A recorded payment label; value codes are not defined in this example."
               }
             }
           ]
@@ -58,7 +58,7 @@
   "programs": {
     "name": "programs",
     "businessName": "Synthetic grant programs",
-    "description": "One synthetic grant program per code",
+    "description": "Find the program names used in the example grant awards. These programs are synthetic.",
     "properties": [
       {
         "name": "code",

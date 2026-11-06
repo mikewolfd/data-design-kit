@@ -18,17 +18,17 @@ from ddk.documents import json_dumps
 
 PROJECT = Path(__file__).resolve().parent.parent
 CAPTURE = PROJECT / 'fixtures/applications/commerce-native'
-CAPTURE_SHA = '884cf9dc7676187c17f7bd668151672a4c3d9d98edf5409c7fab18af287a0f72'
+CAPTURE_SHA = '2b2dfa95deccf0c8240926bcb568d8e396bfdc6128034f6a704df7a7c1510834'
 QUALIFIED = Path('/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01')
 BINARY = Path('/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/docspec-ddk-final')
 BINARY_SHA = 'b89b43e2d2bf17f8d87ff1d9a779e06c3a024f2777e2327a8f048c6cb00a2532'
 WHEEL_SHA = '7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8'
 DATA_SHA = 'ff0efd8f35eb3b64e23a2f195cbfd2c9989173020b4681ae783bc0f2301ba4c6'
-VERSION = 'urn:ddk:file-version:737bacee2ec6b3ada9d212f8206e4905647dc155ff71433646a645054d6a8e50'
+VERSION = 'urn:ddk:file-version:667e1cdb71e36ebef8639a894100bcc50d3ab83bc4c02f18ab2e3f9a6f71eb24'
 DATASET = 'urn:example:commerce:dataset:daily-revenue'
-REPRESENTATION = 'urn:ddk:representation:cb241944dad0e60e968aed2f1db0d5dfc3e1a364595a525dd8b4ef814bdc30d8'
+REPRESENTATION = 'urn:ddk:representation:eb5fc8380425c98005ccda57f9ac4f399e348daf008fd0812252028352e4965d'
 RECIPE = 'urn:example:commerce:recipe:checked-revenue'
-RELEASE = 'urn:test:reference:release'
+RELEASE = 'urn:example:commerce:release:copy-refresh-20261106'
 LIMITS = {'batch_rows': 8192, 'compute_threads': 2, 'max_batch_bytes': 8 << 20,
           'max_metadata_bytes': 2 << 20, 'memory_bytes': 256 << 20, 'scratch_bytes': 64 << 20}
 CANCELLED = threading.Event()

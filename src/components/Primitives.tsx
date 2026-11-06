@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { CatalogField, RecordRef, FieldPath } from '../domain/types';
-import { textValue, pathLabel, safeLink, words } from '../lib/display';
+import { textValue, pathLabel, safeLink } from '../lib/display';
+import { enumLabel } from '../lib/content';
 import { exactObjectEntries, exactStringify, isExactNumber } from '../domain/exact';
 
 export function Badge({ status, children }: { status: string; children?: ReactNode }) {
@@ -9,7 +10,7 @@ export function Badge({ status, children }: { status: string; children?: ReactNo
       className={`badge ${['failed', 'refused', 'error'].includes(status) ? 'bad' : status === 'passed' || status === 'available' || status === 'ok' ? 'good' : 'neutral'}`}
     >
       <span aria-hidden="true" className="status-dot" />
-      {children ?? words(status)}
+      {children ?? enumLabel(status)}
     </span>
   );
 }
@@ -76,8 +77,7 @@ export function Raw({ value, label = 'View exact record' }: { value: unknown; la
           <pre>{raw.slice(0, 131072)}</pre>
           {raw.length > 131072 && (
             <p className="muted">
-              Preview limited to 131,072 characters. The exact catalog companion retains the full
-              record.
+              Preview limited to 131,072 characters. The full value is not shown here.
             </p>
           )}
         </>
@@ -100,7 +100,7 @@ export function RecordLink({ record }: { record?: RecordRef }) {
       )}
       {record.sha256 && (
         <small>
-          SHA-256 <code>{record.sha256}</code>
+          File fingerprint (SHA-256) <code>{record.sha256}</code>
         </small>
       )}
     </span>
@@ -127,7 +127,15 @@ export function Value({
     if (!full)
       return (
         <span className="structured-value">
-          {entries.length} {arr ? 'items' : 'fields'} <span aria-hidden="true">↳</span>
+          {entries.length}{' '}
+          {arr
+            ? entries.length === 1
+              ? 'item'
+              : 'items'
+            : entries.length === 1
+              ? 'field'
+              : 'fields'}{' '}
+          <span aria-hidden="true">↳</span>
         </span>
       );
     if (depth >= 8) return <pre>{textValue(value)}</pre>;
@@ -144,7 +152,7 @@ export function Value({
           ))}
         </dl>
         {entries.length > 50 && (
-          <p>First 50 occurrences displayed. The page export retains the complete value.</p>
+          <p>First 50 items displayed. Downloading the result retains the complete value.</p>
         )}
       </>
     );
@@ -169,12 +177,10 @@ function Field({
   const info = (
     <>
       <code>{field.name || '[element]'}</code>
-      <span className="field-type">
-        {field.physicalType || field.logicalType || 'type not disclosed'}
-      </span>
-      <span className="field-description">
-        {field.description || field.businessName || 'Description not supplied'}
-      </span>
+      {field.businessName && field.businessName !== field.name && (
+        <span className="field-type">{field.businessName}</span>
+      )}
+      <span className="field-description">{field.description || 'Description not supplied'}</span>
     </>
   );
   return (
@@ -201,18 +207,15 @@ function Field({
           <div className="field-summary">{info}</div>
         )}
       </div>
-      <div className="field-meta">
+      <details className="field-meta">
+        <summary>Technical field details</summary>
+        <span>Storage type: {field.physicalType || field.logicalType || 'Not disclosed'}</span>
         <span>
-          {field.required
-            ? 'Required'
-            : field.nullable === false
-              ? 'Non-null'
-              : field.nullable === true
-                ? 'Nullable'
-                : 'Nullability not disclosed'}
+          {field.required ? 'Field is required. ' : ''}Whether null is allowed:{' '}
+          {field.nullable === false ? 'No' : field.nullable === true ? 'Yes' : 'Not specified'}.
         </span>
         <code>{pathLabel(path)}</code>
-      </div>
+      </details>
     </li>
   );
 }
@@ -236,8 +239,28 @@ export function FieldTree({
         />
       ))}
       {fields.length > 100 && (
-        <li>First 100 fields displayed. Inspect the catalog companion for the full definition.</li>
+        <li>First 100 fields displayed. See the catalog definition for all fields.</li>
       )}
     </ul>
+  );
+}
+
+export function BlankValuesHelp() {
+  return (
+    <details className="blank-values-help">
+      <summary>Why some values are blank</summary>
+      <dl>
+        <dt>missing</dt>
+        <dd>The field is not present in this record.</dd>
+        <dt>null</dt>
+        <dd>The record supplies an explicit null value. Its reason is not inferred.</dd>
+        <dt>empty text</dt>
+        <dd>The record supplies a blank string.</dd>
+        <dt>empty list</dt>
+        <dd>The record supplies a list with no items.</dd>
+        <dt>empty object</dt>
+        <dd>The record supplies an object with no fields.</dd>
+      </dl>
+    </details>
   );
 }

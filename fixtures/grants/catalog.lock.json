@@ -7,7 +7,7 @@
   "files": [
     {
       "path": "definitions.json",
-      "sha256": "68ee137892a21d71962e30211e64e5ac89b4c10aa46471b1ea49e0259e5a81be",
+      "sha256": "8d6305a7482dbcc3a06d93c1da5818db20267230a4d6941ff0da6e32ec640f15",
       "role": "definition"
     },
     {
@@ -61,7 +61,7 @@
     "urn:ddk:catalog:output-set": [
       {
         "path": "catalog.ddk.json",
-        "sha256": "ac19cec88afa1d82324b2683430ca789df943c364b03064272ed875fcb497c80",
+        "sha256": "02159ec4cbe70639664abfedf5b68d4a0d6d3ffa110a7ced5de62a06a973efb8",
         "role": "catalog"
       },
       {

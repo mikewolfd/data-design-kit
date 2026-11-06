@@ -443,7 +443,7 @@ export class CatalogAccess {
         ...(!owner?.reader && !owner?.query
           ? {
               reason:
-                'Discovery only: no owner reader or query adapter is registered for this application set.',
+                'Dataset descriptions and fields are available. Reading records and running queries are not connected to this portal.',
             }
           : {}),
       },

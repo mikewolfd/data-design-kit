@@ -8,19 +8,22 @@ import type {
   ReadRequest,
 } from '../domain/types';
 import { request } from '../lib/client';
-import { downloadJson, jsonInput, releaseFor, shortId } from '../lib/display';
-import { Badge, Notice, Raw, Section, Value } from './Primitives';
+import { downloadJson, jsonInput, releaseFor, shortId, titleOf } from '../lib/display';
+import { Badge, Notice, Raw, Section, Value, BlankValuesHelp } from './Primitives';
 import { EvidenceRecord } from './EvidenceRecord';
+import { formatLabel, enumLabel } from '../lib/content';
 import { exactObjectField } from '../domain/exact';
 
 export function ResultTable({
   rows,
   columns,
   positions,
+  caption = 'Records returned by this request',
 }: {
   rows: ExactObject[];
   columns: string[];
   positions?: number[];
+  caption?: string;
 }) {
   const [selected, setSelected] = useState<number | undefined>();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -38,7 +41,7 @@ export function ResultTable({
         aria-label="Data records; scroll horizontally for more fields"
       >
         <table className="data-table">
-          <caption className="sr-only">Bounded records for the exact selected version</caption>
+          <caption className="sr-only">{caption}</caption>
           <thead>
             <tr>
               <th scope="col">Record</th>
@@ -90,9 +93,7 @@ export function ResultTable({
               Close detail
             </button>
           </div>
-          <p className="muted">
-            List positions identify occurrences. Repeated values remain separate.
-          </p>
+          <p className="muted">Each listed item is kept separately, including repeated values.</p>
           <Value value={rows[selected]} full />
         </section>
       )}
@@ -114,6 +115,8 @@ export function DataPanel({
   const [representationId, setRepresentation] = useState(reps.length === 1 ? reps[0].id : '');
   const [result, setResult] = useState<ReadResult>();
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
+  const [errorDiagnostic, setErrorDiagnostic] = useState('');
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState<string>();
   const [history, setHistory] = useState<(string | undefined)[]>([]);
@@ -149,13 +152,18 @@ export function DataPanel({
     currentRequest.current = body;
     setLoading(true);
     setError('');
+    setErrorCode('');
     setResult(undefined);
     request<ReadResult>('/api/read', abort.signal, body)
       .then((data) => {
         if (!abort.signal.aborted) setResult(data);
       })
       .catch((e) => {
-        if (!abort.signal.aborted) setError(e.message);
+        if (!abort.signal.aborted) {
+          setError(e.message);
+          setErrorCode(e.code || '');
+          setErrorDiagnostic(e.technicalMessage || e.message);
+        }
       })
       .finally(() => {
         if (!abort.signal.aborted) setLoading(false);
@@ -174,6 +182,7 @@ export function DataPanel({
   ]);
   function applyFilter(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
+    setErrorCode('');
     try {
       setFilter(
         filterField
@@ -201,24 +210,40 @@ export function DataPanel({
       });
     } catch (e) {
       setError((e as Error).message);
+      setErrorCode('export_too_large');
+      setErrorDiagnostic((e as Error).message);
     }
   }
+  const versions = snapshot.catalog.versions.filter(
+    (item) => item.dataset === dataset.alias || item.dataset === dataset.id,
+  );
+  const cursorError = ['invalid_cursor', 'cursor_mismatch'].includes(errorCode);
+  const quotaError = errorCode === 'native_quota';
   if (!version)
     return (
-      <Section title="Explore records">
-        <Notice title="Choose an exact data version">
-          A definition alone cannot resolve record access. Select a recorded version above when one
-          is available.
+      <Section title="View records">
+        <Notice
+          title={
+            versions.length
+              ? 'Choose a data version to view records'
+              : 'Records are not available in this portal'
+          }
+        >
+          {versions.length
+            ? 'Select a data version above to view its access details.'
+            : 'You can explore the dataset description and fields. This catalog does not include a data version to open.'}
         </Notice>
       </Section>
     );
   return (
     <>
       <Section
-        title="Explore records"
+        title="View records"
         aside={
           snapshot.mode === 'fixture' ? (
             <Badge status="unknown">Demonstration data</Badge>
+          ) : snapshot.exampleData === 'authored' ? (
+            <Badge status="unknown">Saved example data</Badge>
           ) : undefined
         }
       >
@@ -226,22 +251,19 @@ export function DataPanel({
           <Notice
             title={
               snapshot.capabilities.read
-                ? 'Dataset outside the connected reader scope'
-                : 'No reader is connected'
+                ? 'Records for this dataset are not connected'
+                : 'Viewing records is not connected'
             }
           >
-            {snapshot.capabilities.read && snapshot.capabilities.description
-              ? snapshot.capabilities.description
-              : snapshot.capabilities.reason ||
-                'The owner must provide a bounded reader for the exact native version, view, schema, and field identities.'}
+            You can explore the dataset description and fields. This portal cannot open this
+            dataset’s records.
+            <Raw value={snapshot.capabilities} label="Reader connection details" />
           </Notice>
         ) : null}
-        {readSupported && snapshot.capabilities.description && (
-          <p className="muted">{snapshot.capabilities.description}</p>
-        )}
+
         <div className="data-toolbar">
           <label className="stack-label">
-            Representation
+            File, table or service
             <select
               value={representationId}
               onChange={(e) => {
@@ -251,17 +273,17 @@ export function DataPanel({
                 setResult(undefined);
               }}
             >
-              <option value="">Choose a representation</option>
+              <option value="">Choose a file, table or service</option>
               {reps.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {shortId(r.id)} · {r.availability}
+                  {shortId(r.id)} · {enumLabel(r.availability)}
                 </option>
               ))}
             </select>
           </label>
           {rep && (
             <span className="toolbar-note">
-              {rep.mediaType || rep.kind}
+              {formatLabel(rep.mediaType, rep.kind)}
               <br />
               <Badge status={rep.availability} />
             </span>
@@ -321,22 +343,22 @@ export function DataPanel({
                       setHistory([]);
                     }}
                   >
-                    Clear
+                    Clear filter
                   </button>
                 )}
               </form>
             ) : (
-              <p className="muted">Generic filters are not supported by this owner reader.</p>
+              <p className="muted">Filtering records is not supported by this connection.</p>
             )}
             <div className="result-bar">
               <span role="status" aria-live="polite">
                 {loading
-                  ? 'Reading the exact version…'
-                  : result
-                    ? `${result.returned} records on this page${result.total !== undefined ? ` · ${result.total} matching records` : ''}`
-                    : error
-                      ? 'Read failed'
-                      : 'Ready to read'}
+                  ? 'Loading records…'
+                  : result?.status === 'ok'
+                    ? `${result.returned} ${result.returned === 1 ? 'record' : 'records'} on this page${result.total !== undefined ? ` · ${result.total} matching ${result.total === 1 ? 'record' : 'records'}` : ''}`
+                    : result || error
+                      ? 'Records were not loaded.'
+                      : 'Ready to load records'}
               </span>
               <div>
                 {loading ? (
@@ -344,8 +366,9 @@ export function DataPanel({
                     onClick={() => {
                       controller.current?.abort();
                       setLoading(false);
+                      setErrorCode('');
                       setError(
-                        'Stopped waiting for this read. Owner work may still finish; its outcome is unknown here. Your version and filter are preserved.',
+                        'Stopped waiting. The source may still finish the request; this portal does not know its outcome. Your version and filter are preserved.',
                       );
                     }}
                   >
@@ -353,25 +376,88 @@ export function DataPanel({
                   </button>
                 ) : null}
                 {result?.status === 'ok' && (
-                  <button onClick={exportPage}>Export this page ↓</button>
+                  <button onClick={exportPage}>Download this page (JSON) ↓</button>
                 )}
               </div>
             </div>
+            {result?.status === 'ok' && (
+              <p className="muted">
+                Download includes all returned fields for this page, including fields hidden in the
+                table. It is not the full dataset. JSON is a structured data-file format.
+              </p>
+            )}
             {error && (
               <Notice
-                title="Records could not be loaded"
+                title={
+                  cursorError
+                    ? 'This page link is no longer valid'
+                    : errorCode === 'export_too_large'
+                      ? 'This page could not be downloaded'
+                      : 'Records could not be loaded'
+                }
                 kind="error"
-                action={<button onClick={() => setRetry((v) => v + 1)}>Retry read</button>}
+                action={
+                  cursorError ? (
+                    <button
+                      onClick={() => {
+                        setHistory([]);
+                        setCursor(undefined);
+                        setRetry((v) => v + 1);
+                      }}
+                    >
+                      Return to first page
+                    </button>
+                  ) : !quotaError &&
+                    ![
+                      'result_budget',
+                      'column_budget',
+                      'browser_budget',
+                      'result_too_large',
+                      'response_too_large',
+                      'export_too_large',
+                    ].includes(errorCode) &&
+                    !error.startsWith('Stopped waiting') ? (
+                    <button onClick={() => setRetry((v) => v + 1)}>Retry read</button>
+                  ) : undefined
+                }
               >
-                {error}
+                {cursorError ? 'Return to the first page to continue.' : error}
+                {snapshot.mode === 'fixture' &&
+                  ['result_budget', 'column_budget', 'browser_budget', 'export_too_large'].includes(
+                    errorCode,
+                  ) && <p>You can change the filter above and try again.</p>}
+                {errorCode && (
+                  <Raw
+                    value={{ code: errorCode, message: errorDiagnostic || error }}
+                    label="Error details"
+                  />
+                )}
               </Notice>
             )}
             {result && result.status !== 'ok' && (
-              <Notice title={result.status === 'refused' ? 'Access refused' : 'Access is unknown'}>
-                {result.reason}
-                <div className="notice-actions">
-                  <button onClick={() => setRetry((v) => v + 1)}>Retry read</button>
-                </div>
+              <Notice
+                title={
+                  version.referenceDisclosure === 'withheld'
+                    ? 'This version is withheld'
+                    : result.status === 'unknown'
+                      ? version.retention === 'unknown' || rep.availability === 'unknown'
+                        ? 'Record availability is unknown'
+                        : 'Request outcome is unknown'
+                      : 'Records cannot be opened'
+                }
+              >
+                {version.referenceDisclosure === 'withheld'
+                  ? 'The catalog does not disclose the details needed to open its records.'
+                  : result.status === 'unknown'
+                    ? version.retention === 'unknown' || rep.availability === 'unknown'
+                      ? 'The catalog does not confirm whether this version can be opened.'
+                      : 'This request did not establish an outcome. The source may still finish; this portal does not know its result.'
+                    : result.reason}
+                {versions.length > 1 && <p>You can choose another listed version above.</p>}
+                <Raw
+                  value={{ status: result.status, reason: result.reason }}
+                  label="Access details"
+                />
               </Notice>
             )}
             {result?.status === 'ok' &&
@@ -398,31 +484,39 @@ export function DataPanel({
                       ))}
                     </div>
                   </details>
+
+                  <BlankValuesHelp />
                   <ResultTable
+                    caption={`Records from ${titleOf(dataset)}, version ${shortId(version.id)} · this page only`}
                     rows={result.rows}
                     columns={visibleColumns ?? result.columns}
                     positions={result.rowPositions}
                   />
                 </>
               ) : (
-                <Notice title="No matching records">
-                  The reader completed this bounded request. An empty result does not establish
-                  source completeness.
+                <Notice
+                  title={
+                    filter ? 'No records match this filter' : 'This request returned no records'
+                  }
+                >
+                  {filter
+                    ? 'Try another value or clear the filter. This result applies to the selected version.'
+                    : 'This result applies to the selected version and request.'}
                 </Notice>
               ))}
             {result?.continuation === 'unknown' && (
-              <Notice title="Continuation is unknown">
-                The owner did not report whether another page exists. These records are not evidence
-                of the end of the dataset.
+              <Notice title="More records: unknown">
+                The source did not report whether more records are available. This page does not
+                establish the end of the dataset.
               </Notice>
             )}
             <div className="pagination">
               <span>
                 {result?.rowOrder === 'query-result'
-                  ? `${result.continuation === 'complete' ? 'Complete read' : 'Bounded page'} · native query result order`
+                  ? `${result.continuation === 'complete' ? 'All records in this saved result returned' : 'This page only'} · query result order`
                   : snapshot.mode === 'fixture'
                     ? '10 records per page · original order'
-                    : '10 records per page · owner-reported positions'}
+                    : '10 records per page · source-reported positions'}
               </span>
               <div>
                 <button
@@ -448,13 +542,13 @@ export function DataPanel({
           </>
         )}
         {!reps.length && (
-          <Notice title="No representation is recorded">
+          <Notice title="No file, table or service is listed">
             The exact version exists in the catalog, but no file, table, or service is offered for
             it.
           </Notice>
         )}
       </Section>
-      <Section title="Exact read context">
+      <Section title="Technical read details">
         {result?.attempt && (
           <EvidenceRecord
             snapshot={snapshot}

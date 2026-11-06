@@ -5,7 +5,7 @@
   "owner": "ddk.catalog_impact.compare_catalogs",
   "ddkSource": "fb70ab825243235b4ecf77c5ebb8c636d0d06e2d",
   "ddkWheelSha256": "7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8",
-  "baseCatalogSha256": "fdeab365886a7e8c19b9cf790040adc9f5ec52ffbfb495682c0670c7415ce7b3",
-  "candidateCatalogSha256": "6f48781b55cd5384a95b87c00228ce8efc1398f15529c1d42b2614a1529eb306",
+  "baseCatalogSha256": "5e336277d880c3cee824c5909f56eabee1cf72c76e843c22106b421ee4652b16",
+  "candidateCatalogSha256": "9970ffedd41f9dc65c7d260eaa1f848f5cc9bf37b20e7394e84ae73754bdd593",
   "reportSha256": "6ccffe1819b04240937f392f9c910a3771a960256ddab27d2acd05320006e5aa"
 }

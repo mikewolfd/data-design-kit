@@ -2,12 +2,12 @@
   "observations": {
     "name": "observations",
     "businessName": "Watershed observations",
-    "description": "One synthetic instrument observation with nested readings",
+    "description": "Explore example water-quality measurements and readings at monitoring stations. These synthetic values do not describe real water conditions.",
     "properties": [
       {
         "name": "id",
         "logicalType": "integer",
-        "description": "Exact observation ID above JavaScript's safe integer range",
+        "description": "Identifier for this observation. Large identifiers are preserved exactly.",
         "physicalType": "int64"
       },
       {
@@ -33,16 +33,16 @@
             {
               "name": "depth",
               "logicalType": "number",
-              "description": "Exact depth"
+              "description": "Depth recorded for the nested reading. A measurement unit is not specified in this example."
             },
             {
               "name": "flags",
               "logicalType": "array",
-              "description": "Repeated flag values",
+              "description": "Recorded labels for a reading. Repeated labels remain separate.",
               "items": {
                 "name": "flag",
                 "logicalType": "string",
-                "description": "Flag"
+                "description": "A recorded label; value codes are not defined in this example."
               }
             }
           ]
@@ -75,7 +75,7 @@
   "stations": {
     "name": "stations",
     "businessName": "Synthetic station register",
-    "description": "One synthetic station per station code",
+    "description": "Find the station names used in the example water-quality measurements. These stations are synthetic.",
     "properties": [
       {
         "name": "code",

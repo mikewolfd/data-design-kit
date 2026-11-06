@@ -7,7 +7,7 @@ import { Notice, Raw, RecordLink } from './Primitives';
 export function EvidenceRecord({
   snapshot,
   record,
-  label = 'Inspect owner evidence',
+  label = 'View publisher evidence',
 }: {
   snapshot: CatalogSnapshot;
   record?: RecordRef;
@@ -15,6 +15,7 @@ export function EvidenceRecord({
 }) {
   const [result, setResult] = useState<EvidenceResult>();
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState<unknown>();
   const [loading, setLoading] = useState(false);
   const controller = useRef<AbortController>(null);
   useEffect(() => {
@@ -29,6 +30,8 @@ export function EvidenceRecord({
     controller.current = abort;
     setLoading(true);
     setError('');
+    setResult(undefined);
+    setErrorDetails(undefined);
     try {
       const value = await request<EvidenceResult>('/api/evidence', abort.signal, {
         catalogId: snapshot.id,
@@ -37,7 +40,14 @@ export function EvidenceRecord({
       });
       if (!abort.signal.aborted) setResult(value);
     } catch (e) {
-      if (!abort.signal.aborted) setError((e as Error).message);
+      if (!abort.signal.aborted) {
+        const failure = e as Error & { code?: string; technicalMessage?: string };
+        setError(failure.message);
+        setErrorDetails({
+          code: failure.code,
+          message: failure.technicalMessage ?? failure.message,
+        });
+      }
     } finally {
       if (!abort.signal.aborted) setLoading(false);
     }
@@ -45,20 +55,31 @@ export function EvidenceRecord({
   return (
     <div className="owner-evidence">
       <RecordLink record={record} />
+      {record && (!snapshot.capabilities.evidence || !record.sha256) && (
+        <p className="muted">
+          {!snapshot.capabilities.evidence
+            ? 'This portal cannot open the evidence file. Its recorded reference is shown above.'
+            : 'This record has no file fingerprint, so this portal cannot verify and open its evidence file.'}
+        </p>
+      )}
       {snapshot.capabilities.evidence && record?.sha256 && (
         <>
           <button className="text-button" disabled={loading} onClick={() => void inspect()}>
-            {loading ? 'Reading verified evidence…' : result ? 'Reload owner evidence' : label}
+            {loading ? 'Opening evidence file…' : result ? 'Reload publisher evidence' : label}
           </button>
           {error && (
             <Notice title="Evidence could not be loaded" kind="error">
               {error}
+              <Raw value={errorDetails} label="Error details" />
             </Notice>
           )}
           {result && (
             <>
-              <p role="status">Exact evidence verified. {result.scope}</p>
-              <Raw value={result.document} label="Verified evidence document" />
+              <p role="status">
+                Evidence file matches its recorded fingerprint. This confirms the file’s identity;
+                its contents describe what was checked. {result.scope}
+              </p>
+              <Raw value={result.document} label="View evidence document" />
             </>
           )}
         </>

@@ -53,128 +53,219 @@ test('the genuine native catalog remains local and preserves unknown consumption
   assert.equal(new Set(shared.map((file) => file.sha256)).size, 1);
 });
 
-test('actual owner read and checked recipe retain the original result identity and actual native receipts', async () => {
-  const { store, snapshot, binding, version } = await context();
-  const adapter = createCommerceAdapter();
-  let attempt: RecordRef | undefined;
-  const access = new CatalogAccess(
-    store,
-    new Map([
-      [
-        snapshot.id,
-        {
-          ...adapter,
-          reader: {
-            ...adapter.reader,
-            read: (input) =>
-              adapter.reader.read({
-                ...input,
-                onAttempt: (record) => {
-                  attempt = record;
-                  input.onAttempt?.(record);
-                },
-              }),
-          },
-          evidence: ({ record, deadline, signal }) =>
-            readCommerceEvidence(record, { deadline, signal }),
-        },
-      ],
-    ]),
-  );
+test('retained owner journey matches the immutable source and evidence without fresh native acceptance', async () => {
+  const { snapshot, binding, version } = await context();
+  const journey = JSON.parse(await readFile(resolve('outputs/publisher-commerce-journey.json'), 'utf8'));
+  for (const key of ['catalogSha256', 'reportSha256', 'lockSha256'] as const)
+    assert.equal(journey.catalog[key], snapshot.identity[key]);
+  assert.equal(journey.sourceVersionId, version.id);
   const source = fileURLToPath((version.reference!.value as any).location);
-  const sourceBefore = sha256(await readFile(source));
-  const beforeCatalog = sha256(
-    await readFile(`${commerceRegistration.directory}/catalog.ddk.json`),
-  );
-  const read = await access.read({
-    ...binding,
-    catalogId: snapshot.id,
-    catalogSha256: snapshot.identity.catalogSha256,
-    limit: 3,
-    releaseId: 'urn:test:reference:release',
-  });
-  assert.equal(read.status, 'ok');
-  assert.equal(read.release?.id, 'urn:test:reference:release');
-  assert.equal(read.release?.selected, undefined);
-  assert.equal(read.rowOrder, 'query-result');
-  assert.equal(read.total, 3);
-  assert.equal(read.continuation, 'complete');
-  assert.deepEqual(byGrain(read.rows), [
+  assert.equal(sha256(await readFile(source)), journey.sourceResultSha256);
+  const expectedRows = [
     { amount_cents: { $number: '1700' }, order_day: '2026-01-05', region: 'north' },
     { amount_cents: { $number: '500' }, order_day: '2026-01-05', region: 'south' },
     { amount_cents: { $number: '250' }, order_day: '2026-01-06', region: 'north' },
-  ]);
-  assert.equal(read.readEvidence?.kind, 'owner');
-  assert.equal(read.readEvidence?.consumed.versionId, version.id);
-  assert.ok(attempt);
-  const attempted = await readCommerceEvidence(attempt);
-  assert.equal(attempted.scope, 'viewer-read-attempt');
-  assert.match(
-    (attempted.document as any).scope,
-    /Native submission and consumption are not established/,
-  );
-  const readRecord = read.readEvidence!.record!;
-  const evidence = await readCommerceEvidence(readRecord);
-  const receipt = evidence.document as any;
-  assert.equal(evidence.scope, 'new-consumer-read');
-  assert.equal(receipt.status, 'succeeded');
+  ];
+  for (const result of [journey.read, journey.query]) {
+    assert.equal(result.status, 'ok');
+    assert.equal(result.returned, 3);
+    assert.equal(result.total, 3);
+    assert.equal(result.continuation, 'complete');
+    assert.equal(result.rowOrder, 'query-result');
+    assert.deepEqual(byGrain(result.rows), expectedRows);
+  }
+  assert.deepEqual(journey.read.binding, { ...binding, releaseId: journey.read.release.id });
+  assert.deepEqual(journey.read.readEvidence.consumed, journey.read.binding);
+  assert.equal(journey.read.readEvidence.kind, 'owner');
+  assert.equal(journey.read.release.selected, undefined);
+  assert.deepEqual(journey.query.bindings.daily_revenue, journey.read.binding);
+  assert.equal(journey.query.execution.kind, 'owner');
+  assert.equal(journey.query.execution.recipeId, commerceScope.recipeIds[0]);
+  const recipe = snapshot.catalog.recipes.find((row) => row.id === commerceScope.recipeIds[0])!;
   assert.equal(
-    receipt.tool.distributionSha256,
-    'b89b43e2d2bf17f8d87ff1d9a779e06c3a024f2777e2327a8f048c6cb00a2532',
+    sha256(await readFile(resolve(commerceRegistration.directory, recipe.sql))),
+    journey.query.execution.sqlSha256,
   );
-  assert.equal(receipt.inputs[0].sha256, sourceBefore);
-  assert.equal(receipt.inputs[0].path, source);
-  assert.equal(receipt.operation.selection, 'not_requested');
-  assert.equal(receipt.operation.reconciliation, 'unsupported');
-  assert.deepEqual(receipt.operation.outputs, []);
   assert.equal(
-    receipt.result.queries[0].data.find(
-      (row: any) => row.order_day === '2026-01-05' && row.region === 'north',
-    ).amount_cents.$number,
-    '1700',
-  );
-  const result = await access.query({
-    catalogId: snapshot.id,
-    catalogSha256: snapshot.identity.catalogSha256,
-    recipeId: commerceScope.recipeIds[0],
-    bindings: { daily_revenue: binding },
-    parameters: {},
-    limit: 3,
-  });
-  assert.equal(result.status, 'ok');
-  assert.equal(result.execution?.kind, 'owner');
-  assert.equal(
-    result.execution?.sqlSha256,
+    journey.query.execution.sqlSha256,
     'ca01fbd8506181c0f7a4766c61712613a32f8882007b2a941247b13703183670',
   );
-  assert.deepEqual(byGrain(result.rows), byGrain(read.rows));
-  assert.notEqual(result.execution?.record?.uri, readRecord.uri);
-  const queryReceipt = (await readCommerceEvidence(result.execution!.record!)).document as any;
-  assert.equal(queryReceipt.operation.execution, 'succeeded');
-  assert.equal(queryReceipt.inputs[0].sha256, sourceBefore);
-  assert.equal(sha256(await readFile(source)), sourceBefore);
-  assert.equal(
-    sha256(await readFile(`${commerceRegistration.directory}/catalog.ddk.json`)),
-    beforeCatalog,
+  assert.deepEqual(journey.read.readEvidence.record, journey.nativeReadReceipt.record);
+  const retainedRead = await readCommerceEvidence(journey.read.readEvidence.record);
+  assert.equal(retainedRead.scope, 'new-consumer-read');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(retainedRead.document)),
+    journey.nativeReadReceipt.document,
   );
-  const restored = await promisify(execFile)(
-    process.execPath,
-    [
-      '--import',
-      'tsx',
-      '--input-type=module',
-      '-e',
-      `import {readCommerceEvidence} from './src/server/commerce-native.ts'; process.stdout.write(JSON.stringify(await readCommerceEvidence(${JSON.stringify(readRecord)})));`,
-    ],
-    { cwd: process.cwd(), maxBuffer: 128 * 1024 },
+  for (const record of [journey.read.readEvidence.record, journey.query.execution.record]) {
+    const receipt = (await readCommerceEvidence(record)).document as any;
+    assert.equal(receipt.status, 'succeeded');
+    assert.equal(receipt.operation.execution, 'succeeded');
+    assert.equal(receipt.operation.selection, 'not_requested');
+    assert.equal(receipt.operation.reconciliation, 'unsupported');
+    assert.deepEqual(receipt.operation.outputs, []);
+    assert.equal(receipt.inputs[0].path, source);
+    assert.equal(receipt.inputs[0].sha256, journey.sourceResultSha256);
+    assert.deepEqual(byGrain(receipt.result.queries[0].data), expectedRows);
+  }
+  const original = await readCommerceEvidence(snapshot.catalog.runs[0].record);
+  assert.equal(original.scope, 'original-execution');
+  const originalReceipt = original.document as any;
+  assert.equal(originalReceipt.status, 'succeeded');
+  assert.equal(originalReceipt.operation.selection, 'not_requested');
+  assert.equal(originalReceipt.operation.reconciliation, 'unsupported');
+  assert.equal(originalReceipt.operation.outputs[0].sha256, journey.sourceResultSha256);
+  assert.equal(originalReceipt.operation.outputs[0].path, source);
+  assert.equal(snapshot.catalog.runs[0].inputCoverage.status, 'unknown');
+  assert.deepEqual(snapshot.catalog.runs[0].inputs, []);
+  assert.ok(
+    snapshot.catalog.checks.every(
+      (check) => check.record?.sha256 === journey.qualityEvidence.sha256,
+    ),
   );
-  const restoredEvidence = JSON.parse(restored.stdout);
-  assert.equal(restoredEvidence.record.sha256, readRecord.sha256);
-  assert.equal(
-    restoredEvidence.document.operation.requestIdentity.value,
-    receipt.operation.requestIdentity.value,
-  );
+  const qualityEvidence = await readCommerceEvidence(journey.qualityEvidence);
+  assert.equal(qualityEvidence.scope, 'refreshed-quality');
+  const quality = qualityEvidence.document as any;
+  assert.equal(quality.status, 'passed');
+  assert.equal(quality.checks.length, 13);
+  assert.ok(quality.checks.every((check: any) => check.status === 'passed'));
+  assert.equal(quality.target.kind, 'files');
+  assert.equal(quality.target.files[0].sha256, journey.sourceResultSha256);
+  assert.equal(quality.nativeRead, null);
+  // These are retained bounded-file checks and executions, not a fresh native run or managed candidate acceptance.
 });
+
+test(
+  'actual owner read and checked recipe retain the original result identity and actual native receipts',
+  {
+    skip:
+      process.env.DDK_VIEWER_RUN_NATIVE_ACCEPTANCE !== '1'
+        ? 'Requires DDK_VIEWER_RUN_NATIVE_ACCEPTANCE=1: submits a native read and query and consumes the finite retained-attempt quota. Retained-evidence checks run by default.'
+        : false,
+  },
+  async () => {
+    const { store, snapshot, binding, version } = await context();
+    const adapter = createCommerceAdapter();
+    let attempt: RecordRef | undefined;
+    const access = new CatalogAccess(
+      store,
+      new Map([
+        [
+          snapshot.id,
+          {
+            ...adapter,
+            reader: {
+              ...adapter.reader,
+              read: (input) =>
+                adapter.reader.read({
+                  ...input,
+                  onAttempt: (record) => {
+                    attempt = record;
+                    input.onAttempt?.(record);
+                  },
+                }),
+            },
+            evidence: ({ record, deadline, signal }) =>
+              readCommerceEvidence(record, { deadline, signal }),
+          },
+        ],
+      ]),
+    );
+    const source = fileURLToPath((version.reference!.value as any).location);
+    const sourceBefore = sha256(await readFile(source));
+    const beforeCatalog = sha256(
+      await readFile(`${commerceRegistration.directory}/catalog.ddk.json`),
+    );
+    const read = await access.read({
+      ...binding,
+      catalogId: snapshot.id,
+      catalogSha256: snapshot.identity.catalogSha256,
+      limit: 3,
+      releaseId: 'urn:example:commerce:release:copy-refresh-20261106',
+    });
+    assert.equal(read.status, 'ok');
+    assert.equal(read.release?.id, 'urn:example:commerce:release:copy-refresh-20261106');
+    assert.equal(read.release?.selected, undefined);
+    assert.equal(read.rowOrder, 'query-result');
+    assert.equal(read.total, 3);
+    assert.equal(read.continuation, 'complete');
+    assert.deepEqual(byGrain(read.rows), [
+      { amount_cents: { $number: '1700' }, order_day: '2026-01-05', region: 'north' },
+      { amount_cents: { $number: '500' }, order_day: '2026-01-05', region: 'south' },
+      { amount_cents: { $number: '250' }, order_day: '2026-01-06', region: 'north' },
+    ]);
+    assert.equal(read.readEvidence?.kind, 'owner');
+    assert.equal(read.readEvidence?.consumed.versionId, version.id);
+    assert.ok(attempt);
+    const attempted = await readCommerceEvidence(attempt);
+    assert.equal(attempted.scope, 'viewer-read-attempt');
+    assert.match(
+      (attempted.document as any).scope,
+      /Native submission and consumption are not established/,
+    );
+    const readRecord = read.readEvidence!.record!;
+    const evidence = await readCommerceEvidence(readRecord);
+    const receipt = evidence.document as any;
+    assert.equal(evidence.scope, 'new-consumer-read');
+    assert.equal(receipt.status, 'succeeded');
+    assert.equal(
+      receipt.tool.distributionSha256,
+      'b89b43e2d2bf17f8d87ff1d9a779e06c3a024f2777e2327a8f048c6cb00a2532',
+    );
+    assert.equal(receipt.inputs[0].sha256, sourceBefore);
+    assert.equal(receipt.inputs[0].path, source);
+    assert.equal(receipt.operation.selection, 'not_requested');
+    assert.equal(receipt.operation.reconciliation, 'unsupported');
+    assert.deepEqual(receipt.operation.outputs, []);
+    assert.equal(
+      receipt.result.queries[0].data.find(
+        (row: any) => row.order_day === '2026-01-05' && row.region === 'north',
+      ).amount_cents.$number,
+      '1700',
+    );
+    const result = await access.query({
+      catalogId: snapshot.id,
+      catalogSha256: snapshot.identity.catalogSha256,
+      recipeId: commerceScope.recipeIds[0],
+      bindings: { daily_revenue: binding },
+      parameters: {},
+      limit: 3,
+    });
+    assert.equal(result.status, 'ok');
+    assert.equal(result.execution?.kind, 'owner');
+    assert.equal(
+      result.execution?.sqlSha256,
+      'ca01fbd8506181c0f7a4766c61712613a32f8882007b2a941247b13703183670',
+    );
+    assert.deepEqual(byGrain(result.rows), byGrain(read.rows));
+    assert.notEqual(result.execution?.record?.uri, readRecord.uri);
+    const queryReceipt = (await readCommerceEvidence(result.execution!.record!)).document as any;
+    assert.equal(queryReceipt.operation.execution, 'succeeded');
+    assert.equal(queryReceipt.inputs[0].sha256, sourceBefore);
+    assert.equal(sha256(await readFile(source)), sourceBefore);
+    assert.equal(
+      sha256(await readFile(`${commerceRegistration.directory}/catalog.ddk.json`)),
+      beforeCatalog,
+    );
+    const restored = await promisify(execFile)(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        '--input-type=module',
+        '-e',
+        `import {readCommerceEvidence} from './src/server/commerce-native.ts'; process.stdout.write(JSON.stringify(await readCommerceEvidence(${JSON.stringify(readRecord)})));`,
+      ],
+      { cwd: process.cwd(), maxBuffer: 128 * 1024 },
+    );
+    const restoredEvidence = JSON.parse(restored.stdout);
+    assert.equal(restoredEvidence.record.sha256, readRecord.sha256);
+    assert.equal(
+      restoredEvidence.document.operation.requestIdentity.value,
+      receipt.operation.requestIdentity.value,
+    );
+  },
+);
 
 test('conflicting bytes for one locked source path refuse while distinct same-file selections remain intact', async () => {
   await mkdir(resolve('work'), { recursive: true });

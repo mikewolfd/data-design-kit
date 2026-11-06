@@ -9,6 +9,7 @@ import {
   versionsOf,
   releaseFor,
 } from '../lib/display';
+import { datasetRecordAccess, enumLabel } from '../lib/content';
 import { Badge, Notice, Raw } from './Primitives';
 import { Overview, Evidence, Activity, Compare } from './MetadataPanels';
 import { DataPanel } from './DataPanel';
@@ -16,6 +17,14 @@ import { Connections } from './Connections';
 
 const tabs = ['Overview', 'Data', 'Connections', 'Evidence', 'Activity', 'Compare'] as const;
 type Tab = (typeof tabs)[number];
+const tabLabels: Record<Tab, string> = {
+  Overview: 'Overview',
+  Data: 'View data',
+  Connections: 'Related data',
+  Evidence: 'Checks & sources',
+  Activity: 'History',
+  Compare: 'Compare versions',
+};
 type Route = {
   catalog: string;
   dataset: string;
@@ -116,7 +125,7 @@ export default function Workspace() {
         if (abort.signal.aborted) return;
         if (route.digest && route.digest !== s.identity.catalogSha256)
           throw new Error(
-            'The shared link names a different catalog snapshot. The server has not supplied those exact bytes. Open this catalog explicitly to choose its configured snapshot.',
+            'This link refers to a different catalog copy. Opening the available copy may show different data.',
           );
         s.definitions =
           (
@@ -153,36 +162,57 @@ export default function Workspace() {
       const sourceIds = snapshot.catalog.versions
         .filter((v) => v.dataset === d.alias || v.dataset === d.id)
         .flatMap((v) => v.sources);
-      const sourceText = snapshot.catalog.sources
-        .filter((s) => sourceIds.includes(s.id))
-        .map((s) => `${s.id} ${s.scope} ${s.outcome}`)
-        .join(' ');
-      const matches = [
-        d.alias,
-        d.id,
-        d.title,
-        d.rowMeaning,
-        definition?.description,
-        snapshot.catalog.project.id,
-        sourceText,
-      ]
+      const matches = [d.alias, d.id, d.title, d.rowMeaning, definition?.description]
         .filter(Boolean)
         .join(' ')
         .toLocaleLowerCase()
         .includes(search);
-      const readable = snapshot.catalog.versions.some(
-        (v) =>
-          (v.dataset === d.id || v.dataset === d.alias) &&
-          snapshot.catalog.representations.some(
-            (r) => r.version === v.id && r.availability === 'available',
-          ),
-      );
+      const recordState = datasetRecordAccess(snapshot, d).state;
       return (
         matches &&
         (!sourceFilter || sourceIds.includes(sourceFilter)) &&
-        (availability === 'all' || (availability === 'available' ? readable : !readable))
+        (availability === 'all' ||
+          (availability === 'available'
+            ? recordState === 'available'
+            : availability === 'unknown'
+              ? recordState === 'unknown'
+              : recordState !== 'available' && recordState !== 'unknown'))
       );
     }) ?? [];
+  const titleCounts = new Map<string, number>();
+  for (const item of snapshot?.catalog.datasets ?? []) {
+    const title = titleOf(item);
+    titleCounts.set(title, (titleCounts.get(title) ?? 0) + 1);
+  }
+  const description =
+    snapshot && dataset ? snapshot.definitions[dataset.alias]?.description : undefined;
+  const coverageStart = description?.indexOf('Coverage limits:') ?? -1;
+  const nullabilityStart = description?.indexOf('Nullability basis:') ?? -1;
+  const technicalDescription =
+    coverageStart >= 0 && nullabilityStart > coverageStart;
+  const coverageNote =
+    technicalDescription && description
+      ? description
+          .slice(coverageStart + 'Coverage limits:'.length, nullabilityStart)
+          .trim()
+      : undefined;
+  const summary =
+    technicalDescription
+      ? description?.slice(0, coverageStart).trim() || undefined
+      : description !== dataset?.rowMeaning ? description : undefined;
+  const exampleDataset =
+    !!snapshot?.exampleData ||
+    snapshot?.mode === 'fixture' ||
+    (['Future reader fixture', 'Future reader example (fixture)'].includes(dataset?.title ?? '') &&
+      dataset?.rowMeaning === 'One future fixture row');
+  useEffect(() => {
+    document.title =
+      dataset && snapshot
+        ? `${titleOf(dataset)} · ${snapshot.title} · DDK`
+        : snapshot
+          ? `${snapshot.title} · DDK`
+          : 'Data catalog · DDK';
+  }, [dataset, snapshot]);
   function chooseDataset(id: string, versionId?: string, releaseId?: string) {
     navigate({ dataset: id, version: versionId || '', release: releaseId || '', tab: 'Overview' });
     setExportOpen(false);
@@ -211,12 +241,16 @@ export default function Workspace() {
       },
       link: window.location.href,
     });
-    setAnnouncement('Exact reference downloaded.');
+    setAnnouncement('Dataset reference downloaded.');
   }
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setAnnouncement('Dataset and version link copied.');
+      const link = new URL(window.location.href);
+      if (dataset) link.searchParams.set('dataset', dataset.id);
+      if (version) link.searchParams.set('version', version.id);
+      else link.searchParams.delete('version');
+      await navigator.clipboard.writeText(link.href);
+      setAnnouncement(version ? 'Dataset and version link copied.' : 'Dataset link copied.');
     } catch {
       setAnnouncement('Clipboard access is unavailable. Copy the address from your browser.');
     }
@@ -227,7 +261,7 @@ export default function Workspace() {
         Skip to dataset
       </a>
       <header className="app-header">
-        <a className="brand" href="/" aria-label="Data workspace home">
+        <a className="brand" href="/" aria-label="Data catalog home">
           <span className="brand-mark">
             <svg aria-hidden="true" width="35" height="28" viewBox="0 0 40 28">
               <path
@@ -238,7 +272,7 @@ export default function Workspace() {
               />
             </svg>
           </span>
-          <span>Data workspace</span>
+          <span>Data catalog</span>
         </a>
         <div className="header-context">
           <span className="header-dot" aria-hidden="true" />
@@ -250,6 +284,7 @@ export default function Workspace() {
       <div className="app-layout">
         <aside className="sidebar" aria-label="Dataset discovery">
           <div className="sidebar-top">
+            <p className="eyebrow">Explore data</p>
             <label className="eyebrow" htmlFor="catalog-choice">
               Catalog
             </label>
@@ -275,19 +310,30 @@ export default function Workspace() {
               ))}
             </select>
             <p className="catalog-description">
-              {snapshot?.capabilities.description ||
-                snapshot?.description ||
-                'Standard catalogs, exact data, and evidence.'}
+              {snapshot?.description ||
+                'Find datasets, understand what they contain, and see how you can use them.'}{' '}
+              A dataset is a collection of related records.
             </p>
             {snapshot && (
+              <details>
+                <summary>About this catalog</summary>
+                <p>{snapshot.description}</p>
+                {snapshot.capabilities.description && <p>{snapshot.capabilities.description}</p>}
+              </details>
+            )}
+            {snapshot && (
               <Badge status="unknown">
-                {snapshot.mode === 'fixture' ? 'Demonstration catalog' : 'Application catalog'}
+                {snapshot.mode === 'fixture'
+                  ? 'Example catalog · synthetic records'
+                  : snapshot.exampleData === 'authored'
+                    ? 'Example catalog'
+                    : 'Application catalog'}
               </Badge>
             )}
           </div>
           <div className="discovery-tools">
             <label className="sr-only" htmlFor="dataset-search">
-              Find a dataset
+              Search this catalog
             </label>
             <div className="search-wrap">
               <span aria-hidden="true">⌕</span>
@@ -295,7 +341,8 @@ export default function Workspace() {
                 id="dataset-search"
                 ref={searchRef}
                 type="search"
-                placeholder="Find a dataset…"
+                placeholder="Search this catalog…"
+                aria-describedby="dataset-search-help"
                 value={route.search}
                 onChange={(e) => {
                   navigate({ search: e.target.value }, true);
@@ -303,8 +350,11 @@ export default function Workspace() {
                 }}
               />
             </div>
+            <p id="dataset-search-help" className="muted">
+              Search dataset titles, descriptions and identifiers.
+            </p>
             <label className="filter-label">
-              Availability
+              Can I view records here?
               <select
                 value={availability}
                 onChange={(e) => {
@@ -313,34 +363,49 @@ export default function Workspace() {
                 }}
               >
                 <option value="all">All datasets</option>
-                <option value="available">Available representation</option>
-                <option value="unavailable">No available representation</option>
+                <option value="available">Records connected here</option>
+                <option value="unavailable">Records not available here</option>
+                <option value="unknown">Record availability unknown</option>
               </select>
             </label>
             {!!snapshot?.catalog.sources.length && (
               <label className="filter-label source-filter">
-                Source occurrence
+                Source capture
                 <select
                   value={sourceFilter}
+                  aria-describedby="source-capture-help"
                   onChange={(e) => {
                     setSourceFilter(e.target.value);
                     setLimit(40);
                   }}
                 >
-                  <option value="">All sources</option>
+                  <option value="">All source captures</option>
                   {snapshot.catalog.sources.map((s) => (
                     <option value={s.id} key={s.id}>
-                      {shortId(s.id)} · {s.outcome}
+                      {s.scope || s.id} · {enumLabel(s.outcome)}
                     </option>
                   ))}
                 </select>
               </label>
             )}
+            {!!snapshot?.catalog.sources.length && (
+              <details className="source-capture-help">
+                <summary>About source captures</summary>
+                <p id="source-capture-help" className="muted">
+                  A source capture is a recorded retrieval or observation of a source. The
+                  publisher’s recorded scope labels each capture; exact identifiers are in Checks &
+                  sources.
+                </p>
+              </details>
+            )}
           </div>
           {unavailable.length > 0 && (
             <div className="source-errors">
               <details>
-                <summary>{unavailable.length} catalog source unavailable</summary>
+                <summary>
+                  {unavailable.length} catalog {unavailable.length === 1 ? 'source' : 'sources'}{' '}
+                  unavailable
+                </summary>
                 {unavailable.map((c) => (
                   <p key={c.id}>
                     {c.id}: {c.reason}
@@ -355,6 +420,11 @@ export default function Workspace() {
             <span aria-live="polite">{datasets.length}</span>
           </div>
           <nav className="dataset-nav" aria-label="Datasets">
+            {(error || catalogError) && (
+              <div className="nav-empty">
+                <p>Dataset list could not be loaded.</p>
+              </div>
+            )}
             {datasets.slice(0, limit).map((d) => (
               <button
                 key={d.id}
@@ -368,7 +438,10 @@ export default function Workspace() {
                 <span>
                   <strong>{titleOf(d)}</strong>
                   <small>
-                    {d.role || 'Dataset'} · {d.definition.version}
+                    {(titleCounts.get(titleOf(d)) ?? 0) > 1
+                      ? d.alias
+                      : enumLabel(d.role || 'Dataset')}{' '}
+                    · {d.definition.version}
                   </small>
                 </span>
                 <span className="dataset-arrow" aria-hidden="true">
@@ -376,7 +449,7 @@ export default function Workspace() {
                 </span>
               </button>
             ))}
-            {!datasets.length && !loading && (
+            {!datasets.length && !loading && !error && !catalogError && !!snapshot && (
               <div className="nav-empty">
                 <p>No datasets match these filters.</p>
                 <button
@@ -392,7 +465,8 @@ export default function Workspace() {
             )}
             {datasets.length > limit && (
               <button className="load-more" onClick={() => setLimit((n) => n + 40)}>
-                Show 40 more datasets
+                Show {Math.min(40, datasets.length - limit)} more{' '}
+                {datasets.length - limit === 1 ? 'dataset' : 'datasets'}
               </button>
             )}
           </nav>
@@ -402,11 +476,7 @@ export default function Workspace() {
             </span>
             <div>
               <strong>Catalog & evidence</strong>
-              <span>
-                Exact references stay with
-                <br />
-                each dataset and result.
-              </span>
+              <span>References stay with each dataset and result.</span>
             </div>
           </footer>
         </aside>
@@ -423,7 +493,7 @@ export default function Workspace() {
           {loading ? (
             <div className="loading-state" role="status">
               <span className="loading-line" />
-              Loading the catalog and its evidence…
+              Opening the catalog…
             </div>
           ) : error || exactLinkMismatch ? (
             <Notice
@@ -432,7 +502,7 @@ export default function Workspace() {
               action={<button onClick={() => setRetry((v) => v + 1)}>Retry catalog</button>}
             >
               {error ||
-                'The workspace link names different catalog bytes. Open the configured snapshot explicitly to continue.'}
+                'This link refers to a different catalog copy. Opening the available copy may show different data.'}
               {route.digest && (
                 <div>
                   <button
@@ -441,7 +511,7 @@ export default function Workspace() {
                       setRetry((v) => v + 1);
                     }}
                   >
-                    Open the configured snapshot
+                    Open the catalog available here
                   </button>
                 </div>
               )}
@@ -455,15 +525,51 @@ export default function Workspace() {
               </div>
               <div className="dataset-heading">
                 <div>
-                  <p className="eyebrow">{dataset.role || 'Dataset'}</p>
+                  <p className="eyebrow" title={dataset.role}>
+                    {enumLabel(dataset.role || 'Dataset')}
+                  </p>
                   <h1 ref={titleRef} tabIndex={-1}>
                     {titleOf(dataset)}
                   </h1>
-                  <p className="dataset-subtitle">
-                    {snapshot.definitions[dataset.alias]?.description ||
-                      dataset.rowMeaning ||
-                      'Explore the admitted definition and available evidence.'}
-                  </p>
+                  {summary && <p className="dataset-subtitle">{summary}</p>}
+                  {exampleDataset && (
+                    <Badge status="unknown">
+                      {snapshot.mode === 'fixture'
+                        ? 'Example dataset · synthetic records'
+                        : snapshot.exampleData === 'authored'
+                          ? 'Example dataset · saved example records'
+                          : 'Example dataset · not live archive data'}
+                    </Badge>
+                  )}
+                  {coverageNote && (
+                    <p className="dataset-subtitle">
+                      <strong>Coverage and important limits: </strong>
+                      {coverageNote}
+                    </p>
+                  )}
+                  {technicalDescription && (
+                    <details>
+                      <summary>Technical definition notes</summary>
+                      <p className="dataset-subtitle">{description}</p>
+                    </details>
+                  )}
+                  <details>
+                    <summary>Dataset identifiers</summary>
+                    <p>
+                      Definition alias: <code>{dataset.alias}</code>
+                    </p>
+                    {dataset.title && dataset.title !== titleOf(dataset) && (
+                      <p>
+                        Supplied title: <code>{dataset.title}</code>
+                      </p>
+                    )}
+                    <p>
+                      Dataset identifier: <code>{dataset.id}</code>
+                    </p>
+                    <p>
+                      Role: <code>{dataset.role ?? 'Not recorded'}</code>
+                    </p>
+                  </details>
                 </div>
                 <div className="share-control">
                   <button
@@ -475,9 +581,16 @@ export default function Workspace() {
                   </button>
                   {exportOpen && (
                     <div className="share-panel">
-                      <button onClick={copyLink}>Copy dataset & version link</button>
-                      <button onClick={exactReference}>Download exact reference</button>
-                      <p>Page data and query results export from their working views.</p>
+                      <button onClick={copyLink}>
+                        {version ? 'Copy link to this dataset and version' : 'Copy dataset link'}
+                      </button>
+                      <button onClick={exactReference}>Download dataset reference (JSON)</button>
+                      <p>
+                        Includes identifiers for the catalog
+                        {version ? ' and selected version' : ' and dataset'}. It does not contain
+                        data records. JSON is a structured data-file format.
+                      </p>
+                      <p>Download records and query results from their views.</p>
                     </div>
                   )}
                 </div>
@@ -491,7 +604,7 @@ export default function Workspace() {
                     onChange={(e) => navigate({ version: e.target.value, release: '' })}
                   >
                     <option value="">
-                      {versions.length ? 'Choose an exact version' : 'No observed data versions'}
+                      {versions.length ? 'Choose a data version' : 'No data versions listed'}
                     </option>
                     {versions.map((v) => (
                       <option value={v.id} key={v.id}>
@@ -504,7 +617,7 @@ export default function Workspace() {
                   </select>
                 </label>
                 <div className="snapshot-context">
-                  <span>Catalog snapshot</span>
+                  <span>Catalog copy</span>
                   <code title={snapshot.identity.catalogSha256}>
                     {snapshot.identity.catalogSha256.slice(0, 12)}
                   </code>
@@ -513,8 +626,10 @@ export default function Workspace() {
               </div>
               {invalidVersion && (
                 <Notice title="The linked version is unavailable" kind="error">
-                  This exact version is not present in the configured catalog. Choose an available
-                  version explicitly.
+                  This version is not listed in this catalog.{' '}
+                  {versions.length
+                    ? 'Choose a listed version.'
+                    : 'No data versions are listed here.'}
                 </Notice>
               )}
               <div className="tablist" role="tablist" aria-label="Dataset views">
@@ -538,7 +653,7 @@ export default function Workspace() {
                       document.getElementById(`tab-${tabs[n]}`)?.focus();
                     }}
                   >
-                    {tab}
+                    {tabLabels[tab]}
                     {tab === 'Data' && version && (
                       <span className="tab-indicator" aria-hidden="true" />
                     )}
@@ -587,10 +702,10 @@ export default function Workspace() {
                 <span>
                   {snapshot.mode === 'fixture'
                     ? 'Synthetic examples · no production data'
-                    : 'Admitted application definitions · owner evidence retained'}
+                    : 'Application field definitions and recorded evidence'}
                 </span>
                 <details>
-                  <summary>Snapshot identity</summary>
+                  <summary>Catalog copy identifiers</summary>
                   <Raw
                     value={{
                       identity: snapshot.identity,
@@ -606,7 +721,7 @@ export default function Workspace() {
             <Notice title="Dataset unavailable">
               {route.dataset
                 ? 'The dataset in this link is not disclosed by this catalog. Choose a dataset from the list.'
-                : 'This admitted catalog contains no datasets.'}
+                : 'This catalog contains no datasets.'}
             </Notice>
           ) : null}
         </main>

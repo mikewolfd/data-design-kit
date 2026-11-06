@@ -9,25 +9,26 @@ import type { EvidenceResult, ExactBinding, ExactObject, RecordRef } from '../do
 import type { OwnerReader, OwnerQuery } from './access';
 import { fail, sha256, ViewerError, type CatalogRegistration } from './catalog-store';
 
-const CAPTURE_SHA = '884cf9dc7676187c17f7bd668151672a4c3d9d98edf5409c7fab18af287a0f72';
-const CATALOG_SHA = 'c323123b5bfc65c23c2fd2710dcbf6c02fdd5ae1f0f351fc9ba30d31e958ae83';
+const CAPTURE_SHA = '2b2dfa95deccf0c8240926bcb568d8e396bfdc6128034f6a704df7a7c1510834';
+const CATALOG_SHA = '932e5d622d142f36d25d00f3b2ed8597fc10056a7818d8ab5e6c56c7283d0cfe';
 const SQL_SHA = 'ca01fbd8506181c0f7a4766c61712613a32f8882007b2a941247b13703183670';
 const DATA_SHA = 'ff0efd8f35eb3b64e23a2f195cbfd2c9989173020b4681ae783bc0f2301ba4c6';
 const NATIVE_SHA = 'b89b43e2d2bf17f8d87ff1d9a779e06c3a024f2777e2327a8f048c6cb00a2532';
 const VERSION =
-  'urn:ddk:file-version:737bacee2ec6b3ada9d212f8206e4905647dc155ff71433646a645054d6a8e50';
+  'urn:ddk:file-version:667e1cdb71e36ebef8639a894100bcc50d3ab83bc4c02f18ab2e3f9a6f71eb24';
 const REPRESENTATION =
-  'urn:ddk:representation:cb241944dad0e60e968aed2f1db0d5dfc3e1a364595a525dd8b4ef814bdc30d8';
+  'urn:ddk:representation:eb5fc8380425c98005ccda57f9ac4f399e348daf008fd0812252028352e4965d';
 const DATASET = 'urn:example:commerce:dataset:daily-revenue';
 const RECIPE = 'urn:example:commerce:recipe:checked-revenue';
-const RELEASE = 'urn:test:reference:release';
+const RELEASE = 'urn:example:commerce:release:copy-refresh-20261106';
 const PYTHON =
   '/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/env-full/bin/python';
 const ROOT = resolve(process.cwd());
 const CAPTURE = resolve(ROOT, 'fixtures/applications/commerce-native');
 const WORK = resolve(ROOT, 'work/native-consumer');
 export const commerceQuota = Object.freeze({
-  attempts: 32,
+  // Preserve the four receipts produced by routine tests before native acceptance became opt-in.
+  attempts: 36,
   retainedBytes: 16 * 1024 * 1024,
   bridgeProcesses: 1,
   evidenceBytes: 1024 * 1024,
@@ -36,16 +37,19 @@ export const commerceQuota = Object.freeze({
 });
 export const commerceRegistration: CatalogRegistration = {
   id: 'commerce-native',
-  navigationLabel: 'Commerce · retained native result',
+  navigationLabel: 'Commerce example — saved daily revenue result',
+  navigationDescription:
+    'Explore a saved three-record result from the commerce example. Daily revenue is the only dataset you can view here.',
   mode: 'application',
+  exampleData: 'authored',
   directory: CAPTURE,
-  lockSha256: 'b36d8196f9eefa332f2580bcfd3684bbf7f94506fab0e2cc2064e4f23ef34c2d',
+  lockSha256: 'efd61cc7f5de0fec81fec7f4750805030e21dbfa6d6ffeb7393dc56bc4504f82',
 };
 export const commerceScope = Object.freeze({
   datasetIds: [DATASET],
   recipeIds: [RECIPE],
   description:
-    'A complete three-row read of one exact retained Parquet result through the qualified DDK and DocSpec bounded reader. Native query order; no paginated order guarantee, transformation, quality rerun or managed candidate acceptance.',
+    'View all three records in the saved daily revenue result. This reads the saved result; it does not recalculate revenue or rerun checks. Record order may vary.',
 });
 type EvidenceEntry = { path: string; record: RecordRef; scope: string };
 const issued = new Map<string, EvidenceEntry>();

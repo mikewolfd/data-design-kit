@@ -18,7 +18,7 @@
   "results": [
     {
       "path": "fixtures/watershed/catalog.ddk.json",
-      "sha256": "6f48781b55cd5384a95b87c00228ce8efc1398f15529c1d42b2614a1529eb306",
+      "sha256": "9970ffedd41f9dc65c7d260eaa1f848f5cc9bf37b20e7394e84ae73754bdd593",
       "shapeErrors": 0
     },
     {
@@ -28,12 +28,12 @@
     },
     {
       "path": "fixtures/watershed/catalog.lock.json",
-      "sha256": "3fee3318c1a4e62e6c4d206e18392f26a7099ffd4f4de91cc768c466ff690122",
+      "sha256": "d054ae499d8b34927254a13a89318f97d82768f26f2c7395b2818daa54b717ca",
       "shapeErrors": 0
     },
     {
       "path": "fixtures/grants/catalog.ddk.json",
-      "sha256": "ac19cec88afa1d82324b2683430ca789df943c364b03064272ed875fcb497c80",
+      "sha256": "02159ec4cbe70639664abfedf5b68d4a0d6d3ffa110a7ced5de62a06a973efb8",
       "shapeErrors": 0
     },
     {
@@ -43,7 +43,7 @@
     },
     {
       "path": "fixtures/grants/catalog.lock.json",
-      "sha256": "090d6cbe2b20a2c8cb0ded09fec034257541de883a9142006b95d50884c1b57d",
+      "sha256": "2ce71ba5128b3968709c2095d46a917cc2e6c1c80dbc72e6dfaaa6dfa5f18e8a",
       "shapeErrors": 0
     }
   ]

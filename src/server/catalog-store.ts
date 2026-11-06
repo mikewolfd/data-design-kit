@@ -58,6 +58,8 @@ export type CatalogRegistration = {
   lockSha256: string;
   mode: 'fixture' | 'application';
   navigationLabel?: string;
+  navigationDescription?: string;
+  exampleData?: 'synthetic' | 'authored';
 };
 export type LoadedCatalog = {
   snapshot: CatalogSnapshot;
@@ -454,8 +456,10 @@ export class CatalogStore {
       title: marker?.title ?? registration.navigationLabel ?? catalog.project.id,
       description:
         marker?.description ??
-        'Read-only application catalog. Data access requires an injected, independently qualified owner adapter.',
+        registration.navigationDescription ??
+        'Explore dataset descriptions and fields. Record access is shown for each dataset.',
       mode: registration.mode,
+      exampleData: registration.mode === 'fixture' ? 'synthetic' : registration.exampleData,
       audience: catalog.audience,
       catalog: catalog as Catalog,
       report: report as CatalogReport,
@@ -471,7 +475,7 @@ export class CatalogStore {
         ...(registration.mode === 'application'
           ? {
               reason:
-                'Discovery only: no native reader or query adapter is registered for this application set.',
+                'Dataset descriptions and fields are available. Reading records and running queries are not connected to this portal.',
             }
           : {}),
       },
@@ -500,8 +504,10 @@ export class CatalogStore {
         title: snapshot?.title ?? row.navigationLabel ?? row.id,
         description:
           snapshot?.description ??
-          `Pinned ${row.mode} registration. Admission is checked when selected.`,
+          row.navigationDescription ??
+          'Open this catalog to see its datasets and available records.',
         mode: row.mode,
+        exampleData: row.mode === 'fixture' ? 'synthetic' : row.exampleData,
         audience: snapshot?.audience ?? this.audience,
         admission: snapshot ? ('admitted' as const) : ('not_loaded' as const),
       };

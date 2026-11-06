@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type {
   CatalogDataset,
   CatalogSnapshot,
@@ -19,7 +19,8 @@ import {
   titleOf,
   words,
 } from '../lib/display';
-import { Badge, Facts, Notice, Raw, Section } from './Primitives';
+import { Badge, Facts, Notice, Raw, Section, BlankValuesHelp } from './Primitives';
+import { enumLabel, formatLabel } from '../lib/content';
 import { ResultTable } from './DataPanel';
 import { EvidenceRecord } from './EvidenceRecord';
 
@@ -39,9 +40,13 @@ function Recipe({
   const [representationsByInput, setRepresentationsByInput] = useState<Record<string, string>>({});
   const [result, setResult] = useState<QueryResult>();
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
+  const [errorDiagnostic, setErrorDiagnostic] = useState('');
+  const parameterId = useId();
   const [loading, setLoading] = useState(false);
   const [sql, setSql] = useState<string>();
   const [sqlLoading, setSqlLoading] = useState(false);
+  const [sqlError, setSqlError] = useState('');
   const controller = useRef<AbortController>(null);
   const sqlController = useRef<AbortController>(null);
   const queryRef = useRef<QueryRequest>(null);
@@ -79,12 +84,11 @@ function Recipe({
   let bindingProblem = '';
   const release = snapshot.catalog.releases.find((r) => r.id === releaseId);
   if (unsupportedRelationship)
-    bindingProblem =
-      'A required relationship has no supported exact resolver in the selected DDK profile.';
+    bindingProblem = 'This portal cannot resolve a required relationship for this query.';
   else if (bindingMode === 'release' && !release)
-    bindingProblem = 'Choose an explicit release for the recipe inputs.';
+    bindingProblem = 'Choose a named release for the datasets used.';
   else if (bindingMode === 'release' && release?.membership !== 'complete')
-    bindingProblem = 'This release does not establish complete input membership.';
+    bindingProblem = 'This release does not list all required data versions.';
   else
     for (const [input, alias] of Object.entries(recipe.inputs)) {
       const dataset = snapshot.catalog.datasets.find((d) => d.alias === alias || d.id === alias);
@@ -99,7 +103,7 @@ function Recipe({
         (r) => r.version === versions[0]?.id && r.availability === 'available',
       );
       if (!dataset || versions.length !== 1 || !representations.length) {
-        bindingProblem = `Input ${input} needs one exact version and an available representation in this release.`;
+        bindingProblem = `Input ${input} needs one data version and an available file, table or service in the selected group.`;
         break;
       }
       representationChoices.push({ input, choices: representations });
@@ -108,7 +112,7 @@ function Recipe({
           ? representations[0]
           : representations.find((r) => r.id === representationsByInput[input]);
       if (!representation) {
-        bindingProblem = `Choose an exact representation for ${input}.`;
+        bindingProblem = `Choose a file, table or service for ${input}.`;
         continue;
       }
       bindings[input] = {
@@ -121,6 +125,7 @@ function Recipe({
   async function run(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
+    setErrorCode('');
     setResult(undefined);
     if (bindingProblem) {
       setError(bindingProblem);
@@ -157,7 +162,13 @@ function Recipe({
       const value = await request<QueryResult>('/api/query', abort.signal, body);
       if (!abort.signal.aborted) setResult(value);
     } catch (e) {
-      if (!abort.signal.aborted) setError((e as Error).message);
+      if (!abort.signal.aborted) {
+        setError((e as Error).message);
+        setErrorCode((e as Error & { code?: string }).code || '');
+        setErrorDiagnostic(
+          (e as Error & { technicalMessage?: string }).technicalMessage || (e as Error).message,
+        );
+      }
     } finally {
       if (!abort.signal.aborted) setLoading(false);
     }
@@ -168,66 +179,90 @@ function Recipe({
     const abort = new AbortController();
     sqlController.current = abort;
     setSqlLoading(true);
-    setError('');
+    setSqlError('');
     try {
       const response = await fetch(
         `/api/companion?${new URLSearchParams({ catalogId: snapshot.id, catalogSha256: snapshot.identity.catalogSha256, path: recipe.sql })}`,
         { signal: abort.signal, cache: 'no-store' },
       );
-      if (!response.ok) throw new Error('The admitted SQL companion could not be read.');
+      if (!response.ok)
+        throw new Error('The SQL file could not be loaded. Close and reopen View SQL to retry.');
       const bytes = await readText(response, 1024 * 1024);
       if (!abort.signal.aborted) setSql(bytes);
     } catch (e) {
-      if (!abort.signal.aborted) setError((e as Error).message);
+      if (!abort.signal.aborted) setSqlError((e as Error).message);
     } finally {
       if (!abort.signal.aborted) setSqlLoading(false);
     }
   }
   return (
     <article className="recipe">
-      <h3>{recipe.title || shortId(recipe.id)}</h3>
+      <h3>{recipe.title || 'Query title not supplied'}</h3>
       {recipe.notes?.map((n, i) => (
         <p key={i}>{n}</p>
       ))}
       <Facts
         items={[
-          ['Dialect', recipe.dialect],
-          ['Result meaning', recipe.resultGrain || recipe.resultDataset || 'Not declared'],
+          ['SQL engine', recipe.dialect],
+          ['Each result represents', recipe.resultGrain || recipe.resultDataset || 'Not supplied'],
           [
-            'Actual inputs',
+            'Datasets used',
             Object.entries(recipe.inputs).map(([name, alias]) => (
               <span className="subline" key={name}>
-                <code>{name}</code> → {alias}
+                <code>{name}</code> →{' '}
+                {titleOf(
+                  snapshot.catalog.datasets.find((d) => d.alias === alias || d.id === alias) ??
+                    ({ id: alias, alias } as CatalogDataset),
+                )}{' '}
+                <code>{alias}</code>
               </span>
             )),
           ],
           [
-            'Explanatory links',
+            'Related matching rules',
             recipe.contextualRelationships?.length
               ? recipe.contextualRelationships.map(shortId).join(', ')
               : 'None declared',
           ],
         ]}
       />
-      <p className="muted">Explanatory links do not add datasets to this query’s inputs.</p>
+      <Raw value={recipe} label="Technical query details" />
+      <p className="muted">
+        Related matching rules provide context; they do not add datasets to this query.
+      </p>
       <details
         className="sql-preview"
         onToggle={(e) => {
           if (e.currentTarget.open) void showSql();
         }}
       >
-        <summary>Inspect the exact SQL companion</summary>
+        <summary>View SQL</summary>
+        <p>Structured Query Language (SQL) describes how this query uses the data.</p>
         {sqlLoading ? (
-          <p role="status">Reading verified SQL…</p>
+          <p role="status">Loading SQL…</p>
         ) : (
-          <pre>{sql ?? 'Open again to retry the companion read.'}</pre>
+          <pre>{sql ?? 'Close and reopen to retry loading the SQL file.'}</pre>
+        )}
+        {sqlError && (
+          <Notice
+            title="SQL could not be loaded"
+            kind="error"
+            action={<button onClick={() => void showSql()}>Retry loading SQL</button>}
+          >
+            {sqlError}
+          </Notice>
         )}
       </details>
       {querySupported ? (
         <form onSubmit={run} className="recipe-form">
+          <p>
+            A release is a named group of data versions. Choose the release or individual versions
+            to use; the portal keeps these choices explicit.
+          </p>
+          {requiresRelease && <p>This query requires all inputs to come from the same release.</p>}
           {!requiresRelease && (
             <label className="stack-label">
-              Input binding
+              Data versions to use
               <select
                 value={bindingMode}
                 onChange={(e) => {
@@ -237,14 +272,14 @@ function Recipe({
                   setBindingMode(e.target.value as 'release' | 'versions');
                 }}
               >
-                <option value="release">One exact release</option>
-                <option value="versions">Explicit exact versions</option>
+                <option value="release">One named release</option>
+                <option value="versions">Choose versions individually</option>
               </select>
             </label>
           )}
           {bindingMode === 'release' ? (
             <label className="stack-label">
-              Exact release
+              Named release
               <select
                 value={releaseId}
                 onChange={(e) => {
@@ -258,7 +293,7 @@ function Recipe({
                 <option value="">Choose a release</option>
                 {releases.map((r) => (
                   <option value={r.id} key={r.id}>
-                    {shortId(r.id)} · {r.membership}
+                    {shortId(r.id)} · {enumLabel(r.membership)}
                   </option>
                 ))}
               </select>
@@ -277,12 +312,12 @@ function Recipe({
                     setRepresentationsByInput((previous) => ({ ...previous, [input]: '' }));
                   }}
                 >
-                  <option value="">Choose an exact version</option>
+                  <option value="">Choose a data version</option>
                   {snapshot.catalog.versions
                     .filter((v) => v.dataset === alias)
                     .map((v) => (
                       <option value={v.id} key={v.id}>
-                        {shortId(v.id)} · {v.retention}
+                        {shortId(v.id)} · {enumLabel(v.retention)}
                       </option>
                     ))}
                 </select>
@@ -293,7 +328,7 @@ function Recipe({
             .filter((item) => item.choices.length > 1)
             .map(({ input, choices }) => (
               <label className="stack-label" key={input}>
-                Representation for {input}
+                File, table or service for {input}
                 <select
                   value={representationsByInput[input] ?? ''}
                   onChange={(e) => {
@@ -306,10 +341,10 @@ function Recipe({
                     }));
                   }}
                 >
-                  <option value="">Choose an exact representation</option>
+                  <option value="">Choose a file, table or service</option>
                   {choices.map((choice) => (
                     <option key={choice.id} value={choice.id}>
-                      {shortId(choice.id)} · {choice.mediaType || choice.kind}
+                      {shortId(choice.id)} · {formatLabel(choice.mediaType, choice.kind)}
                     </option>
                   ))}
                 </select>
@@ -318,10 +353,14 @@ function Recipe({
           {order.map((name) => {
             const prop = objectOf(schema[name]);
             return (
-              <label className="stack-label" key={name}>
-                {String(prop.title || name)}
-                {required.includes(name) ? ' (required)' : ''}
+              <div className="stack-label" key={name}>
+                <label htmlFor={`${parameterId}-${name}`}>
+                  {String(prop.title || words(name))}
+                  {required.includes(name) ? ' (required)' : ''}
+                </label>
                 <input
+                  id={`${parameterId}-${name}`}
+                  aria-describedby={`${parameterId}-${name}-help`}
                   required={required.includes(name)}
                   value={parameters[name] ?? ''}
                   onChange={(e) => {
@@ -330,19 +369,29 @@ function Recipe({
                     setParameters((p) => ({ ...p, [name]: e.target.value }));
                     setResult(undefined);
                   }}
-                  placeholder={String(prop.description || prop.type || 'Value')}
                 />
-                <small>{String(prop.description || `Type: ${prop.type || 'string'}`)}</small>
-              </label>
+                <small id={`${parameterId}-${name}-help`}>
+                  {String(prop.description || `Required format: ${prop.type || 'text'}`)}
+                  {Array.isArray(prop.examples) && prop.examples.length
+                    ? ` Example: ${String(prop.examples[0])}.`
+                    : ''}
+                </small>
+                <details>
+                  <summary>Technical parameter details</summary>
+                  <code>{name}</code>
+                  <span> · Type: {String(prop.type || 'string')}</span>
+                </details>
+              </div>
             );
           })}
           {bindingProblem && <p className="muted">{bindingProblem}</p>}
           <button className="button primary" disabled={loading || !!bindingProblem} type="submit">
-            {loading ? 'Running bounded query…' : 'Run query'}
+            {loading ? 'Running query…' : 'Run query'}
             <span aria-hidden="true"> →</span>
           </button>
           <span className="muted">
-            Up to 25 result rows · {snapshot.mode === 'fixture' ? 'fixture reader' : 'owner reader'}
+            Up to 25 result rows ·{' '}
+            {snapshot.mode === 'fixture' ? 'synthetic example data' : 'connected data source'}
           </span>
           {loading && (
             <button
@@ -351,7 +400,7 @@ function Recipe({
                 controller.current?.abort();
                 setLoading(false);
                 setError(
-                  'Stopped waiting for this query. Owner work may still finish; its outcome is unknown here. Parameters remain available.',
+                  'Stopped waiting. The source may still finish the request; this portal does not know its outcome. Parameters remain available.',
                 );
               }}
             >
@@ -360,29 +409,54 @@ function Recipe({
           )}
         </form>
       ) : (
-        <Notice
-          title={
-            snapshot.capabilities.query
-              ? 'Recipe outside the connected query scope'
-              : 'Query execution is not connected'
-          }
-        >
-          {snapshot.capabilities.query
-            ? snapshot.capabilities.description ||
-              'The registered owner does not support this recipe.'
-            : 'This recipe is documentation until an owner supplies a checked, exact-binding query adapter.'}
+        <Notice title="Example query — cannot run here">
+          You can inspect the SQL and its required data. This query is not connected to an execution
+          service here.
+          <Raw
+            value={{ recipeId: recipe.id, capabilities: snapshot.capabilities }}
+            label="Query connection details"
+          />
         </Notice>
       )}
       {error && (
-        <Notice title="Query needs attention" kind="error">
+        <Notice
+          title={
+            errorCode === 'export_too_large'
+              ? 'Query result could not be downloaded'
+              : 'Query needs attention'
+          }
+          kind="error"
+        >
           {error}
+          {errorCode && (
+            <Raw
+              value={{ code: errorCode, message: errorDiagnostic || error }}
+              label="Error details"
+            />
+          )}
         </Notice>
       )}
       <div role="status" aria-live="polite">
-        {result?.status === 'ok' ? `${result.returned} query results` : ''}
+        {result?.status === 'ok'
+          ? `${result.returned} ${result.returned === 1 ? 'query result' : 'query results'}`
+          : ''}
       </div>
       {result && result.status !== 'ok' && (
-        <Notice title={`Query ${result.status}`}>{result.reason}</Notice>
+        <Notice
+          title={
+            result.status === 'unknown'
+              ? 'Query request outcome is unknown'
+              : 'Query results were not loaded'
+          }
+        >
+          {result.status === 'unknown'
+            ? 'This request did not establish an outcome. The source may still finish; this portal does not know its result.'
+            : result.reason}
+          <Raw
+            value={{ status: result.status, reason: result.reason }}
+            label="Query outcome details"
+          />
+        </Notice>
       )}
       {result?.attempt && (
         <EvidenceRecord
@@ -395,30 +469,48 @@ function Recipe({
         <>
           <div className="result-bar">
             <Badge status="unknown">
-              {result.execution?.kind === 'fixture' ? 'Demonstration execution' : 'Owner execution'}
+              {result.execution?.kind === 'fixture'
+                ? 'Demonstration execution'
+                : 'Connected source execution'}
             </Badge>
             <button
-              onClick={() =>
-                downloadJson('ddk-query-result.json', {
-                  format: 'ddk-viewer-query/1',
-                  scope: 'Bounded query result',
-                  catalog: snapshot.identity,
-                  request: queryRef.current,
-                  result,
-                })
-              }
+              onClick={() => {
+                try {
+                  downloadJson('ddk-query-result.json', {
+                    format: 'ddk-viewer-query/1',
+                    scope: 'Up to 25 returned query rows; not the full dataset',
+                    numericEncoding: '{$number: exact JSON number lexeme}',
+                    catalog: snapshot.identity,
+                    request: queryRef.current,
+                    result,
+                  });
+                } catch (e) {
+                  setError((e as Error).message);
+                  setErrorCode('export_too_large');
+                  setErrorDiagnostic((e as Error).message);
+                }
+              }}
             >
-              Export query & result ↓
+              Download query and results (JSON) ↓
             </button>
           </div>
+          <p className="muted">
+            Download includes the query request, its data version choices, and up to 25 returned
+            rows with all fields and exact numbers. JSON is a structured data-file format.
+          </p>
+          <BlankValuesHelp />
           {result.rows.length ? (
-            <ResultTable rows={result.rows} columns={result.columns} />
+            <ResultTable
+              rows={result.rows}
+              columns={result.columns}
+              caption={`Results from ${recipe.title || 'query without a supplied title'} · up to 25 returned rows`}
+            />
           ) : (
             <Notice title="No matching results">
-              The supported query completed with no matches.
+              This query completed with no matches for the selected data versions and parameters.
             </Notice>
           )}
-          <Raw value={result.execution} label="Reader-issued execution record" />
+          <Raw value={result.execution} label="Technical execution record" />
           {result.execution?.kind === 'owner' && (
             <EvidenceRecord
               snapshot={snapshot}
@@ -459,12 +551,11 @@ export function Connections({
   return (
     <>
       <Section
-        title="Connections"
+        title="Related data"
         aside={<span className="muted">{relationships.length} declared</span>}
       >
         <p>
-          Relationships describe meaning and matching rules. Their presence does not prove that
-          records match.
+          These links describe how fields can connect datasets. Matches have not been checked here.
         </p>
         {relationships.length ? (
           relationships.map((r) => {
@@ -488,7 +579,7 @@ export function Connections({
             return (
               <article className="relationship" key={r.id}>
                 <div className="relationship-route">
-                  <span>{outgoing ? words(r.source.dataset) : words(r.target.dataset || '')}</span>
+                  <span>{titleOf(dataset)}</span>
                   <span aria-hidden="true">{outgoing ? '→' : '←'}</span>
                   {target ? (
                     <button
@@ -496,7 +587,8 @@ export function Connections({
                         onNavigate(target.id, boundTarget?.id, boundTarget ? releaseId : undefined)
                       }
                     >
-                      {titleOf(target)} · {boundTarget ? 'same release' : 'definition'} ↗
+                      {titleOf(target)} ·{' '}
+                      {boundTarget ? 'version in the same release' : 'dataset description'} ↗
                     </button>
                   ) : (
                     <code>{r.target.external || r.target.dataset}</code>
@@ -505,49 +597,68 @@ export function Connections({
                 <p>{r.meaning}</p>
                 {!boundTarget && target && (
                   <p className="muted">
-                    Opens the dataset definition. No exact record relationship is resolved.
+                    Opens the dataset description. This link does not open matching records.
                   </p>
                 )}
-                <Facts
-                  items={[
-                    [
-                      'Source keys',
-                      r.source.paths.map((p, i) => (
-                        <code className="subline" key={i}>
-                          {pathLabel(p)}
-                        </code>
-                      )),
-                    ],
-                    [
-                      'Target keys',
-                      r.target.paths?.map((p, i) => (
-                        <code className="subline" key={i}>
-                          {pathLabel(p)}
-                        </code>
-                      )) || 'External target',
-                    ],
-                    ['Match & cardinality', `${r.match} · ${r.cardinality}`],
-                    ['Scope & nulls', `${r.scope} · nulls: ${r.nulls}`],
-                  ]}
-                />
-                {r.scopeDescription && <p>{r.scopeDescription}</p>}
+                <details>
+                  <summary>Matching rules</summary>
+                  <Facts
+                    items={[
+                      [
+                        'Source keys',
+                        r.source.paths.map((p, i) => (
+                          <code className="subline" key={i}>
+                            {pathLabel(p)}
+                          </code>
+                        )),
+                      ],
+                      [
+                        'Target keys',
+                        r.target.paths?.map((p, i) => (
+                          <code className="subline" key={i}>
+                            {pathLabel(p)}
+                          </code>
+                        )) || 'External target',
+                      ],
+                      [
+                        'Match & cardinality',
+                        `${enumLabel(r.match)} · ${enumLabel(r.cardinality)}`,
+                      ],
+                      ['Scope & nulls', `${enumLabel(r.scope)} · nulls: ${enumLabel(r.nulls)}`],
+                    ]}
+                  />
+                  {r.scopeDescription && <p>{r.scopeDescription}</p>}
+                </details>
                 <span className="muted">
-                  Observed matches: unknown
+                  Matches have not been checked
                   {r.target.external ? ' · external existence not assessed' : ''}
                 </span>
-                <Raw value={r} label="Full scoped relationship declaration" />
+                <Raw value={r} label="Technical relationship details" />
               </article>
             );
           })
         ) : (
-          <Notice title="No relationships are disclosed">
+          <Notice title="No related datasets are listed">
             A matching field name alone does not establish a connection.
           </Notice>
         )}
       </Section>
       <Section
-        title="Queries"
-        aside={<span className="muted">{recipes.length} available recipes</span>}
+        title="Questions and queries"
+        aside={
+          <span className="muted">
+            {recipes.length} documented {recipes.length === 1 ? 'query' : 'queries'} ·{' '}
+            {
+              recipes.filter(
+                (r) =>
+                  snapshot.capabilities.query &&
+                  (!snapshot.capabilities.queryRecipeIds ||
+                    snapshot.capabilities.queryRecipeIds.includes(r.id)),
+              ).length
+            }{' '}
+            runnable here
+          </span>
+        }
       >
         {recipes.length ? (
           recipes.map((r) => (
@@ -559,8 +670,8 @@ export function Connections({
             />
           ))
         ) : (
-          <Notice title="No query recipes are disclosed">
-            The owner can provide parameterized SQL with exact input bindings and companion bytes.
+          <Notice title="No queries are listed">
+            The publisher has not supplied a query for this dataset.
           </Notice>
         )}
       </Section>

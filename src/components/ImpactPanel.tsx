@@ -50,22 +50,31 @@ export default function ImpactPanel({
   const newFields = snapshot.definitions[dataset.alias]?.properties ?? [];
   return (
     <Section
-      title="Definition changes & impact"
-      aside={result?.available ? <Badge status="unknown">DDK analysis · fixture</Badge> : undefined}
+      title="Publisher definition-change report"
+      aside={
+        result?.available ? (
+          <Badge status="unknown">Definition analysis · example</Badge>
+        ) : undefined
+      }
     >
-      {!result && !error && <p role="status">Loading the exact comparison report…</p>}
+      <p>
+        This publisher-supplied report compares fixed dataset definitions. It does not change when
+        you choose data versions above.
+      </p>
+      {!result && !error && <p role="status">Opening the definition-change report…</p>}
       {error && (
         <Notice
-          title="Impact report unavailable"
+          title="Definition-change report could not be loaded"
           kind="error"
-          action={<button onClick={() => setRetry((n) => n + 1)}>Retry comparison</button>}
+          action={<button onClick={() => setRetry((n) => n + 1)}>Retry report</button>}
         >
           {error}
         </Notice>
       )}
       {result && !result.available && (
-        <Notice title="No owner comparison is supplied">
-          {result.reason} An impact report must name exact base and candidate snapshots.
+        <Notice title="No publisher definition-change report is supplied">
+          {result.reason} A definition-change report must identify the exact catalog copies it
+          compares.
         </Notice>
       )}
       {result?.available && (
@@ -117,7 +126,7 @@ export default function ImpactPanel({
               </tbody>
             </table>
           </div>
-          <h3 className="impact-title">Recorded change obligations</h3>
+          <h3 className="impact-title">Follow-up work identified by the report</h3>
           {Object.entries(changes).map(([key, value]) => {
             const change = objectOf(value);
             return (
@@ -134,7 +143,7 @@ export default function ImpactPanel({
               </div>
             );
           })}
-          <h3 className="impact-title">Known affected definitions and consumers</h3>
+          <h3 className="impact-title">Datasets and tools that may need updates</h3>
           {Object.entries(obligations).map(([key, value]) => (
             <div className="plain-list" key={key}>
               <div>
@@ -147,9 +156,9 @@ export default function ImpactPanel({
               </div>
             </div>
           ))}
-          <Notice title="Runtime reuse remains a separate decision">
-            This report identifies changes and obligations. It does not execute recomputation,
-            accept qualification, or select a release.
+          <Notice title="The report does not carry out these updates">
+            The report records changes and follow-up work. It does not recalculate data, approve
+            checks in the publishing system, or select a release.
           </Notice>
           <Raw value={metadata.runtimeReuse} label="Computation and qualification reuse evidence" />
           <Raw
@@ -157,12 +166,19 @@ export default function ImpactPanel({
             label="Unresolved consumer and evidence scope"
           />
           <Raw value={result.binding} label="Exact base, candidate, report, and DDK identities" />
-          <Raw value={result.report} label="Full owner-issued impact report" />
+          <Raw
+            value={result.report}
+            label="Full publisher-issued report, including original categories"
+          />
+          <p>
+            The JSON file contains this report and its identifiers. It does not contain dataset
+            records.
+          </p>
           <button
             className="button secondary"
             onClick={() => downloadJson('ddk-bound-impact.json', result)}
           >
-            Export exact comparison ↓
+            Download definition-change report (JSON) ↓
           </button>
         </>
       )}

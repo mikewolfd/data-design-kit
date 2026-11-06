@@ -13,16 +13,20 @@ export const applicationRegistrations: readonly CatalogRegistration[] = [
   {
     id: 'spicy-regs',
     navigationLabel: 'SpicyRegs public catalog',
+    navigationDescription:
+      'Find descriptions of data about U.S. rules, legislation, courts, campaign finance and public spending. Records are not connected to this portal.',
     mode: 'application',
     directory: resolve(process.cwd(), 'fixtures/applications/spicy-regs'),
-    lockSha256: 'c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d',
+    lockSha256: 'd7cac836f87f4194894fd78fca11ce137ab859c08e1c90fe104ad7657817776d',
   },
   {
     id: 'congress',
     navigationLabel: 'Congress archive public catalog',
+    navigationDescription:
+      'Explore descriptions of congressional hearings, documents, witnesses, bills and recordings. Records are not connected to this portal.',
     mode: 'application',
     directory: resolve(process.cwd(), 'fixtures/applications/congress'),
-    lockSha256: 'f34c92d4e2f4460ca043aa73fdd11fd6b9b04cee127c5f872cee7829807686f2',
+    lockSha256: '26967938b6e9e5bb067f8be52f798deb38ef2288449498b6cdde1373eddc7801',
   },
 ];
 const registrations = [...applicationRegistrations, commerceRegistration];

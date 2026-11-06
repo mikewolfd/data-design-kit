@@ -4,10 +4,18 @@ import { EvidenceRecord } from './EvidenceRecord';
 import type { CatalogDataset, CatalogSnapshot, CatalogVersion } from '../domain/types';
 import { Badge, FieldTree, Facts, Notice, Raw, RecordLink, Section, Value } from './Primitives';
 import { objectOf, shortId, textValue, versionsOf, words } from '../lib/display';
+import { recordAccess, enumLabel } from '../lib/content';
 
 type Context = { snapshot: CatalogSnapshot; dataset: CatalogDataset; version?: CatalogVersion };
 export function Overview({ snapshot, dataset, version }: Context) {
   const definition = snapshot.definitions[dataset.alias];
+  const access = recordAccess(snapshot, dataset, version);
+  const representations = snapshot.catalog.representations.filter((r) => r.version === version?.id);
+  const fileAvailability = representations.some((r) => r.availability === 'available')
+    ? 'available'
+    : !representations.length || representations.some((r) => r.availability === 'unknown')
+      ? 'unknown'
+      : 'unavailable';
   const identities = snapshot.catalog.identities.filter(
     (i) => i.dataset === dataset.alias || i.dataset === dataset.id,
   );
@@ -18,11 +26,9 @@ export function Overview({ snapshot, dataset, version }: Context) {
   return (
     <>
       <div className="overview-intro">
-        <p className="eyebrow">Purpose & scope</p>
+        <p className="eyebrow">What one record represents</p>
         <p className="purpose">
-          {dataset.rowMeaning ||
-            definition?.description ||
-            'A purpose description has not been supplied for this dataset.'}
+          {dataset.rowMeaning || 'The publisher has not supplied what one record represents.'}
         </p>
         <Facts
           items={[
@@ -33,37 +39,34 @@ export function Overview({ snapshot, dataset, version }: Context) {
                 <span className="subline">Revision {dataset.definition.version}</span>
               </>,
             ],
+            ['View records here', access.label],
             [
-              'Data access',
+              'File availability',
               version ? (
-                <Badge
-                  status={
-                    snapshot.catalog.representations.find((r) => r.version === version.id)
-                      ?.availability || 'unknown'
-                  }
-                />
+                <Badge status={fileAvailability} />
+              ) : versionsOf(snapshot, dataset).length ? (
+                'Choose a data version to view file availability.'
               ) : (
-                'No observed version'
+                'No data versions listed.'
               ),
             ],
             [
-              'Catalog checks',
+              'Catalog report checks',
               <>
                 <Badge status={snapshot.report.decision} />
-                <span className="subline">Within the requested check scope</span>
+                <span className="subline">
+                  Applies to the recorded catalog check scope; see Checks & sources.
+                </span>
               </>,
             ],
           ]}
         />
       </div>
-      {!version && (
-        <Notice title="Definitions are available. Data access is not established.">
-          This catalog does not identify a selected readable version. Definition checks do not
-          establish data quality.
-        </Notice>
-      )}
+      <Notice title="What you can do here">
+        {access.detail} You can explore the field descriptions and recorded checks below.
+      </Notice>
       {products.length > 0 && (
-        <Section title="Data products">
+        <Section title="Collections containing this dataset">
           <div className="plain-list">
             {products.map((p) => (
               <div key={p.id}>
@@ -76,59 +79,48 @@ export function Overview({ snapshot, dataset, version }: Context) {
         </Section>
       )}
       <Section title="Coverage">
-        {version?.coverage?.length ? (
-          version.coverage.map((c, i) => (
-            <div className="evidence-row" key={i}>
-              <div>
-                <strong>{c.scope}</strong>
-                <p>
-                  <Value value={c.observed} /> observed / <Value value={c.expected} /> expected ·{' '}
-                  {c.unit}
-                </p>
-                <RecordLink record={c.record} />
-              </div>
-              <Badge status={c.status} />
-            </div>
-          ))
-        ) : (
-          <p className="muted">
-            Coverage is unknown. No comparable observed and expected population has been supplied
-            for this version.
-          </p>
-        )}
+        <CoverageFacts version={version} />
       </Section>
       <Section
-        title="Field definitions"
-        aside={<span className="muted">{definition?.properties?.length ?? 0} root fields</span>}
+        title="What each field means"
+        aside={
+          <span className="muted">
+            {definition?.properties?.length ?? 0} top-level{' '}
+            {definition?.properties?.length === 1 ? 'field' : 'fields'}
+          </span>
+        }
       >
         {assembly.disclosedDefinitionPaths !== undefined && (
-          <Notice title="Definition disclosure is scoped">
-            Fields omitted from the public view are unknown, not absent.
+          <Notice title="Some field definitions may be omitted from this public view">
+            An omitted field is not evidence that the source has no such field.
           </Notice>
         )}
         {definition?.description && definition.description !== dataset.rowMeaning && (
-          <p>{definition.description}</p>
+          <details>
+            <summary>Publisher’s technical dataset description</summary>
+            <p>{definition.description}</p>
+          </details>
         )}
         {definition?.properties?.length ? (
           <FieldTree fields={definition.properties} />
         ) : (
           <p className="muted">
-            No field definitions are disclosed. Root metadata may still be available.
+            No field definitions are disclosed. Dataset metadata may still be available.
           </p>
         )}
       </Section>
-      <Section title="Identity & provenance">
+      <Section title="Identifiers & source records">
         <Facts
           items={[
             ['Dataset', <code>{dataset.id}</code>],
-            ['Definition owner', <code>{dataset.definition.contractId}</code>],
+            ['Definition publisher', <code>{dataset.definition.contractId}</code>],
             ['Source definition', <RecordLink record={dataset.definition.source} />],
           ]}
         />
         {identities.map((i, n) => (
           <Raw key={n} value={i} label={`${words(i.kind)} identity · ${i.scope}`} />
         ))}
-        <Raw value={definition || {}} label="Inspect the admitted definition" />
+        <Raw value={definition || {}} label="View the original dataset definition" />
       </Section>
     </>
   );
@@ -150,31 +142,41 @@ export function Evidence({ snapshot, dataset, version }: Context) {
   const sources = snapshot.catalog.sources.filter((s) => version?.sources.includes(s.id));
   return (
     <>
-      <Section title="What the evidence establishes">
+      <Section title="What has been checked">
         <Notice
           title={
             required.length
-              ? `${required.length} required check${required.length === 1 ? ' is' : 's are'} unresolved or failed`
+              ? `Across this catalog, ${required.length} required check${required.length === 1 ? ' is' : 's are'} unresolved or failed`
               : 'Catalog checks describe their stated scope'
           }
           kind={required.length ? 'warning' : 'info'}
         >
-          A declaration, available representation, or passing catalog report does not establish
-          accepted native qualification.
+          Each catalog report check applies only to its stated scope. Checks for a data version
+          examine only the named data and rules. Passing checks do not establish overall data
+          reliability.
         </Notice>
         <Facts
           items={[
-            ['Catalog decision', <Badge status={snapshot.report.decision} />],
+            ['Catalog report checks', <Badge status={snapshot.report.decision} />],
             [
-              'Exact-version checks',
-              observed.length ? `${observed.length} recorded` : 'Not supplied',
+              'Checks for this data version',
+              observed.length
+                ? `${observed.length} recorded; ${observed.filter((c) => c.status === 'passed').length} passed; ${observed.filter((c) => c.status === 'failed').length} failed; ${observed.filter((c) => c.status === 'unknown').length} unknown; ${observed.filter((c) => c.status === 'not_run').length} not run`
+                : 'Not supplied',
             ],
-            ['Native acceptance', 'Not established by this viewer'],
             ['Freshness', 'Unknown · no freshness policy assessed'],
           ]}
         />
       </Section>
-      <Section title="Version-bound quality">
+      <Section title="Coverage and remaining unknowns">
+        <CoverageFacts version={version} />
+      </Section>
+      <Section title="Checks for this data version">
+        <p>
+          Passed means the named check passed. Failed means it reported a failure. Not run means it
+          was not run. Unknown means the outcome is not established. Applicability is recorded
+          separately.
+        </p>
         {snapshot.capabilities.evidence &&
           [
             ...new Map(
@@ -187,28 +189,42 @@ export function Evidence({ snapshot, dataset, version }: Context) {
               key={`${record.uri}:${record.sha256}`}
               snapshot={snapshot}
               record={record}
-              label="Inspect retained quality evidence"
+              label="View saved check evidence"
             />
           ))}
         {observed.length ? (
           observed.map((c, i) => (
             <div className="evidence-row" key={i}>
               <div>
-                <strong>{shortId(c.rule.id)}</strong>
+                <strong>
+                  {'title' in c.rule && typeof c.rule.title === 'string'
+                    ? c.rule.title
+                    : c.reason && !['passed', 'failed', 'unknown', 'not_run'].includes(c.reason)
+                      ? c.reason
+                      : `Check ${i + 1} · title not supplied`}
+                </strong>
                 <p>{c.scope}</p>
-                <p>{c.reason}</p>
-                <span className="subline">
-                  Rule {c.rule.version} · evaluator {c.evaluator.id} @ {c.evaluator.version}
-                </span>
+                {'title' in c.rule && <p>{c.reason}</p>}
+                <details>
+                  <summary>Rule and evaluator details</summary>
+                  <p>
+                    Rule: <code>{c.rule.id}</code> · version {c.rule.version}
+                  </p>
+                  <p>
+                    Evaluator: <code>{c.evaluator.id}</code> · version {c.evaluator.version}
+                  </p>
+                </details>
                 <RecordLink record={c.record} />
               </div>
               <Badge status={c.status} />
             </div>
           ))
         ) : (
-          <Notice title="Data qualification is unknown">
-            No checks are bound to this exact version. Required missing checks cannot count as
-            passes.
+          <Notice title="No checks are recorded for this data version">
+            {version
+              ? 'The catalog links no check results to this version.'
+              : 'No data version is selected.'}{' '}
+            Missing results do not count as passes. Data quality remains unknown.
           </Notice>
         )}
       </Section>
@@ -217,7 +233,7 @@ export function Evidence({ snapshot, dataset, version }: Context) {
         aside={
           <label className="check-label">
             <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
-            All catalog checks
+            Show all catalog checks
           </label>
         }
       >
@@ -225,7 +241,12 @@ export function Evidence({ snapshot, dataset, version }: Context) {
           checks.slice(0, 80).map((c, i) => (
             <div className="check-row" key={`${c.id}:${i}`}>
               <div>
-                <strong>{words(c.group)}</strong>
+                <strong>
+                  {'title' in c && typeof c.title === 'string'
+                    ? c.title
+                    : `Catalog check ${i + 1} · title not supplied`}
+                </strong>
+                <span className="subline">{words(c.group)}</span>
                 <p>{c.reason || c.subject}</p>
                 <span className="subline">
                   {c.evidence} evidence · {c.required ? 'Required' : 'Optional'} ·{' '}
@@ -241,37 +262,37 @@ export function Evidence({ snapshot, dataset, version }: Context) {
           ))
         ) : (
           <p className="muted">
-            No check results name this dataset. Choose “All catalog checks” to inspect the full
-            report scope.
+            No catalog checks are linked directly to this dataset. Choose “Show all catalog checks”
+            to inspect the full report scope.
           </p>
         )}
         {checks.length > 80 && (
           <p>
-            Showing 80 of {checks.length} checks. The verified report companion contains the
-            complete set.
+            Showing 80 of {checks.length} checks. All results are retained in the catalog check
+            report.
           </p>
         )}
       </Section>
-      <Section title="Source occurrences">
+      <Section title="Source captures">
         {sources.length ? (
           sources.map((s) => (
             <div className="evidence-row" key={s.id}>
               <div>
-                <strong>{shortId(s.id)}</strong>
-                <p>{s.scope}</p>
+                <strong>{s.scope || shortId(s.id)}</strong>
                 <RecordLink record={s.record} />
-                <Raw value={s} label="Source identity and retained evidence" />
+                <Raw value={s} label="Source identifiers and saved evidence" />
               </div>
               <Badge status={s.outcome} />
             </div>
           ))
         ) : (
           <p className="muted">
-            No source occurrences are linked to this version. Completeness remains unknown.
+            No source captures are linked to this version. Source coverage remains unknown.
           </p>
         )}
       </Section>
-      <Section title="Disclosure & checking scope">
+      <Section title="Technical check details">
+        <p>Acceptance by the publishing system: not established here.</p>
         <Raw value={snapshot.report.scope} label="Requested report scope" />
         <Raw value={snapshot.report.coverage} label="Check coverage" />
         <Raw value={snapshot.lock.tools} label="Recorded tool versions" />
@@ -291,7 +312,7 @@ export function Activity({ snapshot, dataset, version }: Context) {
   );
   return (
     <>
-      <Section title="Observed runs">
+      <Section title="Recorded processing events">
         {runs.length ? (
           runs.map((r) => (
             <article className="run" key={r.id}>
@@ -301,11 +322,14 @@ export function Activity({ snapshot, dataset, version }: Context) {
               </div>
               <Facts
                 items={[
-                  ['Observed at', r.observedAt],
-                  ['Operation identity', <code>{textValue(r.reference)}</code>],
+                  ['Recorded at', readableTime(r.observedAt)],
                   ['Input coverage', r.inputCoverage.status],
                   ['Coverage scope', r.inputCoverage.scope],
                 ]}
+              />
+              <Raw
+                value={{ id: r.id, reference: r.reference, observedAt: r.observedAt }}
+                label="Original operation identifiers and timestamp"
               />
               <Raw
                 value={{ inputs: r.inputs, outputs: r.outputs }}
@@ -314,18 +338,18 @@ export function Activity({ snapshot, dataset, version }: Context) {
               <EvidenceRecord
                 snapshot={snapshot}
                 record={r.record}
-                label="Inspect original execution receipt"
+                label="View original processing record"
               />
             </article>
           ))
         ) : (
           <p className="muted">
-            No observed runs are associated with this version. A production definition is not
-            execution evidence.
+            No processing events are recorded for this version. A processing plan does not show that
+            processing took place.
           </p>
         )}
       </Section>
-      <Section title="Release membership & selections">
+      <Section title="Release membership & publisher selections">
         {releases.length ? (
           releases.map((r) => (
             <article className="run" key={r.id}>
@@ -333,7 +357,10 @@ export function Activity({ snapshot, dataset, version }: Context) {
                 <h3>{shortId(r.id)}</h3>
                 <Badge status={r.membership} />
               </div>
-              <p>{r.members.length} exact member versions</p>
+              <p>
+                Release membership: {words(r.membership)}. {r.members.length} data{' '}
+                {r.members.length === 1 ? 'version' : 'versions'} listed.
+              </p>
               <Raw value={r.members} label="Inspect exact release membership" />
               {catalog.selections
                 .filter((s) => s.release === r.id)
@@ -343,8 +370,16 @@ export function Activity({ snapshot, dataset, version }: Context) {
                     items={[
                       ['Selection authority', <code>{s.authority}</code>],
                       ['Purpose', s.purpose],
-                      ['Observed selection', s.observedAt],
-                      ['Owner record', <RecordLink record={s.record} />],
+                      [
+                        'Selection recorded at',
+                        <>
+                          {readableTime(s.observedAt)}
+                          <span className="subline">
+                            Original: <code>{s.observedAt}</code>
+                          </span>
+                        </>,
+                      ],
+                      ['Publisher record', <RecordLink record={s.record} />],
                     ]}
                   />
                 ))}
@@ -355,50 +390,32 @@ export function Activity({ snapshot, dataset, version }: Context) {
           ))
         ) : (
           <p className="muted">
-            No release membership is recorded for this version. It is not implicitly selected.
+            No release membership is recorded for this version. No publisher selection is inferred.
           </p>
         )}
       </Section>
-      <Section title="Plans & retained results">
-        {productions.map((p) => (
-          <Raw key={p.alias} value={p} label={`${words(p.alias)} · declared production`} />
-        ))}
-        {catalog.files
-          .filter((f) => /substrait|plan|lineage/.test(f.role + ' ' + f.path))
-          .map((f) => (
-            <p key={f.path}>
-              <code>{f.path}</code> · {f.role}
-            </p>
+      <details className="raw">
+        <summary>Integration status</summary>
+        <Section title="Processing plans & saved results">
+          {productions.map((p) => (
+            <Raw key={p.alias} value={p} label={`${p.alias} · processing plan`} />
           ))}
-        <Notice title="Native inspection is not connected">
-          An owner adapter must supply exact operation, plan, protected-result, recovery, and
-          selection receipts. This catalog alone does not prove recovery readiness.
-        </Notice>
-      </Section>
-      <Section title="Runtime capabilities">
-        <div className="plain-list">
-          {[
-            [
-              'Managed Update & reconciliation',
-              'Awaiting a qualified owner adapter for this application.',
-            ],
-            [
-              'Complete candidate qualification',
-              'Accepted-evidence mapping and exact multi-output membership remain shared-runtime requirements.',
-            ],
-            [
-              'Publication recovery',
-              'The publisher owns publication status and recovery. No operator actions are configured.',
-            ],
-          ].map(([name, reason]) => (
-            <div key={name}>
-              <strong>{name}</strong>
-              <span>{reason}</span>
-              <Badge status="unknown" />
-            </div>
-          ))}
-        </div>
-      </Section>
+          {catalog.files
+            .filter((f) => /substrait|plan|lineage/.test(f.role + ' ' + f.path))
+            .map((f) => (
+              <p key={f.path}>
+                <code>{f.path}</code> · {f.role}
+              </p>
+            ))}
+          <Notice title="Recovery and managed-update details are not connected">
+            {snapshot.capabilities.evidence && runs.some((r) => r.record?.sha256)
+              ? 'Original processing records can be opened above. '
+              : 'Original processing records cannot be opened here for this version. '}
+            This portal does not provide update, publishing-system acceptance, or publication
+            recovery actions. Those capabilities remain unassessed here.
+          </Notice>
+        </Section>
+      </details>
     </>
   );
 }
@@ -408,23 +425,25 @@ export function Compare({ snapshot, dataset, version }: Context) {
   const base = versions.find((v) => v.id === baseId);
   return (
     <>
-      <Section title="Compare exact versions">
+      <Section title="Compare versions">
         <p>
-          Compare the recorded facts for two versions. Semantic impact requires the owner’s analysis
-          of exact definition snapshots.
+          Compare recorded facts for two data versions. This comparison does not assess what the
+          differences mean for your use.
         </p>
-        <label className="stack-label">
-          Base version
-          <select value={baseId} onChange={(e) => setBaseId(e.target.value)}>
-            <option value="">Choose a base version</option>
-            {versions.map((v) => (
-              <option key={v.id} value={v.id}>
-                {shortId(v.id)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {base && version ? (
+        {versions.length >= 2 && (
+          <label className="stack-label">
+            Base version
+            <select value={baseId} onChange={(e) => setBaseId(e.target.value)}>
+              <option value="">Choose a base version</option>
+              {versions.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {shortId(v.id)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {versions.length >= 2 && base && version && base.id !== version.id ? (
           <div className="table-scroll" tabIndex={0} role="region" aria-label="Version comparison">
             <table className="compare-table">
               <thead>
@@ -437,18 +456,22 @@ export function Compare({ snapshot, dataset, version }: Context) {
               <tbody>
                 {[
                   [
-                    'Exact native reference',
+                    'Original version reference',
                     textValue(base.reference),
                     textValue(version.reference),
                   ],
-                  ['Retention', base.retention, version.retention],
+                  [
+                    'Saved version',
+                    retentionLabel(base.retention),
+                    retentionLabel(version.retention),
+                  ],
                   ['Scope', base.scope, version.scope],
                   [
-                    'Source occurrences',
+                    'Source captures',
                     base.sources.join(', ') || 'Unknown',
                     version.sources.join(', ') || 'Unknown',
                   ],
-                  ['Coverage', textValue(base.coverage), textValue(version.coverage)],
+                  ['Coverage', coverageLabel(base), coverageLabel(version)],
                 ].map(([label, left, right]) => (
                   <tr key={label}>
                     <th scope="row">{label}</th>
@@ -460,12 +483,91 @@ export function Compare({ snapshot, dataset, version }: Context) {
             </table>
           </div>
         ) : (
-          <Notice title="Choose two observed versions">
-            This catalog may provide definitions without version history.
+          <Notice
+            title={
+              versions.length === 0
+                ? 'No data versions are listed.'
+                : versions.length === 1
+                  ? 'Only one data version is listed.'
+                  : base?.id === version?.id
+                    ? 'Choose two different data versions.'
+                    : 'Choose two data versions.'
+            }
+          >
+            {versions.length < 2
+              ? 'Two versions are needed for a comparison.'
+              : 'Choose a data version above and a different base version here.'}
           </Notice>
+        )}
+        {base && version && base.id !== version.id && (
+          <Raw value={{ base, selected: version }} label="Original version comparison records" />
         )}
       </Section>
       <ImpactPanel snapshot={snapshot} dataset={dataset} />
+    </>
+  );
+}
+
+function readableTime(value: string) {
+  const time = new Date(value);
+  return Number.isNaN(time.getTime())
+    ? value
+    : time.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) +
+        ' UTC';
+}
+function retentionLabel(value: CatalogVersion['retention']) {
+  return { present: 'Retained', missing: 'Not retained', unknown: 'Unknown' }[value];
+}
+function coverageLabel(version: CatalogVersion) {
+  return version.coverage?.length
+    ? version.coverage
+        .map(
+          (c) =>
+            `${c.scope}: ${c.status}; ${c.observed === undefined ? 'observed count not recorded' : textValue(c.observed) + ' ' + c.unit + ' observed'}; ${c.expected === undefined ? 'expected population total not recorded' : textValue(c.expected) + ' ' + c.unit + ' expected'}`,
+        )
+        .join('; ')
+    : 'Unknown — no coverage information recorded';
+}
+
+function CoverageFacts({ version }: { version?: CatalogVersion }) {
+  return (
+    <>
+      {version?.coverage?.length ? (
+        version.coverage.map((c, i) => (
+          <div className="evidence-row" key={i}>
+            <div>
+              <strong>{c.scope}</strong>
+              <p>
+                {c.observed === undefined ? (
+                  'Observed count not recorded.'
+                ) : (
+                  <>
+                    <Value value={c.observed} /> {c.unit === 'rows' ? 'records' : c.unit} observed.
+                  </>
+                )}
+              </p>
+              <p>
+                {c.expected === undefined ? (
+                  'Expected population total not recorded in the catalog.'
+                ) : (
+                  <>
+                    Expected population total: <Value value={c.expected} />{' '}
+                    {c.unit === 'rows' ? 'records' : c.unit}.
+                  </>
+                )}
+              </p>
+              <p>Coverage status applies to: {c.scope}</p>
+              <RecordLink record={c.record} />
+            </div>
+            <Badge status={c.status}>Coverage: {enumLabel(c.status)}</Badge>
+          </div>
+        ))
+      ) : (
+        <p className="muted">
+          Coverage is unknown. No comparable observed and expected population has been supplied for
+          this version.
+        </p>
+      )}
     </>
   );
 }

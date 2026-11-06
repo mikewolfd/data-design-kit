@@ -224,6 +224,7 @@ export type CatalogSummary = {
   title: string;
   description: string;
   mode: 'fixture' | 'application';
+  exampleData?: 'synthetic' | 'authored';
   audience: 'public' | 'local';
   admission?: 'not_loaded' | 'admitted';
 };

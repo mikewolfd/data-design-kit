@@ -15,7 +15,7 @@
   "sourceInventory": [
     {
       "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-      "sha256": "f23976125d9dcb46bb92f7d789da8c811645b7806cbd533af1832b7a1743a247",
+      "sha256": "24760c79edef3cdc2a52c61fa30566582f184f515512ff77526394461081ea9e",
       "role": "definition"
     },
     {
@@ -42,7 +42,7 @@
       "version": "1.0.0",
       "definition": {
         "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-        "sha256": "50a04e1e3f692ad98e08d02965a04e1b53a2457b0c7f293e9e9d37e7aaa28ffb"
+        "sha256": "375b440dba16d8cc51e368dc93c9b7edcbc289deee1b7088dc732da3cc7de166"
       },
       "ports": [
         {
@@ -67,7 +67,7 @@
       "alias": "observations",
       "id": "urn:ddk-viewer:fixture:watershed:dataset:observations",
       "title": "Earlier watershed observations",
-      "rowMeaning": "One synthetic instrument observation with nested readings",
+      "rowMeaning": "One synthetic instrument observation, with any nested readings kept separately.",
       "role": "source_record",
       "definition": {
         "contractId": "urn:ddk-viewer:fixture:watershed:definition",
@@ -75,7 +75,7 @@
         "object": "observations",
         "source": {
           "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-          "sha256": "f23976125d9dcb46bb92f7d789da8c811645b7806cbd533af1832b7a1743a247"
+          "sha256": "24760c79edef3cdc2a52c61fa30566582f184f515512ff77526394461081ea9e"
         }
       }
     },
@@ -83,7 +83,7 @@
       "alias": "stations",
       "id": "urn:ddk-viewer:fixture:watershed:dataset:stations",
       "title": "Synthetic station register",
-      "rowMeaning": "One synthetic station per station code",
+      "rowMeaning": "One synthetic monitoring station per station code.",
       "role": "source_record",
       "definition": {
         "contractId": "urn:ddk-viewer:fixture:watershed:definition",
@@ -91,7 +91,7 @@
         "object": "stations",
         "source": {
           "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-          "sha256": "f23976125d9dcb46bb92f7d789da8c811645b7806cbd533af1832b7a1743a247"
+          "sha256": "24760c79edef3cdc2a52c61fa30566582f184f515512ff77526394461081ea9e"
         }
       }
     }
@@ -159,7 +159,7 @@
       "cardinality": "many_to_one",
       "scope": "same_release",
       "resolution": "unresolved_allowed",
-      "meaning": "Declared lookup meaning; this declaration is not evidence of observed matches.",
+      "meaning": "Connects each measurement to a monitoring station using its station code. This declared relationship does not show which records actually matched.",
       "nulls": "skip"
     },
     {
@@ -188,10 +188,10 @@
   "recipes": [
     {
       "id": "urn:ddk-viewer:fixture:watershed:recipe:minimum",
-      "title": "Filter observations by exact minimum",
+      "title": "Find measurements at or above a concentration",
       "notes": [
-        "Runs only the registered fixture evaluator after exact input and SQL digest checks.",
-        "The lookup relationship is context; the query does not read the lookup dataset."
+        "Search these synthetic example records using the minimum value you enter.",
+        "This query reads only the measurements or awards dataset. Related station or program records are not included."
       ],
       "sql": "recipes/observations-minimum.sql",
       "dialect": "fixture-sql",
@@ -206,7 +206,9 @@
         "type": "object",
         "properties": {
           "minimum_concentration": {
-            "type": "number"
+            "type": "number",
+            "title": "Minimum concentration (mg/L)",
+            "description": "Enter a number in milligrams per litre, for example 1.5."
           }
         },
         "required": [
@@ -217,7 +219,7 @@
       "parameterOrder": [
         "minimum_concentration"
       ],
-      "resultGrain": "One source row meeting the exact minimum; values and source identities are preserved"
+      "resultGrain": "One measurement or award whose value is at or above the minimum. Original values and record identifiers are preserved."
     }
   ],
   "versions": [
@@ -366,7 +368,7 @@
         }
       },
       "outcome": "retained",
-      "scope": "This synthetic capture occurrence only",
+      "scope": "Example source capture 1: records retained from this synthetic observation.",
       "record": {
         "uri": "urn:ddk-viewer:fixture:watershed:evidence"
       }
@@ -386,7 +388,7 @@
         }
       },
       "outcome": "retained",
-      "scope": "This synthetic capture occurrence only",
+      "scope": "Example source capture 2: records retained from this synthetic observation.",
       "record": {
         "uri": "urn:ddk-viewer:fixture:watershed:evidence"
       }
@@ -399,7 +401,7 @@
         "value": "capture-occurrence-empty"
       },
       "outcome": "empty",
-      "scope": "Explicit synthetic capture occurrence; no retained payload",
+      "scope": "Example source capture: no records returned.",
       "record": {
         "uri": "urn:ddk-viewer:fixture:watershed:evidence"
       }
@@ -412,7 +414,7 @@
         "value": "capture-occurrence-failed"
       },
       "outcome": "failed",
-      "scope": "Explicit synthetic capture occurrence; no retained payload",
+      "scope": "Example source capture: request failed and no records were retained.",
       "record": {
         "uri": "urn:ddk-viewer:fixture:watershed:evidence"
       }
@@ -645,7 +647,7 @@
             {
               "name": "id",
               "logicalType": "integer",
-              "description": "Exact observation ID above JavaScript's safe integer range",
+              "description": "Identifier for this observation. Large identifiers are preserved exactly.",
               "physicalType": "int64"
             },
             {
@@ -671,16 +673,16 @@
                   {
                     "name": "depth",
                     "logicalType": "number",
-                    "description": "Exact depth"
+                    "description": "Depth recorded for the nested reading. A measurement unit is not specified in this example."
                   },
                   {
                     "name": "flags",
                     "logicalType": "array",
-                    "description": "Repeated flag values",
+                    "description": "Recorded labels for a reading. Repeated labels remain separate.",
                     "items": {
                       "name": "flag",
                       "logicalType": "string",
-                      "description": "Flag"
+                      "description": "A recorded label; value codes are not defined in this example."
                     }
                   }
                 ]
@@ -713,7 +715,7 @@
         "stations": {
           "name": "stations",
           "businessName": "Synthetic station register",
-          "description": "One synthetic station per station code",
+          "description": "Find the station names used in the example water-quality measurements. These stations are synthetic.",
           "properties": [
             {
               "name": "code",
@@ -732,7 +734,7 @@
     },
     "urn:ddk-viewer:fixture": {
       "title": "Watershed observatory",
-      "description": "Synthetic watershed observations and station register. Exact decimals, nested readings and version-scoped keys.",
+      "description": "Explore example water-quality measurements and monitoring stations. All records are synthetic.",
       "synthetic": true,
       "nativeExecution": "not_run",
       "conformance": "Document shapes checked separately; no DDK producer or native conformance claim"

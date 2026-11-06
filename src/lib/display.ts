@@ -17,7 +17,15 @@ export const shortId = (id: string = '') => id.split(/[:/#]/).filter(Boolean).sl
 export const words = (s: string = '') => s.replaceAll('_', ' ').replaceAll('-', ' ');
 export const pathLabel = (path: FieldPath) =>
   path.map((p) => ('field' in p ? `[${JSON.stringify(p.field)}]` : '[each]')).join('');
-export const titleOf = (dataset: CatalogDataset) => dataset.title || words(dataset.alias);
+export const titleOf = (dataset: CatalogDataset) => {
+  const supplied = dataset.title || dataset.alias;
+  // Formatting only: do not infer a subject, preferred variant, or missing definition.
+  if (/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/.test(supplied)) {
+    const label = supplied.replaceAll('_', ' ');
+    return label[0].toUpperCase() + label.slice(1);
+  }
+  return dataset.title || words(dataset.alias);
+};
 export const versionsOf = (snapshot: CatalogSnapshot, dataset: CatalogDataset) =>
   snapshot.catalog.versions.filter((v) => v.dataset === dataset.alias || v.dataset === dataset.id);
 export function selectedVersion(
@@ -64,7 +72,7 @@ export function safeLink(value: string): string | undefined {
 export function downloadJson(name: string, data: unknown) {
   const bytes = JSON.stringify(data, null, 2);
   if (new TextEncoder().encode(bytes).length > 1024 * 1024)
-    throw new Error('This export exceeds the 1 MiB page limit. Choose a smaller page.');
+    throw new Error('This page is too large to download here. The download limit is 1 MiB.');
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
@@ -88,5 +96,5 @@ export function jsonInput(value: string, kind = 'string'): ExactValue {
     return value === 'true';
   }
   if (kind === 'null') return null;
-  throw new Error(`The ${kind} input type needs an owner-provided editor.`);
+  throw new Error(`This portal does not support entering values of type ${kind}.`);
 }
