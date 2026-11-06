@@ -9,7 +9,7 @@ from pathlib import Path
 from types import MappingProxyType
 
 from .catalog_access import (
-    CatalogError, compare_equal, field_at, field_type, relationship_keys,
+    CatalogError, compare_equal, field_at, field_type, relationship_keys, row_identity_paths,
     resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
@@ -98,6 +98,7 @@ class Assembly:
         self.files = {}
         self.relationship_profile = None
         self.native_rule_profile = None
+        self.managed_schema_profiles = {}
         self.relationship_assessments = []
 
     def select_relationship_profile(self, profile):
@@ -265,13 +266,12 @@ class Assembly:
         self.production_definitions()
 
     def derive_identity(self, alias, schema):
+        row_paths = row_identity_paths(schema)
         authored = [identity for identity in self.identities[alias] if identity["kind"] == "key"]
         if authored:
             return
-        fields = [item for item in schema.get("customProperties", ())
-                  if item.get("vendor") == "ddk" and item.get("property") == "rowIdentity"]
-        if fields:
-            names = fields[0]["value"]
+        if row_paths is not None:
+            names = [path[0]["field"] for path in row_paths]
         else:
             primary = [field for field in schema.get("properties", ()) if field.get("primaryKey") is True]
             if not primary:
@@ -280,8 +280,7 @@ class Assembly:
             if len(primary) > 1 and (any(position < 1 for position in positions) or len(set(positions)) != len(positions)):
                 raise CatalogError("CATALOG-KEY-INCOMPLETE", "A composite ODCS key needs unambiguous positions.")
             names = [field["name"] for field in sorted(primary, key=lambda field: field.get("primaryKeyPosition", -1))]
-        if (len(fields) > 1 or not isinstance(names, list) or not names or any(not isinstance(name, str) for name in names)
-                or len(set(names)) != len(names)):
+        if len(set(names)) != len(names):
             raise CatalogError("CATALOG-KEY-INCOMPLETE", "An ODCS row identity needs unique ordered field names.")
         identity = {"dataset": alias, "kind": "key", "scope": "dataset_version",
                     "meaning": "Declared row identity from the selected ODCS object.", "fields": []}
@@ -430,6 +429,8 @@ class Assembly:
             self.report.metadata["relationshipAssessments"] = details["relationshipAssessments"]
         if self.native_rule_profile is not None:
             details["nativeRuleProfile"] = self.native_rule_profile.record()
+        if self.managed_schema_profiles:
+            details["managedSchemaProfiles"] = deepcopy(self.managed_schema_profiles)
         if self.metadata:
             details["recordOwners"] = self.metadata.owners
             details["registeredRunInputs"] = self.metadata.bound_inputs
@@ -617,7 +618,7 @@ class Assembly:
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
                      permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None,
-                     include_private_artifacts=False):
+                     include_private_artifacts=False, managed_schema_profiles=None):
     """Load once and return admitted metadata with its report and companions.
 
     An admitted view remains inspectable when qualification is incomplete or
@@ -654,6 +655,13 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     try:
         assembly.project_records()
         products = assembly.definitions()
+        if managed_schema_profiles is not None:
+            from .arrow_observation import MANAGED_SCHEMA_V2
+            if (not isinstance(managed_schema_profiles, Mapping)
+                    or set(managed_schema_profiles) - assembly.datasets.keys()
+                    or any(value != MANAGED_SCHEMA_V2 for value in managed_schema_profiles.values())):
+                raise CatalogError("CATALOG-SCHEMA-PROFILE", "Select supported managed schema profiles for registered dataset aliases.", status="unknown")
+            assembly.managed_schema_profiles = deepcopy(dict(managed_schema_profiles))
         assembly.check("products", "ports")
         step = "relationships"
         assembly.select_relationship_profile(relationship_profile)
@@ -677,6 +685,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
             try:
                 assembly.metadata = LocalMetadata(document, inventory, METADATA_ADAPTERS[metadata_adapter],
                                                   assembly.datasets, assembly.productions, native_rule_profile=selected_native_rules,
+                                                  schema_profiles=assembly.managed_schema_profiles,
                                                   identities=[row for rows in assembly.identities.values() for row in rows]).read()
             except (KeyError, TypeError, AttributeError) as exc:
                 raise CatalogError("CATALOG-METADATA-SHAPE", "An owner record contains malformed fields.") from exc

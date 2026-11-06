@@ -751,6 +751,15 @@ A check summary MUST identify the exact version, versioned rule, evaluator, chec
 
 A managed-job mapper MUST bind the exact captured production and dataset definitions to the original native request and account for every input and output within its stated scope. Native policy acceptance MUST NOT imply coverage of unrelated authored field rules. An explicitly supplied application generator MAY bind authored facets to exact original native reports. The mapper MUST reproduce those bindings from immutable captured definitions and original JobSpec bytes, verify exact accepted report membership and outcomes, and retain generator identity separately from evaluator identity. Missing support and changed or incomplete bindings MUST remain unknown. Metadata MUST NOT load generator code.
 
+A nondefault managed output-schema interpretation MUST be selected explicitly
+for each dataset it affects and included in the original captured definition
+identity. The mapper MUST preserve the default interpretation for unselected
+outputs and MUST NOT fall back when a selected interpretation is unsupported.
+Type-representation options and row-value constraints MUST retain their distinct
+evidence requirements. The explicit
+[Arrow declaration observation profile](arrow-declaration-profile.md#observing-managed-output-schemas)
+reuses the maintained declaration mapping; it does not execute value checks.
+
 When the accepted policy ID is the original admitted policy ID, its policy bytes and authority conditions MUST agree with that original request. A distinct native requalification policy MAY change those conditions while retaining the original request unchanged. An incomplete native observation MUST NOT invent a binding to the current production definition.
 
 Native output-schema facts, accepted row counters and supported export invariants MUST retain their distinct scope. Nonnull evidence MUST NOT imply uniqueness. Ordered-export uniqueness MUST cover the entire authored key under the exact supported native interpretation; a unique larger tuple MUST NOT qualify a subset. A composite nonnull claim MUST account for every key field in the same exact output. These facts MUST NOT replace required native policy acceptance or execution qualification.

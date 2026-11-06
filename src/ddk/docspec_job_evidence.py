@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 
 from .documents import DocumentError, freeze_json, json_dumps, parse_json
+from .arrow_observation import MANAGED_SCHEMA_V2, SchemaInterpretation
 
 CANDIDATE_SCHEME = "urn:docspec:whole-job-candidate"
 COMPLETION_PROFILE = "urn:docspec:whole-job-completion:1"
@@ -453,15 +454,7 @@ def _verify_counter_row(accepted, native, schema_bytes):
                  "Native acceptance lacks an exact passed zero-integer outcome.")
 
 
-@dataclass(frozen=True)
-class SchemaInterpretation:
-    status: str
-    reasons: tuple
-    fields: tuple
-    obligations: tuple
-
-
-def interpret_output_schema(schema_bytes, declaration):
+def interpret_output_schema(schema_bytes, declaration, *, profile=None):
     """Compare retained Arrow metadata to resolved ODCS; never inspect rows.
 
     This version closes field sets recursively, supports explicit primitive
@@ -469,6 +462,12 @@ def interpret_output_schema(schema_bytes, declaration):
     supply to required fields. Value constraints and undeclared native field-ID
     conventions are outside this schema check, rather than silently passing.
     """
+    if profile is not None:
+        if profile != MANAGED_SCHEMA_V2:
+            raise JobEvidenceError("DOCSPEC-SCHEMA-PROFILE", "Unsupported explicitly selected managed schema profile.", status="unknown")
+        from .arrow_observation import observe_declaration
+        pa, schema = _read_schema(schema_bytes)
+        return observe_declaration(schema, declaration, pa)
     from .definitions import enum_values
 
     pa, schema = _read_schema(schema_bytes)

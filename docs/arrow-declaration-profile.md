@@ -85,6 +85,27 @@ presence format or silently fill values.
 
 ## Invocation and evidence
 
+### Observing managed output schemas
+
+`urn:ddk:metadata:arrow-odcs:2` reuses this declaration mapper to compare retained
+Arrow schema metadata to a captured ODCS declaration. It is selected explicitly
+per output dataset through `assemble_catalog(managed_schema_profiles=...)`.
+The original managed definition identity retains that selection. The existing
+managed interpreter remains the default and is not broadened implicitly.
+
+The observer preserves ordered field paths and exact observed types and
+nullability. A wrong known type, nested shape, field order, unit, zone or list
+item name fails. An unsupported declaration or native field-ID convention stays
+unknown; there is no fallback to the old interpreter or SQL type inference.
+Nullable supply for a required field retains a required-value obligation.
+Nonnullable supply satisfies that field's nullability fact. Other authored value
+obligations remain unknown until their maintained owner supplies exact evidence.
+Metadata interpretation reads no rows and does not itself accept or select a
+native candidate. [Observer tests](../tests/test_arrow_observation.py) use
+independently constructed Arrow schemas to exercise these distinctions.
+
+### Declaring fixtures
+
 `arrow_schema(dataset, profile=DECLARATION_PROFILE)` returns the declared schema
 and per-facet coverage. `map_declaration` captures the declaration once and shares
 it between schema construction and fixture conversion. PyArrow is injected only

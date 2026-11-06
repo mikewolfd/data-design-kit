@@ -84,13 +84,14 @@ def _staging_metrics(report, table, loads):
 
 
 class LocalMetadata:
-    def __init__(self, document, inventory, adapter, datasets, productions, *, native_rule_profile=None, identities=()):
+    def __init__(self, document, inventory, adapter, datasets, productions, *, native_rule_profile=None, identities=(), schema_profiles=None):
         self.document = document
         self.inventory = inventory
         self.adapter = adapter
         self.datasets = datasets
         self.productions = productions
         self.native_rule_profile = native_rule_profile
+        self.schema_profiles = deepcopy(schema_profiles or {})
         self.identities = tuple(identities)
         self.observations = {section: [] for section in SECTIONS}
         self.records = {document.path: document}

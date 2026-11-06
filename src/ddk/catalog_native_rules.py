@@ -7,7 +7,7 @@ source pins identify code; independent qualification remains a release duty.
 import base64
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
@@ -37,6 +37,7 @@ class NativeRuleContext:
     inputs: Mapping
     outputs: Mapping
     out_of_catalog: Mapping
+    schema_profiles: Mapping = field(default_factory=lambda: freeze_json({}))
 
 
 class NativeRuleProfile(Protocol):
@@ -95,11 +96,13 @@ def select_native_rule_profile(profile, inventory=None):
     return SelectedNativeRuleProfile(selected.identity, selected.source, selected.callback)
 
 
-def rule_context(production, datasets, identities, entry):
+def rule_context(production, datasets, identities, entry, schema_profiles=None):
     return NativeRuleContext(freeze_json(deepcopy(production)), freeze_json(deepcopy(datasets)),
                              tuple(freeze_json(deepcopy(row)) for row in identities),
                              freeze_json(deepcopy(entry["inputs"])), freeze_json(deepcopy(entry["outputs"])),
-                             freeze_json(deepcopy(entry["outOfCatalog"])))
+                             freeze_json(deepcopy(entry["outOfCatalog"])),
+                             freeze_json({alias: schema_profiles[alias] for alias in sorted(set(entry["outputs"].values()))
+                                          if alias in (schema_profiles or {})}))
 
 
 def _authored_facets(context):
@@ -187,7 +190,8 @@ def native_rule_artifact(catalog_result, original_job_bytes, *, native_rule_prof
     catalog = catalog_result.local_catalog
     declarations = catalog["extensions"]["urn:ddk:catalog:assembly"]["datasetDefinitions"]
     context = rule_context(next(row for row in catalog["productions"] if row["alias"] == production),
-                           declarations, catalog["identities"], {"inputs": inputs, "outputs": outputs, "outOfCatalog": out_of_catalog})
+                           declarations, catalog["identities"], {"inputs": inputs, "outputs": outputs, "outOfCatalog": out_of_catalog},
+                           catalog["extensions"]["urn:ddk:catalog:assembly"].get("managedSchemaProfiles"))
     selected = select_native_rule_profile(native_rule_profile)
     if selected is None:
         raise CatalogError("CATALOG-NATIVE-RULE-PROFILE", "Native rule capture requires an explicitly selected generator.", status="unknown")

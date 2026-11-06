@@ -121,6 +121,32 @@ Use `native_rule_artifact` to capture these bindings and original JobSpec bytes.
 
 Schema interpretation and row-value checks remain separate. A retained nonnullable field can establish its own nonnull property. A nullable field with an authored `required` rule needs the corresponding accepted counter. Composite key nonnull evidence can combine those facts only for the same output and all key fields. It establishes no uniqueness.
 
+Select `managed_schema_profiles={"output-alias": "urn:ddk:metadata:arrow-odcs:2"}`
+on both the initial and final `assemble_catalog` calls to use the maintained
+Arrow declaration mapper for that output dataset. This explicit profile checks
+the complete observed Arrow field tree against
+`urn:ddk:odcs:arrow-declaration:2`: names, order, nested shapes, integer/float
+widths, temporal units and exact timezone spelling. Numeric `format: i64`, for
+example, describes `Int64` and creates no separate row-value obligation.
+Numeric bounds, strings' semantic formats, enum, object presence, array limits,
+relationships and other value rules still need their own evidence.
+
+The selection is per dataset. Unselected outputs retain the original schema
+interpreter, including its existing fixed-binary spelling. Invalid aliases or
+unsupported profile identifiers refuse. The selection enters the original
+managed definition identity and the immutable `NativeRuleContext.schema_profiles`;
+changing it cannot reinterpret an older accepted job as a newly qualified one.
+Neither metadata nor an opaque SQL type string selects a profile. There is no
+fallback when the explicit declaration mapper cannot preserve a type. See the
+[mapping boundaries](arrow-declaration-profile.md#observing-managed-output-schemas)
+and [independent cases](../tests/catalog/test_managed_schema_profiles.py).
+
+Root ODCS `ddk.rowIdentity` and project alternate keys retain separate ordered
+uniqueness obligations. Both catalog identity derivation and managed field-rule
+coverage use the same row-identity parser. A project key cannot hide a malformed,
+repeated or missing-field ODCS row identity, and evidence for one key cannot
+qualify a different key.
+
 The supported DocSpec ordered-export interpretation can establish `key_unique` when the complete explicit sort tuple equals the authored ordered top-level key, every field appears in the sealed export, and the original settings, retained settings and native runtime identity agree. A larger sort tuple containing a hidden source occurrence cannot establish uniqueness of its visible subset. Nested or virtual keys and unsupported native semantics remain unknown. Export uniqueness does not establish nonnull values or replace native policy acceptance.
 
 Public assembly requires an explicit identifier grant for the selected native-rule profile, just as for a relationship profile. Source locations follow the evidence disclosure policy. Generator identity and the native evaluator remain distinct in provenance.

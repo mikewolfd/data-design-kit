@@ -33,6 +33,23 @@ def field_at(schema, path):
     return field
 
 
+def row_identity_paths(schema):
+    """Read the one ordered ODCS row identity for catalog and data-check owners."""
+    declared = [item for item in schema.get("customProperties", ())
+                if item.get("vendor") == "ddk" and item.get("property") == "rowIdentity"]
+    if not declared:
+        return None
+    names = declared[0]["value"]
+    if (len(declared) != 1 or not isinstance(names, list) or not names
+            or any(not isinstance(name, str) for name in names) or len(set(names)) != len(names)):
+        raise CatalogError("CATALOG-KEY-INCOMPLETE", "An ODCS row identity needs unique ordered field names.")
+    paths = [[{"field": name}] for name in names]
+    for name, path in zip(names, paths):
+        if field_at(schema, path) is None:
+            raise CatalogError("CATALOG-KEY-PATH", f"Declared identity field {name!r} is missing.")
+    return paths
+
+
 def field_type(field):
     """The initial equality profile recognizes only native bytes and supported logical scalars."""
     logical = field.get("logicalType")
