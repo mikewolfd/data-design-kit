@@ -766,6 +766,10 @@ main:focus {
   min-width: 0;
   flex: 1;
 }
+.section-heading h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .evidence-row strong,
 .check-row strong {
   font-weight: 550;

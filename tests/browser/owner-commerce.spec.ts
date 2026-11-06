@@ -144,6 +144,14 @@ test('connected commerce preserves unsupported controls and all-view accessibili
   test.setTimeout(60_000);
   const snapshot = await enabled(request);
   const customerVersion = snapshot.catalog.versions.find((v: any) => v.dataset === 'customers').id;
+  // Reuse the actual owner response proven by the consumer journey for visual checks.
+  // Changing a viewport or revisiting a tab does not require another native read.
+  const retained = JSON.parse(await readFile('work/commerce-browser-journey.json', 'utf8'));
+  expect(retained.catalog.catalogSha256).toBe(snapshot.identity.catalogSha256);
+  await page.route('**/api/read', async (route) => {
+    expect(route.request().postDataJSON().versionId).toBe(retained.read.binding.versionId);
+    await route.fulfill({ json: retained.read });
+  });
   await page.goto(
     `/?catalog=commerce-native&dataset=customers&version=${encodeURIComponent(customerVersion)}&tab=Data`,
   );
@@ -165,9 +173,10 @@ test('connected commerce preserves unsupported controls and all-view accessibili
       if (tab === 'Data') await expect(page.locator('.data-table tbody tr')).toHaveCount(3);
       if (width === 390 && tab === 'Data')
         await page.screenshot({ path: 'outputs/viewer-native-mobile.png' });
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true,
-      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `${width}px ${tab} must fit the viewport`,
+      ).toBe(true);
       expect(
         (
           await new AxeBuilder({ page })
