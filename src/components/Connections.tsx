@@ -21,6 +21,7 @@ import {
 } from '../lib/display';
 import { Badge, Facts, Notice, Raw, Section } from './Primitives';
 import { ResultTable } from './DataPanel';
+import { EvidenceRecord } from './EvidenceRecord';
 
 function Recipe({
   recipe,
@@ -44,6 +45,10 @@ function Recipe({
   const controller = useRef<AbortController>(null);
   const sqlController = useRef<AbortController>(null);
   const queryRef = useRef<QueryRequest>(null);
+  const querySupported =
+    snapshot.capabilities.query &&
+    (!snapshot.capabilities.queryRecipeIds ||
+      snapshot.capabilities.queryRecipeIds.includes(recipe.id));
   const schema = objectOf(recipe.parameters.properties);
   const order = recipe.parameterOrder ?? Object.keys(schema);
   const required = Array.isArray(recipe.parameters.required)
@@ -218,7 +223,7 @@ function Recipe({
           <pre>{sql ?? 'Open again to retry the companion read.'}</pre>
         )}
       </details>
-      {snapshot.capabilities.query ? (
+      {querySupported ? (
         <form onSubmit={run} className="recipe-form">
           {!requiresRelease && (
             <label className="stack-label">
@@ -345,17 +350,27 @@ function Recipe({
               onClick={() => {
                 controller.current?.abort();
                 setLoading(false);
-                setError('Query stopped. Parameters remain available.');
+                setError(
+                  'Stopped waiting for this query. Owner work may still finish; its outcome is unknown here. Parameters remain available.',
+                );
               }}
             >
-              Stop query
+              Stop waiting
             </button>
           )}
         </form>
       ) : (
-        <Notice title="Query execution is not connected">
-          This recipe is documentation until an owner supplies a checked, exact-binding query
-          adapter.
+        <Notice
+          title={
+            snapshot.capabilities.query
+              ? 'Recipe outside the connected query scope'
+              : 'Query execution is not connected'
+          }
+        >
+          {snapshot.capabilities.query
+            ? snapshot.capabilities.description ||
+              'The registered owner does not support this recipe.'
+            : 'This recipe is documentation until an owner supplies a checked, exact-binding query adapter.'}
         </Notice>
       )}
       {error && (
@@ -368,6 +383,13 @@ function Recipe({
       </div>
       {result && result.status !== 'ok' && (
         <Notice title={`Query ${result.status}`}>{result.reason}</Notice>
+      )}
+      {result?.attempt && (
+        <EvidenceRecord
+          snapshot={snapshot}
+          record={result.attempt}
+          label="Inspect viewer query request"
+        />
       )}
       {result?.status === 'ok' && (
         <>
@@ -397,6 +419,13 @@ function Recipe({
             </Notice>
           )}
           <Raw value={result.execution} label="Reader-issued execution record" />
+          {result.execution?.kind === 'owner' && (
+            <EvidenceRecord
+              snapshot={snapshot}
+              record={result.execution.record}
+              label="Inspect native query receipt"
+            />
+          )}
         </>
       )}
     </article>

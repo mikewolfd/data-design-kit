@@ -15,6 +15,7 @@ import type {
   ExactBinding,
   ExactObject,
   ExactValue,
+  EvidenceResult,
   FieldPath,
   QueryRequest,
   QueryResult,
@@ -33,6 +34,8 @@ import {
 
 /** Native owners implement only these reads. No scheduler, selection or runtime SDK lives here. */
 export interface OwnerReader {
+  supportedDatasetIds?: readonly string[];
+  description?: string;
   read(input: {
     snapshot: CatalogSnapshot;
     binding: ExactBinding;
@@ -40,9 +43,11 @@ export interface OwnerReader {
     limit: number;
     deadline: number;
     signal: AbortSignal;
+    onAttempt?: (record: RecordRef) => void;
   }): Promise<{
     rows: ExactObject[];
     rowPositions: number[];
+    rowOrder?: ReadResult['rowOrder'];
     total?: number;
     hasMore?: boolean;
     consumed: ExactBinding;
@@ -50,6 +55,8 @@ export interface OwnerReader {
   }>;
 }
 export interface OwnerQuery {
+  supportedRecipeIds?: readonly string[];
+  description?: string;
   query(input: {
     snapshot: CatalogSnapshot;
     recipeId: string;
@@ -59,8 +66,19 @@ export interface OwnerQuery {
     limit: number;
     deadline: number;
     signal: AbortSignal;
+    onAttempt?: (record: RecordRef) => void;
   }): Promise<QueryResult>;
 }
+export type OwnerEvidenceReader = (input: {
+  record: RecordRef;
+  deadline: number;
+  signal: AbortSignal;
+}) => Promise<EvidenceResult>;
+export type OwnerAdapters = {
+  reader?: OwnerReader;
+  query?: OwnerQuery;
+  evidence?: OwnerEvidenceReader;
+};
 const TRANSPORT = 'ddk-exact-json-v1' as const;
 const empty = (
   binding: ExactBinding,
@@ -159,15 +177,16 @@ function checkedBinding(
     release = {
       id: row.id,
       membership: row.membership,
-      selected: Boolean(
-        selector &&
-        snapshot.catalog.selections.some(
-          (selection) =>
-            selection.authority === selector.authority &&
-            selection.purpose === selector.purpose &&
-            selection.release === row.id,
-        ),
-      ),
+      ...(selector
+        ? {
+            selected: snapshot.catalog.selections.some(
+              (selection) =>
+                selection.authority === selector.authority &&
+                selection.purpose === selector.purpose &&
+                selection.release === row.id,
+            ),
+          }
+        : {}),
     };
   }
   return { release };
@@ -234,7 +253,13 @@ function sameBinding(actual: ExactBinding, expected: ExactBinding): boolean {
   );
 }
 function validatePage(
-  page: { rows: ExactObject[]; rowPositions?: number[]; total?: number; hasMore?: boolean },
+  page: {
+    rows: ExactObject[];
+    rowPositions?: number[];
+    rowOrder?: ReadResult['rowOrder'];
+    total?: number;
+    hasMore?: boolean;
+  },
   limit: number,
   offset = 0,
 ) {
@@ -245,6 +270,7 @@ function validatePage(
     page.rows.some((row) => !isObject(row) || isExactNumber(row)) ||
     !Array.isArray(page.rowPositions) ||
     page.rows.length !== page.rowPositions.length ||
+    (page.rowOrder !== undefined && !['source-row', 'query-result'].includes(page.rowOrder)) ||
     page.rowPositions.some(
       (value, index, positions) =>
         !Number.isSafeInteger(value) || value < 0 || (index > 0 && value <= positions[index - 1]),
@@ -384,7 +410,7 @@ export class CatalogAccess {
   private deadlineMs: number;
   constructor(
     private store: CatalogStore,
-    private adapters: ReadonlyMap<string, { reader?: OwnerReader; query?: OwnerQuery }> = new Map(),
+    private adapters: ReadonlyMap<string, OwnerAdapters> = new Map(),
     options: { deadlineMs?: number } = {},
   ) {
     this.fixture = new FixtureReader(store);
@@ -404,6 +430,16 @@ export class CatalogAccess {
       capabilities: {
         read: Boolean(owner?.reader),
         query: Boolean(owner?.query),
+        ...(owner?.evidence ? { evidence: true } : {}),
+        ...(owner?.reader?.supportedDatasetIds
+          ? { readDatasetIds: owner.reader.supportedDatasetIds }
+          : {}),
+        ...(owner?.query?.supportedRecipeIds
+          ? { queryRecipeIds: owner.query.supportedRecipeIds }
+          : {}),
+        ...(owner?.reader?.description || owner?.query?.description
+          ? { description: owner.reader?.description || owner.query?.description }
+          : {}),
         ...(!owner?.reader && !owner?.query
           ? {
               reason:
@@ -416,6 +452,38 @@ export class CatalogAccess {
   /** The same explicit adapter registry controls both UI capabilities and API access. */
   async snapshot(id: string): Promise<CatalogSnapshot> {
     return this.capabilities(await this.store.snapshot(id));
+  }
+  async evidence(request: {
+    catalogId: string;
+    catalogSha256: string;
+    record: RecordRef;
+  }): Promise<EvidenceResult> {
+    const deadline = Date.now() + this.deadlineMs;
+    if (!isObject(request) || !isObject(request.record))
+      fail('invalid_request', 'An exact catalog and evidence record are required.');
+    text(request.record.uri, 'record.uri');
+    if (typeof request.record.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(request.record.sha256))
+      fail('invalid_request', 'The exact evidence SHA-256 is required.');
+    const { snapshot } = await this.selected(request.catalogId, request.catalogSha256, deadline);
+    const reader = this.adapters.get(snapshot.id)?.evidence;
+    if (!reader)
+      fail('evidence_unavailable', 'This catalog has no registered evidence reader.', 404);
+    const result = await this.callOwner(
+      (signal) => reader({ record: request.record, deadline, signal }),
+      deadline,
+    );
+    if (
+      !isObject(result) ||
+      !isObject(result.record) ||
+      result.record.uri !== request.record.uri ||
+      result.record.sha256 !== request.record.sha256
+    )
+      fail(
+        'evidence_mismatch',
+        'The owner evidence response does not match the requested record.',
+        409,
+      );
+    return resultBudget(result);
   }
   /** A timed-out owner still holds its concurrency slot until its promise settles. */
   private async callOwner<T>(
@@ -515,7 +583,7 @@ export class CatalogAccess {
       }),
     );
     const offset = this.offset(request.cursor, scope);
-    const reader =
+    const reader: OwnerReader | undefined =
       loaded.registration.mode === 'fixture'
         ? this.fixture
         : this.adapters.get(snapshot.id)?.reader;
@@ -525,9 +593,16 @@ export class CatalogAccess {
         'refused',
         'No qualified owner reader is registered for this application catalog.',
       );
+    if (reader.supportedDatasetIds && !reader.supportedDatasetIds.includes(binding.datasetId))
+      return empty(
+        binding,
+        'refused',
+        'This dataset is outside the registered owner reader scope.',
+      );
     let page: {
       rows: ExactObject[];
       rowPositions: number[];
+      rowOrder?: ReadResult['rowOrder'];
       total?: number;
       hasMore?: boolean;
       consumed: ExactBinding;
@@ -563,14 +638,29 @@ export class CatalogAccess {
       if (reader === this.fixture)
         page = await this.fixture.read({ snapshot, binding, offset, limit, deadline });
       else {
+        let attempt: RecordRef | undefined;
         try {
           page = await this.callOwner(
-            (signal) => reader.read({ snapshot, binding, offset, limit, deadline, signal }),
+            (signal) =>
+              reader.read({
+                snapshot,
+                binding,
+                offset,
+                limit,
+                deadline,
+                signal,
+                onAttempt: (record) => {
+                  attempt = record;
+                },
+              }),
             deadline,
           );
         } catch (error) {
-          if (error instanceof ViewerError && ['owner_deadline', 'owner_busy'].includes(error.code))
-            return empty(binding, 'unknown', error.message);
+          if (
+            error instanceof ViewerError &&
+            ['owner_deadline', 'owner_busy', 'native_read_unknown'].includes(error.code)
+          )
+            return { ...empty(binding, 'unknown', error.message), ...(attempt ? { attempt } : {}) };
           throw error;
         }
       }
@@ -597,6 +687,11 @@ export class CatalogAccess {
       binding,
       rows: page.rows,
       rowPositions: page.rowPositions,
+      ...(page.rowOrder
+        ? { rowOrder: page.rowOrder }
+        : reader === this.fixture
+          ? { rowOrder: 'source-row' as const }
+          : {}),
       columns: rowColumns(page.rows),
       returned: page.rows.length,
       ...(page.total !== undefined ? { total: page.total } : {}),
@@ -623,6 +718,17 @@ export class CatalogAccess {
       { snapshot } = loaded;
     const recipe = snapshot.catalog.recipes.find((row) => row.id === request.recipeId);
     if (!recipe) fail('unknown_recipe', 'This recipe is absent from the selected catalog.', 404);
+    const supported = this.adapters.get(snapshot.id)?.query?.supportedRecipeIds;
+    if (loaded.registration.mode !== 'fixture' && supported && !supported.includes(recipe.id))
+      return {
+        status: 'refused',
+        reason: 'This recipe is outside the registered owner query scope.',
+        bindings: request.bindings,
+        rows: [],
+        columns: [],
+        returned: 0,
+        transport: TRANSPORT,
+      };
     const names = Object.keys(recipe.inputs).sort(),
       bound = Object.keys(request.bindings).sort();
     if (names.length !== bound.length || names.some((name, index) => name !== bound[index]))
@@ -703,6 +809,7 @@ export class CatalogAccess {
           transport: TRANSPORT,
         };
       let result: QueryResult;
+      let attempt: RecordRef | undefined;
       try {
         result = await this.callOwner(
           (signal) =>
@@ -715,11 +822,17 @@ export class CatalogAccess {
               limit,
               deadline,
               signal,
+              onAttempt: (record) => {
+                attempt = record;
+              },
             }),
           deadline,
         );
       } catch (error) {
-        if (error instanceof ViewerError && ['owner_deadline', 'owner_busy'].includes(error.code))
+        if (
+          error instanceof ViewerError &&
+          ['owner_deadline', 'owner_busy', 'native_read_unknown'].includes(error.code)
+        )
           return {
             status: 'unknown',
             reason: error.message,
@@ -728,6 +841,7 @@ export class CatalogAccess {
             columns: [],
             returned: 0,
             transport: TRANSPORT,
+            ...(attempt ? { attempt } : {}),
           };
         throw error;
       }

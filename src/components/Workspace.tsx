@@ -275,7 +275,9 @@ export default function Workspace() {
               ))}
             </select>
             <p className="catalog-description">
-              {snapshot?.description || 'Standard catalogs, exact data, and evidence.'}
+              {snapshot?.capabilities.description ||
+                snapshot?.description ||
+                'Standard catalogs, exact data, and evidence.'}
             </p>
             {snapshot && (
               <Badge status="unknown">

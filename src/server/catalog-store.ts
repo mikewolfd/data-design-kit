@@ -429,16 +429,29 @@ export class CatalogStore {
     for (const recipe of catalog.recipes)
       if (outputRows.get(recipe.sql)?.role !== 'recipe')
         fail('missing_recipe_companion', 'A recipe is missing its exact SQL companion.', 409);
-    unique(
-      lock.files.map((row: any) => row.path),
-      'locked input paths',
-    );
+    const inputDigests = new Map<string, string>();
+    for (const row of lock.files) {
+      if (
+        !isObject(row) ||
+        typeof row.path !== 'string' ||
+        !row.path ||
+        !digest(row.sha256) ||
+        (inputDigests.has(row.path) && inputDigests.get(row.path) !== row.sha256)
+      )
+        fail(
+          'ambiguous_catalog',
+          'The lock has invalid or conflicting bytes for one input path.',
+          409,
+        );
+      // Several schema objects can select the same exact source file. Preserve every record.
+      inputDigests.set(row.path, row.sha256);
+    }
     const marker = catalog.extensions?.['urn:ddk-viewer:fixture'];
     if (registration.mode === 'fixture' && (!isObject(marker) || marker.synthetic !== true))
       fail('invalid_fixture', 'The registered fixture has no explicit synthetic marker.', 409);
     const snapshot: CatalogSnapshot = freeze({
       id: registration.id,
-      title: marker?.title ?? catalog.project.id,
+      title: marker?.title ?? registration.navigationLabel ?? catalog.project.id,
       description:
         marker?.description ??
         'Read-only application catalog. Data access requires an injected, independently qualified owner adapter.',

@@ -1,7 +1,12 @@
 import { resolve } from 'node:path';
-import { CatalogAccess } from './access';
+import { CatalogAccess, type OwnerEvidenceReader } from './access';
 import { CatalogStore, fail, type CatalogRegistration } from './catalog-store';
 import { fixturePins } from './fixture-pins';
+import {
+  commerceRegistration,
+  createCommerceAdapter,
+  readCommerceEvidence,
+} from './commerce-native';
 
 /** Operator-selected, read-only discovery inputs. No runtime paths arrive from HTTP. */
 export const applicationRegistrations: readonly CatalogRegistration[] = [
@@ -20,12 +25,16 @@ export const applicationRegistrations: readonly CatalogRegistration[] = [
     lockSha256: 'f34c92d4e2f4460ca043aa73fdd11fd6b9b04cee127c5f872cee7829807686f2',
   },
 ];
+const registrations = [...applicationRegistrations, commerceRegistration];
 const selected = (process.env.DDK_VIEWER_APPLICATIONS ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
-if (selected.some((id) => !applicationRegistrations.some((row) => row.id === id)))
-  fail('invalid_registration', 'DDK_VIEWER_APPLICATIONS accepts only spicy-regs and congress.');
+if (selected.some((id) => !registrations.some((row) => row.id === id)))
+  fail(
+    'invalid_registration',
+    'DDK_VIEWER_APPLICATIONS accepts spicy-regs, congress, and commerce-native.',
+  );
 export const store = new CatalogStore(
   [
     ...fixturePins.map((row) => ({
@@ -34,8 +43,25 @@ export const store = new CatalogStore(
       directory: resolve(process.cwd(), 'fixtures', row.id),
       mode: 'fixture' as const,
     })),
-    ...applicationRegistrations.filter((row) => selected.includes(row.id)),
+    ...registrations.filter((row) => selected.includes(row.id)),
   ],
   process.env.DDK_VIEWER_AUDIENCE === 'local' ? 'local' : 'public',
 );
-export const access = new CatalogAccess(store);
+const commerceEvidence: OwnerEvidenceReader = ({ record, deadline, signal }) =>
+  readCommerceEvidence(record, { deadline, signal });
+export const access = new CatalogAccess(
+  store,
+  new Map(
+    selected.includes(commerceRegistration.id)
+      ? [
+          [
+            commerceRegistration.id,
+            {
+              ...createCommerceAdapter(),
+              evidence: commerceEvidence,
+            },
+          ],
+        ]
+      : [],
+  ),
+);

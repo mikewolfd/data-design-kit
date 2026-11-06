@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ImpactPanel from './ImpactPanel';
+import { EvidenceRecord } from './EvidenceRecord';
 import type { CatalogDataset, CatalogSnapshot, CatalogVersion } from '../domain/types';
 import { Badge, FieldTree, Facts, Notice, Raw, RecordLink, Section, Value } from './Primitives';
 import { objectOf, shortId, textValue, versionsOf, words } from '../lib/display';
@@ -174,6 +175,21 @@ export function Evidence({ snapshot, dataset, version }: Context) {
         />
       </Section>
       <Section title="Version-bound quality">
+        {snapshot.capabilities.evidence &&
+          [
+            ...new Map(
+              observed
+                .filter((c) => c.record)
+                .map((c) => [`${c.record!.uri}:${c.record!.sha256}`, c.record!]),
+            ).values(),
+          ].map((record) => (
+            <EvidenceRecord
+              key={`${record.uri}:${record.sha256}`}
+              snapshot={snapshot}
+              record={record}
+              label="Inspect retained quality evidence"
+            />
+          ))}
         {observed.length ? (
           observed.map((c, i) => (
             <div className="evidence-row" key={i}>
@@ -295,7 +311,11 @@ export function Activity({ snapshot, dataset, version }: Context) {
                 value={{ inputs: r.inputs, outputs: r.outputs }}
                 label="Exact consumed inputs and outputs"
               />
-              <RecordLink record={r.record} />
+              <EvidenceRecord
+                snapshot={snapshot}
+                record={r.record}
+                label="Inspect original execution receipt"
+              />
             </article>
           ))
         ) : (

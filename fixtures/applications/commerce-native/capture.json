@@ -1,0 +1,120 @@
+{
+  "scope": "Exact retained local DDK dev4 standard catalog and owner evidence. Original file URIs and version identities are unchanged. No row payloads, runtime state or native binary copied. Quality evidence is bounded-file evidence, not managed candidate acceptance.",
+  "sourceRoot": "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0",
+  "sourceLockSha256": "b36d8196f9eefa332f2580bcfd3684bbf7f94506fab0e2cc2064e4f23ef34c2d",
+  "sourceLockUnchangedDuringCapture": true,
+  "files": [
+    {
+      "path": "catalog.lock.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/catalog.lock.json",
+      "sha256": "b36d8196f9eefa332f2580bcfd3684bbf7f94506fab0e2cc2064e4f23ef34c2d",
+      "bytes": 13026,
+      "scope": "catalog-control"
+    },
+    {
+      "path": "catalog.ddk.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/catalog.ddk.json",
+      "sha256": "c323123b5bfc65c23c2fd2710dcbf6c02fdd5ae1f0f351fc9ba30d31e958ae83",
+      "bytes": 57626,
+      "scope": "catalog-control"
+    },
+    {
+      "path": "catalog.report.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/catalog.report.json",
+      "sha256": "2a60e790fd64d63dcb3624aa627e7deda6fe960e3161bdef1bb22e37d4a347fc",
+      "bytes": 45136,
+      "scope": "catalog-control"
+    },
+    {
+      "path": "discovery.dcat.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/discovery.dcat.json",
+      "sha256": "f823af7d5e71a6c8f2afcbba5f854ce66b4c9401fbdad4fcc6d0c0715928f0d9",
+      "bytes": 6832,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "lineage/0000.openlineage.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/lineage/0000.openlineage.json",
+      "sha256": "f4acfad40a4e8e702d0728504e58d4c70a0d78c91cc3404f011a2f25510abe3f",
+      "bytes": 572,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "lineage/0001.openlineage.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/lineage/0001.openlineage.json",
+      "sha256": "6be4eef76b6dce207491cb00aff594b7d1ddfed2bdec02f08e19ea044faf7328",
+      "bytes": 847,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "queries/c963862f563e4b7b342bb5589001eace8a96f3ed1a8300184249d5fd0742243e.sql",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/queries/c963862f563e4b7b342bb5589001eace8a96f3ed1a8300184249d5fd0742243e.sql",
+      "sha256": "133ded229a138b27600c1f0b0af0db0f930179c0e9ea9c20adac2f42f8c09c7a",
+      "bytes": 382,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "queries/f0a27c490ea8831876315ddaf0d550c0e2d369fe76b17eb56f89bd5106452d65.sql",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/catalog/queries/f0a27c490ea8831876315ddaf0d550c0e2d369fe76b17eb56f89bd5106452d65.sql",
+      "sha256": "ca01fbd8506181c0f7a4766c61712613a32f8882007b2a941247b13703183670",
+      "bytes": 122,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "evidence/execution.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/runtime/job-wchstlnl/receipt.json",
+      "sha256": "1a5155c320c343f34aec230f4258a9f8c977ffad9cc8a833a7390bab91672f99",
+      "bytes": 4210,
+      "scope": "original-execution"
+    },
+    {
+      "path": "evidence/quality.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/native/quality-rpjw4bnl/receipt.json",
+      "sha256": "06b1c688e93d6c5c19abe02f8dff26fa06c9e6ee0b4e4c3f6d47b709151d9bab",
+      "bytes": 7316,
+      "scope": "original-quality"
+    },
+    {
+      "path": "evidence/consumer-read.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/runtime/job-lb4c5xqv/receipt.json",
+      "sha256": "54bd3a055385113aa5c23a5f847ee90e734b6bc1a6e368e5f3db48471b3f26d7",
+      "bytes": 1876,
+      "scope": "original-consumer-read"
+    },
+    {
+      "path": "evidence/consumer-result.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/consumer-result.json",
+      "sha256": "375b730c30e421deaa83c4b48d62a4f7e20f4ec9a843bb628183bd0b446239ef",
+      "bytes": 2942,
+      "scope": "original-consumer-result"
+    },
+    {
+      "path": "evidence/fixture-report.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/run/report.ddk.json",
+      "sha256": "3af4ad8c99c481173b86361cd6c61a594f6692ef50d3cdf4879bf3e2dac3e973",
+      "bytes": 86022,
+      "scope": "original-fixture-report"
+    },
+    {
+      "path": "evidence/reference-workflow.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/reference-workflow.json",
+      "sha256": "d37592f350006d87e98d406af2c84b7dbb39b441adda5ce28c586ed305746841",
+      "bytes": 1412,
+      "scope": "original-reference-workflow"
+    },
+    {
+      "path": "evidence/workflow-verification.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/workflow-verification.json",
+      "sha256": "140f4c4f55234890485f7613f57b249765f348194a60443ec762cab7dd062429",
+      "bytes": 825,
+      "scope": "original-workflow-verification"
+    },
+    {
+      "path": "evidence/metadata.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/metadata.json",
+      "sha256": "ce879f6e0417b335eb988b336cd97bea898a0dc61387547b66c2975f6a0337a5",
+      "bytes": 1627,
+      "scope": "original-metadata"
+    }
+  ]
+}

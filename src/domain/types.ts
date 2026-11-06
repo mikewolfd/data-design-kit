@@ -236,7 +236,15 @@ export type CatalogSnapshot = CatalogSummary & {
   report: CatalogReport;
   lock: CatalogLock;
   identity: { catalogSha256: string; reportSha256: string; lockSha256: string };
-  capabilities: { read: boolean; query: boolean; reason?: string };
+  capabilities: {
+    read: boolean;
+    query: boolean;
+    evidence?: boolean;
+    readDatasetIds?: readonly string[];
+    queryRecipeIds?: readonly string[];
+    description?: string;
+    reason?: string;
+  };
   definitions: Record<string, CatalogField>;
 };
 export type ExactBinding = {
@@ -273,9 +281,11 @@ export type ReadResult = {
   continuation?: 'more' | 'complete' | 'unknown';
   nextCursor?: string;
   rowPositions?: number[];
+  rowOrder?: 'source-row' | 'query-result';
+  attempt?: RecordRef;
   transport: 'ddk-exact-json-v1';
   readEvidence?: { kind: 'fixture' | 'owner'; consumed: ExactBinding; record?: RecordRef };
-  release?: { id: string; membership: string; selected: boolean };
+  release?: { id: string; membership: string; selected?: boolean };
 };
 export type QueryResult = Omit<ReadResult, 'binding'> & {
   bindings: Record<string, ExactBinding>;
@@ -287,4 +297,9 @@ export type QueryResult = Omit<ReadResult, 'binding'> & {
     contextualRelationships: string[];
     record?: RecordRef;
   };
+};
+export type EvidenceResult = {
+  record: RecordRef;
+  document: unknown;
+  scope: string;
 };

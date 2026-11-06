@@ -10,6 +10,7 @@ import type {
 import { request } from '../lib/client';
 import { downloadJson, jsonInput, releaseFor, shortId } from '../lib/display';
 import { Badge, Notice, Raw, Section, Value } from './Primitives';
+import { EvidenceRecord } from './EvidenceRecord';
 import { exactObjectField } from '../domain/exact';
 
 export function ResultTable({
@@ -126,8 +127,12 @@ export function DataPanel({
   const currentRequest = useRef<ReadRequest>(null);
   const rep = reps.find((r) => r.id === representationId);
   const fields = snapshot.definitions[dataset.alias]?.properties ?? [];
+  const readSupported =
+    snapshot.capabilities.read &&
+    (!snapshot.capabilities.readDatasetIds ||
+      snapshot.capabilities.readDatasetIds.includes(dataset.id));
   useEffect(() => {
-    if (!version || !rep || !snapshot.capabilities.read) return;
+    if (!version || !rep || !readSupported) return;
     const abort = new AbortController();
     controller.current = abort;
     const body: ReadRequest = {
@@ -165,6 +170,7 @@ export function DataPanel({
     cursor,
     filter,
     retry,
+    readSupported,
   ]);
   function applyFilter(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -216,12 +222,23 @@ export function DataPanel({
           ) : undefined
         }
       >
-        {!snapshot.capabilities.read ? (
-          <Notice title="No reader is connected">
-            {snapshot.capabilities.reason ||
-              'The owner must provide a bounded reader for the exact native version, view, schema, and field identities.'}
+        {!readSupported ? (
+          <Notice
+            title={
+              snapshot.capabilities.read
+                ? 'Dataset outside the connected reader scope'
+                : 'No reader is connected'
+            }
+          >
+            {snapshot.capabilities.read && snapshot.capabilities.description
+              ? snapshot.capabilities.description
+              : snapshot.capabilities.reason ||
+                'The owner must provide a bounded reader for the exact native version, view, schema, and field identities.'}
           </Notice>
         ) : null}
+        {readSupported && snapshot.capabilities.description && (
+          <p className="muted">{snapshot.capabilities.description}</p>
+        )}
         <div className="data-toolbar">
           <label className="stack-label">
             Representation
@@ -250,63 +267,67 @@ export function DataPanel({
             </span>
           )}
         </div>
-        {snapshot.capabilities.read && rep && (
+        {readSupported && rep && (
           <>
-            <form onSubmit={applyFilter} className="filter-form">
-              <label>
-                Field
-                <select value={filterField} onChange={(e) => setFilterField(e.target.value)}>
-                  <option value="">All records</option>
-                  {fields
-                    .filter((f) => !f.items && !f.properties)
-                    .map((f) => (
-                      <option value={f.name} key={f.name}>
-                        {f.name}
+            {snapshot.mode === 'fixture' ? (
+              <form onSubmit={applyFilter} className="filter-form">
+                <label>
+                  Field
+                  <select value={filterField} onChange={(e) => setFilterField(e.target.value)}>
+                    <option value="">All records</option>
+                    {fields
+                      .filter((f) => !f.items && !f.properties)
+                      .map((f) => (
+                        <option value={f.name} key={f.name}>
+                          {f.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  Value type
+                  <select
+                    value={filterKind}
+                    disabled={!filterField}
+                    onChange={(e) => setFilterKind(e.target.value)}
+                  >
+                    {['string', 'integer', 'number', 'boolean', 'null'].map((t) => (
+                      <option value={t} key={t}>
+                        {t}
                       </option>
                     ))}
-                </select>
-              </label>
-              <label>
-                Value type
-                <select
-                  value={filterKind}
-                  disabled={!filterField}
-                  onChange={(e) => setFilterKind(e.target.value)}
-                >
-                  {['string', 'integer', 'number', 'boolean', 'null'].map((t) => (
-                    <option value={t} key={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Equals
-                <input
-                  value={filterText}
-                  disabled={!filterField || filterKind === 'null'}
-                  onChange={(e) => setFilterText(e.target.value)}
-                  placeholder="Exact value"
-                />
-              </label>
-              <button className="button secondary" type="submit">
-                Apply filter
-              </button>
-              {filter && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilter(undefined);
-                    setFilterField('');
-                    setFilterText('');
-                    setCursor(undefined);
-                    setHistory([]);
-                  }}
-                >
-                  Clear
+                  </select>
+                </label>
+                <label>
+                  Equals
+                  <input
+                    value={filterText}
+                    disabled={!filterField || filterKind === 'null'}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    placeholder="Exact value"
+                  />
+                </label>
+                <button className="button secondary" type="submit">
+                  Apply filter
                 </button>
-              )}
-            </form>
+                {filter && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter(undefined);
+                      setFilterField('');
+                      setFilterText('');
+                      setCursor(undefined);
+                      setHistory([]);
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </form>
+            ) : (
+              <p className="muted">Generic filters are not supported by this owner reader.</p>
+            )}
             <div className="result-bar">
               <span role="status" aria-live="polite">
                 {loading
@@ -323,10 +344,12 @@ export function DataPanel({
                     onClick={() => {
                       controller.current?.abort();
                       setLoading(false);
-                      setError('Read stopped. Your version and filter are preserved.');
+                      setError(
+                        'Stopped waiting for this read. Owner work may still finish; its outcome is unknown here. Your version and filter are preserved.',
+                      );
                     }}
                   >
-                    Stop
+                    Stop waiting
                   </button>
                 ) : null}
                 {result?.status === 'ok' && (
@@ -394,7 +417,13 @@ export function DataPanel({
               </Notice>
             )}
             <div className="pagination">
-              <span>10 records per page · original order</span>
+              <span>
+                {result?.rowOrder === 'query-result'
+                  ? `${result.continuation === 'complete' ? 'Complete read' : 'Bounded page'} · native query result order`
+                  : snapshot.mode === 'fixture'
+                    ? '10 records per page · original order'
+                    : '10 records per page · owner-reported positions'}
+              </span>
               <div>
                 <button
                   disabled={!history.length || loading}
@@ -426,8 +455,24 @@ export function DataPanel({
         )}
       </Section>
       <Section title="Exact read context">
+        {result?.attempt && (
+          <EvidenceRecord
+            snapshot={snapshot}
+            record={result.attempt}
+            label="Inspect viewer read request"
+          />
+        )}
         {result?.readEvidence && (
-          <Raw value={result.readEvidence} label="Read evidence and consumed version" />
+          <>
+            <Raw value={result.readEvidence} label="Read evidence and consumed version" />
+            {result.readEvidence.kind === 'owner' && (
+              <EvidenceRecord
+                snapshot={snapshot}
+                record={result.readEvidence.record}
+                label="Inspect native read receipt"
+              />
+            )}
+          </>
         )}
         <Raw
           value={{ catalogSha256: snapshot.identity.catalogSha256, version, representation: rep }}

@@ -14,13 +14,19 @@ Public mode refuses internal catalogs. It does not try to reconstruct disclosure
 
 An owner can provide `hasMore` without a total. The viewer issues the next bound cursor without demanding a count scan. If both total and continuation evidence are absent, it displays continuation as unknown instead of asserting the dataset ended.
 
-Return exact typed values using the transport helpers. A read result must identify the exact consumed binding and owner evidence record, retain physical row positions, obey the requested limit and byte budget, and make progress on every non-final page. Query results must retain exact bindings and a receipt naming the recipe and consumed SQL digest. The viewer validates these at the transport boundary; it cannot establish that an untrusted adapter physically read the claimed inputs.
+Return exact typed values using the transport helpers. A read result must identify the exact consumed binding and owner evidence record, state its row-position meaning with `rowOrder`, obey the requested limit and byte budget, and make progress on every non-final page. Query results must retain exact bindings and a receipt naming the recipe and consumed SQL digest. The viewer validates these at the transport boundary; it cannot establish that an untrusted adapter physically read the claimed inputs.
 
 A new adapter must qualify its native mappings with independent expected values, including unsafe integers, decimal scale, timestamp units/timezones, binary widths, nullability, nested/list occurrence context, schema/field IDs, exact version mismatch, last-page failure and cancellation. Metadata-only admission does not meet that requirement. Generic filtering is explicitly refused for owner adapters until supported; the synthetic reader implements the tested scalar/list equality subset.
 
 Owner adapters receive an AbortSignal and an absolute deadline. A timeout returns unknown and requests cancellation. Two outstanding owner slots bound uncooperative asynchronous adapters; a timed-out slot stays occupied until its work settles. The viewer cannot prove that external/native work stopped. Generic owner totals and physical offsets support nonnegative safe integers; the 10,000-row materialization cap applies only to the fixture reader.
 
 Owner operations remain read-only here. A later operator action must call the actual owner under its original operation identity and retain uncertain outcomes. It must not create a second journal, select a release, infer a completed operation after a timeout, or retry a side effect under a new identity.
+
+Adapters may restrict `supportedDatasetIds` and `supportedRecipeIds`. The same registration controls the visible controls and server dispatch, so unsupported datasets and recipes refuse before native work. An optional evidence reader accepts an exact registered record URI and SHA-256; the client cannot supply an arbitrary filesystem path. Evidence reads share the catalog identity checks, byte limits and deadline budget.
+
+An owner may call `onAttempt` with an immutable submitted-request reference before execution. Unknown results retain it separately from evidence of consumed inputs. A submitted attempt does not prove execution. Browser “Stop waiting” controls abort the response wait; they do not prove that owner work stopped.
+
+The optional local `commerce-native` integration connects the retained example through the qualified DDK/DocSpec interfaces. See [its scope and evidence](owner-commerce.md).
 
 ## Endpoints
 
@@ -31,6 +37,7 @@ Owner operations remain read-only here. A later operator action must call the ac
 | `POST /api/read` | Bounded page for exact catalog/dataset/version/representation and optional release/filter/cursor |
 | `POST /api/query` | Explicit recipe, exact execution inputs, parameter values and optional complete release |
 | `GET /api/companion` | Requested admitted companion bytes, verified against exact inventory; no arbitrary path traversal |
+| `POST /api/evidence` | Exact registered owner record, verified against its retained digest |
 | `GET /api/impact` | Registered owner analysis bound to exact base/candidate/report; explicit unavailable otherwise |
 
 POST input/output types are exported from `src/domain/types.ts`. Numeric parameter values use exact numeric tags or the declared string type. The recipe form supports either one complete release or explicit exact versions, and asks for a representation when more than one is available. Unsupported required external/declared relationship resolution remains unknown before owner execution. `parameterOrder` determines presentation order; never infer positional order from `required`. `contextualRelationships` remain explanatory and never add unread endpoints to `bindings`.
