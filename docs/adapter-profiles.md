@@ -1,6 +1,6 @@
 # Adapter Profiles
 
-**Draft, November 4, 2026.** This document elaborates [Section 15 of the specification](specification.md#integrations). Numbered DDK requirements in that specification are normative. The integration designs and examples here are proposed; no adapter has been implemented or qualified.
+**Draft, November 4, 2026.** This document elaborates [Section 15 of the specification](specification.md#integrations). Numbered DDK requirements in that specification are normative. Local integrations are implemented and undergoing conformance qualification; [implementation status](implementation-status.md) separates tested behavior from remaining claims.
 
 ## 1. Adapter boundary
 
@@ -36,7 +36,7 @@ Open PRs 1725 and 1726 propose extra-field and order checks. They are candidates
 
 **Failure cases:** unresolved definition, schema mismatch, unsupported quality engine, unavailable local file, native process failure, differing native/DDK schema revisions.
 
-File-backed quality support and native-candidate quality support are separate claims. The initial path tests identified local Parquet or DuckDB output. A native path must prove that the selected CLI backend reads the exact protected DocSpec candidate without resolving latest or requiring an unnecessary export. No such bridge has been demonstrated in this delivery. Preserve evaluator versions, mapping semantics, complete requested checks, and unsupported outcomes. A CLI report is evaluation evidence; DocSpec must accept it before it can gate managed selection.
+File-backed quality support and native-candidate quality support are separate claims. The initial path tests identified local Parquet or DuckDB output. A native path must prove that the selected CLI backend reads the exact protected DocSpec candidate without resolving latest or requiring an unnecessary export. The local bridge streams the protected version through Arrow IPC into a bounded DuckDB view and records native field identities. Its tested tuple appears in the implementation status. Preserve evaluator versions, mapping semantics, complete requested checks, and unsupported outcomes. A CLI report is evaluation evidence; DocSpec must accept it before it can gate managed selection.
 
 ## 3. Frictionless
 
@@ -97,9 +97,9 @@ No saved Substrait intermediate is required for this path. Bounded jobs do not i
 
 ### Substrait sequence
 
-After SQL integration, qualify a DocSpec producer/consumer tuple. Save binary plan bytes and extension identities, consume those bytes through the same admitted context, and apply normalized-plan function/input restrictions and budgets. Return separate compile, consumer, standard-validation, output, and fixture results. The present DocSpec source has no Substrait job variant or dependency.
+Run the bounded WP-00B producer/consumer experiment alongside early core and catalog work. After SQL integration, WP-09B uses that evidence to qualify the integrated DocSpec path on its final dependency tuple. Save binary plan bytes and extension identities, consume those bytes through the same admitted context, and apply normalized-plan function/input restrictions and budgets. Return separate compile, consumer, standard-validation, output, and fixture results. The isolated DocSpec implementation uses matching DataFusion and datafusion-substrait 53.1.0 libraries. It preserves standalone validity as unknown.
 
-DocSpec's inspected local revision pins Rust DataFusion 53.1.0. It is team-owned and unreleased; that pin and its API can change after testing. The earlier Python repository head `878e5d3b8d373bca19671af43e49dfb1890f8da2` names `datafusion-substrait 55.2.0` and Rust crate `substrait 0.63.0`. It remains a separate research candidate, not a mandatory second engine in DDK. Those package numbers do not establish the encoded Substrait standard version. WP-00 and WP-09B must inspect emitted plans and upstream definitions.
+DocSpec's inspected local revision pins Rust DataFusion 53.1.0. It is team-owned and unreleased; that pin and its API can change after testing. The earlier Python repository head `878e5d3b8d373bca19671af43e49dfb1890f8da2` names `datafusion-substrait 55.2.0` and Rust crate `substrait 0.63.0`. It remains a separate research candidate, not a mandatory second engine in DDK. Those package numbers do not establish the encoded Substrait standard version. WP-00B and WP-09B must inspect emitted plans and upstream definitions.
 
 An open DataFusion FFI PR about a process-local foreign-plan workaround concerns a different physical serialization boundary. It must not be presented as general portable Substrait support. The initial DDK profile excludes opaque process-local handles and custom physical execution-plan payloads.
 
@@ -149,8 +149,8 @@ The [example adapter manifest](../examples/adapter-manifest.ddk.json) deliberate
 
 The `catalog` profile reads ODPS 1.1.0 product documents and resolves participating ports to the project's ODCS definitions. Load native publication manifests, version records, and run or check receipts through an explicitly selected metadata adapter. Emit the resolved catalog and preserve source inventory, exact reference schemes, scope, and disclosure policy. Profile discovery stays separate from adapter invocation.
 
-The `catalog.dcat` profile writes DCAT 3 JSON-LD. Preserve a dataset's stable identity and exact version relationships. Emit an available distribution or service only for an observed supported representation. Derive a current-version link from the named publication selection. Validate the resulting graph independently.
+The `catalog.dcat` profile writes DCAT 3 JSON-LD. Preserve a dataset's stable identity and exact version relationships. Emit an available distribution or service only for an observed supported representation. Derive a current-version link only from an unambiguous publisher selection for the requested authority and purpose. Validate the resulting graph independently.
 
-The `lineage.openlineage` profile writes validated job and run events. Use the same job and dataset identities for definitions and runs. Map observed native run IDs to stable OpenLineage IDs and link those IDs back to native evidence in the catalog. Use the dataset version facet to identify exact versions. Preserve unobserved outcomes and scoped qualification in DDK's records.
+The `lineage.openlineage` profile writes validated job and run events. Preserve existing OpenLineage identities and use the pinned mapping consistently in definitions and run events. Link event run IDs and dataset version facets back to exact native evidence. Preserve input coverage, unobserved outcomes, and scoped qualification in DDK records.
 
 Initial exports use local files. Record the event schema and facet versions, DCAT mapping version, ODPS schema revision, and every native adapter's supported input scheme. The [catalog profile requirements](specification.md#catalog) and [example](../examples/commerce/catalog/README.md) define the connection points.

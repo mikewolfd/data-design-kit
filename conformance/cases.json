@@ -1926,7 +1926,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "Refresh from unchanged metadata. Reuse evidence at its original assurance level, verify zero data-payload reads and byte-identical catalog outputs.",
+      "scenario": "Refresh from unchanged metadata in a fresh process. Reuse evidence at its original assurance level. Verify zero data-payload opens, copies or repeated checks and byte-identical outputs.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
@@ -2032,7 +2032,7 @@
       ],
       "profile": "lineage.openlineage",
       "runtimeStatus": "planned",
-      "scenario": "Validate the job and observed run events and supported version facets against pinned schemas. Match the run ID to its native reference and all observed inputs and outputs to exact versions.",
+      "scenario": "Validate the job and observed run events and supported version facets against pinned schemas. Import the native and DDK events into one receiver, replay both, and verify that the same job, run, and physical datasets keep their original identities. Resolve the recorded input and output versions to exact native references.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
@@ -2087,6 +2087,114 @@
       }
     },
     {
+      "id": "CASE-CATALOG-023",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Build a catalog from definitions alone with no metadata adapter. Expose meanings, declared relationships and query examples. Keep availability and observed lineage unresolved and create no inferred current selection.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-024",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Build from a recipe whose authoring path is relative to the declaring document. Move the complete output set to an unrelated directory and remove access to the original project. Resolve the generated recipe locally and check that its SQL bytes match the original digest. Its checked use binds the requested exact input versions.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-025",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-008"
+      ],
+      "profile": "catalog.dcat",
+      "runtimeStatus": "planned",
+      "scenario": "Load distinct public and preview selections for the same dataset plus a disjoint public selection for another dataset. Select the public authority and purpose and verify the two intended current versions. With no selector, emit no current links.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-026",
+      "requirements": [
+        "DDK-CATALOG-008"
+      ],
+      "profile": "catalog.dcat",
+      "runtimeStatus": "planned",
+      "scenario": "Select an authority and purpose for which two distinct current release records overlap on the same dataset. Reverse file order and vary observation times. Report ambiguity in either order and preserve the prior completed output set.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-SELECTION-AMBIGUOUS"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-027",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-009"
+      ],
+      "profile": "lineage.openlineage",
+      "runtimeStatus": "planned",
+      "scenario": "Read a terminal run with a partial input list and one separately retained source with no consumption evidence. Emit only the observed consumed version and keep the scope and partial coverage in DDK. Do not turn the unproven source into a run input.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-028",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Check a composite comparison with a small scalar fixture and independently expected matches and non-matches. Include a different calendar date, a padded textual key, unequal binary bytes, and each supported null policy. Verify the shared rule preserves types and exact values.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-029",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Load a valid versioned project rule and request a required check of its comparison. The evaluator is unavailable. Retain the relationship declaration and report the check as unknown.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-MATCH-UNSUPPORTED"
+      }
+    },
+    {
       "id": "CASE-TEST-004",
       "requirements": [
         "DDK-TEST-004",
@@ -2094,12 +2202,28 @@
       ],
       "profile": "product-release",
       "runtimeStatus": "planned",
-      "scenario": "Run both pilot workflows. Validate ODPS and DCAT access, observed and design OpenLineage, exact source and release links, and checked queries. Execute SQL and saved Substrait against independent expectations. Verify wrong-version, incomplete-key, and missing-evidence diagnostics, reused metadata, and consolidated maintained definitions.",
+      "scenario": "Execute the local commerce workflow on independently authored inputs and expected rows. Check the design and one definition change; execute SQL and replay saved Substrait bytes through DocSpec; attach supported ODCS checks and OpenLineage to the exact saved-plan output. Resolve ODPS and DCAT and use the generated catalog to bind a checked query to that output. Include separate nested/scoped-identity cases; reject wrong versions, incomplete keys and missing evidence. Verify unchanged metadata refresh with no data-payload reads. Claimed intake uses the exact staged files; managed quality gates have their separate typed-operation acceptance.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
         "exitCode": 0,
         "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-TEST-005",
+      "requirements": [
+        "DDK-TEST-004",
+        "DDK-VERSION-003"
+      ],
+      "profile": "product-release",
+      "runtimeStatus": "planned",
+      "scenario": "Catalog generation and saved Substrait fixtures pass separately, but no reader binds a checked query through the generated catalog to the exact checked output of the same saved plan. The connected local demonstration remains incomplete.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "TEST-WORKFLOW-INCOMPLETE"
       }
     }
   ]

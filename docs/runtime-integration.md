@@ -1,6 +1,6 @@
 # Runtime Integration Design
 
-**Status: proposed architecture, November 4, 2026. No DDK adapter or new DocSpec capability is implemented.** Normative requirements remain in the [specification](specification.md#integrations).
+**Status: implemented local profiles under conformance qualification, November 5, 2026.** Normative requirements remain in the [specification](specification.md#integrations).
 
 ## Responsibility and ownership
 
@@ -8,7 +8,7 @@ DDK receives designs, dataset descriptions, parameters, and explicit bindings. I
 
 DocSpec owns calculation execution, native read views, protection of retained work, managed-operation recovery, and guarded dataset selection. DDK retains receipts and references. It does not maintain another lifecycle or mutable latest pointer.
 
-DocSpec is team-owned and unreleased. Its public API can change to make this boundary simple. Preserve required behavior and retained identities; do not build compatibility shims for an unreleased interface merely because it exists today. This plan makes no change to DocSpec itself.
+DocSpec is team-owned and unreleased. Its public API can change to make this boundary simple. Preserve required behavior and retained identities; do not build compatibility shims for an unreleased interface merely because it exists today. The isolated DocSpec implementation supplies the required preparation, saved-plan, protected-read, and managed-qualification paths.
 
 ## Domain, application, and adapters
 
@@ -66,11 +66,11 @@ Protect inputs and candidates through DocSpec's existing native protection owner
 
 This path does not select a managed dataset release. Returned partial output identities are useful evidence but do not establish process-loss recovery. A timeout records what is known; it does not create a new operation or declare that nothing ran.
 
-Current ordinary DocSpec inputs include Parquet, explicitly schematized JSON Lines, and native table references. They do not establish direct CSV support. The first fixture runner can encode its explicitly authored rows as bounded temporary JSON Lines with a recorded schema and input mapping. The commerce CSV files describe file intake and documentation consistency; executing those bindings requires a qualified CSV conversion/read path or an explicit unsupported result. No silent format substitution is permitted.
+Current ordinary DocSpec inputs include Parquet, explicitly schematized JSON Lines, and native table references. They do not establish direct CSV support. The fixture runner materializes authored rows as explicitly typed temporary Parquet. The bound commerce workflow validates CSV with Frictionless and stages it with dlt, then passes the exact completed Parquet inventory to DocSpec. Receipts preserve this conversion and mark the declared reader output as injected data.
 
 ## Managed quality-gated path
 
-This is a bounded DocSpec extension for one selected operation/backend family, not an existing guarantee of arbitrary SQL jobs.
+The implemented local profile covers the independent, unbased typed Build operation. Its native gate is separate from ordinary SQL jobs.
 
 1. Record the stable operation ID and native request identity before submission. Capture required rules and applicable policy preconditions.
 2. DocSpec admits and prepares a retained candidate through its native lifecycle.
@@ -96,7 +96,7 @@ The runtime accepts qualification; a caller cannot establish acceptance by writi
 
 Current local DocSpec source pins DataFusion 53.1.0 and has no Substrait job variant or dependency. The earlier DataFusion Python GitHub snapshot is research evidence for a separate candidate, not the execution dependency selected for this design.
 
-Choose one tested Rust DataFusion baseline in DocSpec; update it if the compatibility experiment justifies that choice. Add saved-plan production/consumption through DocSpec's existing context. Apply normalized-plan function and input checks after decoding, and preserve admitted memory/spill/concurrency limits. Parsing a different format must not bypass execution restrictions.
+Run the bounded WP-00B compatibility experiment alongside early core and catalog development to choose a tested Rust DataFusion baseline in DocSpec. WP-09B integrates saved-plan production/consumption through DocSpec's existing context after SQL integration and verifies the final dependency tuple. Reuse applicable experiment evidence and update the baseline when tests justify the change. Apply normalized-plan function and input checks after decoding, and preserve admitted memory/spill/concurrency limits. Parsing a different format must not bypass execution restrictions.
 
 The first product release requires saved-plan consumption and fixture correctness on the qualified DocSpec path. Keep compiler success, consumer support, standalone standard validity, output inference, and fixture correctness independent. A second engine must consume the same bytes and match independently authored expectations before portability is claimed.
 

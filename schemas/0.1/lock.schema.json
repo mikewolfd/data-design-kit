@@ -125,6 +125,9 @@
         },
         "metadataAdapter": {
           "$ref": "common.schema.json#/$defs/toolIdentity"
+        },
+        "currentSelection": {
+          "$ref": "catalog.schema.json#/$defs/selectionSelector"
         }
       },
       "required": [

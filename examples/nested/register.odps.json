@@ -1,0 +1,12 @@
+{
+  "apiVersion": "v1.1.0",
+  "kind": "DataProduct",
+  "id": "urn:example:register:product",
+  "version": "1.0.0",
+  "name": "Dated record register",
+  "status": "draft",
+  "team": {"name": "Example register maintainers", "members": [{"username": "example-owner", "role": "owner"}]},
+  "outputPorts": [
+    {"name": "dated-records", "contractId": "urn:example:register:contract", "version": "1.0.0"}
+  ]
+}

@@ -320,10 +320,12 @@
                 "$ref": "common.schema.json#/$defs/identifier"
               },
               "baseVersion": {
-                "$ref": "common.schema.json#/$defs/version"
+                "type": "string",
+                "minLength": 1
               },
               "candidateVersion": {
-                "$ref": "common.schema.json#/$defs/version"
+                "type": "string",
+                "minLength": 1
               },
               "kinds": {
                 "type": "array",

@@ -1,0 +1,20 @@
+{
+  "representation": "Binary record IDs use hexadecimal and dates use ISO Gregorian calendar days in this fixture.",
+  "rows": [
+    {
+      "record.id": "41",
+      "issued_on": "2026-02-01",
+      "citations": [
+        {"record.id": "41", "issued_on": "2026-02-02"},
+        {"record.id": "4120", "issued_on": "2026-02-01"}
+      ],
+      "next_position": 1
+    },
+    {"record.id": "41", "issued_on": "2026-02-02", "citations": [], "next_position": null},
+    {"record.id": "4120", "issued_on": "2026-02-01", "citations": [], "next_position": null}
+  ],
+  "expectedCitationTargets": [
+    {"sourcePosition": 0, "citationPosition": 0, "targetPosition": 1},
+    {"sourcePosition": 0, "citationPosition": 1, "targetPosition": 2}
+  ]
+}

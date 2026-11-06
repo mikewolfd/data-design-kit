@@ -11,7 +11,7 @@
   "sourceInventory": [
     {
       "uri": "https://data.example.org/commerce/evidence/example-metadata.json",
-      "sha256": "8c7dbed2464ec945fda2f96dbbe7bfa66cc8f9608cd6c8081c1735093a78a2c4",
+      "sha256": "b3577a1afd954eeb80f17559e62ef37da7a55c1e1bd61159c947ad7a9c895b11",
       "role": "metadata"
     },
     {
@@ -36,12 +36,12 @@
     },
     {
       "uri": "urn:example:commerce:definition:project",
-      "sha256": "2d86496517a4209136485bb6b026f436b4711b4ebb16a8cc2abe517d3c2de10a",
+      "sha256": "aead2f6e05861f4b5a11ea2e7aaaa7d58c1001c973d1ba225cf08fa9204e637b",
       "role": "project"
     },
     {
       "uri": "urn:example:commerce:definition:revenue-sql",
-      "sha256": "5e22039e7aca42c999dbd13a4cda7cc838265ace8ffbe7cd863acd06ca9abec8",
+      "sha256": "133ded229a138b27600c1f0b0af0db0f930179c0e9ea9c20adac2f42f8c09c7a",
       "role": "recipe"
     },
     {
@@ -258,7 +258,7 @@
   "recipes": [
     {
       "id": "urn:example:commerce:recipe:daily-revenue",
-      "sql": "transforms/revenue.sql",
+      "sql": "queries/revenue.sql",
       "dialect": "datafusion",
       "inputs": {
         "orders": "orders",
@@ -418,7 +418,11 @@
         "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
       },
       "production": "summarize",
-      "openLineageRunId": "1cd0c8e5-a233-5182-9f12-2898d5f0788f"
+      "openLineageRunId": "1cd0c8e5-a233-5182-9f12-2898d5f0788f",
+      "inputCoverage": {
+        "status": "complete",
+        "scope": "The authored commerce fixture run."
+      }
     }
   ],
   "checks": [
@@ -454,6 +458,11 @@
       "role": "openlineage"
     },
     {
+      "path": "queries/revenue.sql",
+      "sha256": "133ded229a138b27600c1f0b0af0db0f930179c0e9ea9c20adac2f42f8c09c7a",
+      "role": "recipe"
+    },
+    {
       "path": "start.openlineage.json",
       "sha256": "1fc9c721f7621ca88fdacc4ee2267dfc716e3b5595ad612e107d1eac83d9053b",
       "role": "openlineage"
@@ -478,5 +487,9 @@
         "daily-revenue"
       ]
     }
-  ]
+  ],
+  "currentSelection": {
+    "authority": "https://data.example.org/commerce",
+    "purpose": "public-revenue"
+  }
 }

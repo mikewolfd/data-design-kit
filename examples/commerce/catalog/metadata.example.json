@@ -142,7 +142,11 @@
       "record": {
         "uri": "https://data.example.org/commerce/evidence/example-metadata.json"
       },
-      "production": "summarize"
+      "production": "summarize",
+      "inputCoverage": {
+        "status": "complete",
+        "scope": "The authored commerce fixture run."
+      }
     }
   ],
   "checks": [

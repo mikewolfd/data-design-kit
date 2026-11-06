@@ -1,0 +1,33 @@
+{
+  "apiVersion": "v3.2.0",
+  "kind": "DataContract",
+  "id": "urn:example:register:contract",
+  "version": "1.0.0",
+  "name": "Dated record register",
+  "status": "draft",
+  "schema": [
+    {
+      "id": "records",
+      "name": "records",
+      "logicalType": "object",
+      "dataGranularityDescription": "One record per publisher number and Gregorian issue date.",
+      "properties": [
+        {"name": "record.id", "logicalType": "string", "physicalType": "binary", "required": true},
+        {"name": "issued_on", "logicalType": "date", "required": true},
+        {"name": "next_position", "logicalType": "integer"},
+        {
+          "name": "citations",
+          "logicalType": "array",
+          "description": "Citations in the publisher's recorded order.",
+          "items": {
+            "logicalType": "object",
+            "properties": [
+              {"name": "record.id", "logicalType": "string", "physicalType": "binary"},
+              {"name": "issued_on", "logicalType": "date"}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

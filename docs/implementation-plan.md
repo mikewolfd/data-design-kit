@@ -1,6 +1,6 @@
 # Data Design Kit — Implementation Plan
 
-**Plan date: November 5, 2026. Status: proposed implementation; no runtime work package is complete.**
+**Plan date: November 5, 2026. Status: implementation in progress; no product release is qualified.**
 
 ## 1. Delivery decision
 
@@ -8,21 +8,20 @@ Build an independently authored Python checker and catalog generator. Use one se
 
 The first DDK product release includes ODPS product definitions, ODCS dataset definitions, DCAT 3 discovery, OpenLineage job and run records, and saved Substrait execution through DocSpec. It also qualifies SQL execution, independently specified fixtures, and supported ODCS checks. The offline checker remains independently installable and usable. Data Contract CLI, Frictionless, dlt, pytest, and the DocSpec profiles retain distinct capability boundaries.
 
-The first useful workflow resolves one product into a catalog with an exact version and checked query. Release acceptance extends it to both pilots in WP-15. This plan implements the [engineering specification](specification.md). The [work-package registry](../implementation/work-packages.json) and [conformance cases](../conformance/cases.json) track the normative requirements.
+The first connected workflow uses independently authored local commerce inputs, real staging and execution receipts, exact-output quality checks, and a generated catalog that binds a checked query. A companion nested-data fixture checks scoped relationships. A separate typed managed operation qualifies native quality acceptance and recovery. Project pilots are outside the build scope. This plan implements the [engineering specification](specification.md). The [work-package registry](../implementation/work-packages.json) and [conformance cases](../conformance/cases.json) track the normative requirements.
+
+The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve future adoption work separately.
 
 ## 2. Current deliverables and remaining work
 
-| Present in this repository | Still to implement |
-| --- | --- |
-| Draft normative specification and adapter boundaries | DDK parsing, checking, and reporting runtime |
-| JSON Schemas for proposed document shapes and a catalog example | Catalog assembly, symbolic containment, and declared dataset compatibility |
-| Independently authored commerce declarations and fixtures | Impact analysis and lock enforcement |
-| Requirement-to-work-package and case traceability | Native-tool adapters and saved-plan execution |
-| Pinned ODCS, ODPS, and OpenLineage schemas and source provenance | Runtime conformance, package installation, performance measurements |
-| GitHub default-branch and selected pull-request research | Actual builds/tests of candidate upstream commit combinations |
-| Delivery verification record; verification tools retained outside the repository | A published package, hosted repository, or production deployment |
+| Track | Implemented | Remaining qualification |
+| --- | --- | --- |
+| Offline core and impact | Strict document and definition loading, interface and dataset checks, graphs, policies, locks, and catalog-aware impact | Complete the named conformance cases and measure the documented resource targets |
+| Catalog and interchange | Open Data Product Standard (ODPS) port resolution, local owner receipts, scoped identities, atomic refresh, Data Catalog Vocabulary (DCAT) discovery, OpenLineage, and exact-version query binding | Qualify the release tuple and retain the catalog and reader evidence from the connected workflow |
+| Native execution and quality | Bounded DocSpec SQL and saved Substrait execution, Data Contract CLI checks, Frictionless CSV validation, dlt Parquet staging, and one typed local managed Build workflow | Qualify the supported combinations and their failure and uncertainty cases. Additional engines and standalone plan validation remain separate |
+| Release | Local source and installed-package verification under way | Publish the exact dependency tuple, case coverage, and unresolved limits after qualification |
 
-Document and schema checks verify these deliverables only. They do not mark any future runtime conformance case as passed.
+The [implementation status](implementation-status.md) describes the supported boundaries. The [verification record](verification.md) separates document checks from executed behavior.
 
 ## 3. Implementation architecture
 
@@ -68,74 +67,86 @@ Each check consumes validated prerequisites and returns a typed result. A failed
 
 ```mermaid
 flowchart LR
-    W0[WP-00 Baseline and Substrait experiment] --> W1[WP-01 Documents]
-    W1 --> W2[WP-02 Application and CLI]
+    W0[WP-00 Source baseline] --> W1[WP-01 Documents and definitions]
+    W0 --> W0B[WP-00B Saved-plan feasibility]
+    W1 --> W2[WP-02 Results and source inventory]
     W2 --> W3[WP-03 Interfaces]
     W3 --> W4[WP-04 Datasets and graphs]
     W4 --> W5[WP-05 Policies]
-    W2 --> W13[WP-13 Catalog and ODPS]
+    W2 --> W13[WP-13 Local catalog and ODPS]
     W5 --> W6[WP-06 Locks and impact]
     W13 --> W6
     W13 --> W14[WP-14 DCAT and OpenLineage]
-    W6 --> W7[WP-07 Quality tools]
-    W6 --> W8[WP-08 File intake and ingestion]
-    W6 --> W9A[WP-09A DocSpec SQL]
+    W2 --> W7[WP-07 Quality tools]
+    W2 --> W8[WP-08 File intake and ingestion]
+    W2 --> W9A[WP-09A DocSpec SQL]
     W9A --> W9B[WP-09B Saved Substrait]
+    W0B --> W9B
     W7 --> W10[WP-10 SQL and Substrait fixtures]
     W9B --> W10
-    W10 --> W12[WP-12 Managed qualification]
-    W10 --> W15[WP-15 Two project pilots]
-    W14 --> W15
-    W15 --> W11[WP-11 First product release]
+    W7 --> W12[WP-12 Managed qualification]
+    W9A --> W12
+    W6 --> W11[WP-11 Local workflow and release qualification]
+    W10 --> W11
+    W14 --> W11
 ```
+
+The diagram shows required dependencies, with redundant transitive edges omitted. Document loading and saved-plan feasibility start independently after WP-00. The shared foundation supplies exact source inventories, resolved definitions, and result records before adapter integration. Execution, quality, ingestion, and catalog work proceed alongside compatibility and impact analysis. Integrated requests still enforce all applicable prerequisites.
 
 | Milestone | Useful outcome | Exit evidence |
 | --- | --- | --- |
-| M0 | Pin standards and test saved-plan compatibility | Exact source and dependency identities, supported operations, separate validation and execution results |
-| M1 | Resolve product definitions and generate a usable local catalog | ODPS ports resolve to ODCS objects, known exact versions and relationships appear with source references |
-| M2 | Generate standard discovery and lineage | Independent DCAT reader resolves access, OpenLineage separates definitions and observations |
-| M3 | Check changes and execute bounded fixtures | Correct impact paths, SQL and saved Substrait produce independently expected results, ODCS checks bind to exact output |
-| M4 | Demonstrate both pilot products | Correct queries, source trace, native selections, metadata reuse, and consolidated authoring |
-| Release | Qualify the complete first product | Required profiles pass with retained evidence, reproducible installs, pinned dependencies, and explicit limits |
+| M0 | Pin the source baseline and start the runtime probes | Exact source/dependency identities and bounded saved-plan and native-quality experiments |
+| M1 | Establish shared records and usable independent tracks | Strict loader, resolved definitions, check reducer, exact input inventory, and explicit service interfaces |
+| M2 | Connect the local commerce workflow | Staged file list feeds SQL and saved Substrait; both match independent rows; output checks and catalog query bind the same exact result |
+| M3 | Complete correctness and standards coverage | Impact, scoped/nested relationships, independent DCAT reading, OpenLineage identity, failure and uncertainty cases |
+| Release | Qualify the first product profile set | DDK-VERSION-003 profiles, the local demonstration, clean installation, and retained evidence |
+| Complete stack | Qualify intake, ingestion, and one managed operation as well | WP-08 and WP-12 evidence including exact-native quality access, guarded selection, rule-only reuse, and lost-response recovery |
 
-WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and WP-12 qualify the separate intake and managed-selection profiles. The standalone validator and each additional runtime receive separate capability claims. Local development builds can exercise subsets while the release work is in progress.
+WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this build strategy also requires WP-08 and WP-12; their capability claims remain separately evidenced. Standalone Substrait validity and additional-engine portability require their own tested combinations. No project pilot is a build or release prerequisite.
 
 ## 5. Work packages
 
-### WP-00 — Public-source baseline and compatibility experiment
+### WP-00 — Public-source baseline
 
-**Dependencies:** none. **Primary owner:** implementation lead with DDK and DocSpec maintainers. **Output:** pinned source evidence and bounded compatibility decisions. Baseline inventory unblocks core; optional experiments continue independently.
+**Dependencies:** none. **Primary owner:** DDK integration. **Output:** pinned source and schema evidence for offline development.
 
-1. Review `PROVENANCE.md`; establish a new source tree and independent fixtures. Keep restricted predecessor material out of the repository and test corpus.
-2. Confirm licenses from the exact public commits or distributions selected, including required notices and transitive dependencies.
-3. Review both published versions and GitHub development. Use `github-snapshot.json` and `github-evidence.json` as dated leads, not proof of runtime behavior. Inspect the owned DocSpec revision in `docspec-evidence.json`; identify SQL preparation gaps, exact native reads, partial-failure behavior, operation/backend limits, and retained computation/validation mechanisms. Test whether the selected CLI backend can read an exact unselected candidate without an unnecessary export.
-4. For the standalone validator profile, build the Substrait validator from commit `157c13913ac2e95786d86e75558d4967eabff662` in an isolated environment, and compare it with the released validator. Its development manifests use 0.88.1 packaging; open PRs 562 and 554 propose 0.106.0. Treat those PRs as separate experimental candidates, never silently as supported main.
-5. Choose a tested Rust DataFusion baseline inside DocSpec, using the inspected 53.1.0 pin as a starting point. It may change. Treat the earlier Python snapshot as a separate research candidate, not a second mandatory DDK runtime. Inspect encoded plan headers and extensions; crate versions are not specification versions.
-6. Produce and consume a minimal read/filter/aggregate plan. Try the standalone validator on the same saved bytes. Record unsupported relations, function identifiers, packaging/build failures, and validator unknowns.
-7. Evaluate DuckDB's GitHub extension and dialect declaration as the second-engine candidate. Compare its actual supported extension set with the producer's plan.
-8. Run targeted native-tool regressions from the GitHub findings: definition constraint inheritance, ODCS combined operators, Frictionless composite keys/error inventory, and dlt nested Parquet as a future-profile probe.
+1. Review [provenance](../PROVENANCE.md), keep independent fixtures, and confirm licenses and required notices for the exact baseline artifacts.
+2. Record the published and development revisions in use. Use [GitHub research](github-evidence.json) as a dated lead. Qualify behavior in the work package that uses it.
+3. Pin ODCS, ODPS, and OpenLineage schemas. Check the draft examples and parse the DCAT graph with an independent reader.
 
-**Acceptance:** an evidence matrix identifies exact commits, built distributions, hashes, operation coverage, and observed statuses. Pin the ODPS and OpenLineage schemas and validate a DCAT 3 graph with an independent reader. A compatible standard validator is either demonstrated or explicitly unavailable. Use the compatibility experiment to narrow the first release plan profile to a supported operation set. Offline checker work can proceed in parallel.
+**Acceptance.** The source inventory identifies exact revisions, digests, and licenses. WP-01 and WP-00B can begin independently. WP-01 owns local-definition resolution and inheritance regressions. WP-07 and WP-08 own their native-tool regressions. WP-09A owns the integrated DocSpec SQL path; WP-09B owns saved-plan integration and qualification.
 
-**Decision gate:** record unsupported combinations and test a narrower supported plan when needed. The first product release requires one qualified saved-plan execution path. Standalone validation coverage follows its separate evidence.
+### WP-00B — Saved-plan feasibility experiment
+
+**Dependencies:** WP-00. **Owners:** DocSpec runtime and DDK integration. **Output:** an early evidence-backed decision on the Rust DataFusion baseline and supported saved-plan operations.
+
+- Run a bounded local experiment alongside early core and catalog development. Use independently authored commerce inputs and expected rows for the read/filter/join/aggregate subset needed by the first release. This experiment requires neither a completed DDK adapter nor the pilot datasets.
+- Produce and save binary Substrait bytes, then reload and execute those bytes with explicit bindings through DocSpec's admitted context. Record source and distribution identities, encoded format version, extension definitions and digests, input mappings, and output expectations. Compare direct SQL and saved-plan results independently with the authored rows.
+- Exercise decoded-plan function/input restrictions and applicable resource limits. Retain failures, unsupported operations, and unknown results with their scope. Keep compiler success, consumer planning, standalone validity, output inference, and execution evidence separate.
+- Decide whether to retain the tested baseline, change it, or revise the proposed operation mapping while preserving the required local workflow. A standalone validator and another engine remain separate experiments.
+
+**Acceptance.** Retained inputs, plan bytes, commands, native results, and dependency identities make the experiment reproducible. The decision names the supported subset and unresolved work. An unsuccessful experiment leaves the saved-plan capability unqualified and identifies what must change before WP-09B can qualify it. WP-09B reuses applicable evidence, integrates the selected path, and verifies the final dependency tuple. This experiment alone does not complete a DDK profile or the release gate.
 
 ### WP-01 — Strict documents, source locations, and artifact index
 
-**Dependencies:** WP-00 baseline. **Output:** parsed artifacts with stable identity and namespace resolution.
+**Dependencies:** WP-00 baseline. **Output:** parsed artifacts and effective local definitions with stable identity, namespace resolution, and source provenance.
 
 - Implement JSON parsing that rejects duplicate keys, non-finite values, and invalid UTF-8. Preserve exact bytes for digests and JSON Pointers for locations.
 - Register the draft schemas and pinned ODCS revision in an offline `referencing` registry. Separate Draft 2020-12 validation from the ODCS schema's Draft 2019-09 dialect.
 - Validate document shape before constructing typed records. Preserve unknown optional extensions without interpreting them.
 - Implement namespace-scoped paths, imported-project traversal, permitted-root checks, dataset-object selection, and identity conflicts.
+- Resolve local ODCS definitions before compatibility or catalog interpretation consumes them. Preserve the pinned upstream precedence and qualify inheritance with independent differential cases. The native CLI resolver imports network-capable helpers and lacks DDK root/read-cache controls, so core uses bounded local metadata resolution; WP-07 owns comparison with the maintained CLI. Keep runtime imports outside core.
+- Preserve followed definition bytes, fragments, resolution chains, and key-level inheritance/override provenance. Return effective values alongside original source values; missing or cyclic required definitions fail resolution, and unavailable remote resolution remains unknown.
 - Make limits configurable and preserve partial diagnostics on limit exhaustion.
 - Optionally add restricted YAML after JSON behavior is stable. Do not use a parser's default YAML 1.1 boolean or date conversions.
 
-**Acceptance:** all document and reference cases pass, including two imported projects that reuse the alias `orders`, a root-relative reference, a symlink escape, duplicate keys, invalid fragments, and same-version conflicting content. A core import must not load a reader, engine, or network client.
+**Acceptance:** all document and reference cases pass, including two imported projects that reuse the alias `orders`, a root-relative reference, a symlink escape, duplicate keys, invalid fragments, and same-version conflicting content. Independent inheritance cases preserve an inherited pattern alongside an inline maximum length and apply the selected resolver's explicit enum precedence. Missing and cyclic definitions block dependent interpretation. A core import must not load a reader, engine, or network client.
 
 ### WP-02 — Results, decisions, CLI, and capability discovery
 
 **Dependencies:** WP-01. **Output:** complete machine-readable results and stable command behavior.
 
+- Make the exact source inventory and runtime evidence identities available to all adapter tracks before impact analysis completes.
 - Implement result and diagnostic records from the report schema, including independent runtime execution/selection outcomes. Add the application use cases and explicit composition-root injection; domain tests must not import native implementation types.
 - Implement one decision reducer for operational errors, required failures, incomplete required checks, and passing selected coverage.
 - Build check-instance inventories before optional dispatch, including missing adapters.
@@ -162,27 +173,26 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 **Dependencies:** WP-03. **Output:** declared input/output relationships for flat ODCS datasets.
 
-- Normalize the selected ODCS object into field records without changing original source values or order.
+- Normalize the selected ODCS object's effective values from WP-01 into field records while retaining original source values, order, and definition provenance.
 - Implement field presence, logical scalar relationships, required/nullability behavior, and enum-value containment.
 - Record declared uniqueness and row identity as assumptions. Do not infer join cardinality from column names.
 - Build indexed step relationships; use deterministic topological ordering and detect self-cycles and larger cycles.
 - Check every named export, including direct source exports and multiple component outputs.
 - Represent unsupported nested or physical-type requirements as unknown, even when the ODCS document itself is valid.
 
-**Acceptance:** multiple independent exports are all checked. An absent column fails even when ODCS `required` is false. Boolean-to-number is rejected. Extra-field behavior differs explicitly between input ports and exports. Positional execution mappings remain separate from logical name comparison.
+**Acceptance:** multiple independent exports are all checked. Compatibility uses resolved inherited constraints; a failed required definition makes the dependent comparison not-run. An absent column fails even when ODCS `required` is false. Boolean-to-number is rejected. Extra-field behavior differs explicitly between input ports and exports. Positional execution mappings remain separate from logical name comparison.
 
 ### WP-05 — Shared definitions, project policies, and provenance
 
 **Dependencies:** WP-04. **Output:** cross-document policy checks and definition-use inventory.
 
-- Integrate the supported local ODCS definition resolver. Pin the resolver implementation and test its merge behavior rather than reimplementing loosely documented precedence.
-- Track definition chains and key-level overrides. The GitHub CLI correction in PR 1812 must have an independent local regression.
+- Use the effective definitions and key-level provenance produced by WP-01 for policy checks and the definition-use inventory.
 - Implement fields-exist, row-identity, quality-fields, and vocabulary rules as small typed checks.
 - Inventory unused registered definitions, including definitions carrying quality arrays.
 - Preserve SQL and custom rules as declarations. Complete quality dependency metadata can be checked; undeclared SQL dependencies remain unknown.
 - Reserve optional CUE integration until actual cross-field policy needs justify another language and runtime dependency.
 
-**Acceptance:** changing one shared property or its quality declaration affects the right loaded consumers. Inline constraints do not silently lose inherited constraints in the chosen resolver tuple. A misleading primary-key claim is never promoted into observed uniqueness.
+**Acceptance:** changing one shared property or its quality declaration affects the right loaded consumers. Policy results retain the inherited and overridden values supplied by WP-01. A misleading primary-key claim is never promoted into observed uniqueness.
 
 ### WP-06 — Locks, dependency-aware impact, and non-weakening
 
@@ -199,10 +209,10 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 ### WP-07 — Data Contract CLI integration
 
-**Dependencies:** WP-06. **Output:** native ODCS lint, version comparison, and actual-data results.
+**Dependencies:** WP-02. **Output:** native ODCS lint, version comparison, and actual-data results.
 
 - Prefer a stable public API when sufficient; otherwise use a structured subprocess invocation with captured native evidence.
-- Pin and compare the published CLI with GitHub commit `34b12923e0366fa4004c2f90644da41769699e0f`, which includes the inherited-constraint correction.
+- Compare the published CLI with GitHub commit `34b12923e0366fa4004c2f90644da41769699e0f`, which includes the inherited-constraint correction. Reuse the resolver identity and inheritance evidence accepted in WP-01; rerun those regressions if the native CLI integration changes that tuple.
 - Verify which schema revision the CLI actually uses. Distinguish its native lint result from DDK's pinned-schema result if they differ.
 - Preserve producer/consumer perspective for version changes.
 - Test final local Parquet or DuckDB output through the supported native backend and preserve unsupported quality-rule outcomes. Implement `QualityEvaluator` with exact dataset identity, resolved rules, required check inventory, evaluator identity, mapping semantics, and native evidence. Probe direct exact-candidate access separately; do not qualify a native gate from file-backed success.
@@ -212,7 +222,7 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 ### WP-08 — Frictionless files and dlt staging
 
-**Dependencies:** WP-06. **Output:** validated file intake and exact staged-snapshot receipts. This can proceed independently of the SQL/quality demonstration.
+**Dependencies:** WP-02. **Output:** validated file intake and exact staged-snapshot receipts. This can proceed independently of the SQL/quality demonstration.
 
 - Translate the supported ODCS subset to explicit Table Schema descriptors. Report missing-value, nullability, enum, uniqueness, and physical-type coverage separately.
 - Exercise Frictionless's full selected check inventory, including error paths involving misconfigured checks. Open PR 1867 is a specific regression lead.
@@ -225,7 +235,7 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 ### WP-09A — DocSpec SQL preparation, jobs, and native bindings
 
-**Dependencies:** WP-06 and WP-00 source baseline. **Owners:** DocSpec for runtime changes; DDK for application ports and translation. **Output:** one explicit, bounded SQL execution path.
+**Dependencies:** WP-02 and WP-00 source baseline. **Owners:** DocSpec for runtime changes; DDK for application ports and translation. **Output:** one explicit, bounded SQL execution path.
 
 - Reshape DocSpec's unreleased public API as needed to support schema-only preparation and machine-readable job receipts. Reuse its maintained DataFusion context, function/input checks, budgets, and native readers.
 - Implement `PlanService` and `JobExecutor`; do not leak DataFusion frames, catalogs, or DocSpec domain types into DDK's domain.
@@ -239,7 +249,7 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 ### WP-09B — Saved Substrait through DocSpec
 
-**Dependencies:** WP-09A plus WP-00's selected tuple experiment. **Owners:** DocSpec for format/runtime support; DDK for capability and evidence mapping. **Output:** the first release saved-plan capability.
+**Dependencies:** WP-09A and WP-00B. **Owners:** DocSpec for format/runtime support and DDK for capability and evidence mapping. **Output:** the first release saved-plan capability. Use the baseline decision and retained experiment from WP-00B; resolve its outstanding issues and qualify the integrated path on the final dependency tuple. Probe a standalone validator or another engine only for its separate profile.
 
 - Add a Substrait representation through the same admitted DocSpec context used for SQL; qualify any dependency/API changes together.
 - Save binary bytes, encoded format version, extension definitions and algorithm-tagged digests, producer and consumer identities, and a readable upstream-generated view.
@@ -265,7 +275,7 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 ### WP-11 — Release qualification and handoff
 
-**Dependencies:** WP-06, WP-10, WP-14, and WP-15. **Output:** reproducible first product release with the complete DDK-VERSION-003 profile set. WP-08 and WP-12 qualify separate claims.
+**Dependencies:** WP-06, WP-10, and WP-14. **Output:** reproducible first product release with the complete DDK-VERSION-003 profile set. WP-08 and WP-12 qualify separate claims.
 
 - Package the offline checker and adapters with explicit installation and invocation boundaries. Verify the core-only installation and the complete first release workflow.
 - Run the required conformance and CLI cases across supported platforms. Test paths outside the source checkout.
@@ -274,11 +284,11 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 - Measure representative loading, impact, and metadata refresh behavior. Record the reused evidence and payload reads.
 - Use the owner-controlled release workflow after the acceptance evidence is complete.
 
-**Acceptance:** a consumer can discover both pilot products, choose an exact data version, run a checked query, and see applicable evidence and limitations. Maintainers can reproduce the test and impact reports. Each profile claim names its tested dependency tuple.
+**Acceptance:** the local workflow meets DDK-TEST-004: a consumer discovers the commerce product, chooses the exact checked saved-plan output, runs a bound query, and sees applicable evidence and limitations. Maintainers can reproduce the test and impact reports. Each profile claim names its tested dependency tuple.
 
 ### WP-12 — Managed candidates and accepted quality gates
 
-**Dependencies:** WP-07, WP-09A, and WP-10; exact-native quality access must pass before a native quality-gate claim. **Owners:** DocSpec for lifecycle changes; DDK for `DatasetRuntime`, rule requests, and receipt translation. **Output:** one qualified managed operation/backend family.
+**Dependencies:** WP-07 and WP-09A; exact-native quality access must pass before a native quality-gate claim. **Owners:** DocSpec for lifecycle changes; DDK for `DatasetRuntime`, rule requests, and receipt translation. **Output:** one qualified managed operation/backend family.
 
 - Choose a concrete existing typed operation family and backend. Arbitrary managed SQL and automatic incremental planning are separate future designs.
 - Expose native prepare/inspect/accept-qualification/select/reconcile responsibilities while keeping one lifecycle, phase-reuse authority, protection inventory, and selection owner.
@@ -294,44 +304,27 @@ WP-11 requires the first release profiles listed in DDK-VERSION-003. WP-08 and W
 
 **Dependencies:** WP-02. **Owners:** DDK and project metadata owners. **Output:** ODPS-backed catalog and its exact input inventory.
 
-- Resolve product ports to registered ODCS schema objects. Preserve the owning source document and digest. Validate the selected object when a port references a contract with several objects.
-- Support native metadata adapters for selected versions, source occurrences, representations, runs, scoped checks, releases, and selections. Use scheme-qualified native identities. Retain record links and independent availability states.
-- Check nested endpoint paths, composite keys, virtual row identities, relationship meaning, and query example references. Validate same-release scope before presenting a release-local relationship as usable.
-- Generate a local catalog from explicit metadata inputs. Apply disclosure rules and inventory companion outputs. Test deterministic refresh and preserve complete prior artifacts if a requested output cannot be generated.
+- Resolve product ports to registered ODCS objects and validate identities, relationships, and recipes. Support definition-only discovery and relocatable companion recipes.
+- Implement an explicitly selected local metadata adapter that reads actual staging, DocSpec execution, and quality receipts from the reference workflow. Preserve each observed fact's owner, exact identity, coverage, and custody. Illustrative example receipts qualify shape tests only.
+- Add independent nested/list paths, binary and composite keys, scoped row positions, and wrong-release negatives without project-specific consumers.
+- Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Verify deterministic refresh with zero data-payload opens or repeated data checks.
 
-**Acceptance:** the catalog describes an exact dataset version and its supported access, known run and evidence, and selected release. A valid empty output, absent data, unknown coverage, and acquisition failure remain distinguishable. Tests reject an incorrect port binding and preserve an unknown qualification.
+**Acceptance.** A local reader binds an exact checked output through the generated catalog, and definition-only generation leaves availability unresolved. Source, run, quality, and access references identify the same output and retain their separate assurance. One definition change propagates to the affected generated outputs and obligations.
 
 ### WP-14 — DCAT and OpenLineage interchange
 
 **Dependencies:** WP-13. **Owners:** DDK integration. **Output:** standards outputs generated from the same catalog definitions and native records.
 
-- Emit DCAT 3 JSON-LD with stable dataset and version identifiers, available representations or services, and selection references where relevant. Check the graph using an independent reader.
-- Emit OpenLineage `JobEvent` for the intended design and `RunEvent` for observed lifecycle records. Bind run and version identifiers to the catalog and native evidence. Validate events and supported facets against pinned schemas.
-- Exercise a historical upstream binding when the current selection changes. Verify that an unresolved terminal outcome remains unresolved and that any design-only record is identified as such.
+- Emit DCAT 3 JSON-LD with stable dataset and version identifiers and available representations or services. Exercise separate public and preview selections, disjoint publication scopes, and overlapping selections. Check the graph using an independent reader.
+- Emit OpenLineage `JobEvent` for intended design and `RunEvent` for observed lifecycle records. Preserve existing identities where supplied and test repeat import into a receiver alongside native producer events. Verify that changes in selection leave historical inputs fixed and incomplete input coverage stays visible.
 
-**Acceptance:** an independent reader can follow DCAT discovery to an exact advertised access path. Valid OpenLineage events distinguish design dependencies and actual inputs and outputs, with an exact run-reference mapping.
-
-### WP-15 — Two product pilots and authoring migration
-
-**Dependencies:** WP-06, WP-10, and WP-14. **Owners:** DDK, SpicyRegs/SpicyDocs, and congressional-tech maintainers. **Output:** two end-to-end adoption examples and an inventory of consolidated definitions.
-
-| Pilot | User task | Authoring migration |
-| --- | --- | --- |
-| SpicyRegs Federal Register | Find the bounded source records and query parent/child or docket data with the complete dated key. Trace a value to its retained original and explain a conversion. | Select one maintained owner for each repeated relationship or field description. Generate dictionary and reader metadata, and retain scoped measurements as evidence. |
-| Congressional documents and meetings | Find a transcript through its nested meeting reference and open it in the exact selected release. Follow published binary keys and pinned upstream dependencies. | Adapt the existing release registry as a source or migrate its owned facts once. Generate its consumer outputs and retire the corresponding duplicate maintained descriptions. |
-
-- Use bounded retained inputs and version metadata. Record the actual local candidate status for Federal Register and the selected release binding for congressional data.
-- Compare query results with independent expectations, including a wrong dated key and an attempted cross-release position join. Exercise a wrong input version, unresolved coverage, and missing required evidence.
-- Show one maintained definition change in the catalog and existing consumer outputs. Record which maintained copies or reconciliation paths are retired.
-- Compare the read inventory for first generation and unchanged refresh. Preserve exact input history when a publisher changes its selection.
-
-**Acceptance:** the pilots meet DDK-TEST-004 and demonstrate useful discovery and queries, less duplicate authoring, exact lineage, and evidence reuse. Project publishers keep authority over their selections.
+**Acceptance.** An independent reader can follow DCAT discovery to the selected access path. The lineage receiver shows the same job, run, and dataset identities when native and DDK events describe the same entities. A run with partial input coverage exposes only known consumption and retains its limits.
 
 ## 6. Commerce regression fixture
 
 The independently authored commerce fixture exercises a shared reader, changed interfaces, inherited field requirements, invalid dependencies, and known revenue outputs. The fixture filters cancelled orders, joins customer regions, and sums integer cents by date and region. Execute the SQL and saved Substrait plan against the same expected rows. Run exact-output ODCS checks, and exercise a missing required check and wrong-but-well-typed join.
 
-The [catalog example](../examples/commerce/catalog/README.md) adds ODPS, version and release metadata, DCAT, and OpenLineage document shapes. The two project pilots supply the first product acceptance evidence.
+The [catalog example](../examples/commerce/catalog/README.md) adds ODPS, version and release metadata, DCAT, and OpenLineage document shapes. The connected local reference workflow supplies product acceptance evidence; a nested/scoped fixture and the separate managed workflow cover their respective boundaries.
 
 ## 7. Test strategy and evidence
 
@@ -366,13 +359,13 @@ These are proposed engineering targets, not measured results. Establish a named 
 | Risk | Evidence or trigger | Bounded response |
 | --- | --- | --- |
 | Unreleased upstream fixes are needed | GitHub research identifies concrete correctness changes | Pin a reviewed commit for an experimental lane; require tests and distribution hashes; keep published baseline comparison |
-| Substrait producer/validator/consumer versions diverge | Released and GitHub manifests differ | Qualify one saved-plan producer and consumer combination early. Scope standalone validator and additional-engine claims separately |
+| Substrait producer/validator/consumer versions diverge | Released and GitHub manifests differ | Run WP-00B alongside core/catalog work and use its evidence for WP-09B integration. Scope standalone validator and additional-engine claims separately |
 | A package version hides source differences | Validator development package still uses version 0.1.4 | Record commit and built-artifact digest, not version alone |
 | Schema revision changes under the same ODCS API version | Combined-operator correction on development branch | Pin the schema bytes and revision in conformance claims and locks |
 | Generic schema compatibility becomes a research project | Unsupported conditions and nested constraints | Keep a sound subset and explicit unknown outcomes |
 | Tool combinations duplicate state or policy | Repeated mapping rules or whole-dataset scans | Assign one owner per rule; generate bounded configurations and reuse valid evidence |
 | The new interface format grows into another ecosystem | New field/type/quality/operator syntax appears | Keep those vocabularies in ODCS, JSON Schema, and Substrait; justify every new composition field |
-| A beautiful checker misses real user work | Representative library still needs substantial manual checking | Compare task completion and maintenance code before expanding the format |
+| A beautiful checker misses real user work | Representative library still needs substantial manual checking | Measure the local source-to-query task and adapter maintenance before expanding the format |
 
 ## 10. Decisions intentionally deferred
 
@@ -389,4 +382,4 @@ These deferrals do not weaken declared conformance requirements. A requested def
 
 ## 11. Requirement coverage
 
-Every normative requirement is assigned to a primary work package in [work-packages.json](../implementation/work-packages.json). Individual conformance cases name their requirement IDs. Documentation checks verify that all referenced IDs exist and every requirement has an owner and at least one future case. The runtime implementation must turn those cases into executed evidence before making claims.
+Every normative requirement is assigned to a primary work package in [work-packages.json](../implementation/work-packages.json). Individual conformance cases name their requirement IDs. Documentation checks verify that every requirement has an owner and at least one named case. The executed case evidence determines which profile claims are supported.

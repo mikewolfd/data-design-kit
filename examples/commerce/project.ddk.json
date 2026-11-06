@@ -145,6 +145,21 @@
           "additionalProperties": false
         },
         "resultDataset": "daily-revenue"
+      },
+      {
+        "id": "urn:example:commerce:recipe:checked-revenue",
+        "sql": "catalog/queries/read-revenue.sql",
+        "dialect": "datafusion",
+        "inputs": {
+          "daily_revenue": "daily-revenue"
+        },
+        "relationships": [],
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "resultDataset": "daily-revenue"
       }
     ]
   }

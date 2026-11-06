@@ -160,4 +160,4 @@
 
 **Reason.** SpicyRegs can consolidate repeated schema and relationship declarations. Congressional-tech already generates metadata from a maintained release registry. Both need exact identities, scoped keys, and separately observable access and confidence. A shared checker and generated catalog allow each project to preserve these semantics and replace duplicate authoring.
 
-**Consequence.** Qualification requires two representative project products, one maintained owner per migrated fact, and proof that a refresh reuses admitted metadata. The first product release includes all required standards and the tested execution path defined in [DDK-VERSION-003](specification.md#DDK-VERSION-003).
+**Consequence.** Build the independent local reference workflow through the catalog, standards exporters, and exact-output reader. Prove a separately managed candidate through DocSpec's native quality gate. Keep pilot replacement and maintenance-removal demonstrations in [deferred adoption notes](pilot-adoption-notes.md). The first product release includes the required standards and tested execution profiles in [DDK-VERSION-003](specification.md#DDK-VERSION-003).

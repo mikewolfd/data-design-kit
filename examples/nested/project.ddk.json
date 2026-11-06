@@ -1,0 +1,83 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:register:project",
+  "version": "1.0.0",
+  "requiredChecks": [
+    "core.documents", "core.references", "core.graph", "core.calls", "core.datasets", "core.policies",
+    "catalog.relationships"
+  ],
+  "artifacts": {
+    "register": {
+      "kind": "dataset",
+      "path": "register.odcs.json",
+      "object": "records",
+      "catalogId": "urn:example:register:dataset",
+      "role": "source_record"
+    },
+    "register-product": {
+      "kind": "product",
+      "path": "register.odps.json"
+    }
+  },
+  "catalog": {
+    "id": "urn:example:register:catalog",
+    "identities": [
+      {
+        "dataset": "register",
+        "kind": "key",
+        "scope": "dataset_version",
+        "fields": [
+          {"path": [{"field": "record.id"}], "virtual": false, "physicalType": "binary"},
+          {"path": [{"field": "issued_on"}], "virtual": false, "physicalType": "date"}
+        ],
+        "meaning": "The publisher can reuse the binary record number on different dates."
+      },
+      {
+        "dataset": "register",
+        "kind": "row_position",
+        "scope": "release",
+        "fields": [
+          {"path": [{"field": "$position"}], "virtual": true, "physicalType": "integer"}
+        ],
+        "meaning": "The release reader assigns a position in this exact release."
+      }
+    ],
+    "relationships": [
+      {
+        "id": "urn:example:register:relationship:citations",
+        "source": {
+          "dataset": "register",
+          "paths": [
+            [{"field": "citations"}, {"each": true}, {"field": "record.id"}],
+            [{"field": "citations"}, {"each": true}, {"field": "issued_on"}]
+          ]
+        },
+        "target": {
+          "dataset": "register",
+          "paths": [
+            [{"field": "record.id"}],
+            [{"field": "issued_on"}]
+          ]
+        },
+        "match": "equal",
+        "cardinality": "many_to_one",
+        "scope": "version_pair",
+        "nulls": "skip",
+        "resolution": "unresolved_allowed",
+        "meaning": "Each ordered citation identifies a record number and its issue date."
+      },
+      {
+        "id": "urn:example:register:relationship:next",
+        "source": {"dataset": "register", "paths": [[{"field": "next_position"}]]},
+        "target": {"dataset": "register", "paths": [[{"field": "$position"}]]},
+        "match": "equal",
+        "cardinality": "unknown",
+        "scope": "same_release",
+        "nulls": "skip",
+        "resolution": "unresolved_allowed",
+        "meaning": "Resolve a successor using a row position inside the same release."
+      }
+    ]
+  }
+}

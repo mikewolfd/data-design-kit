@@ -499,9 +499,9 @@
   },
   {
     "id": "DDK-TEST-004",
-    "title": "Product release demonstration",
+    "title": "Local stack demonstration",
     "specification": "docs/specification.md#DDK-TEST-004",
-    "owner": "WP-15"
+    "owner": "WP-11"
   },
   {
     "id": "DDK-CATALOG-001",

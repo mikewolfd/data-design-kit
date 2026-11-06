@@ -1,0 +1,501 @@
+{
+  "specification": "DDK 0.1",
+  "scope": "Core, impact, and generated catalog impact scenarios in conformance/cases.json.",
+  "status": "Test traceability. Run the listed tests to obtain results for the current source and environment.",
+  "cases": [
+    {
+      "id": "CASE-CONF-001",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_core_only_claim_rejects_transformation_success_in_summary"
+      ]
+    },
+    {
+      "id": "CASE-CONF-002",
+      "tests": [
+        "tests/core/test_core.py::test_offline_core_does_not_open_implementation"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CONF-003",
+      "tests": [
+        "tests/core/test_core.py::test_unknown_required_profile_has_independent_instances"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CONF-004",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_schema_that_allows_missing_output_blocks_qualification"
+      ]
+    },
+    {
+      "id": "CASE-MODEL-001",
+      "tests": [
+        "tests/core/test_core.py::test_conflicting_identity_is_detected"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-MODEL-002",
+      "tests": [
+        "tests/core/test_core.py::test_offline_core_does_not_open_implementation"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-SYNTAX-001",
+      "tests": [
+        "tests/core/test_core.py::test_strict_json"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-SYNTAX-002",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_pinned_odcs_combined_operators_differ_from_release"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-SYNTAX-003",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_unknown_property_and_legacy_runtime_configuration_are_rejected",
+        "tests/core/test_core.py::test_defaults_are_not_arguments_and_independent_exports_continue"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-SYNTAX-004",
+      "tests": [
+        "tests/core/test_core.py::test_symbolic_containment",
+        "tests/core/test_core.py::test_missing_producer_blocks_dependent_export_only"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-REF-001",
+      "tests": [
+        "tests/core/test_core.py::test_import_scopes_local_and_root_relative_aliases"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-REF-002",
+      "tests": [
+        "tests/core/test_core.py::test_import_cycle"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-REF-003",
+      "tests": [
+        "tests/core/test_core.py::test_dataset_selection_checks_id_before_name"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-REF-004",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_definition_failures_keep_dependent_comparison_not_run"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-REF-005",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_selected_import_leaves_other_consumer_namespace_uncovered"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CALL-001",
+      "tests": [
+        "tests/core/test_core.py::test_offline_core_does_not_open_implementation"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CALL-002",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_named_ports_missing_and_unexpected"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CALL-003",
+      "tests": [
+        "tests/core/test_core.py::test_literal_objects_keep_reserved_looking_keys_as_data"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CALL-004",
+      "tests": [
+        "tests/core/test_core.py::test_defaults_are_not_arguments_and_independent_exports_continue"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CALL-005",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_symbolic_bounds_are_checked_at_a_call",
+        "tests/core/test_core.py::test_symbolic_containment"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CALL-006",
+      "tests": [
+        "tests/core/test_core.py::test_literal_condition_and_symbolic_whole_object_are_distinct"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-DATA-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_nullable_consumer_column_still_has_to_be_present"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-DATA-002",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_declared_nullability_and_enum_values_outweigh_enum_labels"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-DATA-003",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_required_physical_type_is_unknown_with_declared_evidence"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-DATA-004",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_uniqueness_stays_a_declared_assumption"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-DATA-005",
+      "tests": [
+        "tests/core/test_core.py::test_dataset_aggregates_independent_failure_and_unknown"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-GRAPH-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_two_step_cycle_and_nonexistent_output_are_independently_reported",
+        "tests/core/test_core.py::test_graph_cycle_preserves_independent_work"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-GRAPH-002",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_two_exports_get_separate_results_in_one_design"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-GRAPH-003",
+      "tests": [
+        "tests/core/test_core.py::test_unknown_required_profile_has_independent_instances"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-GRAPH-004",
+      "tests": [
+        "tests/core/test_core.py::test_missing_producer_blocks_dependent_export_only"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-POLICY-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_unknown_rule_and_explicit_vocabulary_policy"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-POLICY-002",
+      "tests": [
+        "tests/core/test_core.py::test_row_identity_duplicate_and_unknown_sql_dependencies"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-POLICY-003",
+      "tests": [
+        "tests/core/test_core.py::test_row_identity_duplicate_and_unknown_sql_dependencies",
+        "tests/core/test_case_coverage.py::test_explicit_quality_dependency_must_reference_a_real_field"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-POLICY-004",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_unknown_rule_and_explicit_vocabulary_policy"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-POLICY-005",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_unused_quality_definition_warns_without_fake_execution"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CHECK-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_invalid_prerequisite_blocks_dependents_and_keeps_independent_checks"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CHECK-002",
+      "tests": [
+        "tests/core/test_core.py::test_selection_keeps_prerequisites_and_excludes_unreadable_sibling"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CHECK-003",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_real_path_documents_parsed_once_per_run"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-IMPACT-001",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_impact_keeps_removed_edge_and_same_version_bytes"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-IMPACT-002",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_impact_reader_change_lists_three_consumers_and_direction"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-IMPACT-003",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_impact_detects_new_required_argument_and_weaker_output"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-IMPACT-004",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_effective_override_weakening_and_external_scope",
+        "tests/core/test_inventory_impact.py::test_unsupported_definition_nonweakening_remains_unknown"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-LOCK-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_development_tool_identity_distinguishes_equal_version_strings"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-LOCK-002",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_lock_pins_selected_objects_and_followed_bytes"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-LOCK-003",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_execution_locks.py::test_changed_staged_file_blocks_reused_saved_plan_evidence"
+      ]
+    },
+    {
+      "id": "CASE-LOCK-004",
+      "tests": [
+        "tests/core/test_execution_locks.py::test_locked_stable_results_ignore_inventory_order_and_volatile_observations"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-RESULT-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_required_physical_type_is_unknown_with_declared_evidence"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-RESULT-002",
+      "tests": [
+        "tests/core/test_core.py::test_reducer",
+        "tests/core/test_core.py::test_row_identity_duplicate_and_unknown_sql_dependencies"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-RESULT-003",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_cli.py::test_result_003_human_severity_filter_keeps_failed_decision"
+      ]
+    },
+    {
+      "id": "CASE-RESULT-004",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_result_keeps_evidence_levels_and_missing_optional_capability"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-RESULT-005",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_release_rejects_reassigning_a_diagnostic_code"
+      ]
+    },
+    {
+      "id": "CASE-CLI-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_cli_does_not_import_a_reader_entrypoint"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CLI-002",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_cli_uses_decision_exit_codes_and_one_json_object"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CLI-003",
+      "tests": [
+        "tests/test_cli.py::test_cli_003_progress_is_stderr_and_invalid_call_is_one_json_report"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CLI-004",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_cli.py::test_cli_004_two_exports_preserve_previous_complete_bundle"
+      ]
+    },
+    {
+      "id": "CASE-SAFE-001",
+      "tests": [
+        "tests/core/test_core.py::test_outside_symlink_rejected_before_read",
+        "tests/core/test_inventory_impact.py::test_definition_failures_keep_dependent_comparison_not_run"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-SAFE-002",
+      "tests": [
+        "tests/test_cli.py::test_safe_002_structured_parameters_and_secret_evidence"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-SAFE-003",
+      "tests": [
+        "tests/core/test_core.py::test_resource_limit_retains_prior_checks"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-VERSION-001",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_optional_uri_extension_and_unsupported_ddk_version"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-VERSION-002",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_optional_uri_extension_and_unsupported_ddk_version"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-VERSION-003",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_first_release_requires_observed_saved_substrait_execution"
+      ]
+    },
+    {
+      "id": "CASE-TEST-001",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_fixture_expectation_derived_from_transformation_fails_release_gate"
+      ]
+    },
+    {
+      "id": "CASE-TEST-002",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_documentation_shape_check_does_not_count_as_executed_case",
+        "tests/core/test_conformance.py::test_readme_substitution_and_invented_tool_tuple_cannot_qualify",
+        "tests/core/test_conformance.py::test_unrelated_passing_junit_case_does_not_cover_maintained_case"
+      ]
+    },
+    {
+      "id": "CASE-TEST-003",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_conformance.py::test_release_bundle_requires_versions_unresolved_inventory_and_fixture_provenance"
+      ]
+    },
+    {
+      "id": "CASE-ARCH-OFFLINE-INJECTION",
+      "tests": [
+        "tests/core/test_capabilities.py::test_offline_manifest_discovery_does_not_import_native_tools_and_adapter_injection_is_explicit"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-IMPLEMENTATION-SEPARATION",
+      "tests": [
+        "tests/core/test_core.py::test_offline_core_does_not_open_implementation"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-IMPLEMENTATION-LEGACY-CONFIG",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_unknown_property_and_legacy_runtime_configuration_are_rejected"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CATALOG-021",
+      "tests": [
+        "tests/core/test_catalog_impact.py::test_changed_rule_and_relationship_require_requalification_and_metadata",
+        "tests/core/test_catalog_impact.py::test_access_change_preserves_exact_version_and_computation_meaning"
+      ],
+      "coverage": "exercised"
+    },
+    {
+      "id": "CASE-CATALOG-022",
+      "tests": [
+        "tests/core/test_catalog_impact.py::test_complete_scope_request_preserves_excluded_consumers"
+      ],
+      "coverage": "exercised"
+    }
+  ]
+}

@@ -1,0 +1,371 @@
+{
+  "caseRegistry": "conformance/cases.json",
+  "profiles": [
+    "catalog",
+    "catalog.dcat",
+    "lineage.openlineage"
+  ],
+  "verification": {
+    "scope": "Executed catalog assembly, consumer, and impact tests over independent fixtures. Case verification is separate from the complete product workflow.",
+    "tests": "tests/catalog tests/core/test_catalog_impact.py",
+    "passedTests": 30,
+    "passedCases": 29,
+    "statusMeaning": "Verified means that the test exercised the behavior and observed the expected decision and diagnostic. An expected failed or incomplete decision is a verified negative case.",
+    "standards": "RDFLib parses exported DCAT graphs. The pinned OpenLineage schemas validate exported events and version facets. A local independent receiver checks OpenLineage identity and replay."
+  },
+  "uncoveredCases": [],
+  "unsupportedCapabilities": [
+    {
+      "capability": "project-rule-execution",
+      "reason": "The shared relationship checker preserves project rule references and reports unknown when evaluation is required. CASE-CATALOG-029 verifies that boundary."
+    },
+    {
+      "capability": "public-openlineage",
+      "reason": "The public view supports catalog and DCAT disclosure. The OpenLineage exporter currently runs for local catalogs."
+    },
+    {
+      "capability": "bounded-docspec-physical-input-consumption",
+      "reason": "The bounded DocSpec receipt attests registered versions and native outputs. It does not establish actual input scans or full consumption coverage."
+    }
+  ],
+  "cases": [
+    {
+      "id": "CASE-CATALOG-001",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_shared_content_keeps_two_source_occurrences_and_exact_definition"
+      ],
+      "evidence": "Assembles two owner occurrences with one content digest and verifies the selected ODCS object and its original document digest."
+    },
+    {
+      "id": "CASE-CATALOG-002",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-AUTHORITY-CONFLICT",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_conflicting_version_reports_both_authority_records"
+      ],
+      "evidence": "Rejects contradictory retention observations for one exact version and scope and cites both owner records."
+    },
+    {
+      "id": "CASE-CATALOG-003",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_definition_only_catalog_preserves_port_resolution_and_has_no_observed_claims"
+      ],
+      "evidence": "Resolves three ODPS ports to separate objects in the same pinned ODCS definition through the normal assembler."
+    },
+    {
+      "id": "CASE-CATALOG-004",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-PORT-AMBIGUOUS",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_port_binding_missing_or_wrong_revision"
+      ],
+      "evidence": "Removes the orders port selection and checks that multiple matching ODCS objects fail resolution."
+    },
+    {
+      "id": "CASE-CATALOG-005",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-PORT-VERSION",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_port_binding_missing_or_wrong_revision"
+      ],
+      "evidence": "Registers the same logical orders dataset at an older definition revision and checks that selecting it fails the current port."
+    },
+    {
+      "id": "CASE-CATALOG-006",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_opaque_native_version_and_byte_digest_remain_distinct"
+      ],
+      "evidence": "Preserves the exact scheme, authority, large opaque sequence, and separate byte digest and links the representation to that version."
+    },
+    {
+      "id": "CASE-CATALOG-007",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_nested_paths_preserve_literal_dot_order_types_and_scope"
+      ],
+      "evidence": "Loads the nested product and checks an ordered list self-relation with literal dotted field names against independently expected matches."
+    },
+    {
+      "id": "CASE-CATALOG-008",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RELEASE-SCOPE",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_nested_paths_preserve_literal_dot_order_types_and_scope"
+      ],
+      "evidence": "Rejects resolving a virtual row position from a pair of versions without a common exact release."
+    },
+    {
+      "id": "CASE-CATALOG-009",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-KEY-INCOMPLETE",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_nested_paths_preserve_literal_dot_order_types_and_scope"
+      ],
+      "evidence": "Removes the date from both sides of a dated composite key and checks that the missing component fails validation."
+    },
+    {
+      "id": "CASE-CATALOG-010",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-EVIDENCE-SCOPE",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_missing_or_stale_evidence_does_not_qualify_discovery"
+      ],
+      "evidence": "Retains the older passing observation and checks that it cannot qualify the current output under a different rule revision."
+    },
+    {
+      "id": "CASE-CATALOG-011",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-EVIDENCE-MISSING",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_missing_or_stale_evidence_does_not_qualify_discovery"
+      ],
+      "evidence": "Preserves a successful run and its discoverable output while a required absent check remains not_run."
+    },
+    {
+      "id": "CASE-CATALOG-012",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_fresh_process_refresh_reuses_receipts_without_payload_io"
+      ],
+      "evidence": "Runs two fresh processes, guards payload opens and copies and subprocess execution, verifies equal output bytes, and preserves executed check assurance."
+    },
+    {
+      "id": "CASE-CATALOG-013",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_new_release_preserves_historical_binding_and_run_inputs"
+      ],
+      "evidence": "Moves the publisher selection, resolves the new release, and replays the original exact release binding and historical run inputs."
+    },
+    {
+      "id": "CASE-CATALOG-014",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_empty_absent_and_failed_acquisition_keep_distinct_records",
+        "tests/catalog/test_catalog.py::test_stage_empty_file_and_completed_load_without_file_remain_distinct"
+      ],
+      "evidence": "Preserves a released and available empty output, unknown coverage population, confirmed absence, and acquisition failure as distinct records. Corroborates a materialized zero-row file and a completed dlt load with zero normalized rows and no file."
+    },
+    {
+      "id": "CASE-CATALOG-015",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "ADAPTER-CAPABILITY-MISSING",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_atomic_refresh_and_dcat_current_selection"
+      ],
+      "evidence": "Checks that a missing requested export leaves the preceding complete output directory byte-identical."
+    },
+    {
+      "id": "CASE-CATALOG-016",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_public_discovery_withholds_native_location_and_evidence"
+      ],
+      "evidence": "Inspects all public output bytes for withheld locations, evidence, opaque references, and SQL while preserving the permitted identifier and download."
+    },
+    {
+      "id": "CASE-CATALOG-017",
+      "profile": "catalog.dcat",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_atomic_refresh_and_dcat_current_selection"
+      ],
+      "evidence": "RDFLib independently follows catalog, dataset, selected version, distribution, download, and the cited publisher release."
+    },
+    {
+      "id": "CASE-CATALOG-018",
+      "profile": "catalog.dcat",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_dcat_preserves_historical_version_and_disjoint_current_selection"
+      ],
+      "evidence": "RDFLib resolves the historical version and finds no available distribution for it."
+    },
+    {
+      "id": "CASE-CATALOG-019",
+      "profile": "lineage.openlineage",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_openlineage_native_and_mapped_events_replay_into_one_receiver"
+      ],
+      "evidence": "Validates events and version facets against the pinned schemas, replays authored native-format and generated records through an independent local SQLite receiver, and resolves dataset keys back to exact native references."
+    },
+    {
+      "id": "CASE-CATALOG-020",
+      "profile": "lineage.openlineage",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_observed_partial_lineage_retains_existing_native_identity"
+      ],
+      "evidence": "Changes the terminal outcome to unknown, preserves the JobEvent and observed START, and verifies there is no terminal event."
+    },
+    {
+      "id": "CASE-CATALOG-021",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/core/test_catalog_impact.py::test_changed_rule_and_relationship_require_requalification_and_metadata"
+      ],
+      "evidence": "Compares exact snapshots and verifies affected recipe obligations, metadata regeneration, and requalification while computation remains unaffected by the changed rule."
+    },
+    {
+      "id": "CASE-CATALOG-022",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-IMPACT-SCOPE",
+      "tests": [
+        "tests/core/test_catalog_impact.py::test_complete_scope_request_preserves_excluded_consumers"
+      ],
+      "evidence": "Requests complete consumer scope and verifies the outside project remains listed and the decision incomplete."
+    },
+    {
+      "id": "CASE-CATALOG-023",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_definition_only_catalog_preserves_port_resolution_and_has_no_observed_claims"
+      ],
+      "evidence": "Builds from declarations alone, retains meanings and recipes, and checks that availability, execution, and current selection are unresolved."
+    },
+    {
+      "id": "CASE-CATALOG-024",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_relocate_sql_and_bind_exact_versions_before_reader"
+      ],
+      "evidence": "Moves the output set, removes the original project copy, verifies companion SQL bytes and exact input bindings, and rejects a wrong version or altered SQL before invoking the reader."
+    },
+    {
+      "id": "CASE-CATALOG-025",
+      "profile": "catalog.dcat",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_dcat_preserves_historical_version_and_disjoint_current_selection"
+      ],
+      "evidence": "Separates public from preview and verifies two disjoint current datasets through RDFLib. Rebuilds without a selector and checks there are no current links."
+    },
+    {
+      "id": "CASE-CATALOG-026",
+      "profile": "catalog.dcat",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-SELECTION-AMBIGUOUS",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_atomic_refresh_and_dcat_current_selection"
+      ],
+      "evidence": "Changes the selection record order and observation time and verifies that the overlapping scope fails in both orders without replacing output."
+    },
+    {
+      "id": "CASE-CATALOG-027",
+      "profile": "lineage.openlineage",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_observed_partial_lineage_retains_existing_native_identity"
+      ],
+      "evidence": "Keeps the partial input scope and emits only observed consumption when a separate source and dataset version are also retained."
+    },
+    {
+      "id": "CASE-CATALOG-028",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog.py::test_nested_paths_preserve_literal_dot_order_types_and_scope"
+      ],
+      "evidence": "Evaluates independently authored composite matches with different dates, different binary values, padded text, and every supported null policy."
+    },
+    {
+      "id": "CASE-CATALOG-029",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-MATCH-UNSUPPORTED",
+      "tests": [
+        "tests/catalog/test_catalog.py::test_required_project_rule_remains_unknown_with_declared_relationship"
+      ],
+      "evidence": "Requires a versioned project rule and verifies its unavailable evaluator leaves the comparison unknown while retaining the declaration."
+    }
+  ],
+  "additionalReceiptTests": [
+    {
+      "test": "tests/catalog/test_catalog.py::test_stage_requires_exact_completed_native_file_inventory",
+      "evidence": "Corroborates dlt staging files against completed native job metrics and rejects missing jobs or mismatched size or state."
+    },
+    {
+      "test": "tests/catalog/test_catalog.py::test_quality_requires_raw_run_check_and_exact_schema_evidence",
+      "evidence": "Corroborates quality outcomes and native check IDs against the pinned report and requires a separate exact schema observation."
+    },
+    {
+      "test": "tests/catalog/test_catalog.py::test_docspec_capture_error_preserves_native_execution_without_observed_consumption",
+      "evidence": "Preserves native execution and output when diagnostic capture fails and keeps the generated output set unpublished."
+    },
+    {
+      "test": "tests/catalog/test_catalog.py::test_stage_empty_file_and_completed_load_without_file_remain_distinct",
+      "evidence": "Preserves a completed zero-row load without an available file and corroborates native normalization counts."
+    }
+  ]
+}

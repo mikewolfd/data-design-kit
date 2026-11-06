@@ -1,0 +1,132 @@
+{
+  "specification": "DDK 0.1",
+  "scope": "Native quality, local file intake and ingestion, independent fixtures, and the connected local stack demonstration.",
+  "status": "Test traceability. Qualification requires the maintained test nodes to pass under the exact source and dependency tuple.",
+  "cases": [
+    {
+      "id": "CASE-ADAPTER-001",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_capabilities.py::test_offline_manifest_discovery_does_not_import_native_tools_and_adapter_injection_is_explicit"
+      ]
+    },
+    {
+      "id": "CASE-ADAPTER-002",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_fixtures.py::test_primitive_plan_schema_does_not_establish_decimal_precision",
+        "tests/test_native_tools.py::test_frictionless_primary_key_null_semantics_and_unsupported_precision"
+      ]
+    },
+    {
+      "id": "CASE-ADAPTER-003",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_native_tools.py::test_quality_keeps_failed_unknown_and_missing_checks",
+        "tests/test_native_tools.py::test_native_lint_and_version_perspective_are_separate"
+      ]
+    },
+    {
+      "id": "CASE-ADAPTER-004",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_native_tools.py::test_dlt_empty_schema_and_discard_counts",
+        "tests/test_native_tools.py::test_dlt_freeze_and_exact_native_job_inventory"
+      ]
+    },
+    {
+      "id": "CASE-ADAPTER-007",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_fixtures.py::test_duplicate_rows_and_boolean_identity",
+        "tests/test_fixtures.py::test_tolerance_requires_a_complete_multiset_assignment"
+      ]
+    },
+    {
+      "id": "CASE-ADAPTER-010",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_connected_workflow.py::test_connected_staged_saved_plan_quality_catalog_reader",
+        "tests/test_connected_workflow.py::test_duplicate_binding_origin_is_rejected_before_any_native_call"
+      ]
+    },
+    {
+      "id": "CASE-SAFE-004",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_connected_workflow.py::test_cli_fixture_cleanup_retains_failure_and_unrelated_data",
+        "tests/test_connected_workflow.py::test_fixture_caller_interruption_retains_original_uncertain_request"
+      ]
+    },
+    {
+      "id": "CASE-GITHUB-CLI-INHERITANCE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_native_tools.py::test_selected_definition_resolver_matches_pinned_development_semantics",
+        "tests/core/test_inventory_impact.py::test_inheritance_merges_keys_and_respects_explicit_legacy_enum"
+      ]
+    },
+    {
+      "id": "CASE-GITHUB-ODCS-OPERATORS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_case_coverage.py::test_pinned_odcs_combined_operators_differ_from_release"
+      ]
+    },
+    {
+      "id": "CASE-GITHUB-FRICTIONLESS-KEYS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_native_tools.py::test_frictionless_composite_key_and_invalid_date",
+        "tests/test_native_tools.py::test_frictionless_primary_key_null_semantics_and_unsupported_precision"
+      ]
+    },
+    {
+      "id": "CASE-GITHUB-FRICTIONLESS-ERRORS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_native_tools.py::test_frictionless_check_start_errors_never_claim_complete_coverage"
+      ]
+    },
+    {
+      "id": "CASE-BUSINESS-REVENUE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_connected_workflow.py::test_connected_staged_saved_plan_quality_catalog_reader",
+        "tests/test_connected_workflow.py::test_fixture_boundary_expectations_are_independent"
+      ]
+    },
+    {
+      "id": "CASE-TEST-004",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_connected_workflow.py::test_connected_staged_saved_plan_quality_catalog_reader",
+        "tests/catalog/test_catalog.py::test_nested_paths_preserve_literal_dot_order_types_and_scope",
+        "tests/catalog/test_catalog.py::test_fresh_process_refresh_reuses_receipts_without_payload_io"
+      ]
+    },
+    {
+      "id": "CASE-TEST-005",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_connected_workflow.py::test_connected_staged_saved_plan_quality_catalog_reader",
+        "tests/core/test_conformance.py::test_disconnected_catalog_and_fixture_reports_do_not_qualify_workflow"
+      ]
+    },
+    {
+      "id": "CASE-GITHUB-DLT-NESTED",
+      "coverage": "unexercised",
+      "gap": "Nested dlt ingestion is not a claimed mapping; required nested requests remain unavailable."
+    },
+    {
+      "id": "CASE-GITHUB-VALIDATOR-TUPLE",
+      "coverage": "unexercised",
+      "gap": "No compatible standalone validator tuple is claimed. Standard validity remains unknown."
+    },
+    {
+      "id": "CASE-PORTABILITY-SAME-BYTES",
+      "coverage": "unexercised",
+      "gap": "Only the named DocSpec/DataFusion consumer is claimed. Second-engine saved-byte portability remains not_run."
+    }
+  ]
+}

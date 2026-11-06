@@ -1,0 +1,244 @@
+{
+  "specification": "DDK 0.1",
+  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, and one local source-only managed Build.",
+  "status": "Executable traceability for the pinned local tuple. The independent loose-mode validator remains unexercised.",
+  "evidencePaths": [
+    "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/verification-qualified.json",
+    "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/pytest-runtime-final-qualified.log",
+    "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-runtime-focused.log"
+  ],
+  "cases": [
+    {
+      "id": "CASE-ADAPTER-005",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_commerce_sql_and_saved_bytes_match_independent_expectations",
+        "tests/test_connected_workflow.py::test_connected_staged_saved_plan_quality_catalog_reader"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/reproducible-plan-68wbwa29/reproduction.json"
+      ]
+    },
+    {
+      "id": "CASE-ADAPTER-006",
+      "coverage": "unexercised",
+      "gap": "The pinned consumer ran the saved plan. No compatible independent loose-mode validator ran on those bytes."
+    },
+    {
+      "id": "CASE-ADAPTER-008",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_cli.py::test_declared_custom_function_without_runtime_implementation_is_not_run"
+      ],
+      "scopeNote": "An authored unavailable custom function yields the registered not-run diagnostic."
+    },
+    {
+      "id": "CASE-ADAPTER-009",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_cli.py::test_bundle_interruption_after_native_binary_preserves_previous_outputs",
+        "tests/test_cli.py::test_cli_004_two_exports_preserve_previous_complete_bundle",
+        "tests/test_cli.py::test_build_preserves_unmanaged_and_modified_prior_bundle_contents"
+      ],
+      "scopeNote": "A create-only collision interrupts the native export after writing its first staged output. The prior complete bundle remains byte-identical."
+    },
+    {
+      "id": "CASE-PREPARE-SCHEMA-ONLY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_commerce_sql_and_saved_bytes_match_independent_expectations"
+      ],
+      "nativeTests": [
+        "src/job/plan.rs::job::plan::tests::schema_only_preparation_uses_a_provider_that_refuses_scans"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-runtime-focused.log"
+      ],
+      "scopeNote": "The Rust probe exercises the registered schema-only provider, which refuses any attempted scan. The DDK test prepares commerce SQL before fixture rows exist and compares independently stated Arrow fields."
+    },
+    {
+      "id": "CASE-SQL-WITHOUT-SUBSTRAIT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_cli.py::test_sql_only_runtime_executes_authored_fixture"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/sql-without-substrait-ox7mx_ms/result.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/sql-only-cargo-tree.txt"
+      ]
+    },
+    {
+      "id": "CASE-JOB-PARTIAL-OUTPUTS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_bound_parameters_and_partial_output_identity"
+      ]
+    },
+    {
+      "id": "CASE-JOB-PROCESS-LOSS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_bounded_job_process_loss_keeps_native_execution_unknown"
+      ]
+    },
+    {
+      "id": "CASE-NATIVE-EXACT-READ",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_exact_native_version_survives_latest_change"
+      ]
+    },
+    {
+      "id": "CASE-NATIVE-FIELD-IDENTITY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_exact_native_version_survives_latest_change"
+      ],
+      "scopeNote": "Exact protected reads preserve field IDs across a newer release that renames and reorders columns."
+    },
+    {
+      "id": "CASE-NATIVE-DIGEST-SCHEME",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_exact_native_version_survives_latest_change"
+      ],
+      "scopeNote": "A contradictory digest scheme is refused before submission and mapped to the registered failed DDK check."
+    },
+    {
+      "id": "CASE-NATIVE-UNAVAILABLE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_exact_native_version_survives_latest_change"
+      ],
+      "scopeNote": "A missing exact retained version yields the registered not-run DDK check without substituting latest or writing output."
+    },
+    {
+      "id": "CASE-NATIVE-QUALITY-BRIDGE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "Latest advances to another release before evaluation. The evaluator reads the earlier unselected protected candidate via bounded Arrow IPC and retains exact native evidence."
+    },
+    {
+      "id": "CASE-NATIVE-QUALITY-UNAVAILABLE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "The configured alternate workspace lacks the exact version and native evaluation cannot bind it. Successful file evidence does not qualify the requested managed gate."
+    },
+    {
+      "id": "CASE-REUSE-RULE-CHANGE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ]
+    },
+    {
+      "id": "CASE-REUSE-ENDPOINT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_exact_native_version_survives_latest_change"
+      ],
+      "scopeNote": "A byte-identical executable moves to a different local path. The input, runtime and semantic identities verify unchanged while receipt provenance records the new path."
+    },
+    {
+      "id": "CASE-REUSE-SEMANTIC-CHANGE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_exact_native_version_survives_latest_change"
+      ],
+      "scopeNote": "The required equivalence check rejects a changed declared function and overflow semantics revision with the same SQL and exact native inputs."
+    },
+    {
+      "id": "CASE-GATE-EXACT-CANDIDATE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "Actual evaluator evidence for the first candidate fails the exact identity check on another candidate."
+    },
+    {
+      "id": "CASE-GATE-COVERAGE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "Duplicate and missing required outcomes yield the registered coverage refusal."
+    },
+    {
+      "id": "CASE-GATE-UNKNOWN",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "A native Data Contract CLI warning gives an unknown required result and leaves selection pending. A separate actual run with a failed and unknown required check also remains pending and reports the failure."
+    },
+    {
+      "id": "CASE-GATE-ATOMIC-AUTHORITY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "Native epoch fencing after acceptance prevents stale selection and preserves the current latest release."
+    },
+    {
+      "id": "CASE-GATE-AUDIT-ONLY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "A fresh exact read after selection has its own native read ID and cannot replace the already accepted preselection evidence."
+    },
+    {
+      "id": "CASE-MANAGED-LOST-ACK",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection",
+        "tests/test_cli.py::test_managed_cli_prior_receipt_refuses_cross_dataset_before_submission"
+      ]
+    },
+    {
+      "id": "CASE-MANAGED-ID-CONFLICT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "Materially different SQL under the same native operation ID is refused with the registered diagnostic and original candidate."
+    },
+    {
+      "id": "CASE-MANAGED-BACKEND-SCOPE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ],
+      "scopeNote": "An unqualified remote backend is refused before native submission."
+    },
+    {
+      "id": "CASE-SUBSTRAIT-RUNTIME-GUARDS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_commerce_sql_and_saved_bytes_match_independent_expectations"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-rust-guards-exact.log"
+      ]
+    },
+    {
+      "id": "CASE-SUBSTRAIT-BUDGETS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_commerce_sql_and_saved_bytes_match_independent_expectations"
+      ],
+      "scopeNote": "The deliberate native memory refusal establishes the registered insufficient-budget case. No physical spill throughput claim is made."
+    },
+    {
+      "id": "CASE-GATE-ACCEPTED-SELECTION",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
+      ]
+    }
+  ]
+}

@@ -145,6 +145,9 @@
         "$ref": "#/$defs/production"
       },
       "uniqueItems": true
+    },
+    "currentSelection": {
+      "$ref": "#/$defs/selectionSelector"
     }
   },
   "required": [
@@ -394,14 +397,11 @@
         "match": {
           "enum": [
             "equal",
-            "decimal_string_to_integer",
-            "shared_list_value",
-            "identifier",
             "project_rule"
           ]
         },
         "rule": {
-          "$ref": "common.schema.json#/$defs/identifier"
+          "$ref": "#/$defs/versionedIdentifier"
         },
         "cardinality": {
           "enum": [
@@ -726,7 +726,22 @@
     },
     "version": {
       "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "reference"
+          ]
+        },
+        {
+          "required": [
+            "referenceDisclosure"
+          ]
+        }
+      ],
       "properties": {
+        "referenceDisclosure": {
+          "const": "withheld"
+        },
         "id": {
           "$ref": "common.schema.json#/$defs/identifier"
         },
@@ -767,7 +782,6 @@
       "required": [
         "id",
         "dataset",
-        "reference",
         "retention",
         "scope",
         "record",
@@ -1010,12 +1024,33 @@
         },
         "production": {
           "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "inputCoverage": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "complete",
+                "partial",
+                "unknown"
+              ]
+            },
+            "scope": {
+              "$ref": "common.schema.json#/$defs/name"
+            }
+          },
+          "required": [
+            "status",
+            "scope"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
         "id",
         "reference",
         "inputs",
+        "inputCoverage",
         "outputs",
         "outcome",
         "observedAt",
@@ -1146,7 +1181,8 @@
             "dcat",
             "openlineage",
             "consumer",
-            "report"
+            "report",
+            "recipe"
           ]
         }
       },
@@ -1307,6 +1343,22 @@
           }
         }
       ]
+    },
+    "selectionSelector": {
+      "type": "object",
+      "properties": {
+        "authority": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "purpose": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "authority",
+        "purpose"
+      ],
+      "additionalProperties": false
     }
   },
   "allOf": [
