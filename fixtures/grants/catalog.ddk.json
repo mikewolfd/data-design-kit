@@ -1,0 +1,694 @@
+{
+  "specVersion": "0.1",
+  "kind": "catalog",
+  "id": "urn:ddk-viewer:fixture:grants:catalog",
+  "version": "1.0.0",
+  "project": {
+    "id": "urn:ddk-viewer:fixture:grants:project",
+    "version": "1.0.0"
+  },
+  "audience": "public",
+  "disclosurePolicy": {
+    "uri": "urn:ddk-viewer:fixture:grants:disclosure",
+    "sha256": "5c77ae1e739ece024873b04290c6efa49ebe2005037ad1010447a29d068c0af7"
+  },
+  "sourceInventory": [
+    {
+      "uri": "urn:ddk-viewer:fixture:grants:definitions",
+      "sha256": "68ee137892a21d71962e30211e64e5ac89b4c10aa46471b1ea49e0259e5a81be",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:ddk-viewer:fixture:grants:evidence",
+      "sha256": "0dcb550c187f7febf799a242b09854afb90744f781bb20312e6c08ef00979465",
+      "role": "metadata"
+    },
+    {
+      "uri": "urn:ddk-viewer:fixture:grants:recipe",
+      "sha256": "6839657ee4a11b0776ab7c4faaad747d30457dffa43143ef5b63ecc562b4973e",
+      "role": "recipe"
+    }
+  ],
+  "adapters": [
+    {
+      "id": "urn:ddk-viewer:fixture-author",
+      "version": "1.0.0"
+    }
+  ],
+  "products": [
+    {
+      "alias": "product",
+      "id": "urn:ddk-viewer:fixture:grants:product",
+      "version": "1.0.0",
+      "definition": {
+        "uri": "urn:ddk-viewer:fixture:grants:definitions",
+        "sha256": "68ee137892a21d71962e30211e64e5ac89b4c10aa46471b1ea49e0259e5a81be"
+      },
+      "ports": [
+        {
+          "product": "product",
+          "direction": "output",
+          "port": "awards",
+          "version": "1.0.0",
+          "dataset": "awards"
+        },
+        {
+          "product": "product",
+          "direction": "output",
+          "port": "programs",
+          "version": "1.0.0",
+          "dataset": "programs"
+        }
+      ]
+    }
+  ],
+  "datasets": [
+    {
+      "alias": "awards",
+      "id": "urn:ddk-viewer:fixture:grants:dataset:awards",
+      "title": "Public-service grants",
+      "rowMeaning": "One synthetic grant award with repeated payment records",
+      "role": "source_record",
+      "definition": {
+        "contractId": "urn:ddk-viewer:fixture:grants:definition",
+        "version": "1.0.0",
+        "object": "awards",
+        "source": {
+          "uri": "urn:ddk-viewer:fixture:grants:definitions",
+          "sha256": "68ee137892a21d71962e30211e64e5ac89b4c10aa46471b1ea49e0259e5a81be"
+        }
+      }
+    },
+    {
+      "alias": "programs",
+      "id": "urn:ddk-viewer:fixture:grants:dataset:programs",
+      "title": "Synthetic grant programs",
+      "rowMeaning": "One synthetic grant program per code",
+      "role": "source_record",
+      "definition": {
+        "contractId": "urn:ddk-viewer:fixture:grants:definition",
+        "version": "1.0.0",
+        "object": "programs",
+        "source": {
+          "uri": "urn:ddk-viewer:fixture:grants:definitions",
+          "sha256": "68ee137892a21d71962e30211e64e5ac89b4c10aa46471b1ea49e0259e5a81be"
+        }
+      }
+    }
+  ],
+  "identities": [
+    {
+      "dataset": "awards",
+      "kind": "key",
+      "scope": "dataset_version",
+      "meaning": "The same ID can appear in two versions; bind the exact version before comparing rows.",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "id"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "int64"
+        }
+      ]
+    },
+    {
+      "dataset": "programs",
+      "kind": "key",
+      "scope": "dataset_version",
+      "meaning": "Lookup key within the exact synthetic version",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "code"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "string"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:relationship:lookup",
+      "source": {
+        "dataset": "awards",
+        "paths": [
+          [
+            {
+              "field": "program_code"
+            }
+          ]
+        ]
+      },
+      "target": {
+        "dataset": "programs",
+        "paths": [
+          [
+            {
+              "field": "code"
+            }
+          ]
+        ]
+      },
+      "match": "equal",
+      "cardinality": "many_to_one",
+      "scope": "same_release",
+      "resolution": "unresolved_allowed",
+      "meaning": "Declared lookup meaning; this declaration is not evidence of observed matches.",
+      "nulls": "skip"
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:relationship:external",
+      "source": {
+        "dataset": "programs",
+        "paths": [
+          [
+            {
+              "field": "code"
+            }
+          ]
+        ]
+      },
+      "target": {
+        "external": "https://example.invalid/fixture-registry"
+      },
+      "match": "equal",
+      "cardinality": "unknown",
+      "scope": "external",
+      "resolution": "external",
+      "meaning": "Explanatory external reference; existence has not been checked.",
+      "nulls": "unknown"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:recipe:minimum",
+      "title": "Filter awards by exact minimum",
+      "notes": [
+        "Runs only the registered fixture evaluator after exact input and SQL digest checks.",
+        "The lookup relationship is context; the query does not read the lookup dataset."
+      ],
+      "sql": "recipes/awards-minimum.sql",
+      "dialect": "fixture-sql",
+      "inputs": {
+        "records": "awards"
+      },
+      "relationships": [],
+      "contextualRelationships": [
+        "urn:ddk-viewer:fixture:grants:relationship:lookup"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "minimum_amount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "minimum_amount"
+        ],
+        "additionalProperties": false
+      },
+      "parameterOrder": [
+        "minimum_amount"
+      ],
+      "resultGrain": "One source row meeting the exact minimum; values and source identities are preserved"
+    }
+  ],
+  "versions": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:v1",
+      "dataset": "awards",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "batch": "1",
+          "sha256": "8401f0d3ce35aebccdf2fa5d0192c92a76105f8620759693a75f52e6d08f7019"
+        }
+      },
+      "retention": "present",
+      "scope": "One immutable synthetic JSON file",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:grants:capture:1"
+      ],
+      "coverage": [
+        {
+          "scope": "Authored sample rows only",
+          "unit": "rows",
+          "status": "complete",
+          "observed": 3,
+          "expected": 3,
+          "record": {
+            "uri": "urn:ddk-viewer:fixture:grants:evidence"
+          }
+        }
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:v2",
+      "dataset": "awards",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "batch": "2",
+          "sha256": "8a54c1b5c345a38b929f08d577cb4ee8a1be266e62a355017d3bac8e02d16d9a"
+        }
+      },
+      "retention": "present",
+      "scope": "One immutable synthetic JSON file",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:grants:capture:2"
+      ],
+      "coverage": [
+        {
+          "scope": "Authored sample rows only",
+          "unit": "rows",
+          "status": "complete",
+          "observed": 2,
+          "expected": 2,
+          "record": {
+            "uri": "urn:ddk-viewer:fixture:grants:evidence"
+          }
+        }
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:programs:v1",
+      "dataset": "programs",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "eb48a0c1c88337ee447c72f68c567420dd67a4b7b05dcf02ec898fbfe0aa0616"
+        }
+      },
+      "retention": "present",
+      "scope": "One synthetic lookup table",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:grants:capture:1"
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:withheld",
+      "dataset": "awards",
+      "referenceDisclosure": "withheld",
+      "retention": "missing",
+      "scope": "Illustrative withheld historical reference; payload unavailable",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      },
+      "sources": []
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:unresolved",
+      "dataset": "awards",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "unresolved-native-reference"
+      },
+      "retention": "unknown",
+      "scope": "Illustrative unresolved retention",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      },
+      "sources": []
+    }
+  ],
+  "sources": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:capture:1",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-1"
+      },
+      "content": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "8401f0d3ce35aebccdf2fa5d0192c92a76105f8620759693a75f52e6d08f7019"
+        }
+      },
+      "outcome": "retained",
+      "scope": "This synthetic capture occurrence only",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:capture:2",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-2"
+      },
+      "content": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "8a54c1b5c345a38b929f08d577cb4ee8a1be266e62a355017d3bac8e02d16d9a"
+        }
+      },
+      "outcome": "retained",
+      "scope": "This synthetic capture occurrence only",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:capture:empty",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-empty"
+      },
+      "outcome": "empty",
+      "scope": "Explicit synthetic capture occurrence; no retained payload",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:capture:failed",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-failed"
+      },
+      "outcome": "failed",
+      "scope": "Explicit synthetic capture occurrence; no retained payload",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    }
+  ],
+  "representations": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:v1:json",
+      "version": "urn:ddk-viewer:fixture:grants:awards:v1",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:grants:data:awards:v1",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:v2:json",
+      "version": "urn:ddk-viewer:fixture:grants:awards:v2",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:grants:data:awards:v2",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:programs:v1:json",
+      "version": "urn:ddk-viewer:fixture:grants:programs:v1",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:grants:data:programs:v1",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:withheld:json",
+      "version": "urn:ddk-viewer:fixture:grants:awards:withheld",
+      "kind": "file",
+      "availability": "unavailable",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:awards:unresolved:service",
+      "version": "urn:ddk-viewer:fixture:grants:awards:unresolved",
+      "kind": "service",
+      "availability": "unknown",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    }
+  ],
+  "releases": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:release:1",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "release-1"
+      },
+      "members": [
+        "urn:ddk-viewer:fixture:grants:awards:v1",
+        "urn:ddk-viewer:fixture:grants:programs:v1"
+      ],
+      "membership": "complete",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:release:2",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "release-2"
+      },
+      "members": [
+        "urn:ddk-viewer:fixture:grants:awards:v2",
+        "urn:ddk-viewer:fixture:grants:programs:v1"
+      ],
+      "membership": "complete",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    }
+  ],
+  "selections": [
+    {
+      "authority": "urn:ddk-viewer:fixture:grants:publisher",
+      "purpose": "fixture-demo",
+      "release": "urn:ddk-viewer:fixture:grants:release:2",
+      "observedAt": "2026-11-06T17:00:00Z",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    }
+  ],
+  "currentSelection": {
+    "authority": "urn:ddk-viewer:fixture:grants:publisher",
+    "purpose": "fixture-demo"
+  },
+  "runs": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:run:illustrative",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "illustrative-record-not-a-native-run"
+      },
+      "inputs": [
+        "urn:ddk-viewer:fixture:grants:capture:1"
+      ],
+      "inputCoverage": {
+        "status": "partial",
+        "scope": "Illustrative fixture capture only; not an execution dependency census"
+      },
+      "outputs": [
+        "urn:ddk-viewer:fixture:grants:awards:v1"
+      ],
+      "outcome": "succeeded",
+      "observedAt": "2026-11-06T17:00:00Z",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:grants:run:unresolved",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "illustrative-unknown-run"
+      },
+      "inputs": [],
+      "inputCoverage": {
+        "status": "unknown",
+        "scope": "No native run evidence"
+      },
+      "outputs": [],
+      "outcome": "unknown",
+      "observedAt": "2026-11-06T17:00:00Z",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "subject": "urn:ddk-viewer:fixture:grants:awards:v1",
+      "rule": {
+        "id": "urn:ddk-viewer:fixture:grants:rule:sample",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "urn:ddk-viewer:fixture-author",
+        "version": "1.0.0"
+      },
+      "scope": "Authored synthetic sample evidence only",
+      "status": "passed",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:grants:evidence"
+      }
+    },
+    {
+      "subject": "urn:ddk-viewer:fixture:grants:awards:v2",
+      "rule": {
+        "id": "urn:ddk-viewer:fixture:grants:rule:native-candidate",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "urn:ddk-viewer:fixture-author",
+        "version": "1.0.0"
+      },
+      "scope": "Native candidate acceptance",
+      "status": "unknown",
+      "reason": "No native accepted candidate record exists."
+    },
+    {
+      "subject": "urn:ddk-viewer:fixture:grants:relationship:external",
+      "rule": {
+        "id": "urn:ddk-viewer:fixture:grants:rule:remote",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "urn:ddk-viewer:fixture-author",
+        "version": "1.0.0"
+      },
+      "scope": "External existence",
+      "status": "not_run",
+      "reason": "No external service was contacted."
+    }
+  ],
+  "files": [
+    {
+      "path": "catalog.report.json",
+      "sha256": "36a2b6ce5702876b8dcdd2f6e14f7a10496441cae92b9bbdb4a93a76dbd59745",
+      "role": "report"
+    },
+    {
+      "path": "recipes/awards-minimum.sql",
+      "sha256": "6839657ee4a11b0776ab7c4faaad747d30457dffa43143ef5b63ecc562b4973e",
+      "role": "recipe"
+    }
+  ],
+  "productions": [],
+  "extensions": {
+    "urn:ddk:catalog:assembly": {
+      "datasetDefinitions": {
+        "awards": {
+          "name": "awards",
+          "businessName": "Public-service grants",
+          "description": "One synthetic grant award with repeated payment records",
+          "properties": [
+            {
+              "name": "id",
+              "logicalType": "integer",
+              "description": "Exact grant identifier",
+              "physicalType": "uint64"
+            },
+            {
+              "name": "program_code",
+              "logicalType": "string",
+              "description": "Program code scoped through the release"
+            },
+            {
+              "name": "amount",
+              "logicalType": "number",
+              "description": "Exact awarded currency amount",
+              "physicalType": "decimal128(30,8)"
+            },
+            {
+              "name": "payments",
+              "logicalType": "array",
+              "description": "Repeated payments; null differs from empty",
+              "items": {
+                "name": "payment",
+                "logicalType": "object",
+                "description": "Payment record",
+                "properties": [
+                  {
+                    "name": "amount",
+                    "logicalType": "number",
+                    "description": "Exact payment amount"
+                  },
+                  {
+                    "name": "tags",
+                    "logicalType": "array",
+                    "description": "Nested tags",
+                    "items": {
+                      "name": "tag",
+                      "logicalType": "string",
+                      "description": "Tag"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "note",
+              "logicalType": "string",
+              "description": "May be absent, null or empty"
+            }
+          ]
+        },
+        "programs": {
+          "name": "programs",
+          "businessName": "Synthetic grant programs",
+          "description": "One synthetic grant program per code",
+          "properties": [
+            {
+              "name": "code",
+              "logicalType": "string",
+              "description": "Program key"
+            },
+            {
+              "name": "name",
+              "logicalType": "string",
+              "description": "Program name"
+            }
+          ]
+        }
+      },
+      "projectExtensions": []
+    },
+    "urn:ddk-viewer:fixture": {
+      "title": "Public-service grants",
+      "description": "Synthetic grants and program register. Large identifiers, exact currency and repeated payment records.",
+      "synthetic": true,
+      "nativeExecution": "not_run",
+      "conformance": "Document shapes checked separately; no DDK producer or native conformance claim"
+    }
+  }
+}

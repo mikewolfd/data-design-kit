@@ -1,0 +1,84 @@
+{
+  "specVersion": "0.1",
+  "kind": "report",
+  "id": "urn:ddk-viewer:fixture:watershed:report",
+  "version": "1.0.0",
+  "decision": "incomplete",
+  "scope": {
+    "projects": [
+      "urn:ddk-viewer:fixture:watershed:project"
+    ],
+    "artifacts": [
+      "observations",
+      "stations"
+    ],
+    "followedReferences": [],
+    "excludedConsumers": []
+  },
+  "coverage": {
+    "requestedGroups": [
+      "catalog.qualification"
+    ],
+    "completedProfiles": [],
+    "availableCapabilities": [
+      "synthetic.fixture-reader"
+    ],
+    "missingCapabilities": [
+      "runtime-native-candidate-acceptance"
+    ],
+    "mappingLimits": [
+      "These are hand-authored format fixtures, not the result of DDK assembly or native execution."
+    ]
+  },
+  "lock": {
+    "verified": false,
+    "path": "catalog.lock.json"
+  },
+  "tools": {
+    "fixture-author": {
+      "version": "1.0.0"
+    }
+  },
+  "checks": [
+    {
+      "id": "declaration",
+      "requirement": "DDK-CATALOG-001",
+      "group": "catalog.qualification",
+      "subject": "urn:ddk-viewer:fixture:watershed:project",
+      "status": "passed",
+      "required": true,
+      "applicable": true,
+      "evidence": "declared",
+      "reason": "The fixture declares its synthetic inventory; this says nothing about native candidate acceptance.",
+      "diagnostics": []
+    },
+    {
+      "id": "native-candidate",
+      "requirement": "DDK-CATALOG-001",
+      "group": "catalog.qualification",
+      "subject": "urn:ddk-viewer:fixture:watershed:project",
+      "status": "unknown",
+      "required": true,
+      "applicable": true,
+      "evidence": "declared",
+      "reason": "No native candidate or accepted qualification record exists for this fixture.",
+      "diagnostics": []
+    },
+    {
+      "id": "remote-existence",
+      "requirement": "DDK-CATALOG-001",
+      "group": "catalog.qualification",
+      "subject": "urn:ddk-viewer:fixture:watershed:relationship:external",
+      "status": "not_run",
+      "required": false,
+      "applicable": true,
+      "evidence": "declared",
+      "reason": "The fixture never contacts the external identifier.",
+      "diagnostics": []
+    }
+  ],
+  "operationalErrors": [],
+  "limits": {
+    "fixtureOnly": true
+  }
+}

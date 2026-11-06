@@ -1,0 +1,741 @@
+{
+  "specVersion": "0.1",
+  "kind": "catalog",
+  "id": "urn:ddk-viewer:fixture:watershed:catalog",
+  "version": "1.0.0",
+  "project": {
+    "id": "urn:ddk-viewer:fixture:watershed:project",
+    "version": "1.0.0"
+  },
+  "audience": "public",
+  "disclosurePolicy": {
+    "uri": "urn:ddk-viewer:fixture:watershed:disclosure",
+    "sha256": "5c77ae1e739ece024873b04290c6efa49ebe2005037ad1010447a29d068c0af7"
+  },
+  "sourceInventory": [
+    {
+      "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+      "sha256": "50a04e1e3f692ad98e08d02965a04e1b53a2457b0c7f293e9e9d37e7aaa28ffb",
+      "role": "definition"
+    },
+    {
+      "uri": "urn:ddk-viewer:fixture:watershed:evidence",
+      "sha256": "0dcb550c187f7febf799a242b09854afb90744f781bb20312e6c08ef00979465",
+      "role": "metadata"
+    },
+    {
+      "uri": "urn:ddk-viewer:fixture:watershed:recipe",
+      "sha256": "707011624caa04c32a0c4291dcea7ae9ced427867630702009715f0f9d81bbdc",
+      "role": "recipe"
+    }
+  ],
+  "adapters": [
+    {
+      "id": "urn:ddk-viewer:fixture-author",
+      "version": "1.0.0"
+    }
+  ],
+  "products": [
+    {
+      "alias": "product",
+      "id": "urn:ddk-viewer:fixture:watershed:product",
+      "version": "1.0.0",
+      "definition": {
+        "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+        "sha256": "50a04e1e3f692ad98e08d02965a04e1b53a2457b0c7f293e9e9d37e7aaa28ffb"
+      },
+      "ports": [
+        {
+          "product": "product",
+          "direction": "output",
+          "port": "observations",
+          "version": "1.0.0",
+          "dataset": "observations"
+        },
+        {
+          "product": "product",
+          "direction": "output",
+          "port": "stations",
+          "version": "1.0.0",
+          "dataset": "stations"
+        }
+      ]
+    }
+  ],
+  "datasets": [
+    {
+      "alias": "observations",
+      "id": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+      "title": "Watershed observations",
+      "rowMeaning": "One synthetic instrument observation with nested readings",
+      "role": "source_record",
+      "definition": {
+        "contractId": "urn:ddk-viewer:fixture:watershed:definition",
+        "version": "1.0.0",
+        "object": "observations",
+        "source": {
+          "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+          "sha256": "50a04e1e3f692ad98e08d02965a04e1b53a2457b0c7f293e9e9d37e7aaa28ffb"
+        }
+      }
+    },
+    {
+      "alias": "stations",
+      "id": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+      "title": "Synthetic station register",
+      "rowMeaning": "One synthetic station per station code",
+      "role": "source_record",
+      "definition": {
+        "contractId": "urn:ddk-viewer:fixture:watershed:definition",
+        "version": "1.0.0",
+        "object": "stations",
+        "source": {
+          "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+          "sha256": "50a04e1e3f692ad98e08d02965a04e1b53a2457b0c7f293e9e9d37e7aaa28ffb"
+        }
+      }
+    }
+  ],
+  "identities": [
+    {
+      "dataset": "observations",
+      "kind": "key",
+      "scope": "dataset_version",
+      "meaning": "The same ID can appear in two versions; bind the exact version before comparing rows.",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "id"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "int64"
+        }
+      ]
+    },
+    {
+      "dataset": "stations",
+      "kind": "key",
+      "scope": "dataset_version",
+      "meaning": "Lookup key within the exact synthetic version",
+      "fields": [
+        {
+          "path": [
+            {
+              "field": "code"
+            }
+          ],
+          "virtual": false,
+          "physicalType": "string"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:relationship:lookup",
+      "source": {
+        "dataset": "observations",
+        "paths": [
+          [
+            {
+              "field": "station_code"
+            }
+          ]
+        ]
+      },
+      "target": {
+        "dataset": "stations",
+        "paths": [
+          [
+            {
+              "field": "code"
+            }
+          ]
+        ]
+      },
+      "match": "equal",
+      "cardinality": "many_to_one",
+      "scope": "same_release",
+      "resolution": "unresolved_allowed",
+      "meaning": "Declared lookup meaning; this declaration is not evidence of observed matches.",
+      "nulls": "skip"
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:relationship:external",
+      "source": {
+        "dataset": "stations",
+        "paths": [
+          [
+            {
+              "field": "code"
+            }
+          ]
+        ]
+      },
+      "target": {
+        "external": "https://example.invalid/fixture-registry"
+      },
+      "match": "equal",
+      "cardinality": "unknown",
+      "scope": "external",
+      "resolution": "external",
+      "meaning": "Explanatory external reference; existence has not been checked.",
+      "nulls": "unknown"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:recipe:minimum",
+      "title": "Filter observations by exact minimum",
+      "notes": [
+        "Runs only the registered fixture evaluator after exact input and SQL digest checks.",
+        "The lookup relationship is context; the query does not read the lookup dataset."
+      ],
+      "sql": "recipes/observations-minimum.sql",
+      "dialect": "fixture-sql",
+      "inputs": {
+        "records": "observations"
+      },
+      "relationships": [],
+      "contextualRelationships": [
+        "urn:ddk-viewer:fixture:watershed:relationship:lookup"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "minimum_concentration": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "minimum_concentration"
+        ],
+        "additionalProperties": false
+      },
+      "parameterOrder": [
+        "minimum_concentration"
+      ],
+      "resultGrain": "One source row meeting the exact minimum; values and source identities are preserved"
+    }
+  ],
+  "versions": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:v1",
+      "dataset": "observations",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "batch": "1",
+          "sha256": "db531822f69641b052aaa9daa9a25fcb5241e49d31febcd58f417e264a868145"
+        }
+      },
+      "retention": "present",
+      "scope": "One immutable synthetic JSON file",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:watershed:capture:1"
+      ],
+      "coverage": [
+        {
+          "scope": "Authored sample rows only",
+          "unit": "rows",
+          "status": "complete",
+          "observed": 3,
+          "expected": 3,
+          "record": {
+            "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+          }
+        }
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:v2",
+      "dataset": "observations",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "batch": "2",
+          "sha256": "1a675d36910b71515eb0861ba0bb0d335403a796f3ae8153195619dbf707f085"
+        }
+      },
+      "retention": "present",
+      "scope": "One immutable synthetic JSON file",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:watershed:capture:2"
+      ],
+      "coverage": [
+        {
+          "scope": "Authored sample rows only",
+          "unit": "rows",
+          "status": "complete",
+          "observed": 14,
+          "expected": 14,
+          "record": {
+            "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+          }
+        }
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:stations:v1",
+      "dataset": "stations",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "e785ec508e4dbe80ddb4006e43489f5452b9e7502abcd3e8c90e9d78a7280ac2"
+        }
+      },
+      "retention": "present",
+      "scope": "One synthetic lookup table",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:watershed:capture:1"
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:stations:v2",
+      "dataset": "stations",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "95ef3346c0f76fbf88c746521cb8f1f274717025ade38ce1b03a02371bd13563"
+        }
+      },
+      "retention": "present",
+      "scope": "One synthetic lookup table",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      },
+      "sources": [
+        "urn:ddk-viewer:fixture:watershed:capture:2"
+      ]
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:withheld",
+      "dataset": "observations",
+      "referenceDisclosure": "withheld",
+      "retention": "missing",
+      "scope": "Illustrative withheld historical reference; payload unavailable",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      },
+      "sources": []
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:unresolved",
+      "dataset": "observations",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "unresolved-native-reference"
+      },
+      "retention": "unknown",
+      "scope": "Illustrative unresolved retention",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      },
+      "sources": []
+    }
+  ],
+  "sources": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:capture:1",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-1"
+      },
+      "content": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "db531822f69641b052aaa9daa9a25fcb5241e49d31febcd58f417e264a868145"
+        }
+      },
+      "outcome": "retained",
+      "scope": "This synthetic capture occurrence only",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:capture:2",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-2"
+      },
+      "content": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": {
+          "sha256": "1a675d36910b71515eb0861ba0bb0d335403a796f3ae8153195619dbf707f085"
+        }
+      },
+      "outcome": "retained",
+      "scope": "This synthetic capture occurrence only",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:capture:empty",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-empty"
+      },
+      "outcome": "empty",
+      "scope": "Explicit synthetic capture occurrence; no retained payload",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:capture:failed",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "capture-occurrence-failed"
+      },
+      "outcome": "failed",
+      "scope": "Explicit synthetic capture occurrence; no retained payload",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    }
+  ],
+  "representations": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:v1:json",
+      "version": "urn:ddk-viewer:fixture:watershed:observations:v1",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:watershed:data:observations:v1",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:v2:json",
+      "version": "urn:ddk-viewer:fixture:watershed:observations:v2",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:watershed:data:observations:v2",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:stations:v1:json",
+      "version": "urn:ddk-viewer:fixture:watershed:stations:v1",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:watershed:data:stations:v1",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:stations:v2:json",
+      "version": "urn:ddk-viewer:fixture:watershed:stations:v2",
+      "kind": "file",
+      "availability": "available",
+      "location": "urn:ddk-viewer:fixture:watershed:data:stations:v2",
+      "mediaType": "application/json",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:withheld:json",
+      "version": "urn:ddk-viewer:fixture:watershed:observations:withheld",
+      "kind": "file",
+      "availability": "unavailable",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:observations:unresolved:service",
+      "version": "urn:ddk-viewer:fixture:watershed:observations:unresolved",
+      "kind": "service",
+      "availability": "unknown",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    }
+  ],
+  "releases": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:release:1",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "release-1"
+      },
+      "members": [
+        "urn:ddk-viewer:fixture:watershed:observations:v1",
+        "urn:ddk-viewer:fixture:watershed:stations:v1"
+      ],
+      "membership": "complete",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:release:2",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "release-2"
+      },
+      "members": [
+        "urn:ddk-viewer:fixture:watershed:observations:v2",
+        "urn:ddk-viewer:fixture:watershed:stations:v2"
+      ],
+      "membership": "complete",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    }
+  ],
+  "selections": [
+    {
+      "authority": "urn:ddk-viewer:fixture:watershed:publisher",
+      "purpose": "fixture-demo",
+      "release": "urn:ddk-viewer:fixture:watershed:release:2",
+      "observedAt": "2026-11-06T17:00:00Z",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    }
+  ],
+  "currentSelection": {
+    "authority": "urn:ddk-viewer:fixture:watershed:publisher",
+    "purpose": "fixture-demo"
+  },
+  "runs": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:run:illustrative",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "illustrative-record-not-a-native-run"
+      },
+      "inputs": [
+        "urn:ddk-viewer:fixture:watershed:capture:1"
+      ],
+      "inputCoverage": {
+        "status": "partial",
+        "scope": "Illustrative fixture capture only; not an execution dependency census"
+      },
+      "outputs": [
+        "urn:ddk-viewer:fixture:watershed:observations:v1"
+      ],
+      "outcome": "succeeded",
+      "observedAt": "2026-11-06T17:00:00Z",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:run:unresolved",
+      "reference": {
+        "scheme": "urn:ddk-viewer:synthetic-version",
+        "authority": "urn:ddk-viewer:fixture-author",
+        "value": "illustrative-unknown-run"
+      },
+      "inputs": [],
+      "inputCoverage": {
+        "status": "unknown",
+        "scope": "No native run evidence"
+      },
+      "outputs": [],
+      "outcome": "unknown",
+      "observedAt": "2026-11-06T17:00:00Z",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "subject": "urn:ddk-viewer:fixture:watershed:observations:v1",
+      "rule": {
+        "id": "urn:ddk-viewer:fixture:watershed:rule:sample",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "urn:ddk-viewer:fixture-author",
+        "version": "1.0.0"
+      },
+      "scope": "Authored synthetic sample evidence only",
+      "status": "passed",
+      "record": {
+        "uri": "urn:ddk-viewer:fixture:watershed:evidence"
+      }
+    },
+    {
+      "subject": "urn:ddk-viewer:fixture:watershed:observations:v2",
+      "rule": {
+        "id": "urn:ddk-viewer:fixture:watershed:rule:native-candidate",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "urn:ddk-viewer:fixture-author",
+        "version": "1.0.0"
+      },
+      "scope": "Native candidate acceptance",
+      "status": "unknown",
+      "reason": "No native accepted candidate record exists."
+    },
+    {
+      "subject": "urn:ddk-viewer:fixture:watershed:relationship:external",
+      "rule": {
+        "id": "urn:ddk-viewer:fixture:watershed:rule:remote",
+        "version": "1.0.0"
+      },
+      "evaluator": {
+        "id": "urn:ddk-viewer:fixture-author",
+        "version": "1.0.0"
+      },
+      "scope": "External existence",
+      "status": "not_run",
+      "reason": "No external service was contacted."
+    }
+  ],
+  "files": [
+    {
+      "path": "catalog.report.json",
+      "sha256": "2380fca74b597704f38277a4872d3ff9230c2af1d6a2f06d6173547fc6b82ee4",
+      "role": "report"
+    },
+    {
+      "path": "recipes/observations-minimum.sql",
+      "sha256": "707011624caa04c32a0c4291dcea7ae9ced427867630702009715f0f9d81bbdc",
+      "role": "recipe"
+    }
+  ],
+  "productions": [],
+  "extensions": {
+    "urn:ddk:catalog:assembly": {
+      "datasetDefinitions": {
+        "observations": {
+          "name": "observations",
+          "businessName": "Watershed observations",
+          "description": "One synthetic instrument observation with nested readings",
+          "properties": [
+            {
+              "name": "id",
+              "logicalType": "integer",
+              "description": "Exact observation ID above JavaScript's safe integer range",
+              "physicalType": "int64"
+            },
+            {
+              "name": "station_code",
+              "logicalType": "string",
+              "description": "Station code, scoped through the release"
+            },
+            {
+              "name": "concentration",
+              "logicalType": "number",
+              "description": "Exact decimal concentration in milligrams per litre",
+              "physicalType": "decimal128(28,18)"
+            },
+            {
+              "name": "readings",
+              "logicalType": "array",
+              "description": "Null, empty and populated lists differ",
+              "items": {
+                "name": "reading",
+                "logicalType": "object",
+                "description": "Nested measurement",
+                "properties": [
+                  {
+                    "name": "depth",
+                    "logicalType": "number",
+                    "description": "Exact depth"
+                  },
+                  {
+                    "name": "flags",
+                    "logicalType": "array",
+                    "description": "Repeated flag values",
+                    "items": {
+                      "name": "flag",
+                      "logicalType": "string",
+                      "description": "Flag"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "note",
+              "logicalType": "string",
+              "description": "May be missing, null or empty"
+            },
+            {
+              "name": "$number",
+              "logicalType": "string",
+              "description": "Literal source key preserved by escaped transport"
+            },
+            {
+              "name": "metadata",
+              "logicalType": "object",
+              "description": "Literal tag-shaped source object",
+              "properties": [
+                {
+                  "name": "$number",
+                  "logicalType": "string",
+                  "description": "Source text, not a number transport tag"
+                }
+              ]
+            }
+          ]
+        },
+        "stations": {
+          "name": "stations",
+          "businessName": "Synthetic station register",
+          "description": "One synthetic station per station code",
+          "properties": [
+            {
+              "name": "code",
+              "logicalType": "string",
+              "description": "Station code"
+            },
+            {
+              "name": "name",
+              "logicalType": "string",
+              "description": "Station label"
+            }
+          ]
+        }
+      },
+      "projectExtensions": []
+    },
+    "urn:ddk-viewer:fixture": {
+      "title": "Watershed observatory",
+      "description": "Synthetic watershed observations and station register. Exact decimals, nested readings and version-scoped keys.",
+      "synthetic": true,
+      "nativeExecution": "not_run",
+      "conformance": "Document shapes checked separately; no DDK producer or native conformance claim"
+    }
+  }
+}

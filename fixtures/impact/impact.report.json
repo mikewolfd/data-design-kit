@@ -1,0 +1,284 @@
+{
+  "specVersion": "0.1",
+  "kind": "report",
+  "id": "urn:ddk:report:75726e3a64646b3a636174616c6f672d696d70616374",
+  "version": "0.1.0-dev.4",
+  "scope": {
+    "projects": [
+      "urn:ddk-viewer:fixture:watershed:project"
+    ],
+    "artifacts": [
+      "observations",
+      "stations"
+    ],
+    "followedReferences": [],
+    "excludedConsumers": []
+  },
+  "coverage": {
+    "requestedGroups": [
+      "impact.catalog"
+    ],
+    "completedProfiles": [
+      "impact.catalog"
+    ],
+    "availableCapabilities": [],
+    "missingCapabilities": [],
+    "mappingLimits": []
+  },
+  "lock": {
+    "verified": false
+  },
+  "tools": {
+    "ddk": {
+      "version": "0.1.0.dev4",
+      "commit": "fb70ab825243235b4ecf77c5ebb8c636d0d06e2d",
+      "distributionSha256": "7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8"
+    },
+    "python": {
+      "version": "3.12.13"
+    },
+    "jsonschema": {
+      "version": "4.26.0"
+    },
+    "referencing": {
+      "version": "0.37.0"
+    },
+    "ddk-local-definition-resolver": {
+      "version": "0.1.0",
+      "distributionSha256": "eea8026ca2e2148a827a635dce8fcffa6d24f2bebbdbab7c3f4549fb44c38d6b"
+    }
+  },
+  "checks": [
+    {
+      "id": "impact.catalog/DDK-CATALOG-010/comparison",
+      "requirement": "DDK-CATALOG-010",
+      "group": "impact.catalog",
+      "subject": "comparison",
+      "status": "passed",
+      "required": true,
+      "applicable": true,
+      "evidence": "inferred",
+      "diagnostics": []
+    },
+    {
+      "id": "impact.catalog/DDK-CATALOG-010/requested-quality-inventory",
+      "requirement": "DDK-CATALOG-010",
+      "group": "impact.catalog",
+      "subject": "requested-quality-inventory",
+      "status": "unknown",
+      "required": false,
+      "applicable": true,
+      "evidence": "declared",
+      "diagnostics": [
+        {
+          "code": "CATALOG-IMPACT-QUALITY-SCOPE",
+          "severity": "warning",
+          "message": "At least one catalog omits the requested quality inventory.",
+          "location": {
+            "path": "<candidate-catalog>",
+            "pointer": ""
+          }
+        }
+      ],
+      "reason": "At least one catalog omits the requested quality inventory."
+    },
+    {
+      "id": "impact.catalog/DDK-CATALOG-010/complete-scope",
+      "requirement": "DDK-CATALOG-010",
+      "group": "impact.catalog",
+      "subject": "complete-scope",
+      "status": "unknown",
+      "required": false,
+      "applicable": true,
+      "evidence": "inferred",
+      "diagnostics": [
+        {
+          "code": "CATALOG-IMPACT-SCOPE",
+          "severity": "warning",
+          "message": "The supplied catalogs do not establish complete external consumer and evidence scope.",
+          "location": {
+            "path": "<command>",
+            "pointer": ""
+          }
+        }
+      ],
+      "reason": "The supplied catalogs do not establish complete external consumer and evidence scope."
+    }
+  ],
+  "operationalErrors": [],
+  "limits": {
+    "maxDocumentBytes": 8388608,
+    "maxProjectBytes": 67108864,
+    "maxReferenceDepth": 32,
+    "maxNesting": 64,
+    "maxArtifacts": 10000,
+    "maxGraphEdges": 100000,
+    "maxDiagnostics": 10000,
+    "maxAdapterSeconds": 120
+  },
+  "metadata": {
+    "catalogProjects": {
+      "base": {
+        "id": "urn:ddk-viewer:fixture:watershed:project",
+        "version": "0.9.0"
+      },
+      "candidate": {
+        "id": "urn:ddk-viewer:fixture:watershed:project",
+        "version": "1.0.0"
+      }
+    },
+    "catalogScopes": {
+      "base": {},
+      "candidate": {}
+    },
+    "catalogProjectInputs": {
+      "base": [],
+      "candidate": []
+    },
+    "unresolvedCatalogScope": [
+      "urn:ddk-viewer:fixture:watershed:observations:withheld",
+      "urn:ddk-viewer:fixture:watershed:relationship:external"
+    ],
+    "catalogScopeLimit": "Impact covers consumers and evidence in the supplied snapshots.",
+    "runtimeReuse": {
+      "base": [],
+      "candidate": [],
+      "computation": {
+        "status": "unknown",
+        "reason": "Both snapshots need runtime-issued identities for this comparison."
+      },
+      "qualification": {
+        "status": "unknown",
+        "reason": "Both snapshots need runtime-issued identities for this comparison."
+      }
+    },
+    "catalogChanges": {
+      "dataset:observations": {
+        "identity": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "obligations": [
+          "metadata-regeneration"
+        ],
+        "computation": "unaffected-by-this-change"
+      },
+      "dataset:stations": {
+        "identity": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+        "obligations": [
+          "metadata-regeneration"
+        ],
+        "computation": "unaffected-by-this-change"
+      },
+      "product:product": {
+        "identity": "urn:ddk-viewer:fixture:watershed:product",
+        "obligations": [
+          "metadata-regeneration"
+        ],
+        "computation": "unaffected-by-this-change"
+      }
+    },
+    "catalogAffectedObligations": {
+      "product:product": [
+        "metadata-regeneration"
+      ],
+      "recipe:urn:ddk-viewer:fixture:watershed:recipe:minimum": [
+        "consumer-rebind",
+        "metadata-regeneration"
+      ],
+      "relationship:urn:ddk-viewer:fixture:watershed:relationship:external": [
+        "metadata-regeneration"
+      ],
+      "relationship:urn:ddk-viewer:fixture:watershed:relationship:lookup": [
+        "metadata-regeneration"
+      ]
+    }
+  },
+  "impact": {
+    "baseProject": "urn:ddk-viewer:fixture:watershed:project",
+    "candidateProject": "urn:ddk-viewer:fixture:watershed:project",
+    "changed": [
+      {
+        "identity": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "kinds": [
+          "dataset",
+          "changed"
+        ],
+        "baseVersion": "0.9.0",
+        "candidateVersion": "1.0.0"
+      },
+      {
+        "identity": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+        "kinds": [
+          "dataset",
+          "changed"
+        ],
+        "baseVersion": "1.0.0",
+        "candidateVersion": "1.0.0"
+      },
+      {
+        "identity": "urn:ddk-viewer:fixture:watershed:product",
+        "kinds": [
+          "product",
+          "changed"
+        ],
+        "baseVersion": "1.0.0",
+        "candidateVersion": "1.0.0"
+      }
+    ],
+    "affected": [
+      {
+        "consumer": "product:product",
+        "paths": [
+          [
+            "dataset:observations",
+            "product:product"
+          ],
+          [
+            "dataset:stations",
+            "product:product"
+          ]
+        ]
+      },
+      {
+        "consumer": "recipe:urn:ddk-viewer:fixture:watershed:recipe:minimum",
+        "paths": [
+          [
+            "dataset:observations",
+            "recipe:urn:ddk-viewer:fixture:watershed:recipe:minimum"
+          ],
+          [
+            "dataset:observations",
+            "relationship:urn:ddk-viewer:fixture:watershed:relationship:lookup",
+            "recipe:urn:ddk-viewer:fixture:watershed:recipe:minimum"
+          ],
+          [
+            "dataset:stations",
+            "relationship:urn:ddk-viewer:fixture:watershed:relationship:lookup",
+            "recipe:urn:ddk-viewer:fixture:watershed:recipe:minimum"
+          ]
+        ]
+      },
+      {
+        "consumer": "relationship:urn:ddk-viewer:fixture:watershed:relationship:external",
+        "paths": [
+          [
+            "dataset:stations",
+            "relationship:urn:ddk-viewer:fixture:watershed:relationship:external"
+          ]
+        ]
+      },
+      {
+        "consumer": "relationship:urn:ddk-viewer:fixture:watershed:relationship:lookup",
+        "paths": [
+          [
+            "dataset:observations",
+            "relationship:urn:ddk-viewer:fixture:watershed:relationship:lookup"
+          ],
+          [
+            "dataset:stations",
+            "relationship:urn:ddk-viewer:fixture:watershed:relationship:lookup"
+          ]
+        ]
+      }
+    ]
+  },
+  "decision": "passed"
+}

@@ -1,0 +1,50 @@
+{
+  "scope": "Document shapes only against immutable installed DDK dev4 schemas; no native execution, DDK assembly, producer conformance or accepted-candidate claim.",
+  "wheelSha256": "7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8",
+  "schemaSha256": {
+    "bindings.schema.json": "e8d95861cd1c69884f4c9fc23ac97b91bfedeb08a1714404ceee59d1a62ad5b6",
+    "report.schema.json": "36b6dbaa28ddbf1573d1faffa63c34f90ebe6b1ba5c8f9e3e9dbedb99daa932d",
+    "bundle.schema.json": "0dec3ba0558d30ac831e3d20a2e3c0546a34a2080c243b116ae973b6a814fa58",
+    "policy.schema.json": "50d297f26895087605701b522712f838ee373fc83d2a07bc4cf54dabb852f1b9",
+    "adapter.schema.json": "7271593bf12247d265f80ead33d3567696f2c338cffb64337731cdce49be1749",
+    "common.schema.json": "88c36978c27513875b370930b2479cdbc0d6780bd207b77433d79fb5fd3756f8",
+    "design.schema.json": "dee0d3c3f47a91145e134d478f79a203c1fc9ac91bacd8cd2ec902a08a411dfa",
+    "catalog.schema.json": "e2a90b6a344e67b51471288ef025ca33abeca79e13427df983633fef98a21026",
+    "project.schema.json": "177a13d04bc5c9412355628621402e5d1c2e7882aa915237e8e8146307ad67a6",
+    "lock.schema.json": "2dae544fc6f651a1f62ba0b66089332fd9d65ed88695aa9a74a125062f876fc7",
+    "fixture.schema.json": "d70eb91310f37cefab5963244db36dd53853dd488599df63ee540ae4ca55b934",
+    "component.schema.json": "59f4ffb4abcab242e5e8ff9f47e3c04192ad26b9b08a070f6450ddfb07a80ba3"
+  },
+  "results": [
+    {
+      "path": "fixtures/watershed/catalog.ddk.json",
+      "sha256": "6f48781b55cd5384a95b87c00228ce8efc1398f15529c1d42b2614a1529eb306",
+      "shapeErrors": 0
+    },
+    {
+      "path": "fixtures/watershed/catalog.report.json",
+      "sha256": "2380fca74b597704f38277a4872d3ff9230c2af1d6a2f06d6173547fc6b82ee4",
+      "shapeErrors": 0
+    },
+    {
+      "path": "fixtures/watershed/catalog.lock.json",
+      "sha256": "3fee3318c1a4e62e6c4d206e18392f26a7099ffd4f4de91cc768c466ff690122",
+      "shapeErrors": 0
+    },
+    {
+      "path": "fixtures/grants/catalog.ddk.json",
+      "sha256": "ac19cec88afa1d82324b2683430ca789df943c364b03064272ed875fcb497c80",
+      "shapeErrors": 0
+    },
+    {
+      "path": "fixtures/grants/catalog.report.json",
+      "sha256": "36a2b6ce5702876b8dcdd2f6e14f7a10496441cae92b9bbdb4a93a76dbd59745",
+      "shapeErrors": 0
+    },
+    {
+      "path": "fixtures/grants/catalog.lock.json",
+      "sha256": "090d6cbe2b20a2c8cb0ded09fec034257541de883a9142006b95d50884c1b57d",
+      "shapeErrors": 0
+    }
+  ]
+}

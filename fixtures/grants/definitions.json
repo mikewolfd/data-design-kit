@@ -1,0 +1,75 @@
+{
+  "awards": {
+    "name": "awards",
+    "businessName": "Public-service grants",
+    "description": "One synthetic grant award with repeated payment records",
+    "properties": [
+      {
+        "name": "id",
+        "logicalType": "integer",
+        "description": "Exact grant identifier",
+        "physicalType": "uint64"
+      },
+      {
+        "name": "program_code",
+        "logicalType": "string",
+        "description": "Program code scoped through the release"
+      },
+      {
+        "name": "amount",
+        "logicalType": "number",
+        "description": "Exact awarded currency amount",
+        "physicalType": "decimal128(30,8)"
+      },
+      {
+        "name": "payments",
+        "logicalType": "array",
+        "description": "Repeated payments; null differs from empty",
+        "items": {
+          "name": "payment",
+          "logicalType": "object",
+          "description": "Payment record",
+          "properties": [
+            {
+              "name": "amount",
+              "logicalType": "number",
+              "description": "Exact payment amount"
+            },
+            {
+              "name": "tags",
+              "logicalType": "array",
+              "description": "Nested tags",
+              "items": {
+                "name": "tag",
+                "logicalType": "string",
+                "description": "Tag"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "note",
+        "logicalType": "string",
+        "description": "May be absent, null or empty"
+      }
+    ]
+  },
+  "programs": {
+    "name": "programs",
+    "businessName": "Synthetic grant programs",
+    "description": "One synthetic grant program per code",
+    "properties": [
+      {
+        "name": "code",
+        "logicalType": "string",
+        "description": "Program key"
+      },
+      {
+        "name": "name",
+        "logicalType": "string",
+        "description": "Program name"
+      }
+    ]
+  }
+}

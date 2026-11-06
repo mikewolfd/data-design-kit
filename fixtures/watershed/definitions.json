@@ -1,0 +1,92 @@
+{
+  "observations": {
+    "name": "observations",
+    "businessName": "Watershed observations",
+    "description": "One synthetic instrument observation with nested readings",
+    "properties": [
+      {
+        "name": "id",
+        "logicalType": "integer",
+        "description": "Exact observation ID above JavaScript's safe integer range",
+        "physicalType": "int64"
+      },
+      {
+        "name": "station_code",
+        "logicalType": "string",
+        "description": "Station code, scoped through the release"
+      },
+      {
+        "name": "concentration",
+        "logicalType": "number",
+        "description": "Exact decimal concentration in milligrams per litre",
+        "physicalType": "decimal128(28,18)"
+      },
+      {
+        "name": "readings",
+        "logicalType": "array",
+        "description": "Null, empty and populated lists differ",
+        "items": {
+          "name": "reading",
+          "logicalType": "object",
+          "description": "Nested measurement",
+          "properties": [
+            {
+              "name": "depth",
+              "logicalType": "number",
+              "description": "Exact depth"
+            },
+            {
+              "name": "flags",
+              "logicalType": "array",
+              "description": "Repeated flag values",
+              "items": {
+                "name": "flag",
+                "logicalType": "string",
+                "description": "Flag"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "note",
+        "logicalType": "string",
+        "description": "May be missing, null or empty"
+      },
+      {
+        "name": "$number",
+        "logicalType": "string",
+        "description": "Literal source key preserved by escaped transport"
+      },
+      {
+        "name": "metadata",
+        "logicalType": "object",
+        "description": "Literal tag-shaped source object",
+        "properties": [
+          {
+            "name": "$number",
+            "logicalType": "string",
+            "description": "Source text, not a number transport tag"
+          }
+        ]
+      }
+    ]
+  },
+  "stations": {
+    "name": "stations",
+    "businessName": "Synthetic station register",
+    "description": "One synthetic station per station code",
+    "properties": [
+      {
+        "name": "code",
+        "logicalType": "string",
+        "description": "Station code"
+      },
+      {
+        "name": "name",
+        "logicalType": "string",
+        "description": "Station label"
+      }
+    ]
+  }
+}
