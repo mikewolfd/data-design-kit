@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 
 from .documents import DocumentError, freeze_json, json_dumps, parse_json
-from .arrow_observation import MANAGED_SCHEMA_V2, SchemaInterpretation
+from .arrow_observation import MANAGED_SCHEMA_PROFILES, SchemaInterpretation
 
 CANDIDATE_SCHEME = "urn:docspec:whole-job-candidate"
 COMPLETION_PROFILE = "urn:docspec:whole-job-completion:1"
@@ -463,11 +463,11 @@ def interpret_output_schema(schema_bytes, declaration, *, profile=None):
     conventions are outside this schema check, rather than silently passing.
     """
     if profile is not None:
-        if profile != MANAGED_SCHEMA_V2:
+        if not isinstance(profile, str) or profile not in MANAGED_SCHEMA_PROFILES:
             raise JobEvidenceError("DOCSPEC-SCHEMA-PROFILE", "Unsupported explicitly selected managed schema profile.", status="unknown")
         from .arrow_observation import observe_declaration
         pa, schema = _read_schema(schema_bytes)
-        return observe_declaration(schema, declaration, pa)
+        return observe_declaration(schema, declaration, pa, profile=MANAGED_SCHEMA_PROFILES[profile])
     from .definitions import enum_values
 
     pa, schema = _read_schema(schema_bytes)

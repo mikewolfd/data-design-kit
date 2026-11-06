@@ -16,10 +16,12 @@ import struct
 
 SCALAR_PROFILE = "urn:ddk:odcs:arrow-scalar:1"
 DECLARATION_PROFILE = "urn:ddk:odcs:arrow-declaration:2"
+EXACT_PROFILE = "urn:ddk:odcs:arrow-declaration:3"
 SCALAR_TYPES = {"string": "Utf8", "integer": "Int64", "boolean": "Boolean", "date": "Date32", "number": "Float64"}
 _INTEGER_TYPES = {f"{prefix}{bits}": f"{native}{bits}" for prefix, native in (("i", "Int"), ("u", "UInt"))
                   for bits in (8, 16, 32, 64)}
 _ARROW_ALIASES = {"Utf8": "string", "LargeUtf8": "large_string", "Boolean": "bool", "Date32": "date32",
+                  "Binary": "binary", "LargeBinary": "large_binary",
                   "Float32": "float32", "Float64": "float64",
                   **{value: value.lower() for value in _INTEGER_TYPES.values()}}
 _VALUE_OPTIONS = {
@@ -85,13 +87,34 @@ def _validate_declaration(dataset):
         raise MappingUnavailable(f"Invalid pinned ODCS dataset declaration at {error.json_path}: {error.message}")
 
 
-def _recursive_schema(dataset):
+def _exact_type(prop):
+    """Finite canonical physical spellings, never an engine SQL type parser."""
+    physical, logical = prop.get("physicalType"), prop.get("logicalType")
+    options = prop.get("logicalTypeOptions", {})
+    if not isinstance(physical, str):
+        return None
+    if logical == "number" and "format" not in options:
+        match = re.fullmatch(r"decimal(128|256)\(([1-9][0-9]*),(0|[1-9][0-9]*)\)", physical)
+        if match and len(match[2]) <= 2 and len(match[3]) <= 2:
+            bits, precision, scale = map(int, match.groups())
+            if 0 <= scale <= precision <= (38 if bits == 128 else 76):
+                return {f"Decimal{bits}": [precision, scale]}
+    if logical == "string" and options.get("format") == "binary":
+        if physical in {"binary", "large_binary"}:
+            return {"binary": "Binary", "large_binary": "LargeBinary"}[physical]
+        match = re.fullmatch(r"fixed\[([1-9][0-9]*)\]", physical)
+        if match and len(match[1]) <= 5 and int(match[1]) <= 65536:
+            return {"FixedSizeBinary": int(match[1])}
+    return None
+
+
+def _recursive_schema(dataset, profile):
     _validate_declaration(dataset)
     coverage, count = [], 0
 
     def record(path, facet, status, meaning, **details):
         coverage.append({"path": deepcopy(path), "facet": facet, "status": status,
-                         "meaning": meaning, "profile": DECLARATION_PROFILE, **details})
+                         "meaning": meaning, "profile": profile, **details})
 
     def external_obligations(node, path, scope):
         # Preserve declarations for their maintained owners. In particular,
@@ -128,6 +151,7 @@ def _recursive_schema(dataset):
         if count > _MAX_FIELDS or depth > _MAX_DEPTH:
             raise MappingUnavailable("Declaration exceeds the recursive field/depth bound")
         logical, options = prop.get("logicalType"), prop.get("logicalTypeOptions", {})
+        exact = _exact_type(prop) if profile == EXACT_PROFILE else None
         dtype = None
         if logical == "integer":
             dtype = _INTEGER_TYPES.get(options.get("format"))
@@ -145,6 +169,8 @@ def _recursive_schema(dataset):
         elif logical == "array":
             if "items" in prop:
                 dtype = {"List": field(prop["items"], "element", [*path, {"each": True}], depth + 1)}
+        if exact is not None:
+            dtype = exact
         record(path, "logicalType", "exact" if dtype is not None else "unsupported", "physical-mapping",
                value=logical, mapping=deepcopy(dtype), reason="Explicit profile; no inferred numeric format or timezone")
         record(path, "required", "exact", "physical-mapping", nullable=not prop.get("required", False),
@@ -163,6 +189,7 @@ def _recursive_schema(dataset):
                 key == "format" and logical in {"integer", "number", "date", "timestamp", "time"} and dtype is not None
             ) or (key in {"timezone", "defaultTimezone"} and logical in {"time", "timestamp"} and dtype is not None)
             supported = supported or (logical == "string" and key == "format" and value in _TEXT_FORMATS)
+            supported = supported or (exact is not None and logical == "string" and key == "format" and value == "binary")
             record(path, "logicalTypeOptions/" + key,
                    "unknown" if supported and meaning == "validation-needed" else "exact" if supported else "unsupported",
                    meaning, value=deepcopy(value),
@@ -175,10 +202,11 @@ def _recursive_schema(dataset):
                 record(path, key, "unknown", "validation-needed", value=deepcopy(prop[key]),
                        reason="A declaration or fixture conversion does not execute data rules")
         external_obligations(prop, path, "property")
-        for key, expected in (("physicalName", name), ("physicalType", dtype if isinstance(dtype, str) else None)):
+        physical = prop.get("physicalType") if exact is not None else dtype if isinstance(dtype, str) else None
+        for key, expected in (("physicalName", name), ("physicalType", physical)):
             if key in prop:
                 record(path, key, "exact" if prop[key] == expected else "unsupported", "physical-mapping",
-                       value=prop[key], reason="Only identical names and canonical primitive Arrow spellings are supported")
+                       value=prop[key], reason="Only identical names and this profile's explicit canonical Arrow spellings are supported")
         return _field(name, dtype, not prop.get("required", False))
 
     fields = siblings(dataset.get("properties"), [], 1)
@@ -214,6 +242,10 @@ def pyarrow_schema(schema, pa):
             return pa.struct([field(child) for child in detail])
         if kind == "List":
             return pa.list_(field(detail))
+        if kind == "FixedSizeBinary":
+            return pa.binary(detail)
+        if kind in {"Decimal128", "Decimal256"}:
+            return (pa.decimal128 if kind == "Decimal128" else pa.decimal256)(*detail)
         units = {"Microsecond": "us", "Nanosecond": "ns"}
         if kind == "Time64":
             return pa.time64(units[detail])
@@ -260,6 +292,35 @@ def _temporal_value(value, prop, dtype):
     return result
 
 
+def _decimal_value(value, precision, scale):
+    if type(value) not in (int, Decimal):
+        raise MappingUnavailable("Decimal fixtures require an exact JSON/Python decimal or integer, never a float or string")
+    value = Decimal(value)
+    if not value.is_finite() or (value.is_zero() and value.is_signed()):
+        raise MappingUnavailable("Decimal fixtures require finite values without an unrepresentable negative zero")
+    sign, digits, exponent = value.as_tuple()
+    shift = exponent + scale
+    if value.is_zero():
+        digits = (0,)
+    elif shift >= 0:
+        if len(digits) + shift > precision:
+            raise MappingUnavailable("Decimal fixture exceeds its declared precision")
+        digits = digits + (0,) * shift
+    else:
+        if -shift >= len(digits) or any(digits[shift:]):
+            raise MappingUnavailable("Decimal fixture would require rounding to its declared scale")
+        digits = digits[:shift]
+    if len(digits) > precision:
+        raise MappingUnavailable("Decimal fixture exceeds its declared precision")
+    return Decimal((sign, digits, -scale))
+
+
+def _binary_value(value, width=None):
+    if type(value) is not bytes or (width is not None and len(value) != width):
+        raise MappingUnavailable("Binary fixtures require raw bytes of the declared width; no text encoding is inferred")
+    return value
+
+
 def _value(value, prop, field, recursive):
     dtype = field["data_type"]
     if value is None:
@@ -274,7 +335,13 @@ def _value(value, prop, field, recursive):
             if type(value) is not list:
                 raise ValueError("Array fixtures require a list")
             return [_value(item, prop["items"], detail, recursive) for item in value]
+        if kind in {"Decimal128", "Decimal256"}:
+            return _decimal_value(value, *detail)
+        if kind == "FixedSizeBinary":
+            return _binary_value(value, detail)
         return _temporal_value(value, prop, dtype)
+    if dtype in {"Binary", "LargeBinary"}:
+        return _binary_value(value)
     if dtype == "Date32":
         return _temporal_value(value, prop, dtype)
     if dtype.startswith(("Int", "UInt")):
@@ -326,7 +393,7 @@ class DeclarationMapping:
 
     def rows(self, rows):
         self.require_physical()
-        return [_row(row, self.dataset["properties"], self.schema["fields"], self.profile == DECLARATION_PROFILE) for row in rows]
+        return [_row(row, self.dataset["properties"], self.schema["fields"], self.profile != SCALAR_PROFILE) for row in rows]
 
 
 def map_declaration(dataset, *, profile=SCALAR_PROFILE):
@@ -334,8 +401,8 @@ def map_declaration(dataset, *, profile=SCALAR_PROFILE):
     original = deepcopy(dataset)
     if profile == SCALAR_PROFILE:
         schema, coverage = _scalar_schema(original)
-    elif profile == DECLARATION_PROFILE:
-        schema, coverage = _recursive_schema(original)
+    elif isinstance(profile, str) and profile in {DECLARATION_PROFILE, EXACT_PROFILE}:
+        schema, coverage = _recursive_schema(original, profile)
     else:
         raise MappingUnavailable(f"Unknown Arrow declaration profile {profile!r}")
     return DeclarationMapping(original, profile, schema, coverage)

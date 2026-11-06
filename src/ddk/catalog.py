@@ -656,10 +656,11 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         assembly.project_records()
         products = assembly.definitions()
         if managed_schema_profiles is not None:
-            from .arrow_observation import MANAGED_SCHEMA_V2
+            from .arrow_observation import MANAGED_SCHEMA_PROFILES
             if (not isinstance(managed_schema_profiles, Mapping)
                     or set(managed_schema_profiles) - assembly.datasets.keys()
-                    or any(value != MANAGED_SCHEMA_V2 for value in managed_schema_profiles.values())):
+                    or any(not isinstance(value, str) or value not in MANAGED_SCHEMA_PROFILES
+                           for value in managed_schema_profiles.values())):
                 raise CatalogError("CATALOG-SCHEMA-PROFILE", "Select supported managed schema profiles for registered dataset aliases.", status="unknown")
             assembly.managed_schema_profiles = deepcopy(dict(managed_schema_profiles))
         assembly.check("products", "ports")

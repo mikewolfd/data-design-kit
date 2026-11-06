@@ -11,7 +11,8 @@ registry, preserves the input declaration and inserts no schema defaults. In
 particular, the schema's integer `i32` default and the inconsistent `i32` default
 annotation under number format do not select physical types. Number formats in
 this schema are `f32` and `f64`; `precision` and `scale` are not valid number
-options. Native observed `Decimal128` support is a separate capability.
+options. Version 3 below uses explicit canonical physical types for decimals;
+native execution and observed-value qualification remain separate capabilities.
 
 The existing `urn:ddk:odcs:arrow-scalar:1` remains the default for the existing
 SQL preparation and fixture paths. It retains its original scalar spellings and
@@ -132,3 +133,40 @@ observed-schema and value evidence.
 The declaration profile bounds recursive depth and total fields. These are
 metadata bounds, not a whole-process memory claim or support for bulk fixture
 generation. Ordinary dataset processing belongs to the maintained runtime.
+
+## Exact decimal and binary profile
+
+`urn:ddk:odcs:arrow-declaration:3` adds exact decimal and binary representation
+to version 2. Select it explicitly; old results keep their original meaning.
+The corresponding managed schema observer is `urn:ddk:metadata:arrow-odcs:3`.
+It uses the same declaration mapper and records that profile in the original
+managed definition and each output's interpretation evidence.
+
+| Declaration | Exact representation |
+| --- | --- |
+| `logicalType: number`, `physicalType: decimal128(P,S)`, no `format` | Arrow Decimal128 with precision `P` from 1 through 38 and scale `S` from 0 through `P`. |
+| `logicalType: number`, `physicalType: decimal256(P,S)`, no `format` | Arrow Decimal256 with precision `P` from 1 through 76 and scale `S` from 0 through `P`. |
+| `logicalType: string`, `logicalTypeOptions.format: binary`, `physicalType: binary` or `large_binary` | Arrow Binary or LargeBinary, respectively. |
+| The same binary declaration with `physicalType: fixed[N]` | FixedSizeBinary of exactly `N` bytes, from 1 through 65536. |
+
+These are case-sensitive canonical spellings under this selected profile.
+SQL spellings such as `DECIMAL(38,2)`, leading-zero parameters, omitted binary
+widths, negative scales and a decimal combined with a float `format` remain
+unsupported. The profile inserts no ODCS defaults and parses no SQL dialect.
+
+Decimal fixture values must be Python integers or exact `Decimal` values,
+including numbers from DDK's exact JSON reader. Conversion checks precision
+and scale using the decimal digits, independently of ambient decimal context.
+Floats, strings, nonfinite values, negative zero, overflow and values requiring
+rounding refuse. Binary fixture values must be raw Python bytes of the declared
+width. JSON fixture files therefore cannot express binary bytes through this
+interface; base64 and hexadecimal strings are not decoded implicitly. Actual
+Arrow observations can carry binary fields directly.
+
+The added types work recursively inside the same list and struct mapping.
+Decimal bounds, string length/pattern rules, required values and every other
+data obligation remain separate from physical interpretation. A schema pass
+does not run those rules. Tests in [test_exact_arrow_types.py](../tests/test_exact_arrow_types.py)
+compare independent Arrow types and retained Parquet values, including repeated
+nested values, nulls and empty arrays. Wrong width, precision or scale fails
+observation without casting the data.

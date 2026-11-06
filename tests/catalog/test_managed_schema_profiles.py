@@ -5,7 +5,7 @@ import inspect
 
 import pytest
 
-from ddk.arrow_observation import MANAGED_SCHEMA_V2
+from ddk.arrow_observation import MANAGED_SCHEMA_V2, MANAGED_SCHEMA_V3
 from ddk.catalog import assemble_catalog
 from ddk.catalog_managed_jobs import managed_job_definition
 from ddk.catalog_managed_jobs import _key_obligations
@@ -36,32 +36,37 @@ def trace(result):
     return result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]
 
 
-def test_explicit_profile_changes_definition_and_old_evidence_cannot_be_reinterpreted(native_job, tmp_path):
+@pytest.mark.parametrize("profile,version", [(MANAGED_SCHEMA_V2, "2"), (MANAGED_SCHEMA_V3, "3")])
+def test_explicit_profile_changes_definition_and_old_evidence_cannot_be_reinterpreted(native_job, tmp_path, profile, version):
     project = authored(tmp_path)
+    profiles = {"daily-revenue": profile}
     old = assemble_catalog(project)
-    explicit = assemble_catalog(project, managed_schema_profiles=PROFILES)
+    explicit = assemble_catalog(project, managed_schema_profiles=profiles)
     old_definition = managed_job_definition(old, **_mapping_kwargs())
     new_definition = managed_job_definition(explicit, **_mapping_kwargs())
     assert old_definition != new_definition
+    alternate = MANAGED_SCHEMA_V3 if profile == MANAGED_SCHEMA_V2 else MANAGED_SCHEMA_V2
+    assert managed_job_definition(assemble_catalog(project, managed_schema_profiles={"daily-revenue": alternate}), **_mapping_kwargs()) != new_definition
     assert managed_job_definition(assemble_catalog(project, managed_schema_profiles={}), **_mapping_kwargs()) == old_definition
     # Selecting an input interpretation cannot change this output's definition.
     assert managed_job_definition(assemble_catalog(project, managed_schema_profiles={"orders": MANAGED_SCHEMA_V2}), **_mapping_kwargs()) == old_definition
     schema = pa.schema([pa.field("id", pa.int64(), nullable=False)])
     metadata, _, _ = _metadata(tmp_path, _with_output_schema(native_job, schema, definition=old_definition))
-    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", managed_schema_profiles=PROFILES)
+    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", managed_schema_profiles=profiles)
     assert result.report["decision"] != "passed" and not result.artifacts
     check = next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-definition-capture:1")
     assert check["status"] == "unknown"
     metadata, _, _ = _metadata(tmp_path, _with_output_schema(native_job, schema, definition=new_definition))
-    current = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", managed_schema_profiles=PROFILES)
+    current = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", managed_schema_profiles=profiles)
     assert current.report["decision"] == "passed", current.report
     observation = trace(current)
-    assert observation["profile"]["version"] == "2"
-    assert observation["declarationProfile"] == "urn:ddk:odcs:arrow-declaration:2"
+    assert observation["profile"]["version"] == version
+    assert observation["declarationProfile"] == "urn:ddk:odcs:arrow-declaration:" + version
     assert observation["rowObligations"] == []
 
 
-@pytest.mark.parametrize("profiles", [{"typo": MANAGED_SCHEMA_V2}, {"daily-revenue": "guessed"}, [], True])
+@pytest.mark.parametrize("profiles", [{"typo": MANAGED_SCHEMA_V2}, {"daily-revenue": "guessed"}, [], True,
+                                    {"daily-revenue": []}, {"daily-revenue": {}}])
 def test_unknown_selection_refuses_without_outputs(tmp_path, profiles):
     result = assemble_catalog(authored(tmp_path), managed_schema_profiles=profiles)
     assert result.report["decision"] != "passed" and not result.artifacts

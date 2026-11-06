@@ -7,10 +7,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 import re
 
-from .arrow_mapping import DECLARATION_PROFILE, MappingUnavailable, map_declaration, pyarrow_schema
+from .arrow_mapping import DECLARATION_PROFILE, EXACT_PROFILE, MappingUnavailable, map_declaration, pyarrow_schema
 from .documents import freeze_json, json_dumps
 
 MANAGED_SCHEMA_V2 = "urn:ddk:metadata:arrow-odcs:2"
+MANAGED_SCHEMA_V3 = "urn:ddk:metadata:arrow-odcs:3"
+MANAGED_SCHEMA_PROFILES = {MANAGED_SCHEMA_V2: DECLARATION_PROFILE, MANAGED_SCHEMA_V3: EXACT_PROFILE}
 
 
 @dataclass(frozen=True)
@@ -21,12 +23,12 @@ class SchemaInterpretation:
     obligations: tuple
 
 
-def observe_declaration(schema, declaration, pa):
+def observe_declaration(schema, declaration, pa, *, profile=DECLARATION_PROFILE):
     """Interpret canonical v2 types once, without converting observed values."""
     findings, fields, obligations = [], [], []
     reason = "Authored values require their own exact evidence; Arrow metadata does not evaluate them."
     try:
-        mapping = map_declaration(declaration, profile=DECLARATION_PROFILE)
+        mapping = map_declaration(declaration, profile=profile)
     except MappingUnavailable as exc:
         return SchemaInterpretation("unknown", (str(exc),), (), ())
 

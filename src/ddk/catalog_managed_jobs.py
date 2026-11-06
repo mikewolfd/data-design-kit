@@ -10,6 +10,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from .catalog_access import CatalogError, field_at, row_identity_paths
+from .arrow_observation import MANAGED_SCHEMA_PROFILES
 from .docspec_job_evidence import (
     CANDIDATE_SCHEME, COUNTER_EVALUATOR, JobEvidenceError, interpret_output_schema,
     native_export_uniqueness, verify_completed_job, verify_completed_outputs,
@@ -214,8 +215,8 @@ def managed_execution(metadata, entry):
             selected_profile = metadata.schema_profiles.get(dataset)
             interpreted = interpret_output_schema(base64.b64decode(evidence.manifest["schemas"][output["schema_sha256"]]),
                                                   schemas[dataset], profile=selected_profile)
-            interpreter = INTERPRETER if selected_profile is None else {"id": INTERPRETER["id"], "version": "2"}
-            rule = INTERPRETATION_RULE if selected_profile is None else "urn:ddk:check:managed-output-interpretation:2"
+            interpreter = INTERPRETER if selected_profile is None else {"id": INTERPRETER["id"], "version": selected_profile.rsplit(":", 1)[-1]}
+            rule = INTERPRETATION_RULE if selected_profile is None else "urn:ddk:check:managed-output-interpretation:" + interpreter["version"]
             identity = {"subject": version, "rule": {"id": rule, "version": definition_identity},
                         "evaluator": interpreter,
                         "scope": "Retained output Arrow schema interpreted against the exact authored ODCS field definitions; no row-value checks."}
@@ -265,7 +266,7 @@ def managed_execution(metadata, entry):
             metadata.qualification.append(binding)
             interpretations.append({"output": output["name"], "dataset": dataset, "schemaSha256": output["schema_sha256"],
                                     "profile": interpreter, "status": interpreted.status, "fields": list(interpreted.fields),
-                                    **({"declarationProfile": "urn:ddk:odcs:arrow-declaration:2"} if selected_profile is not None else {}),
+                                    **({"declarationProfile": MANAGED_SCHEMA_PROFILES[selected_profile]} if selected_profile is not None else {}),
                                     "rowObligations": row_observations})
     inputs, registered_inputs = _input_versions(metadata, evidence, input_mapping, record)
     run_id = stable_id("docspec-managed-job-run", context["workspace"], evidence.candidate)
