@@ -77,6 +77,23 @@ class DocSpecAdapter:
         """Infer a schema and optionally produce Substrait bytes without input rows."""
         return self._invoke("job-plan", request)
 
+    def inspect_version(self, workspace, version, *, cancel_event=None):
+        """Admit one exact protected source schema without a calculation or export.
+
+        The maintained native job input path checks the unchanged VersionRef,
+        retention and source-view metadata. Empty steps, outputs and queries
+        leave that provider unscanned. This is an observation, not a retained
+        lease, complete data read, quality result or permission to select it.
+        Subsequent reads must independently pass native admission again.
+        """
+        scratch = Path(tempfile.mkdtemp(prefix="inspect-version-", dir=self.evidence_dir))
+        return self._invoke("job", {
+            "scratch": str(scratch),
+            "inputs": [{"kind": "native", "name": "source", "workspace": str(workspace),
+                        "nativeVersion": version}],
+            "steps": [], "outputs": [], "queries": [],
+        }, cancel_event=cancel_event)
+
     def execute(self, request, *, input_digests=None, semantic_profile=None, cancel_event=None):
         """Run a bounded job and preserve exact source and partial output identities."""
         return self._invoke("job", request, input_digests=input_digests, semantic_profile=semantic_profile,
@@ -245,8 +262,13 @@ class DocSpecAdapter:
                 if file_sha256(path) != digest:
                     status = "unknown"
                     error = _error("DOCSPEC-INPUT-CHANGED", "Input bytes changed during the invocation")
+            observed_names = set()
             for observation in result.get("native_versions", []):
-                version = native_versions.get(observation["name"])
+                name = observation["name"]
+                if name in observed_names:
+                    raise ValueError("Native job returned duplicate version observations")
+                observed_names.add(name)
+                version = native_versions.get(name)
                 if version is None or observation["version"] != version["reference"]:
                     raise ValueError("Native job observation disagrees with the admitted binding")
                 native_reads.append(_native_read(version, observation, self.native_mapping_profile))
