@@ -86,6 +86,8 @@ The native command remains `managed-build`; `prepare_update` is a distinct actio
 
 The quality bridge is an implementation gate. File-backed CLI testing does not prove that the CLI can read an unselected DocSpec candidate directly. First demonstrate a supported exact-version query/view path without an unnecessary export. If unavailable, keep native quality-gated selection unqualified and ship the bounded file-backed path independently. Do not recreate a general quality language in DDK.
 
+The successor `managed_job` caller uses a separate native whole-job candidate scheme. It retains the exact original prepare request and any requested native identity through response loss, verifies native original-byte witnesses, and preserves confirmed historical selection separately from the latest command outcome. Admitted computation that has not started remains `pending`. The caller owns bounded transport and metadata translation; DocSpec owns input custody, durable phases, native counter acceptance and selection. The two-output native conformance examples remain unexecuted until that native build is frozen. Schema-only `prepare_job` evidence establishes inference without input admission or execution.
+
 ## Reuse, provenance, and uncertainty
 
 `reuseRecords` references runtime-issued computation and qualification keys. DDK does not calculate an alternative native phase key. Locks and reports retain full provenance independently of the keys relevant to reuse.

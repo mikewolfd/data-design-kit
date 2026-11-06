@@ -421,6 +421,8 @@ class Assembly:
             details["recordOwners"] = self.metadata.owners
             details["registeredRunInputs"] = self.metadata.bound_inputs
             details["stagingObservations"] = sorted(self.metadata.staging_observations, key=json_dumps)
+            if self.metadata.managed_jobs:
+                details["managedExecutions"] = deepcopy(self.metadata.managed_jobs)
             details["requiredQualityChecks"] = sorted(self.metadata.qualification, key=json_dumps)
             details["productionObservations"] = self.metadata.production_times
             if self.metadata.illustrative:

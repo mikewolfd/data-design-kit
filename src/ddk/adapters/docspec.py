@@ -1,6 +1,7 @@
 """Structured access to DocSpec's bounded and retained execution services."""
 
 from collections.abc import Mapping
+from copy import deepcopy
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -72,6 +73,14 @@ class DocSpecAdapter:
         """Infer a schema and optionally produce Substrait bytes without input rows."""
         return self._invoke("job-plan", request)
 
+    def prepare_job(self, request):
+        """Prepare an exact complete JobSpec through the native schema-only profile.
+
+        The native result retains inferred schemas and explicit not-run input
+        admission/execution. It supplies no candidate or managed acceptance.
+        """
+        return self._invoke("prepare-job", request)
+
     def execute(self, request, *, input_digests=None, semantic_profile=None, cancel_event=None):
         """Run a bounded job and preserve exact source and partial output identities."""
         return self._invoke("job", request, input_digests=input_digests, semantic_profile=semantic_profile,
@@ -92,6 +101,32 @@ class DocSpecAdapter:
         return self._invoke(
             "managed-build", request, prefix=("--workspace", str(workspace)),
             operation_context=operation_context, prior=previous_operation, refusal=refusal, cancel_event=cancel_event,
+        )
+
+    def managed_job(self, workspace, request, *, prior=None, backend="local", cancel_event=None):
+        """Call the explicit retained whole-job protocol with its original identity.
+
+        Native phases, prerequisite admission, evidence acceptance and selection
+        remain DocSpec-owned. This source API does not claim a qualified profile.
+        """
+        from .docspec_jobs import managed_job_context, managed_job_prior, verify_prepare_intent
+
+        if self.redaction:
+            raise ValueError("Retained job reconciliation requires its original native request")
+        request = deepcopy(request)
+        workspace = Path(workspace).resolve(strict=True)
+        context = managed_job_context(workspace, request)
+        previous, confirmation, original, constraint = managed_job_prior(context, prior, max_bytes=self.capture_bytes)
+        if original is not None and request["action"] == "prepare":
+            verify_prepare_intent(original["value"], request)
+        refusal = None if backend == "local" else BindingRefusal(
+            "DOCSPEC-BACKEND-UNSUPPORTED", "The configured retained-job backend is unavailable",
+        )
+        return self._invoke(
+            "managed-job", request, prefix=("--workspace", str(workspace)),
+            operation_context=context, prior=previous, confirmation=confirmation, original_request=original,
+            identity_constraint=constraint,
+            refusal=refusal, cancel_event=cancel_event,
         )
 
     def read_version(self, workspace, version, *, max_ipc_bytes=DEFAULT_CAPTURE_BYTES,
@@ -147,14 +182,21 @@ class DocSpecAdapter:
         return {"status": "succeeded", "ipc": ipc, **observed_result}
 
     def _invoke(self, command, request, *, input_digests=None, prefix=(), operation_context=None,
-                prior=None, refusal=None, semantic_profile=None, cancel_event=None):
+                prior=None, confirmation=None, original_request=None, identity_constraint=None,
+                refusal=None, semantic_profile=None, cancel_event=None):
         folder = Path(tempfile.mkdtemp(prefix=f"{command}-", dir=self.evidence_dir))
         request_path = folder / "request.json"
         limits_path = folder / "limits.json"
         request_sha256 = write_json(request_path, self.redaction.data(request) if self.redaction else request)["sha256"]
+        if command == "managed-job" and request["action"] == "prepare" and original_request is None:
+            original_request = {"reference": {"path": str(request_path), "sha256": request_sha256}, "value": request}
+        if (command == "managed-job" and request["action"] in {"accept", "select", "requalify"}
+                and identity_constraint is None and request.get("request_digest") and request.get("candidate")):
+            identity_constraint = {"reference": {"path": str(request_path), "sha256": request_sha256}, "value": request}
         write_json(limits_path, self.limits)
         bounded = command == "job"
         result = {}
+        unverified_result = None
         error = None
         status = "not_submitted"
         known_inputs = []
@@ -252,6 +294,18 @@ class DocSpecAdapter:
                         or result.get("operation") != operation_context["operationId"]):
                     result = {}
                     raise ValueError("Native response refers to a different managed operation")
+                if command == "managed-job":
+                    from .docspec_jobs import validate_managed_job_response
+
+                    try:
+                        validate_managed_job_response(
+                            operation_context, request, result, prior,
+                            original_request=original_request["value"] if original_request else None,
+                            identity_constraint=identity_constraint["value"] if identity_constraint else None,
+                        )
+                    except ValueError:
+                        unverified_result, result = result, {}
+                        raise
         except BindingRefusal as exc:
             error = _error(exc.code, str(exc))
         except (OSError, subprocess.TimeoutExpired) as exc:
@@ -262,7 +316,7 @@ class DocSpecAdapter:
                 status = "unknown"
         except (ValueError, KeyError, TypeError) as exc:
             status = "unknown" if submitted else "not_submitted"
-            error = _error("DOCSPEC-BINDING", str(exc))
+            error = _error(getattr(exc, "code", "DOCSPEC-BINDING"), str(exc))
 
         native_outcome = status
         native_error = error
@@ -286,6 +340,16 @@ class DocSpecAdapter:
         }
         if semantic_profile is not None:
             receipt["semantics"] = semantic_profile
+        if command == "managed-job" and original_request is not None:
+            receipt["originalRequest"] = original_request["reference"]
+        if command == "managed-job" and identity_constraint is not None:
+            receipt["identityConstraint"] = identity_constraint["reference"]
+        if unverified_result is not None:
+            receipt["unverifiedResult"] = unverified_result
+        if command == "managed-job" and confirmation is not None and result.get("status") != "completed":
+            # One exact prior receipt preserves confirmed computation through
+            # later transport loss; the pointer never grows into a retry chain.
+            receipt["confirmation"] = confirmation
         if error is not None:
             receipt["error"] = error
         if transport is not None:
@@ -312,7 +376,12 @@ class DocSpecAdapter:
                 operation["reason"] = native_error["message"]
             receipt["operation"] = operation
         if operation_context is not None:
-            operation = _managed_operation(
+            operation_mapper = _managed_operation
+            if command == "managed-job":
+                from .docspec_jobs import managed_job_operation
+
+                operation_mapper = managed_job_operation
+            operation = operation_mapper(
                 operation_context, request["action"], request_sha256, result, native_outcome, native_error, prior,
             )
             receipt["operation"] = operation
