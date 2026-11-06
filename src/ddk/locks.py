@@ -4,11 +4,13 @@ from hashlib import sha256
 from importlib.metadata import version
 import os
 from pathlib import Path
+import re
 import stat
 import sys
 import tempfile
 
 from .documents import DocumentError, ResourceLimit, json_dumps, read_json, resolve_path, schema_registry, validate_document
+from .distribution import distribution_identity
 from .interfaces import json_equal
 from .results import VERSION, ReportBuilder, diagnostic
 
@@ -26,7 +28,7 @@ STANDARDS = {
 def tool_identities():
     resolver = Path(__file__).with_name("definitions.py")
     tools = {
-        "ddk": {"version": VERSION},
+        "ddk": distribution_identity(),
         "python": {"version": ".".join(map(str, sys.version_info[:3]))},
         "jsonschema": {"version": version("jsonschema")},
         "referencing": {"version": version("referencing")},
@@ -35,15 +37,28 @@ def tool_identities():
             "distributionSha256": sha256(resolver.read_bytes()).hexdigest(),
         },
     }
-    commit = os.environ.get("DDK_SOURCE_COMMIT")
-    digest = os.environ.get("DDK_DISTRIBUTION_SHA256")
-    if commit and digest:
-        tools["ddk"].update({"commit": commit, "distributionSha256": digest})
     return tools
 
 
 def _key(entry):
     return (entry["path"], entry["role"], entry.get("selection", ""), entry.get("identity", ""))
+
+
+def _selected_tools(supplied):
+    observed = tool_identities()
+    for name, identity in (supplied or {}).items():
+        if name == "ddk":
+            if not isinstance(identity, dict) or any(observed[name].get(key) != value for key, value in identity.items()):
+                raise ValueError("Supplied DDK identity conflicts with the loaded installation's local records.")
+        else:
+            observed[name] = identity
+    return observed
+
+
+def _missing_development_identity(identity):
+    if re.search(r"(?:^|[.-])dev(?:[.-]?\d+)?(?:$|[.+-])", identity["version"], re.IGNORECASE):
+        return [key for key in ("commit", "distributionSha256") if key not in identity]
+    return []
 
 
 def build_lock(inventory, *, tools=None, native_inputs=(), reuse_records=(), extra_files=(), catalog_options=None):
@@ -66,7 +81,7 @@ def build_lock(inventory, *, tools=None, native_inputs=(), reuse_records=(), ext
         "version": VERSION,
         "project": identity,
         "files": [keyed[key] for key in sorted(keyed)],
-        "tools": {**tool_identities(), **(tools or {})},
+        "tools": _selected_tools(tools),
         "standards": dict(STANDARDS),
     }
     if native_inputs:
@@ -113,8 +128,17 @@ def verify_lock(inventory, lock, *, locked=True, tools=None, native_inputs=(), r
                    reason="The root project did not load.")
         return False
     if not details:
-        expected = build_lock(inventory, tools=tools, native_inputs=native_inputs,
-                              reuse_records=reuse_records, extra_files=extra_files, catalog_options=catalog_options)
+        try:
+            expected = build_lock(inventory, tools=tools, native_inputs=native_inputs,
+                                  reuse_records=reuse_records, extra_files=extra_files, catalog_options=catalog_options)
+        except ValueError as exc:
+            details.append(diagnostic("LOCK-INPUT-MISMATCH", str(exc), path=path, pointer="/tools"))
+    if not details:
+        if missing := _missing_development_identity(expected["tools"]["ddk"]):
+            details.append(diagnostic("LOCK-TOOL-IDENTITY-MISSING",
+                                      f"Development lock verification requires locally recorded DDK {', '.join(missing)}.",
+                                      path=path, pointer="/tools/ddk"))
+    if not details:
         for key in ("project", "tools", "standards", "nativeInputs", "reuseRecords", "catalogOptions"):
             if expected.get(key) != lock.get(key):
                 details.append(diagnostic("LOCK-INPUT-MISMATCH", f"Locked {key} differs from the admitted input.",
@@ -260,6 +284,12 @@ def lock_project(path, output=None, *, permitted_roots=(), limits=None, required
         return result, None
     try:
         lock = build_lock(inventory)
+        if missing := _missing_development_identity(lock["tools"]["ddk"]):
+            reason = f"Development lock creation requires locally recorded DDK {', '.join(missing)}."
+            inventory.report.add("DDK-LOCK-001", "core.references", "lock", "not_run", required=True,
+                                 reason=reason, diagnostics=[diagnostic("LOCK-TOOL-IDENTITY-MISSING", reason,
+                                                                      path=output or path, pointer="/tools/ddk")])
+            return inventory.report.build(), None
         if output is not None:
             destination = Path(output).resolve()
             if destination in inventory.documents:

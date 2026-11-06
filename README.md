@@ -1,6 +1,6 @@
 # Data Design Kit
 
-**Status.** November 5, 2026. The local stack is implemented and qualified as `0.1.0-dev.1` on its recorded dependency versions. All 169 installed-package tests passed, and all 13 claimed profiles passed release qualification. This is an unpublished local prerelease. [Package and qualification evidence](docs/local-release.md).
+**Status.** November 6, 2026. The local stack is implemented. Source version `0.1.0-dev.2` corrects installation identity, capability qualification, fixture evidence, and release relocation; its installed-package qualification is pending. The earlier `0.1.0-dev.1` capture passed 169 tests and 13 profiles on its recorded source and dependencies. Both versions remain unpublished. [Release status and retained evidence](docs/local-release.md).
 
 Data Design Kit (DDK) uses maintained data definitions to check designs, test transformations, and generate a catalog of exact versions, access methods, relationships, and evidence. Maintainers can use the same definitions to assess changes and supply documentation and consumer metadata. The adopted [build strategy](docs/build-strategy-without-pilots.md) connects local commerce inputs, real execution and quality receipts, and a generated catalog reader. Nested/scoped identities and one typed managed operation have separate acceptance cases. Project pilots remain deferred.
 

@@ -1,5 +1,5 @@
 {
-  "status": "qualified-local",
+  "status": "release-requalification-pending",
   "specification": "0.1",
   "workPackages": [
     {
@@ -271,7 +271,7 @@
     {
       "id": "WP-11",
       "title": "Release qualification and handoff",
-      "status": "qualified-local",
+      "status": "requalification-pending",
       "dependsOn": [
         "WP-06",
         "WP-10",
@@ -377,7 +377,7 @@
   },
   "qualification": {
     "date": "2026-11-05",
-    "scope": "Unpublished local prerelease on the exact supported dependency versions; pilots excluded.",
+    "scope": "Historical 0.1.0-dev.1 local capture on its exact supported dependencies; current 0.1.0-dev.2 qualification is pending.",
     "record": "docs/local-release.md",
     "implementationCommit": "d86a3384ff7fe17101f34f92dda5422bb986864e",
     "docspecCommit": "b1270b2e964becc5844bb6ca95ee5d605c7a3d79",

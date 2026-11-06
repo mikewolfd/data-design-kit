@@ -24,6 +24,17 @@ def commerce(tmp_path):
     return target
 
 
+@pytest.fixture
+def selected_development_identity(monkeypatch):
+    """Select an independent installed identity for tests of other lock fields."""
+    from ddk import locks
+    from ddk.results import VERSION
+
+    identity = {"version": VERSION, "commit": "1" * 40, "distributionSha256": "a" * 64}
+    monkeypatch.setattr(locks, "distribution_identity", lambda: dict(identity))
+    return identity
+
+
 def edit(path, change):
     value = json.loads(path.read_bytes())
     change(value)

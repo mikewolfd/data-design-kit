@@ -1,6 +1,6 @@
 # Data Design Kit — Implementation Plan
 
-**Plan date: November 5, 2026. Status: local implementation and qualification complete; the prerelease is unpublished.**
+**Updated November 6, 2026. Status: local implementation complete; version `0.1.0-dev.2` awaits installed-package qualification and release handoff.**
 
 ## 1. Delivery decision
 
@@ -13,6 +13,8 @@ The first connected workflow uses independently authored local commerce inputs, 
 The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve future adoption work separately.
 
 ## 2. Completed local deliverables
+
+The table records the `0.1.0-dev.1` capture. The current source adds release-evidence corrections; WP-11 remains open until the changed package passes a fresh installed run, portable-bundle verification, and the selected release handoff. The earlier results do not qualify the changed source.
 
 | Track | Implemented | Qualification evidence |
 | --- | --- | --- |

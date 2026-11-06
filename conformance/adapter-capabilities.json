@@ -1,0 +1,544 @@
+{
+  "adapters": [
+    {
+      "capabilities": [
+        {
+          "evidence": [],
+          "facets": {
+            "nativeVersions": "checked",
+            "ownership": "checked",
+            "payloadFreeRefresh": "checked",
+            "scopedKeys": "checked"
+          },
+          "group": "catalog.assembly",
+          "limitations": [
+            "Local DocSpec, quality and dlt receipts; public OpenLineage and project-rule execution are unavailable."
+          ],
+          "operations": [
+            "local-receipt-assembly",
+            "atomic-refresh",
+            "exact-version-query-binding"
+          ],
+          "standards": {
+            "odcs": "3.2.0",
+            "odps": "1.1.0"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "binaryKeys": "checked",
+            "exactVersionBinding": "checked"
+          },
+          "group": "catalog.relationships",
+          "limitations": [],
+          "operations": [
+            "typed-composite-keys",
+            "nested-list-paths",
+            "release-scopes"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "completeRequiredEvidence": "checked",
+            "externalProjectRules": "unsupported"
+          },
+          "group": "catalog.qualification",
+          "limitations": [],
+          "operations": [
+            "version-bound-checks",
+            "missing-evidence-refusal"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "disclosurePolicy": "checked",
+            "jsonLdGraph": "checked"
+          },
+          "group": "catalog.dcat",
+          "limitations": [],
+          "operations": [
+            "discovery",
+            "versions",
+            "distributions",
+            "explicit-selection"
+          ],
+          "standards": {
+            "dcat": "3"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "declaredVsObserved": "checked",
+            "publicDisclosure": "unsupported",
+            "registeredVsConsumed": "checked"
+          },
+          "group": "lineage.openlineage",
+          "limitations": [],
+          "operations": [
+            "declared-job",
+            "observed-run",
+            "exact-version-facets",
+            "local-event-replay"
+          ],
+          "standards": {
+            "openlineage": "1.55.0"
+          }
+        }
+      ],
+      "id": "urn:ddk:adapter:catalog",
+      "kind": "adapter",
+      "profiles": [
+        "catalog",
+        "catalog.dcat",
+        "lineage.openlineage"
+      ],
+      "specVersion": "0.1",
+      "status": "experimental-unverified",
+      "tools": {},
+      "version": "0.1.0-dev.2"
+    },
+    {
+      "capabilities": [
+        {
+          "evidence": [],
+          "facets": {
+            "localReferences": "checked",
+            "offline": "checked",
+            "remoteResolution": "unsupported"
+          },
+          "group": "core.documents",
+          "limitations": [
+            "JSON only; bounded flat compatibility; native implementations are not imported."
+          ],
+          "operations": [
+            "strict-json",
+            "local-definition-resolution",
+            "lock-verification"
+          ],
+          "standards": {
+            "ddk": "0.1",
+            "json-schema": "2020-12",
+            "odcs": "3.2.0@448f7b93329ece7827897d7dd51e827a3e279460"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "caseSensitiveNames": "checked",
+            "symbolicCoverage": "checked"
+          },
+          "group": "core.calls",
+          "limitations": [
+            "Unsupported symbolic constraints remain unknown."
+          ],
+          "operations": [
+            "named-ports",
+            "parameter-containment",
+            "independent-exports"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "flatScalars": "checked",
+            "nestedCompatibility": "unsupported"
+          },
+          "group": "core.datasets",
+          "limitations": [],
+          "operations": [
+            "directional-compatibility"
+          ],
+          "standards": {
+            "odcs": "3.2.0"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "knownConsumers": "checked"
+          },
+          "group": "core.graph",
+          "limitations": [],
+          "operations": [
+            "cycles",
+            "dependencies",
+            "exports"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "executedDomainRules": "unsupported",
+            "provenance": "checked"
+          },
+          "group": "core.policies",
+          "limitations": [],
+          "operations": [
+            "definition-use",
+            "declared-rules"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "loadedScope": "checked",
+            "unloadedConsumers": "unknown"
+          },
+          "group": "impact.consumers",
+          "limitations": [
+            "Runtime reuse remains unknown without runtime-issued identities."
+          ],
+          "operations": [
+            "affected-consumers",
+            "changed-definitions",
+            "catalog-differences"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        }
+      ],
+      "id": "urn:ddk:adapter:core",
+      "kind": "adapter",
+      "profiles": [
+        "core",
+        "impact"
+      ],
+      "specVersion": "0.1",
+      "status": "experimental-unverified",
+      "tools": {},
+      "version": "0.1.0-dev.2"
+    },
+    {
+      "capabilities": [
+        {
+          "artifactFormats": [
+            "sql",
+            "substrait"
+          ],
+          "evidence": [],
+          "facets": {
+            "independentStandardValidity": "unknown",
+            "noProductionScan": "checked",
+            "sameByteReproduction": "checked"
+          },
+          "group": "plan.compile",
+          "limitations": [
+            "Selected read/filter/join/aggregate profile; no independent standalone validator claim."
+          ],
+          "operations": [
+            "schema-only-prepare",
+            "saved-plan-produce"
+          ],
+          "semanticProfiles": [
+            {
+              "id": "urn:example:commerce-sql-semantics",
+              "revision": "1"
+            }
+          ],
+          "standards": {
+            "sql": "datafusion-sql",
+            "substrait": "0.77.0"
+          }
+        },
+        {
+          "artifactFormats": [
+            "substrait"
+          ],
+          "evidence": [],
+          "facets": {
+            "exactBindings": "checked",
+            "resourceLimits": "checked",
+            "secondEngine": "unsupported"
+          },
+          "group": "plan.consumer",
+          "limitations": [],
+          "operations": [
+            "consume-saved-bytes",
+            "normalized-plan-guards"
+          ],
+          "semanticProfiles": [
+            {
+              "id": "urn:example:commerce-sql-semantics",
+              "revision": "1"
+            }
+          ],
+          "standards": {
+            "substrait": "0.77.0"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "decimalPrecision": "unsupported",
+            "fieldOrder": "checked",
+            "flatScalars": "checked"
+          },
+          "group": "plan.output",
+          "limitations": [],
+          "operations": [
+            "field-name-order-type-nullability"
+          ],
+          "standards": {
+            "arrow": "58.4.0",
+            "odcs": "3.2.0"
+          }
+        },
+        {
+          "artifactFormats": [
+            "sql",
+            "substrait"
+          ],
+          "backend": "docspec-datafusion-local",
+          "evidence": [],
+          "executionMode": "bounded_job",
+          "facets": {
+            "nativeVersions": "checked",
+            "partialOutputs": "checked",
+            "unknownOutcome": "checked"
+          },
+          "group": "runtime.job",
+          "limitations": [
+            "Engine-managed memory/spill budgets; ordinary jobs have no durable reconciliation."
+          ],
+          "nativeReferenceSchemes": [
+            "urn:docspec:version-ref"
+          ],
+          "operations": [
+            "bounded-job",
+            "partial-output-receipts",
+            "caller-cancellation"
+          ],
+          "reconciliation": "unsupported",
+          "requestKinds": [
+            "job"
+          ],
+          "semanticProfiles": [
+            {
+              "id": "urn:example:commerce-sql-semantics",
+              "revision": "1"
+            }
+          ],
+          "standards": {
+            "sql": "datafusion-sql",
+            "substrait": "0.77.0"
+          }
+        },
+        {
+          "artifactFormats": [
+            "sql"
+          ],
+          "backend": "local-iceberg",
+          "evidence": [],
+          "executionMode": "managed_operation",
+          "facets": {
+            "authorityFence": "checked",
+            "exactCandidate": "checked",
+            "lostResponse": "checked",
+            "postSelectionAuditRefusal": "checked",
+            "requiredCoverage": "checked"
+          },
+          "group": "runtime.managed",
+          "limitations": [
+            "Trusted local operator; one source-only Build on local Iceberg/SQLite; arbitrary managed SQL and remote backends are unavailable."
+          ],
+          "nativeReferenceSchemes": [
+            "urn:docspec:version-ref"
+          ],
+          "operations": [
+            "prepare",
+            "inspect",
+            "accept-qualification",
+            "guarded-select",
+            "reconcile",
+            "requalify"
+          ],
+          "qualityAccess": "native",
+          "reconciliation": "supported",
+          "requestKinds": [
+            "source-only-build"
+          ],
+          "semanticProfiles": [
+            {
+              "id": "urn:example:commerce-sql-semantics",
+              "revision": "1"
+            }
+          ],
+          "standards": {
+            "docspec": "0.1.0",
+            "iceberg": "0.10.1"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "dateBoundaries": "checked",
+            "emptyInputs": "checked",
+            "integerMoney": "checked",
+            "portability": "unsupported",
+            "wrongJoin": "checked"
+          },
+          "group": "test.fixtures",
+          "limitations": [],
+          "operations": [
+            "independent-row-expectations",
+            "unordered-multisets",
+            "exact-output-quality",
+            "owned-cleanup"
+          ],
+          "standards": {
+            "ddk": "0.1"
+          }
+        }
+      ],
+      "id": "urn:ddk:adapter:docspec",
+      "kind": "adapter",
+      "profiles": [
+        "plan.docspec-sql",
+        "execute.docspec-job",
+        "plan.datafusion",
+        "runtime.docspec-managed",
+        "test.fixtures"
+      ],
+      "specVersion": "0.1",
+      "status": "experimental-unverified",
+      "tools": {},
+      "version": "0.1.0-dev.2"
+    },
+    {
+      "capabilities": [
+        {
+          "evidence": [],
+          "facets": {
+            "compositeKeys": "checked",
+            "missingValues": "checked",
+            "nested": "unsupported",
+            "nulls": "checked",
+            "precision": "unsupported"
+          },
+          "group": "files.structure",
+          "limitations": [
+            "Misconfigured native checks preserve incomplete coverage; no DPv2 uniqueKeys claim."
+          ],
+          "operations": [
+            "csv-parse",
+            "scalar-constraints",
+            "composite-primary-key",
+            "check-inventory"
+          ],
+          "standards": {
+            "table-schema": "Frictionless 5.21.0"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "emptyVsAbsent": "checked",
+            "exactLoadFiles": "checked",
+            "nameNormalization": "unsupported",
+            "nested": "unsupported",
+            "quarantine": "unsupported",
+            "rowCounts": "checked"
+          },
+          "group": "ingest.receipt",
+          "limitations": [
+            "Only names unchanged by native normalization; an all-discarded load with no file creates no queryable version."
+          ],
+          "operations": [
+            "local-stage",
+            "freeze",
+            "discard-accounting",
+            "empty-schema-materialization"
+          ],
+          "standards": {
+            "dlt": "1.32.0",
+            "parquet": "native filesystem destination"
+          }
+        }
+      ],
+      "id": "urn:ddk:adapter:local-intake",
+      "kind": "adapter",
+      "profiles": [
+        "files.frictionless",
+        "ingest.dlt"
+      ],
+      "specVersion": "0.1",
+      "status": "experimental-unverified",
+      "tools": {},
+      "version": "0.1.0-dev.2"
+    },
+    {
+      "capabilities": [
+        {
+          "evidence": [],
+          "facets": {
+            "partialNativeClassifications": "checked",
+            "resolvedDefinitions": "checked"
+          },
+          "group": "odcs.lint",
+          "limitations": [
+            "Maintained Data Contract CLI 1.2.9; DDK resolves definitions under the tested development semantics before native checking."
+          ],
+          "operations": [
+            "native-lint",
+            "directional-version-comparison"
+          ],
+          "standards": {
+            "odcs": "3.2.0@448f7b93329ece7827897d7dd51e827a3e279460"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "caseSensitiveFields": "checked",
+            "nativeFieldIdentity": "checked",
+            "schemaTypes": "checked",
+            "unsupportedCustomRules": "unsupported"
+          },
+          "group": "data.odcs",
+          "limitations": [
+            "Pinned maintained native compiler/executor against restricted DuckDB views; no generic credential-bearing managed evaluation."
+          ],
+          "operations": [
+            "exact-parquet-checks",
+            "protected-native-read",
+            "required-outcome-inventory"
+          ],
+          "qualityAccess": "files-and-native",
+          "standards": {
+            "arrow-ipc": "58.4.0 native / 26.0.1 Python",
+            "odcs": "3.2.0"
+          }
+        }
+      ],
+      "id": "urn:ddk:adapter:native-quality",
+      "kind": "adapter",
+      "profiles": [
+        "odcs-cli"
+      ],
+      "specVersion": "0.1",
+      "status": "experimental-unverified",
+      "tools": {},
+      "version": "0.1.0-dev.2"
+    }
+  ]
+}

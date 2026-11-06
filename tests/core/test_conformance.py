@@ -3,11 +3,14 @@
 from copy import deepcopy
 from hashlib import sha256
 import json
+from pathlib import Path
+import shutil
+import tempfile
 from xml.etree import ElementTree
 
 import pytest
 
-from ddk.conformance import FIRST_RELEASE_PROFILES, qualify_release, verify_reference_workflow
+from ddk.conformance import FIRST_RELEASE_PROFILES, _pytest_outcomes, _selector_status, qualify_release, verify_reference_workflow
 from ddk.documents import json_dumps, schema_registry, validate_document
 from ddk.results import exit_code
 
@@ -24,6 +27,7 @@ REGISTERED = {
 
 def _retain(root, name, data):
     path = root / name
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return {"path": name, "sha256": sha256(data).hexdigest()}
 
@@ -32,15 +36,24 @@ def _retain(root, name, data):
 def release_evidence(tmp_path):
     measurement = {"name": "case wall time", "value": 42, "unit": "ms", "environment": "local independent fixture"}
     measure_file = _retain(tmp_path, "measurement.json", json.dumps(measurement).encode())
-    source = _retain(tmp_path, "source-manifest.json", b'{"source":"independent synthetic evidence test"}')
+    files = [
+        _retain(tmp_path, "test_qualified.py", b"# Independent synthetic runner cases: core, saved, fixture\n"),
+        _retain(tmp_path, "tests/test_connected_workflow.py", b"# Independently authored fixture and boundary expectations\n"),
+        _retain(tmp_path, "examples/commerce/tests/revenue.fixture.ddk.json", b'{"expected":{"rows":[{"amount":1900}]}}'),
+    ]
+    source = _retain(tmp_path, "source-manifest.json", json.dumps({"files": files}).encode())
     tools = {"ddk": {"version": "0.1.0"}, "python": {"version": "3.12.13"}}
-    xml = ElementTree.Element("testsuite", tests="3", failures="0", skipped="0", errors="0")
+    xml = ElementTree.Element("testsuite", tests="7", failures="0", skipped="0", errors="0")
     properties = ElementTree.SubElement(xml, "properties")
     ElementTree.SubElement(properties, "property", name="ddk.source.sha256", value=source["sha256"])
     ElementTree.SubElement(properties, "property", name="ddk.tools.sha256",
                            value=sha256(json_dumps(tools).encode()).hexdigest())
     for name in ("test_core", "test_saved", "test_fixture"):
         ElementTree.SubElement(xml, "testcase", classname="test_qualified", name=name)
+    for name in ("test_connected_staged_saved_plan_quality_catalog_reader", *(
+        f"test_fixture_boundary_expectations_are_independent[{scenario}]" for scenario in ("empty", "integer", "wrong-join")
+    )):
+        ElementTree.SubElement(xml, "testcase", classname="tests.test_connected_workflow", name=name)
     observed = _retain(tmp_path, "junit.xml", ElementTree.tostring(xml))
     declaration = {
         "specVersion": "0.1", "classes": ["core checker"], "profiles": ["core"],
@@ -55,9 +68,30 @@ def release_evidence(tmp_path):
         "unresolved": [], "fixtureExpectations": [],
         "resources": [{**measurement, "evidence": measure_file}],
         "source": source,
-        "testRuns": [{"id": "core-run", "runner": "pytest", "result": observed, "tools": list(tools)}],
+        "testRuns": [{"id": "core-run", "runner": "pytest", "result": observed, "tools": list(tools), "sourceRoot": "."}],
     }
     return declaration, evidence
+
+
+def _junit_status(root, evidence, name, tag):
+    path = root / evidence["testRuns"][0]["result"]["path"]
+    xml = ElementTree.fromstring(path.read_bytes())
+    case = next(item for item in xml.findall("testcase") if item.get("name") == name)
+    if tag:
+        ElementTree.SubElement(case, tag)
+    evidence["testRuns"][0]["result"] = _retain(root, path.name, ElementTree.tostring(xml))
+
+
+def _runtime_expectations(root, evidence):
+    source = root / "examples/commerce/tests/revenue.fixture.ddk.json"
+    boundary = root / "tests/test_connected_workflow.py"
+    evidence["fixtureExpectations"] = [{
+        "id": identity, "origin": "independently-authored",
+        "source": {"path": str(path), "sha256": sha256(path.read_bytes()).hexdigest()},
+        "expected": {"path": str(path), "sha256": sha256(path.read_bytes()).hexdigest()},
+    } for identity, path in (("commerce-revenue", source), ("commerce-boundary-expectations", boundary))]
+    fixture_report = {"metadata": {"fixture": {"source": evidence["fixtureExpectations"][0]["source"]}}}
+    evidence["referenceWorkflow"] = {"fixtureReport": _retain(root, "fixture-report.json", json.dumps(fixture_report).encode())}
 
 
 def _check(claim, evidence, path, decision, diagnostic=None, **kwargs):
@@ -146,10 +180,7 @@ def test_first_release_requires_observed_saved_substrait_execution(release_evide
     claim["profiles"] = sorted(FIRST_RELEASE_PROFILES)
     evidence["requestedProfiles"] = claim["profiles"]
     evidence["profileTools"] = {profile: ["ddk", "python"] for profile in claim["profiles"]}
-    authored = _retain(tmp_path, "expected.json", b"[{\"amount\":1900}]")
-    evidence["fixtureExpectations"] = [
-        {"id": "authored-expectation", "origin": "independently-authored", "expected": authored, "source": authored}
-    ]
+    _runtime_expectations(tmp_path, evidence)
     evidence["caseResults"].extend([
         {**evidence["caseResults"][0], "caseId": "CASE-TEST-SAVED", "profile": "plan.datafusion"},
         {**evidence["caseResults"][0], "caseId": "CASE-TEST-FIXTURE", "profile": "test.fixtures"},
@@ -167,3 +198,120 @@ def test_disconnected_catalog_and_fixture_reports_do_not_qualify_workflow(tmp_pa
                                        evidence_root=tmp_path)
     assert report["decision"] == "incomplete" and exit_code(report) == 2
     assert "TEST-WORKFLOW-INCOMPLETE" in codes(report)
+
+
+def test_expectations_bind_to_executed_fixture_and_inventoried_test_sources(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    _runtime_expectations(tmp_path, evidence)
+    result = _check(claim, evidence, tmp_path, "passed")
+    assert {item["id"] for item in result["metadata"]["expectationBindings"]} == {
+        "commerce-revenue", "commerce-boundary-expectations",
+    }
+
+
+@pytest.mark.parametrize("replace", ["source", "expected"])
+def test_unrelated_admitted_expectation_cannot_replace_executed_bytes(release_evidence, tmp_path, replace):
+    claim, evidence = release_evidence
+    _runtime_expectations(tmp_path, evidence)
+    evidence["fixtureExpectations"][0][replace] = _retain(tmp_path, "unrelated.json", b"[1900]")
+    _check(claim, evidence, tmp_path, "failed", "DOC-EXPECTATION-PROVENANCE")
+
+
+def test_executed_fixture_source_must_match_expectation_reference(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    _runtime_expectations(tmp_path, evidence)
+    fixture_report = {"metadata": {"fixture": {"source": evidence["fixtureExpectations"][1]["source"]}}}
+    evidence["referenceWorkflow"]["fixtureReport"] = _retain(tmp_path, "fixture-report.json", json.dumps(fixture_report).encode())
+    _check(claim, evidence, tmp_path, "failed", "DOC-EXPECTATION-PROVENANCE")
+
+
+def test_changed_expectation_source_cannot_reuse_old_runner_identity(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    _runtime_expectations(tmp_path, evidence)
+    changed = _retain(tmp_path, "tests/test_connected_workflow.py", b"# Changed expected business values\n")
+    evidence["fixtureExpectations"][1].update(source=changed, expected=changed)
+    _check(claim, evidence, tmp_path, "failed", "DOC-EXPECTATION-PROVENANCE")
+
+
+def test_changed_test_source_cannot_reuse_retained_passing_nodes(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    (tmp_path / "test_qualified.py").write_text("# Assertions removed after the source capture\n")
+    _check(claim, evidence, tmp_path, "failed", "DOC-CONFORMANCE-EVIDENCE")
+
+
+@pytest.mark.parametrize(("status", "tag", "decision"), [
+    ("failed", "failure", "failed"), ("unknown", None, "incomplete"), ("not_run", "skipped", "incomplete"),
+])
+def test_release_retains_required_case_outcomes(release_evidence, tmp_path, status, tag, decision):
+    claim, evidence = release_evidence
+    evidence["caseResults"][0].update(status=status, reason="Recorded native or runner outcome")
+    _junit_status(tmp_path, evidence, "test_core", tag)
+    report = _check(claim, evidence, tmp_path, decision)
+    case = next(item for item in report["checks"] if item["subject"] == "core/CASE-TEST-CORE")
+    assert case["status"] == status and case["required"]
+    if status in {"unknown", "not_run"}:
+        assert case["reason"] == "Recorded native or runner outcome"
+
+
+def test_optional_failed_case_stays_visible_without_gating_core(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    evidence["requestedProfiles"].append("plan.datafusion")
+    evidence["profileTools"]["plan.datafusion"] = ["ddk", "python"]
+    evidence["caseResults"].append({"caseId": "CASE-TEST-SAVED", "profile": "plan.datafusion", "kind": "executed",
+                                    "status": "failed", "runs": ["core-run"]})
+    _junit_status(tmp_path, evidence, "test_saved", "failure")
+    report = _check(claim, evidence, tmp_path, "passed")
+    case = next(item for item in report["checks"] if item["subject"] == "plan.datafusion/CASE-TEST-SAVED")
+    assert case["status"] == "failed" and not case["required"]
+
+
+def test_reported_uncertainty_cannot_hide_an_observed_runner_failure(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    evidence["caseResults"][0].update(status="unknown", reason="Caller did not classify its result")
+    _junit_status(tmp_path, evidence, "test_core", "error")
+    report = _check(claim, evidence, tmp_path, "failed")
+    assert any(item["subject"] == "core/CASE-TEST-CORE" and item["status"] == "failed" for item in report["checks"])
+
+
+def test_skipped_parameter_is_not_a_passing_expectation_test(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    _runtime_expectations(tmp_path, evidence)
+    _junit_status(tmp_path, evidence, "test_fixture_boundary_expectations_are_independent[wrong-join]", "skipped")
+    _check(claim, evidence, tmp_path, "failed", "DOC-EXPECTATION-PROVENANCE")
+
+
+@pytest.mark.parametrize(("tag", "status"), [(None, "passed"), ("failure", "failed"), ("error", "failed"), ("skipped", "not_run")])
+def test_retained_junit_keeps_observed_classification(release_evidence, tmp_path, tag, status):
+    _, evidence = release_evidence
+    _junit_status(tmp_path, evidence, "test_core", tag)
+    digest = sha256(json_dumps(evidence["tools"]).encode()).hexdigest()
+    outcomes = _pytest_outcomes(evidence["testRuns"][0]["result"], tmp_path, evidence["source"]["sha256"], digest)
+    assert outcomes[("test_qualified", "test_core")] == status
+    assert _selector_status("test_qualified.py::test_core", outcomes) == status
+
+
+def test_missing_runner_source_root_cannot_qualify(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    evidence["testRuns"][0].pop("sourceRoot")
+    _check(claim, evidence, tmp_path, "failed", "DOC-CONFORMANCE-EVIDENCE")
+
+
+def test_not_run_case_needs_no_invented_execution(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    evidence["caseResults"][0].update(status="not_run", reason="No supported native request was submitted")
+    evidence["caseResults"][0].pop("runs")
+    report = _check(claim, evidence, tmp_path, "incomplete")
+    check = next(item for item in report["checks"] if item["subject"] == "core/CASE-TEST-CORE")
+    assert check["status"] == "not_run" and check["evidence"] == "declared"
+
+
+def test_relocated_release_preserves_case_and_expectation_source_bindings(release_evidence, tmp_path):
+    claim, evidence = release_evidence
+    _runtime_expectations(tmp_path, evidence)
+    evidence["testRuns"][0]["sourceRoot"] = str(tmp_path)
+    with tempfile.TemporaryDirectory(prefix="relocated-release-", dir=tmp_path.parent) as directory:
+        moved = Path(directory)
+        shutil.copytree(tmp_path, moved, dirs_exist_ok=True)
+        shutil.rmtree(tmp_path)
+        result = _check(claim, evidence, moved, "passed", captured_root=tmp_path)
+        assert len(result["metadata"]["expectationBindings"]) == 2

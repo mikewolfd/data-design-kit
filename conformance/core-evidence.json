@@ -306,7 +306,11 @@
     {
       "id": "CASE-LOCK-001",
       "tests": [
-        "tests/core/test_case_coverage.py::test_development_tool_identity_distinguishes_equal_version_strings"
+        "tests/core/test_case_coverage.py::test_development_tool_identity_distinguishes_equal_version_strings",
+        "tests/core/test_distribution_identity.py::test_installed_identity_uses_build_and_installer_records_without_wheel_reads",
+        "tests/core/test_distribution_identity.py::test_missing_development_identity_blocks_locked_proof_but_keeps_ordinary_check",
+        "tests/core/test_distribution_identity.py::test_missing_development_identity_refuses_lock_creation_and_preserves_output",
+        "tests/core/test_distribution_identity.py::test_installed_identity_allows_lock_creation_without_environment_overrides"
       ],
       "coverage": "exercised"
     },
@@ -342,7 +346,10 @@
       "id": "CASE-RESULT-002",
       "tests": [
         "tests/core/test_core.py::test_reducer",
-        "tests/core/test_core.py::test_row_identity_duplicate_and_unknown_sql_dependencies"
+        "tests/core/test_core.py::test_row_identity_duplicate_and_unknown_sql_dependencies",
+        "tests/core/test_conformance.py::test_release_retains_required_case_outcomes",
+        "tests/core/test_conformance.py::test_optional_failed_case_stays_visible_without_gating_core",
+        "tests/core/test_conformance.py::test_reported_uncertainty_cannot_hide_an_observed_runner_failure"
       ],
       "coverage": "exercised"
     },
@@ -442,7 +449,10 @@
       "id": "CASE-TEST-001",
       "coverage": "exercised",
       "tests": [
-        "tests/core/test_conformance.py::test_fixture_expectation_derived_from_transformation_fails_release_gate"
+        "tests/core/test_conformance.py::test_fixture_expectation_derived_from_transformation_fails_release_gate",
+        "tests/core/test_conformance.py::test_unrelated_admitted_expectation_cannot_replace_executed_bytes",
+        "tests/core/test_conformance.py::test_executed_fixture_source_must_match_expectation_reference",
+        "tests/core/test_conformance.py::test_changed_expectation_source_cannot_reuse_old_runner_identity"
       ]
     },
     {
@@ -451,14 +461,20 @@
       "tests": [
         "tests/core/test_conformance.py::test_documentation_shape_check_does_not_count_as_executed_case",
         "tests/core/test_conformance.py::test_readme_substitution_and_invented_tool_tuple_cannot_qualify",
-        "tests/core/test_conformance.py::test_unrelated_passing_junit_case_does_not_cover_maintained_case"
+        "tests/core/test_conformance.py::test_unrelated_passing_junit_case_does_not_cover_maintained_case",
+        "tests/core/test_conformance.py::test_changed_test_source_cannot_reuse_retained_passing_nodes",
+        "tests/core/test_conformance.py::test_missing_runner_source_root_cannot_qualify",
+        "tests/core/test_conformance.py::test_skipped_parameter_is_not_a_passing_expectation_test"
       ]
     },
     {
       "id": "CASE-TEST-003",
       "coverage": "exercised",
       "tests": [
-        "tests/core/test_conformance.py::test_release_bundle_requires_versions_unresolved_inventory_and_fixture_provenance"
+        "tests/core/test_conformance.py::test_release_bundle_requires_versions_unresolved_inventory_and_fixture_provenance",
+        "tests/core/test_conformance.py::test_relocated_release_preserves_case_and_expectation_source_bindings",
+        "tests/core/test_evidence_locations.py::test_remapped_reference_reads_copied_bytes_without_rewriting_identity",
+        "tests/core/test_evidence_locations.py::test_relocation_refuses_foreign_roots_parent_traversal_and_symlink_escape"
       ]
     },
     {

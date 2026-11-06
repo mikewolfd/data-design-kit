@@ -7,7 +7,11 @@
       "id": "CASE-ADAPTER-001",
       "coverage": "exercised",
       "tests": [
-        "tests/core/test_capabilities.py::test_offline_manifest_discovery_does_not_import_native_tools_and_adapter_injection_is_explicit"
+        "tests/core/test_capabilities.py::test_offline_manifest_discovery_does_not_import_native_tools_and_adapter_injection_is_explicit",
+        "tests/core/test_capabilities.py::test_qualified_manifest_is_bound_to_captured_support_and_exact_bytes",
+        "tests/core/test_capabilities.py::test_release_rejects_expanded_support_and_unrelated_evidence",
+        "tests/core/test_capabilities.py::test_release_rejects_adapter_declaration_outside_captured_source",
+        "tests/core/test_capabilities.py::test_absolute_capability_evidence_relocates_without_rewriting_captured_bytes"
       ]
     },
     {

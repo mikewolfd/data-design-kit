@@ -169,11 +169,12 @@ def test_real_path_documents_parsed_once_per_run(commerce, monkeypatch):
 
 
 def test_development_tool_identity_distinguishes_equal_version_strings(commerce, monkeypatch):
-    monkeypatch.setenv("DDK_SOURCE_COMMIT", "1" * 40)
-    monkeypatch.setenv("DDK_DISTRIBUTION_SHA256", "a" * 64)
+    from ddk import locks
+
+    identity = {"version": "0.1.0.dev1", "commit": "1" * 40, "distributionSha256": "a" * 64}
+    monkeypatch.setattr(locks, "distribution_identity", lambda: dict(identity))
     _, first = lock_project(commerce / "project.ddk.json")
-    monkeypatch.setenv("DDK_SOURCE_COMMIT", "2" * 40)
-    monkeypatch.setenv("DDK_DISTRIBUTION_SHA256", "b" * 64)
+    identity.update(commit="2" * 40, distributionSha256="b" * 64)
     _, second = lock_project(commerce / "project.ddk.json")
     assert first["tools"]["ddk"]["version"] == second["tools"]["ddk"]["version"]
     assert first["tools"]["ddk"]["commit"] != second["tools"]["ddk"]["commit"]

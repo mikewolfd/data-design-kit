@@ -10,7 +10,7 @@ from ddk.documents import validate_document
 from ddk.impact import impact_projects
 from ddk.locks import lock_project
 
-from test_core import check, codes, commerce, edit
+from test_core import check, codes, commerce, edit, selected_development_identity
 
 PROJECT = "project.ddk.json"
 DATASET = "datasets/commerce.odcs.json"
@@ -116,7 +116,7 @@ def test_unused_quality_definition_warns_without_fake_execution(commerce):
     assert "POLICY-DEFINITION-UNUSED" in codes(report)
 
 
-def test_lock_pins_selected_objects_and_followed_bytes(commerce, tmp_path):
+def test_lock_pins_selected_objects_and_followed_bytes(commerce, tmp_path, selected_development_identity):
     lock_path = tmp_path / "locked.json"
     result, lock = lock_project(commerce / PROJECT, lock_path)
     assert result["decision"] == "passed"

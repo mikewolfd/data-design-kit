@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 release-evidence corrections
+
+The current `0.1.0-dev.2` source passed 110 focused tests covering installation identity, lock creation and verification, exact capability claims, evidence relocation, conformance reduction, impact, and existing case coverage. Missing development identity prevents lock creation and preserves prior output. Relocation accepts the captured absolute references only inside the admitted evidence root. Independent static review closed both final findings.
+
+The release assembler separately passed seven focused scenarios, including preserving failed and incomplete runs, generating five manifests from captured declarations, and refusing expanded operation claims. These are source and tooling checks. They do not replace installed-package qualification of the changed source. The `qualified-02` evidence below remains unchanged; the new installed run, portable distribution, and release handoff are pending.
+
+A separate documentation audit passed all 16 loaded schema shapes, five maintained adapter declarations, 193 local links and anchors, and nine upstream SHA-256 and Git blob identities. All 94 normative requirements retain one work-package owner and registered case coverage; 132 referenced test selectors resolve to maintained test functions across the evidence ledgers.
+
 ## November 5, 2026 local release qualification
 
 The [local release](local-release.md) passed qualification on macOS 26.6 arm64, Python 3.12.13, DDK commit `d86a3384ff7fe17101f34f92dda5422bb986864e`, and DocSpec commit `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. These results qualify the recorded local prerelease and supported operations.

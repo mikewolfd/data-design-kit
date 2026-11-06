@@ -23,6 +23,7 @@ def discover_capabilities(inventory, manifests, verified_release=None):
     report = inventory.report
     verified_release = verified_release or {}
     tested_tools = verified_release.get("metadata", {}).get("testedTools", {})
+    qualified_manifests = verified_release.get("metadata", {}).get("qualifiedAdapterManifests", ())
     qualified_profiles = set(verified_release.get("coverage", {}).get("completedProfiles", ()))
     discovered = []
     identities = set()
@@ -64,6 +65,8 @@ def discover_capabilities(inventory, manifests, verified_release=None):
             and bool(manifest["tools"]) and set(manifest["profiles"]) <= qualified_profiles
             and all(json_equal(tool, tested_tools.get(name)) for name, tool in manifest["tools"].items())
             and all(capability["evidence"] for capability in manifest["capabilities"])
+            and {"id": manifest["id"], "version": manifest["version"], "sha256": document.sha256}
+                in qualified_manifests
         )
         if qualified:
             report.available_capabilities.update(capability["group"] for capability in manifest["capabilities"])

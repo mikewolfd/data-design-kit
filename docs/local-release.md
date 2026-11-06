@@ -1,5 +1,7 @@
 # DDK local release — 0.1.0-dev.1
 
+**Current source: `0.1.0-dev.2`, November 6, 2026.** Release review found gaps in installation identity, exact capability qualification, expectation-source binding, unsuccessful case reporting, and evidence relocation. The source fixes passed focused checks and independent review. A new installed-package capture and portable bundle remain pending; the records below preserve the earlier package and do not qualify these changes. A publication destination has not yet been selected.
+
 **Qualified November 5, 2026, on macOS 26.6 arm64 and Python 3.12.13.** The complete local build strategy passed qualification: 169 installed-package tests, no skips, 137 applicable conformance cases, and 154 case/profile combinations across 13 profiles. The release decision is `passed`. The package remains an unpublished prerelease; pilots are deferred.
 
 The package, build environments, source archives, and generated evidence are retained outside this repository in [the qualified release directory](/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/distribution/qualified-02). The Python package version is `0.1.0.dev1`; DDK documents use `0.1.0-dev.1`.

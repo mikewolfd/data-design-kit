@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree
 
 from .documents import DocumentError, REPOSITORY, ResourceLimit, json_dumps, read_json, schema_registry, schema_validator, validate_document
+from .evidence_locations import EvidenceDirectory, evidence_directory, evidence_path
 from .interfaces import json_equal
 from .locks import evidence_sha256, tool_identities
 from .results import ReportBuilder, diagnostic
@@ -57,6 +58,21 @@ PROFILE_INTEGRATION_CASES = {
     "runtime.docspec-managed": {
         "CASE-ADAPTER-001", "CASE-NATIVE-EXACT-READ", "CASE-NATIVE-FIELD-IDENTITY", "CASE-NATIVE-DIGEST-SCHEME",
         "CASE-NATIVE-UNAVAILABLE", "CASE-NATIVE-QUALITY-BRIDGE", "CASE-REUSE-ENDPOINT", "CASE-REUSE-SEMANTIC-CHANGE",
+    },
+}
+# The initial release demonstrates these independently authored expectations.
+# This mapping binds their source files to maintained tests; an origin label
+# alone cannot establish that a runner used an expectation.
+EXPECTATION_BINDINGS = {
+    "commerce-revenue": {
+        "sourcePath": "examples/commerce/tests/revenue.fixture.ddk.json",
+        "tests": ["tests/test_connected_workflow.py::test_connected_staged_saved_plan_quality_catalog_reader"],
+        "fixtureReport": True,
+    },
+    "commerce-boundary-expectations": {
+        "sourcePath": "tests/test_connected_workflow.py",
+        "tests": ["tests/test_connected_workflow.py::test_fixture_boundary_expectations_are_independent"],
+        "fixtureReport": False,
     },
 }
 
@@ -143,8 +159,8 @@ def _admitted(reference, root, verified):
     key = (reference["path"], reference["sha256"])
     if key not in verified:
         try:
-            path = (root / reference["path"]).resolve()
-            verified[key] = path.is_relative_to(root) and evidence_sha256(path) == reference["sha256"]
+            path = evidence_path(root, reference["path"])
+            verified[key] = path.is_relative_to(evidence_directory(root)) and evidence_sha256(path) == reference["sha256"]
         except (DocumentError, OSError, ResourceLimit, RuntimeError, ValueError):
             verified[key] = False
     return verified[key]
@@ -190,27 +206,79 @@ def _evidence_shape(evidence, profiles):
     return missing
 
 
-def _expectations(report, fixtures, root, verified, required):
+def _run_source(reference, relative, run, root, verified):
+    """Match retained bytes to the source path supplied to the admitted runner."""
+    if not _reference(reference) or len(run) < 4 or root is None:
+        return False
+    source_root, files = run[2:4]
+    try:
+        return (
+            files.get(relative) == reference["sha256"]
+            and evidence_path(root, reference["path"]) == (source_root / relative).resolve()
+            and _admitted(reference, root, verified)
+        )
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
+def _selector_source(selector, run, root, verified):
+    relative = selector.partition("::")[0]
+    return _run_source({"path": str(run[2] / relative), "sha256": run[3].get(relative)},
+                       relative, run, root, verified)
+
+
+def _expectations(report, evidence, root, verified, required, run_results):
+    fixtures = evidence["fixtureExpectations"]
     invalid = []
+    seen = set()
+    pending = False
+    bindings = []
+    workflow = _fixture_workflow(evidence.get("referenceWorkflow"), root)
     for index, fixture in enumerate(fixtures):
-        if not isinstance(fixture, dict) or not fixture.get("id") or fixture.get("origin") not in ORIGINS or not all(
+        binding = EXPECTATION_BINDINGS.get(fixture.get("id")) if isinstance(fixture, dict) else None
+        if not binding or fixture["id"] in seen or fixture.get("origin") not in ORIGINS or not all(
             _reference(fixture.get(key)) for key in ("expected", "source")
         ):
             invalid.append(index)
-        elif root is not None and not all(_admitted(fixture[key], root, verified) for key in ("expected", "source")):
+            continue
+        seen.add(fixture["id"])
+        if root is None:
+            pending = True
+            continue
+        matching = [run for run in run_results.values() if all(
+            _run_source(fixture[key], binding["sourcePath"], run, root, verified) for key in ("expected", "source")
+        ) and all(_selector_passed(selector, run[1]) and _selector_source(selector, run, root, verified)
+                  for selector in binding["tests"])]
+        if not matching:
             invalid.append(index)
+            continue
+        if binding["fixtureReport"]:
+            metadata = workflow.get("metadata") if isinstance(workflow, dict) else None
+            fixture_metadata = metadata.get("fixture") if isinstance(metadata, dict) else None
+            actual = fixture_metadata.get("source") if isinstance(fixture_metadata, dict) else None
+            if actual is None:
+                pending = True
+                continue
+            if not any(_run_source(actual, binding["sourcePath"], run, root, verified) for run in matching):
+                invalid.append(index)
+                continue
+        bindings.append({"id": fixture["id"], "origin": fixture["origin"],
+                         "sourcePath": binding["sourcePath"], "sha256": fixture["source"]["sha256"],
+                         "tests": binding["tests"]})
     if invalid:
         _emit(report, "DDK-TEST-001", "release.evidence", "fixture-expectations", "failed",
-              "DOC-EXPECTATION-PROVENANCE", "Fixture expectation evidence must name an independently authored source and match its admitted bytes.",
+              "DOC-EXPECTATION-PROVENANCE", "Expectation references must match the admitted runner sources, maintained tests, and executed fixture source. Authorship remains a named assertion.",
               f"/fixtureExpectations/{invalid[0]}")
-    elif not fixtures and required:
+    elif required and seen != EXPECTATION_BINDINGS.keys():
         _emit(report, "DDK-TEST-003", "release.evidence", "fixture-expectations", "failed",
-              "DOC-RELEASE-EVIDENCE-MISSING", "Fixture provenance is required for the requested release profiles.", "/fixtureExpectations")
-    elif fixtures and root is None:
+              "DOC-RELEASE-EVIDENCE-MISSING", "The maintained fixture and boundary expectation sources are required for these release profiles.", "/fixtureExpectations")
+    elif pending:
         _emit(report, "DDK-TEST-001", "release.evidence", "fixture-expectations", "not_run",
-              "ADAPTER-CAPABILITY-MISSING", "An explicit evidence root is required to verify fixture expectation files.")
+              "DOC-RELEASE-EVIDENCE-MISSING", "An admitted runner and executed fixture report are required to bind expectation sources.")
     else:
         _emit(report, "DDK-TEST-001", "release.evidence", "fixture-expectations", "passed")
+        if bindings:
+            report.metadata["expectationBindings"] = bindings
 
 
 def _catalog(cases):
@@ -232,8 +300,8 @@ def _pytest_outcomes(reference, root, source_digest, tools_digest):
     if not _reference(reference) or root is None:
         return None
     try:
-        path = (root / reference["path"]).resolve()
-        if not path.is_relative_to(root) or not path.is_file():
+        path = evidence_path(root, reference["path"])
+        if not path.is_relative_to(evidence_directory(root)) or not path.is_file():
             return None
         with path.open("rb") as stream:
             data = stream.read((8 << 20) + 1)
@@ -257,47 +325,99 @@ def _pytest_outcomes(reference, root, source_digest, tools_digest):
             key = (case.get("classname"), case.get("name"))
             if None in key or key in outcomes:
                 return None
-            outcomes[key] = not any(child.tag in {"failure", "error", "skipped"} for child in case)
+            outcomes[key] = (
+                "failed" if any(child.tag in {"failure", "error"} for child in case)
+                else "not_run" if case.find("skipped") is not None else "passed"
+            )
     return outcomes
 
 
+def _source_files(reference, root):
+    document = _read_reference(reference, root)
+    if document is None or not isinstance(document.value, dict):
+        return None
+    rows = document.value.get("files")
+    if not isinstance(rows, list) or not rows:
+        return None
+    files = {}
+    for row in rows:
+        if not _reference(row):
+            return None
+        path = Path(row["path"])
+        if path.is_absolute() or path.as_posix() != row["path"] or ".." in path.parts or row["path"] in files:
+            return None
+        files[row["path"]] = row["sha256"]
+    return files
+
+
 def _runner_results(report, evidence, root, verified):
-    if not _admitted(evidence["source"], root, verified):
+    files = _source_files(evidence["source"], root)
+    if files is None:
         _emit(report, "DDK-TEST-003", "release.evidence", "source-identity", "not_run" if root is None else "failed",
-              "DOC-RELEASE-EVIDENCE-MISSING", "An admitted source fingerprint is required to bind test outcomes.")
+              "DOC-RELEASE-EVIDENCE-MISSING", "An admitted source inventory with exact relative file identities is required to bind test outcomes.")
         return {}
     results = {}
     seen = set()
     for index, run in enumerate(evidence["testRuns"]):
         outcomes = None
+        source_root = None
         if (isinstance(run, dict) and isinstance(run.get("id"), str) and run["id"] and run["id"] not in seen
                 and run.get("runner") == "pytest" and _names(run.get("tools")) and run["tools"]
-                and set(run["tools"]) <= evidence["tools"].keys()):
+                and set(run["tools"]) <= evidence["tools"].keys()
+                and isinstance(run.get("sourceRoot"), str) and run["sourceRoot"]):
             seen.add(run["id"])
             tools = {name: evidence["tools"][name] for name in run["tools"]}
             digest = sha256(json_dumps(tools).encode()).hexdigest()
-            outcomes = _pytest_outcomes(run.get("result"), root, evidence["source"]["sha256"], digest)
+            try:
+                source_root = evidence_path(root, run["sourceRoot"])
+                if source_root.is_relative_to(evidence_directory(root)) and source_root.is_dir():
+                    outcomes = _pytest_outcomes(run.get("result"), root, evidence["source"]["sha256"], digest)
+            except (OSError, RuntimeError, ValueError):
+                pass
         if outcomes is None:
             _emit(report, "DDK-TEST-002", "release.evidence", f"test-run/{index}", "failed",
-                  "DOC-CONFORMANCE-EVIDENCE", "Test evidence must be a retained pytest JUnit report bound to exact source and tool identities.",
+                  "DOC-CONFORMANCE-EVIDENCE", "Test evidence must identify its retained source root and a pytest JUnit report bound to exact source and tool identities.",
                   f"/testRuns/{index}")
         else:
-            results[run["id"]] = (set(run["tools"]), outcomes)
+            results[run["id"]] = (set(run["tools"]), outcomes, source_root, files)
     return results
 
 
-def _selector_passed(selector, outcomes):
+def _selector_status(selector, outcomes):
     path, sep, name = selector.partition("::")
     if not sep or not path.endswith(".py"):
-        return False
+        return None
     classname = ".".join((*Path(path[:-3]).parts, *name.split("::")[:-1]))
     function = name.split("::")[-1]
-    matching = [passed for (module, test), passed in outcomes.items()
+    matching = [status for (module, test), status in outcomes.items()
                 if module == classname and (test == function or ("[" not in function and test.startswith(f"{function}[")))]
-    return bool(matching) and all(matching)
+    if not matching:
+        return None
+    return next((status for status in ("failed", "unknown", "not_run") if status in matching), "passed")
 
 
-def _case_observations(report, evidence, registry, profiles, run_results):
+def _selector_passed(selector, outcomes):
+    return _selector_status(selector, outcomes) == "passed"
+
+
+def _required_cases(profile, registry):
+    return ({case for case, record in registry.items() if record["profile"] == profile}
+            | (PROFILE_INTEGRATION_CASES.get(profile, set()) & registry.keys()))
+
+
+def _observed_case(tests, dependencies, runs, run_results):
+    statuses = []
+    for selector in tests:
+        observations = [_selector_status(selector, run_results[run][1]) for run in runs
+                        if dependencies <= run_results[run][0]]
+        observations = [status for status in observations if status is not None]
+        statuses.append(next((status for status in ("failed", "unknown", "not_run") if status in observations),
+                             "passed" if observations else "not_run"))
+    return next((status for status in ("failed", "unknown", "not_run") if status in statuses),
+                "passed" if statuses else "not_run")
+
+
+def _case_observations(report, evidence, registry, profiles, run_results, root, verified):
     passed = defaultdict(set)
     seen = set()
     for index, result in enumerate(evidence["caseResults"]):
@@ -312,25 +432,42 @@ def _case_observations(report, evidence, registry, profiles, run_results):
             and (profile, case) not in seen
             and result.get("status") in CASE_STATES
         )
-        if not valid or (profile in profiles and result.get("kind") != "executed"):
+        status = result.get("status")
+        if not valid or (status in {"passed", "failed", "unknown"} and result.get("kind") != "executed") or (
+            status in {"unknown", "not_run"} and (not isinstance(result.get("reason"), str) or not result["reason"])
+        ):
             _emit(report, "DDK-TEST-002", "release.evidence", subject, "failed", "DOC-CONFORMANCE-EVIDENCE",
                   "A claimed case needs distinct executed evidence matching the registered case and requested profile.",
                   f"/caseResults/{index}")
             continue
         seen.add((profile, case))
-        if result["status"] != "passed" or result.get("kind") != "executed":
-            continue
         runs = result.get("runs")
         tests = registry[case].get("tests", ())
         dependencies = set(evidence["profileTools"].get(profile, ()))
-        if (not tests or not _names(runs) or not runs or any(run not in run_results for run in runs)
-                or not all(any(dependencies <= run_results[run][0] and _selector_passed(selector, run_results[run][1])
-                               for run in runs) for selector in tests)):
+        runs = [] if runs is None and status == "not_run" else runs
+        valid_runs = _names(runs) and all(run in run_results for run in runs)
+        source_matches = valid_runs and all(
+            _selector_source(selector, run_results[run], root, verified)
+            for selector in tests for run in runs
+            if dependencies <= run_results[run][0] and _selector_status(selector, run_results[run][1]) is not None
+        )
+        observed = _observed_case(tests, dependencies, runs, run_results) if valid_runs else None
+        if (not valid_runs or status != "not_run" and (not tests or not runs or not source_matches)
+                or status == "passed" and observed != "passed"
+                or status == "failed" and observed != "failed"):
             _emit(report, "DDK-TEST-002", "release.evidence", subject, "failed", "DOC-CONFORMANCE-EVIDENCE",
-                  "A passing case must match all maintained pytest test nodes under the declared tool tuple.",
+                  "Case outcomes must match maintained pytest nodes, their inventoried source bytes, and the declared tool tuple.",
                   f"/caseResults/{index}/runs")
         else:
-            passed[profile].add(case)
+            # A reported uncertainty cannot conceal an observed runner failure.
+            status = "failed" if observed == "failed" else status
+            required = profile in profiles and case in _required_cases(profile, registry)
+            records = [{"kind": "native-report", **run["result"]} for run in evidence["testRuns"] if run["id"] in runs]
+            reason = result.get("reason") if status in {"unknown", "not_run"} else None
+            report.add("DDK-TEST-002", "release.evidence", f"{profile}/{case}", status, required=required,
+                       evidence="executed" if records else "declared", reason=reason, evidence_records=records)
+            if status == "passed":
+                passed[profile].add(case)
     return passed
 
 
@@ -338,8 +475,8 @@ def _read_reference(reference, root):
     if not _reference(reference) or root is None:
         return None
     try:
-        path = (root / reference["path"]).resolve()
-        if path.is_relative_to(root):
+        path = evidence_path(root, reference["path"])
+        if path.is_relative_to(evidence_directory(root)):
             document = read_json(path)
             if document.sha256 == reference["sha256"]:
                 return document
@@ -536,14 +673,15 @@ def _connected_check(report, reference, root, verified, profiles):
           None if passed else "The supplied reports do not connect the generated catalog reader to the exact quality-checked saved-plan output.")
 
 
-def verify_reference_workflow(reference, *, evidence_root, claimed_profiles=()):
+def verify_reference_workflow(reference, *, evidence_root, claimed_profiles=(), captured_root=None):
     report = ReportBuilder("urn:ddk:reference-workflow", ("release.profiles",))
-    root = Path(evidence_root).resolve()
+    root = EvidenceDirectory(evidence_root, captured_root)
     _connected_check(report, reference, root, {}, set(claimed_profiles))
     return report.build()
 
 
-def qualify_release(claim, evidence, *, cases=None, previous_diagnostics=None, component_schema=None, evidence_root=None):
+def qualify_release(claim, evidence, *, cases=None, previous_diagnostics=None, component_schema=None, evidence_root=None,
+                    captured_root=None):
     """Validate claimed scope and existing evidence without running product workloads."""
     report = ReportBuilder("urn:ddk:release", RELEASE_GROUPS)
     report.tools = tool_identities()
@@ -554,23 +692,23 @@ def qualify_release(claim, evidence, *, cases=None, previous_diagnostics=None, c
               f"Missing or invalid release evidence: {', '.join(missing)}.")
         return report.build()
     _diagnostic_assignments(report, previous_diagnostics, evidence.get("diagnostics"))
-    root = Path(evidence_root).resolve() if evidence_root is not None else None
+    root = EvidenceDirectory(evidence_root, captured_root) if evidence_root is not None else None
     verified = {}
-    _expectations(report, evidence["fixtureExpectations"], root, verified, bool(profiles & {"test.fixtures", "plan.datafusion"}))
     if root is not None and not all(_measurement_verified(item, root) for item in evidence["resources"]):
         _emit(report, "DDK-TEST-003", "release.evidence", "resource-measurements", "failed", "DOC-RELEASE-EVIDENCE-MISSING",
               "A resource measurement has no matching retained artifact.", "/resources")
     registry = _catalog(cases)
     first = isinstance(claim, dict) and claim.get("firstProductRelease", False)
     run_results = _runner_results(report, evidence, root, verified)
-    passed = _case_observations(report, evidence, registry, profiles | ({"product-release"} if first else set()), run_results)
+    _expectations(report, evidence, root, verified, bool(profiles & {"test.fixtures", "plan.datafusion"}), run_results)
+    passed = _case_observations(report, evidence, registry, profiles | ({"product-release"} if first else set()),
+                                run_results, root, verified)
     required = profiles | (FIRST_RELEASE_PROFILES if first else set())
     report.metadata["requestedProfiles"] = sorted(required)
     report.metadata["testedTools"] = evidence["tools"]
     report.metadata["unresolvedReleaseEvidence"] = evidence["unresolved"]
     for profile in sorted(required):
-        expected = {case for case, record in registry.items() if record["profile"] == profile}
-        expected |= PROFILE_INTEGRATION_CASES.get(profile, set()) & registry.keys()
+        expected = _required_cases(profile, registry)
         missing = sorted(expected - passed[profile])
         reason = None
         if profile not in profiles:
@@ -590,6 +728,14 @@ def qualify_release(claim, evidence, *, cases=None, previous_diagnostics=None, c
         if missing := sorted(release_cases - passed["product-release"]):
             _emit(report, "DDK-TEST-002", "release.profiles", "workflow-cases", "not_run",
                   "TEST-WORKFLOW-INCOMPLETE", f"Required reference workflow cases lack passing evidence: {', '.join(missing)}.")
+    from .capability_evidence import admit_release_capabilities
+
+    adapters, errors = admit_release_capabilities(evidence, root)
+    if errors:
+        _emit(report, "DDK-ADAPTER-001", "release.evidence", "adapter-manifests", "failed",
+              "DOC-CAPABILITY-EVIDENCE", "; ".join(errors))
     if report.build()["decision"] == "passed":
         report.completed_profiles.update(required)
+        if adapters:
+            report.metadata["qualifiedAdapterManifests"] = adapters
     return report.build()

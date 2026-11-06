@@ -1,6 +1,8 @@
 # DDK implementation status
 
-**November 5, 2026. Local implementation and qualification complete.** The Python checker and explicit integrations passed all 169 tests from an installed package outside the source checkout, with no skips. Release qualification passed all 154 required case/profile combinations across 13 claimed profiles. The [local release record](local-release.md) links the package, exact source versions, dependency locks, and retained evidence. The prerelease remains local and unpublished.
+**November 6, 2026. Local implementation complete; release qualification pending for `0.1.0-dev.2`.** The current source binds development identity to local installation records, qualifies exact capability manifests against captured declarations, binds expectations to executed sources, preserves unsuccessful case outcomes, and admits relocated evidence without changing captured bytes. The changed package needs a fresh installed run and portable release bundle.
+
+The earlier `0.1.0-dev.1` package passed 169 installed tests with no skips and all 154 required case/profile combinations across 13 profiles. Those results apply to its recorded source. The [local release record](local-release.md) preserves the package, exact source versions, dependency locks, and evidence. The prerelease remains unpublished.
 
 ## Working paths
 
@@ -21,7 +23,7 @@ The tested DDK implementation is commit `d86a3384ff7fe17101f34f92dda5422bb986864
 
 The CLI exposes `check`, `impact`, `lock`, `build`, `test`, and `catalog`. The additional `files`, `stage`, `quality`, and `managed` commands require explicit requests and tool selection. `--format json` returns one report; exit codes are 0 passed, 1 failed, 2 incomplete, 3 operational error, and 64 invalid usage.
 
-Invoke the source checkout with its `src` directory on `PYTHONPATH`, or use the independently built local wheel. The offline environment needs the pinned JSON Schema libraries. Native tools run in a separately selected environment through `--tool-python`; DocSpec requires `--docspec` and an explicit `--limits` file.
+Invoke the source checkout with its `src` directory on `PYTHONPATH`, or use the independently built local wheel. The offline environment needs the pinned JSON Schema libraries. Development lock creation additionally requires the installed source commit and wheel digest: a checkout or installation without those records returns incomplete without writing a lock. Ordinary unlocked checks remain available. Native tools run in a separately selected environment through `--tool-python`; DocSpec requires `--docspec` and an explicit `--limits` file.
 
 The [local release instructions](local-release.md#run-the-package) provide the retained executable and a clean installation command using the captured dependency lock.
 

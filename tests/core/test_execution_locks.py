@@ -8,7 +8,7 @@ from ddk.documents import validate_document
 from ddk.locks import lock_project, verify_execution_inputs
 from ddk.results import exit_code, stable_report
 
-from test_core import check, codes, commerce
+from test_core import check, codes, commerce, selected_development_identity
 
 
 def _file(path, data):
@@ -40,7 +40,7 @@ def test_changed_staged_file_blocks_reused_saved_plan_evidence(tmp_path):
     assert [item["location"]["pointer"] for item in issues] == ["/inputs/0"]
 
 
-def test_locked_stable_results_ignore_inventory_order_and_volatile_observations(commerce):
+def test_locked_stable_results_ignore_inventory_order_and_volatile_observations(commerce, selected_development_identity):
     result, lock = lock_project(commerce / "project.ddk.json")
     assert result["decision"] == "passed"
     first = check(commerce, "passed", locked=True, lock=lock)
