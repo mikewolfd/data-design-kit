@@ -1,6 +1,8 @@
 # DDK build strategy without pilots
 
-**Date: November 5, 2026. Status: adopted implementation route; implementation and qualification are in progress.**
+**Date: November 5, 2026. Status: local implementation and qualification complete; pilots remain deferred.**
+
+The [local release](local-release.md) records the completed result: 169 installed-package tests passed, 13 profiles qualified, identical repeat package builds, and retained native execution and recovery evidence. The sections below preserve the adopted build route and its acceptance criteria.
 
 Build the full Data Design Kit (DDK) stack through four parallel implementation tracks, integrated through one local reference workflow. Remove pilot preparation, project-specific consumer adapters, and adoption demonstrations from the build dependencies. The scope includes core checking and impact analysis, catalogs and standards outputs, SQL and saved Substrait execution, data-quality checks, file intake, ingestion, and one managed operation/backend.
 

@@ -1,11 +1,11 @@
 {
-  "status": "in-progress",
+  "status": "qualified-local",
   "specification": "0.1",
   "workPackages": [
     {
       "id": "WP-00",
       "title": "Public-source baseline",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [],
       "requirements": [],
       "planSection": "WP-00 \u2014 Public-source baseline",
@@ -16,7 +16,7 @@
     {
       "id": "WP-00B",
       "title": "Saved-plan feasibility experiment",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-00"
       ],
@@ -30,7 +30,7 @@
     {
       "id": "WP-01",
       "title": "Strict documents, source locations, and artifact index",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-00"
       ],
@@ -57,7 +57,7 @@
     {
       "id": "WP-02",
       "title": "Results, decisions, CLI, and capability discovery",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-01"
       ],
@@ -91,7 +91,7 @@
     {
       "id": "WP-03",
       "title": "Component interfaces and bounded parameter reasoning",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-02"
       ],
@@ -112,7 +112,7 @@
     {
       "id": "WP-04",
       "title": "Dataset compatibility, design graphs, and exports",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-03"
       ],
@@ -135,7 +135,7 @@
     {
       "id": "WP-05",
       "title": "Shared definitions, project policies, and provenance",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-04"
       ],
@@ -154,7 +154,7 @@
     {
       "id": "WP-06",
       "title": "Locks, dependency-aware impact, and non-weakening",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-05",
         "WP-13"
@@ -179,7 +179,7 @@
     {
       "id": "WP-07",
       "title": "Data Contract CLI integration",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-02"
       ],
@@ -194,7 +194,7 @@
     {
       "id": "WP-08",
       "title": "Frictionless files and dlt staging",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-02"
       ],
@@ -209,7 +209,7 @@
     {
       "id": "WP-09A",
       "title": "DocSpec SQL preparation, jobs, and native bindings",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-02",
         "WP-00"
@@ -229,7 +229,7 @@
     {
       "id": "WP-09B",
       "title": "Saved Substrait through DocSpec",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-09A",
         "WP-00B"
@@ -248,7 +248,7 @@
     {
       "id": "WP-10",
       "title": "Fixture tests, native output checks, and portability",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-07",
         "WP-09A",
@@ -271,7 +271,7 @@
     {
       "id": "WP-11",
       "title": "Release qualification and handoff",
-      "status": "in-progress",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-06",
         "WP-10",
@@ -298,7 +298,7 @@
     {
       "id": "WP-12",
       "title": "Managed candidates and accepted quality gates",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-07",
         "WP-09A"
@@ -315,7 +315,7 @@
     {
       "id": "WP-13",
       "title": "Product catalog and native metadata",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-02"
       ],
@@ -337,7 +337,7 @@
     {
       "id": "WP-14",
       "title": "DCAT and OpenLineage interchange",
-      "status": "implemented",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-13"
       ],
@@ -374,5 +374,20 @@
       "WP-12"
     ],
     "pilotWorkExcluded": true
+  },
+  "qualification": {
+    "date": "2026-11-05",
+    "scope": "Unpublished local prerelease on the exact supported dependency versions; pilots excluded.",
+    "record": "docs/local-release.md",
+    "implementationCommit": "d86a3384ff7fe17101f34f92dda5422bb986864e",
+    "docspecCommit": "b1270b2e964becc5844bb6ca95ee5d605c7a3d79",
+    "installedTests": {
+      "passed": 169,
+      "failed": 0,
+      "skipped": 0
+    },
+    "qualifiedProfiles": 13,
+    "requiredCaseProfilePairs": 154,
+    "publication": "not_requested"
   }
 }

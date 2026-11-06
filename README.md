@@ -1,6 +1,6 @@
 # Data Design Kit
 
-**Status.** Engineering specification and implementation plan, November 5, 2026. The local stack is implemented and undergoing conformance qualification; no conforming product release is claimed.
+**Status.** November 5, 2026. The local stack is implemented and qualified as `0.1.0-dev.1` on its recorded dependency versions. All 169 installed-package tests passed, and all 13 claimed profiles passed release qualification. This is an unpublished local prerelease. [Package and qualification evidence](docs/local-release.md).
 
 Data Design Kit (DDK) uses maintained data definitions to check designs, test transformations, and generate a catalog of exact versions, access methods, relationships, and evidence. Maintainers can use the same definitions to assess changes and supply documentation and consumer metadata. The adopted [build strategy](docs/build-strategy-without-pilots.md) connects local commerce inputs, real execution and quality receipts, and a generated catalog reader. Nested/scoped identities and one typed managed operation have separate acceptance cases. Project pilots remain deferred.
 
@@ -17,13 +17,14 @@ The first product release requires ODPS product definitions, ODCS dataset defini
 - [Research and references](docs/references.md): public sources, observed versions, licensing, and unresolved compatibility.
 - [Conformance cases](conformance/cases.json): independently specified runtime cases and their evidence.
 - [Delivery verification](docs/verification.md): checks actually performed and their limits.
+- [Local release](docs/local-release.md): tested package, exact source versions, installation, dependency records, and supported limits.
 - [Commerce catalog example](examples/commerce/catalog/README.md) and [draft catalog schema](schemas/0.1/catalog.schema.json) show the product, discovery, lineage, and evidence formats.
 
 The specification follows the structure of a W3C technical report. This is an independent engineering draft, not a W3C publication or standards-body endorsement. “Data Design Kit” and `ddk` are working names.
 
 ## What is present
 
-This repository contains specifications, format schemas, independently authored examples and tests, upstream provenance, and the DDK source implementation under development. Build tooling, environments, dependency installations, and generated outputs remain outside the repository. Implemented and qualified capabilities are reported separately in the verification record.
+This repository contains specifications, format schemas, independently authored examples and tests, upstream provenance, and the DDK source implementation. Build tooling, environments, dependency installations, and generated outputs remain outside the repository. The verification record identifies the exact code and dependencies covered by each qualification claim.
 
 The integrated architecture separates domain rules, application use cases, and adapters. Native references preserve their original identity schemes. Check outcomes remain separate from uncertain runtime outcomes. The local demonstrations execute saved Substrait and exercise one typed managed quality gate; each claim remains bound to its tested dependency tuple. DocSpec is team-owned and unreleased; its API may change to support the design.
 
@@ -35,4 +36,4 @@ The [implementation status](docs/implementation-status.md) documents the command
 
 ## License
 
-Original material is licensed under Apache-2.0. Vendored material retains the attribution recorded in [NOTICE](NOTICE) and [upstream-artifacts.json](docs/upstream-artifacts.json). The implementation plan requires version-specific dependency and notice checks before a runtime release.
+Original material is licensed under Apache-2.0. Vendored material retains the attribution recorded in [NOTICE](NOTICE) and [upstream-artifacts.json](docs/upstream-artifacts.json). The local release includes dependency locks, software bills of materials, and native dependency notices.

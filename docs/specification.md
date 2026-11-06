@@ -6,7 +6,7 @@
 | --- | --- |
 | Short name | DDK |
 | Specification version | 0.1 |
-| Document status | Draft for implementation; no conforming implementation is claimed |
+| Document status | Independent draft; local implementation qualification is recorded separately |
 | Normative artifacts | This document, the versioned schemas, and the normative adapter requirements explicitly linked here |
 | Implementation roadmap | [Implementation plan](implementation-plan.md) |
 | Public-source evidence | [References](references.md) |
@@ -21,6 +21,8 @@ DDK checks reusable reader and transformation interfaces, declared compatibility
 ## Status of this document
 
 This is a new engineering proposal. It follows the organization and conformance discipline of W3C technical reports but is not a W3C publication. It carries no W3C, Bitol, or Apache endorsement. No runtime behavior is implemented by publishing this draft.
+
+The [local release record](local-release.md) identifies an independently implemented prerelease and the exact profile claims supported by its executed evidence. This document remains a draft.
 
 Examples and conformance expectations were written independently for this project. Public upstream artifacts retain their own provenance. See [PROVENANCE.md](../PROVENANCE.md).
 

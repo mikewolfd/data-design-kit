@@ -1,6 +1,6 @@
 # Data Design Kit — Implementation Plan
 
-**Plan date: November 5, 2026. Status: implementation in progress; no product release is qualified.**
+**Plan date: November 5, 2026. Status: local implementation and qualification complete; the prerelease is unpublished.**
 
 ## 1. Delivery decision
 
@@ -12,16 +12,16 @@ The first connected workflow uses independently authored local commerce inputs, 
 
 The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve future adoption work separately.
 
-## 2. Current deliverables and remaining work
+## 2. Completed local deliverables
 
-| Track | Implemented | Remaining qualification |
+| Track | Implemented | Qualification evidence |
 | --- | --- | --- |
-| Offline core and impact | Strict document and definition loading, interface and dataset checks, graphs, policies, locks, and catalog-aware impact | Complete the named conformance cases and measure the documented resource targets |
-| Catalog and interchange | Open Data Product Standard (ODPS) port resolution, local owner receipts, scoped identities, atomic refresh, Data Catalog Vocabulary (DCAT) discovery, OpenLineage, and exact-version query binding | Qualify the release tuple and retain the catalog and reader evidence from the connected workflow |
-| Native execution and quality | Bounded DocSpec SQL and saved Substrait execution, Data Contract CLI checks, Frictionless CSV validation, dlt Parquet staging, and one typed local managed Build workflow | Qualify the supported combinations and their failure and uncertainty cases. Additional engines and standalone plan validation remain separate |
-| Release | Local source and installed-package verification under way | Publish the exact dependency tuple, case coverage, and unresolved limits after qualification |
+| Offline core and impact | Strict document and definition loading, interface and dataset checks, graphs, policies, locks, and catalog-aware impact | Named cases passed; isolated core installation passed; small-fixture resource measurements retained |
+| Catalog and interchange | Open Data Product Standard (ODPS) port resolution, local owner receipts, scoped identities, atomic refresh, Data Catalog Vocabulary (DCAT) discovery, OpenLineage, and exact-version query binding | Independent readers and the connected workflow passed against the exact checked saved-plan output |
+| Native execution and quality | Bounded DocSpec SQL and saved Substrait execution, Data Contract CLI checks, Frictionless CSV validation, dlt Parquet staging, and one typed local managed Build workflow | Supported operations, required failures, uncertainty, exact-native acceptance, and reconciliation passed on the recorded tool versions |
+| Local release | Installable package, dependency locks, notices, software bills of materials, capability manifests, and retained evidence | All 169 installed-package tests passed; 154 case/profile combinations qualified; repeat package builds were identical |
 
-The [implementation status](implementation-status.md) describes the supported boundaries. The [verification record](verification.md) separates document checks from executed behavior.
+The [local release](local-release.md) identifies the tested source and artifacts. The [implementation status](implementation-status.md) describes the supported boundaries. The [verification record](verification.md) separates document checks from executed behavior. Public distribution, pilots, additional engines, and standalone plan validation remain separate work. The work packages below preserve the delivery requirements; their local completion status is recorded in the registry.
 
 ## 3. Implementation architecture
 
@@ -346,7 +346,7 @@ Property-based tests are useful for containment boundaries, alias resolution, re
 
 ## 8. Performance and resource acceptance
 
-These are proposed engineering targets, not measured results. Establish a named reference machine and dataset before accepting numerical limits.
+The [local release measurements](local-release.md#measured-resources) establish small-fixture loading, impact, and metadata-refresh behavior. The larger-scale targets below remain proposed and unmeasured; local qualification does not claim they have been met.
 
 - Generate a public synthetic design library with 1,000 artifacts, 10,000 step relationships, shared definitions, and several changed interfaces.
 - Initial target: a cold offline core check within 5 seconds and 256 MiB peak resident memory on the reference machine; report parsing/schema/reference time separately.
