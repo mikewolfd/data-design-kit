@@ -31,7 +31,7 @@ The assembly details at `extensions["urn:ddk:catalog:assembly"]` retain resolved
 
 ## Application relationship reasoning
 
-The pending successor adds an explicit `relationship_profile` argument to `assemble_catalog` and `build_catalog`. It is not included in the qualified dev3 wheel. A profile supplies `identity`, an optional local `source` file, and `assess(ResolvedRelationship) -> RelationshipAssessment` from `ddk.catalog_semantics`.
+The [qualified dev4 package](local-release-dev4.md) adds an explicit `relationship_profile` argument to `assemble_catalog` and `build_catalog`. A profile supplies `identity`, an optional local `source` file, and `assess(ResolvedRelationship) -> RelationshipAssessment` from `ddk.catalog_semantics`.
 
 The identity uses the existing tool-identity shape: an absolute `id`, exact `version`, and optional `commit` or `distributionSha256`. Supply a source file or an exact source/distribution pin. A source file must be within the permitted roots and document byte limit; the assembler reads its original bytes once for provenance. This records the supplied source, not a verified callable-to-source binding or its complete dependencies.
 
@@ -59,7 +59,7 @@ Select a public view with an explicit disclosure policy. Its shape is defined in
 
 This fragment adds grants to the ordinary policy. A field grant keeps selected fields and necessary structure, with supported types and nullability. Descriptions require `descriptions: true`. `disclosedDefinitionPaths` identifies the partial scope. Public output uses the disclosed object name and withholds unlisted siblings and private native properties. An extension grant permits its complete value, so its owner must decide whether that value belongs in the public view.
 
-The pending successor also supports `definitionFields: {"urn:example:dataset": [[]]}` to grant root metadata only. With `descriptions: true`, this includes the root description without granting any child field or native/custom property. Empty paths remain invalid for identities and relationships.
+Use `definitionFields: {"urn:example:dataset": [[]]}` to grant root metadata only. With `descriptions: true`, this includes the root description without granting any child field or native/custom property. Empty paths remain invalid for identities and relationships.
 
 A public view using a relationship profile must explicitly grant the profile's exact identity ID in `identifiers`. Otherwise public assembly refuses output and preserves the full reason in `local_report`. This applies even when the ID is a `file://` URI: allowing its source record alone does not disclose its tool identity. Ordinary evidence policy still governs captured source locations.
 

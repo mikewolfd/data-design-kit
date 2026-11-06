@@ -1,6 +1,6 @@
 # Shared runtime work for the full replacements
 
-**November 6, 2026. Both replacements are greenfield; full replacement qualification remains incomplete.** SpicyRegs and congressional-tech will update their producers and readers together. The qualified [dev3 catalog package](local-release-dev3.md) is ready for integration. External publication awaits a destination.
+**November 6, 2026. Both replacements are greenfield; full replacement qualification remains incomplete.** SpicyRegs and congressional-tech will update their producers and readers together. The qualified [dev4 catalog package](local-release-dev4.md) is ready for integration. External publication awaits a destination.
 
 Build one new path through definitions, execution, qualification, publication, and consumers. Remove old-reader compatibility, legacy metadata decoders, fallback controllers, and migration of old lifecycle journals from delivery scope. Valid retained originals and native results can still supply exact inputs when identity and interpretation are established. The new stack must preserve its own retry, recovery, qualification, and selection guarantees.
 

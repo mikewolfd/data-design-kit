@@ -1,8 +1,16 @@
 # DDK verification
 
+## November 6, 2026 dev4 installed relationship-profile qualification
+
+The [dev4 package](local-release-dev4.md) passed all 320 installed tests with zero failures, errors or skips and 11 RDFLib warnings in 122.83 seconds. [Qualification](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/release-qualification.ddk.json) passes 177 case/profile combinations covering 160 cases and 13 declared profiles. Source `fb70ab825243235b4ecf77c5ebb8c636d0d06e2d` includes cases 041–052 and the relationship-profile disclosure/impact repairs.
+
+Two builds produced identical wheels. The [identity check](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/identity-verification.json) matches 144 source files to the commit, 108 wheel members to both installations, 102 code/resource members to source, and the installed source/wheel identities. Core-only checking and locks passed separately. Source and external inputs remained unchanged. Separate greybeard and ETL source reviews closed their findings before this capture.
+
+Both application owners received the exact [handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/handoff.json). Their application-specific profiles and complete consumer journeys remain separate acceptance work. The native tuple is unchanged from dev2; managed Update, streaming quality and wider native views are not included.
+
 ## November 6, 2026 relationship-profile source checks
 
-The pending catalog increment adds explicitly supplied application relationship reasoning and root-only description grants. Independent review found and repaired three gaps: ungranted tool IDs in public output, omitted profile/assessment changes in impact, and loss of public profile provenance during disclosure. The [latest focused capture](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/relationship-profile-rereview/attempt-2.junit.xml) passed 32 changed-boundary cases in 2.60 seconds. Its [checkpoint](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/relationship-profile-rereview/source-checkpoint-2.json) identifies the seven implementation, schema, and test files. The earlier 29-case repair capture remains separate.
+The source checks below preceded dev4 qualification. Independent review found and repaired three gaps: ungranted tool IDs in public output, omitted profile/assessment changes in impact, and loss of public profile provenance during disclosure. The [latest focused capture](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/relationship-profile-rereview/attempt-2.junit.xml) passed 32 changed-boundary cases in 2.60 seconds. Its [checkpoint](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/relationship-profile-rereview/source-checkpoint-2.json) identifies the seven implementation, schema, and test files. The earlier 29-case repair capture remains separate.
 
 Public comparisons retain the permitted profile identity and redacted source while marking private assessment and consumer scope unknown. Local comparisons follow only actually assessed relationships and their readers. Source metadata is read once per assembly; sorting occurs at finalization, with partial local diagnostics preserved. These checks establish the named behaviors, not a throughput improvement, installed qualification, or runtime relationship evaluation.
 
