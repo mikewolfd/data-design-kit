@@ -10,6 +10,7 @@ The first product release requires ODPS product definitions, ODCS dataset defini
 
 - [Engineering specification](docs/specification.md): normative requirements, formats, algorithms, profiles, and conformance.
 - [Implementation plan](docs/implementation-plan.md): work packages, dependencies, acceptance criteria, release gates, and risks.
+- [Full replacement runtime plan](docs/replacement-runtime-plan.md): shared DDK/DocSpec work required by SpicyRegs and congressional-tech, with owners and planned acceptance cases.
 - [Build strategy without pilots](docs/build-strategy-without-pilots.md): adopted parallel implementation route using a local reference workflow.
 - [Adapter profiles](docs/adapter-profiles.md): exact boundaries for third-party integrations and proposed capability negotiation.
 - [Runtime integration](docs/runtime-integration.md): injected services, bounded versus managed execution, native bindings, and quality-gated selection.

@@ -1,5 +1,11 @@
 # DDK verification
 
+## November 6, 2026 shared-runtime planning checkpoint
+
+The [full replacement runtime plan](replacement-runtime-plan.md) records the concrete shared work requested by SpicyRegs and congressional-tech. Source inspection and an [independent greybeard/ETL/semi-formal review](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/document-checkpoint-01/independent-review.md) identified four design corrections: qualification of a recomposed candidate, complete multi-view check bindings, publication authorization and historical outcomes, and checkpoint retirement. The plan incorporates those corrections and keeps the affected protocols and their execution evidence pending.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/document-checkpoint-01/document-audit.json) verifies schema shapes, local links and anchors, upstream provenance digests, and requirement/test traceability against this checkout. All 94 normative requirements retain one work-package owner and registered case coverage. No source code, schema, capability manifest, or runtime conformance claim changed. No runtime tests or builds were rerun for this documentation checkpoint; the installed and portable results below retain their original source scope.
+
 ## November 6, 2026 installed and portable release acceptance
 
 Version `0.1.0-dev.2` passed installed qualification and portable acceptance on macOS 26.6 arm64 and Python 3.12.13. The tested DDK source is `8e9a53e81ec6258f2068557ff5e4788c80c32995`; DocSpec remains `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. Documentation updates follow this tested snapshot. Publication remains incomplete while the destination is unresolved. Full SpicyRegs and congressional-tech replacements remain separate, incomplete work.

@@ -2,7 +2,7 @@
 
 **November 6, 2026. Version `0.1.0-dev.2` passed installed qualification and portable acceptance.** All 226 installed tests passed, with zero failures, errors, or skips. Release qualification passed 154 case/profile combinations covering 137 cases and 13 profiles. The portable archive passed verification, fresh installation and lock checks, and four connected-workflow cases. Publication remains incomplete while the destination is unresolved.
 
-The [local release record](local-release.md) identifies the package, exact sources, dependencies, and evidence. Development identity comes from local build and installer records; exact manifest qualification, expectation-source binding, case outcomes, and relocation now have installed regression coverage. The [dev1 record](local-release-dev1.md) preserves the earlier capture separately. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete work.
+The [local release record](local-release.md) identifies the package, exact sources, dependencies, and evidence. Development identity comes from local build and installer records; exact manifest qualification, expectation-source binding, case outcomes, and relocation now have installed regression coverage. The [dev1 record](local-release-dev1.md) preserves the earlier capture separately. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete work. Their [shared runtime plan](replacement-runtime-plan.md) covers broader managed operations, exact nested views, bounded quality, retained multi-table work, migration, and publication recovery. Those extensions are planned and unqualified; dev2 remains available for independent application work.
 
 ## Working paths
 

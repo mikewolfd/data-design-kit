@@ -1,0 +1,88 @@
+# Shared runtime work for the full replacements
+
+**November 6, 2026. Implementation plan; new capabilities remain unimplemented and unqualified.** The local `0.1.0-dev.2` release is ready for application work. External publication awaits a destination. SpicyRegs and congressional-tech retain their full replacement scope, including migration, consumer behavior, and recovery.
+
+Extend the existing DocSpec services and DDK adapters, then give both applications the same qualified successor package and runtime. Preserve the frozen [dev2 release](local-release.md). Application teams can author definitions, source mappings, independent expectations, and consumer integrations while the shared changes proceed.
+
+## What the existing release provides
+
+The inspected DDK implementation is `8e9a53e81ec6258f2068557ff5e4788c80c32995`; its documentation checkpoint is `3d2622b`. DocSpec is `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. Their existing qualification covers the boundaries in [implementation status](implementation-status.md).
+
+DocSpec already has typed Build, Update, Backfill, Refresh, and Evidence operations, protected group readers, retained completions, generation membership, and export recovery. Its qualified DDK managed interface exposes one local source-only Build family. DDK's native mapper accepts a flat scalar subset, and native quality captures the complete Arrow stream before decoding the complete table. These narrower interfaces explain several adoption gaps; the underlying services provide substantial reusable work.
+
+The source-grounded investigations retain detailed evidence and proposed cases:
+
+- [Managed operations and publication recovery](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/managed-lifecycle-plan.md).
+- [Native shapes, groups, and field identity](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/native-shape-plan.md).
+- [Exact quality evaluation within memory and scratch limits](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/quality-access-plan.md).
+
+These investigations are static evidence. Their proposed executions have status `not_run`.
+
+## Owners and shared work
+
+Application packages own acquisition, parsing, domain rules, and consumer meaning. DocSpec owns native execution, durable phases, protection, reconciliation, and native selection. Each existing publisher retains its selection authority for its declared scope. DDK owns definitions, checking, bindings, and evidence translation. A generated catalog describes those owners' observations.
+
+The application requirements are maintained in [SpicyRegs' requests](/Users/mikewolfd/.codex/worktrees/a8e8/spicy-stack/docs/ddk-replacement/shared-runtime-requests.json) and [congressional-tech's runtime gaps](/Users/mikewolfd/.codex/worktrees/9c45/congressional-tech/docs/replacement-ddk/runtime-gaps.md). The identifiers below refer to those requests; they are not new normative DDK requirement IDs.
+
+| Shared work | Smallest necessary change | Owner and requirement coverage |
+| --- | --- | --- |
+| Exact native views | Bind an exact version to an explicit group/table and schema interpretation. Preserve native reference schemes, digest algorithms, field and list-element IDs, and full field paths. Describe schemas without opening rows. | DocSpec reader and DDK mapping; Spicy R02/R04, Congress G01/G02 |
+| Nested and exact types | Extend mappings and offline declared compatibility for the actual struct/list, fixed binary, integer, decimal, and timestamp requirements. Record original and canonical native types separately. Unsupported mandatory facets remain unknown. | DDK, with native schema services and application definitions; Spicy R02/R06, Congress G01/G07 |
+| Complete bounded quality | Keep the maintained rule compiler/executor. Stream an exact protected candidate into a repeatable evaluation relation, with separate batch, memory, scratch, result, and timeout limits. Bind every required result to its exact view. | DDK quality adapter and DocSpec acceptance; Spicy R03, Congress G03 |
+| Broader managed operations | Expose the required existing typed operations through prepare, inspect, accept, select, and reconcile. Apply the admitted quality policy to every newly supported selection path. Completed retries verify their original binding and return the historical result without requiring it to remain current or selecting it again. | DocSpec lifecycle and DDK adapter; Spicy R01, Congress G02 |
+| Retained multi-table computation | Reuse typed operations where they fit. For actual SQL steps that need durable completion, reuse the native step executor inside DocSpec's lifecycle. Retain expensive shared intermediates and seal exact output membership. | DocSpec, with application-authored steps; Spicy R01/R06, Congress G04 |
+| Existing-state admission | Admit the specific retained formats and selected members needed by each application. Preserve original identities, occurrences, receipts, key-index meaning, schema interpretation, and old-reader protection. | DocSpec admission and application interpretation; Spicy R04, Congress G06 |
+| Scoped publication and readback | Retain preparation and effect records in DocSpec; invoke the existing publisher's conditional selection. Reconcile a lost response under the original attempt before another write. Keep native selection, public selection, and consumer readback distinct. | DocSpec and existing publishers; Spicy R05, Congress G05 |
+| Full application acceptance | Use generated definitions and exact native observations across every required source and consumer. Preserve complete, partial, unknown, refused, and valid-empty scopes. Qualify each application's runtime/client tuple and actual readers. | Application managers, with shared evidence; Spicy R06/R07, Congress G06/G07/G08 |
+
+The first native implementation should exercise a based correction and explicit deletion through the existing Update machinery. In parallel, settle exact group/schema bindings and the required type profile. The larger lifecycle and publication changes depend on those concrete bindings and the applications' actual step inventories. Independent application work continues throughout.
+
+## Decisions that constrain implementation
+
+**Guard every supported selection path.** In the inspected native source, Refresh leaves `select_prepared_with_policy` before the Build quality guard; Backfill has a separate selection path. This is a hazard when widening support, not a demonstrated bypass of the qualified Build profile. Reuse those operations, add the appropriate native guard, and test every promised branch before advertising it. [Native completion code](/Users/mikewolfd/Work/worktrees/docspec-ddk-runtime/src/engine/pipeline/completion.rs).
+
+**Bind qualification to the final composed candidate.** Backfill can combine retained work with a newer sibling state. The initial expanded profile must refuse a changed selection or composition while preserving useful native completions. Supporting that race later requires an explicit native transition that records the newly composed candidate, exposes its exact views, and obtains new qualification. Adding a guard alone is insufficient: the existing managed readback and policy cannot silently acquire a different candidate or expected selection.
+
+**Version the new mapping behavior explicitly.** The current report shapes describe flat mappings. Resolve the successor schema/profile revision before changing them, using the existing extension mechanism where it can express a required capability faithfully. Keep frozen 0.1 reports interpretable under their original schemas. A native view identifies version, group, table metadata/snapshot/schema, and complete field-ID paths; a leaf ID or schema number alone is insufficient.
+
+**Make multi-view qualification explicit before broadening the reader.** The existing native evidence names one candidate and one completed read; DDK quality selects one dataset. The successor policy must bind each required check instance to its complete target and reference-view set, including exact versions, groups/tables, schema interpretation, and required row/field coverage. Native acceptance verifies every associated completed read. Equal rule names on two groups are distinct obligations. Checking one cannot qualify both. Richer field metadata alone cannot establish which relations a cross-table query consumed.
+
+**Keep quality semantics and resource claims separate.** The concrete candidate design streams Arrow batches once into a DuckDB temporary table so maintained checks can query the complete relation repeatedly. Qualify type preservation, complete ingress, actual spill, and all required checks on the pinned libraries. Prefer direct native evaluation only if the maintained compiler/backend can execute the required rules with qualified equivalent semantics. A DuckDB memory setting does not establish a whole-process bound. Custom SQL also needs bounded scalar results and the established read/function/effect restrictions. [Quality proposal](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/quality-access-plan.md).
+
+**Separate temporary work from reusable completions.** Disposable evaluator scratch may be rebuilt after interruption. Retain a complete evaluator report before acceptance, and reconcile lost acceptance responses through DocSpec. Preserve expensive native computation independently of qualification changes. Any promise to resume completed evaluator materialization or checks needs an explicit native-owned completion; an application cache cannot supply that promise.
+
+Retained SQL execution must preserve the application's existing dependency and last-consumer information. For each durable intermediate, name the saved recovery work, remaining consumers, native protection owner, and retirement condition. A materialized relation is not automatically a permanent checkpoint. Release disposable bulk when its consumer and recovery obligations end; retain the completion evidence required for reconciliation.
+
+**Keep membership and activation distinct.** Native generation membership binds exact table versions; it does not atomically advance every table or external consumer. A reader resolves one selected release root and uses its exact members. Each publisher retains its own conditional-write token and scope. Retain old-reader protection through activation and recovery.
+
+Before implementing publication, define the point at which native authorization becomes an accepted publication decision and whether later authority changes can invalidate it. A publisher's conditional token does not check a native epoch. The protocol must either preserve an accepted decision or enforce later invalidation at the publisher; record unsupported semantics explicitly. Bind durable publisher evidence to the original attempt and expected token. After a lost response followed by a successor publication, the current pointer alone cannot prove whether the original attempt committed. Preserve `unknown` when history cannot settle that question, and prevent an old attempt from replacing the successor.
+
+## Independent acceptance examples
+
+All examples below are planned. Application originals and independently authored expected values supply the oracle; the new transformation must not generate its own expected results. Small cases establish mechanisms, while each application's complete source/consumer inventory determines replacement acceptance.
+
+| Case | Required observation and planted failure |
+| --- | --- |
+| Shared content, separate occurrences | Two source occurrences share content. A meeting contains two identical sitting structs and another contains an empty sittings list. Preserve occurrences, repetition, order, empty versus null, fixed[32] bytes, and native IDs including meetings element 7 and sittings element 18. Changing one nested field ID must refuse. |
+| Based correction and deletion | Start with occurrences o1/o2 sharing h1; append o3=h2; correct only o2 and explicitly empty its children; delete o3 from the current view. Preserve o1, raw history, and the exact prior release. Unmentioned rows in partial input remain present. |
+| Completed work survives caller loss | Kill after an expensive native phase and lose the selection response. A fresh process reconciles the same operation, reuses completed work, and establishes one coherent result. Changed input under the same operation ID refuses. |
+| Exact numeric and temporal meaning | Preserve fixed binary widths, decimal scale beyond Float64 precision, timestamp units/zones, source spelling, and null/empty statuses. Wrong width, rounding, deduplication, or an implicit timezone fails the applicable check. |
+| Complete bounded evaluation | Increase the retained population while keeping the changed set and resource allocations fixed. Check row identity and nested counts, including a violation in the final batch. Wrong candidate, missing/duplicate check, truncated read, or lost protection prevents acceptance. Two groups with equal rule names but only one evaluated must refuse. Measure aggregate process memory, actual rows/bytes, and scratch. |
+| Changed candidate composition | Evaluate prepared B, then select sibling C. B's selection either refuses while preserving C or follows a separately qualified native transition to a new B+C manifest. Evidence for B's earlier manifest cannot authorize B+C. |
+| Complete consumer release | Exercise the actual shared materializations and 23 congressional public tables, plus every required SpicyRegs publication scope. Missing or mixed members prevent activation. After response loss, recover through the existing publisher and verify API/MCP/browser/index readback against the selected root. Include an intervening successor publication; unresolved historical outcome remains unknown and never rewinds the successor. |
+| Existing state and old readers | Admit exact retained subject, receipt, parent, and key-index members. Refuse wrong-table or missing history mappings. An old reader retains its original interpretation through a successor selection and cold recovery. |
+| Honest source coverage | Keep held, consumed, refused, emitted, and unselected occurrences distinguishable. A metadata refresh preserves unknown/partial coverage and opens no data payloads. |
+
+## Execution order and evidence
+
+1. Finish the operation/view/type/publisher inventory from retained metadata. Pin actual schemas, rules, and shared SQL steps; record unavailable evidence without a discovery replay.
+2. Implement the smallest based-update and exact-view paths in the parent-owned shared code. Add independent positive, refusal, and recovery cases for the changed behavior. Keep one writer per shared file.
+3. Complete the required nested quality, retained multi-output, admission, and scoped publication paths. Integrate the actual application wrappers as those capabilities qualify.
+4. Capture an immutable successor source/package/native tuple. Qualify changed profiles and affected consumers, preserving unchanged dev2 evidence for its original scope.
+5. Complete each application's full acceptance inventory, including cold recovery and old readers. Keep production cutover and external publication in their separately authorized workflows.
+
+This work extends WP-04, WP-07, WP-09A, WP-10, and WP-12 in the [implementation plan](implementation-plan.md); catalog and release integration use WP-13, WP-14, and WP-11. Existing normative requirements retain their owners. The controlling requirements include `DDK-DATA-003`, `DDK-LOCK-005`, `DDK-RESULT-006`, `DDK-ADAPTER-011` through `014`, `DDK-SAFE-003/004`, and `DDK-CATALOG-001/003/005/006`. Register new executable cases and profile coverage with implementation; this plan grants no new qualification.
+
+An independent Sol xhigh greybeard/ETL/semi-formal review found the four design issues addressed above: candidate recomposition, multi-view quality identity, publication authorization/history, and checkpoint retirement. The [review record and dispositions](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/document-checkpoint-01/independent-review.md) retain its `RECONSIDER` verdict on the broader draft promises. The amended plan makes those protocol decisions prerequisites for their affected implementations. Static review does not establish that the extensions work.
+
+Before a build or resource experiment, remeasure available memory and disk and budget all simultaneous native/worker buffers, outputs, spill, retained old/new versions, and recovery work. The latest [capacity observation](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/document-checkpoint-01/capacity-observation.json) recorded about 8 GiB free, so no native build or large data job is admitted by this plan. Reuse immutable binaries and inputs in place, and preserve unrelated work. Document validation, static review, focused execution, resource measurements, and full replacement acceptance remain separate records.
