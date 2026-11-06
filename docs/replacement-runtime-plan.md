@@ -1,6 +1,6 @@
 # Shared runtime work for the full replacements
 
-**November 6, 2026. Both replacements are greenfield; full replacement qualification remains incomplete.** SpicyRegs and congressional-tech will update their producers and readers together. The qualified [dev5 catalog and managed Update package](local-release-dev5.md) is ready for integration. External publication awaits a destination.
+**November 6, 2026. Both replacements are greenfield; full replacement qualification remains incomplete.** SpicyRegs and congressional-tech update their producers and readers together. The [dev6 catalog API package](local-release-dev6.md) supplies installed metadata integration, including Congress's exact dependency pins. The [dev5 package](local-release-dev5.md) retains its earlier complete supported profile set and managed Update qualification. External publication awaits a destination.
 
 Build one new path through definitions, execution, qualification, publication, and consumers. Remove old-reader compatibility, legacy metadata decoders, fallback controllers, and migration of old lifecycle journals from delivery scope. Valid retained originals and native results can still supply exact inputs when identity and interpretation are established. The new stack must preserve its own retry, recovery, qualification, and selection guarantees.
 
@@ -8,7 +8,7 @@ Extend the existing DocSpec services and DDK adapters, then give both applicatio
 
 ## What the existing release provides
 
-The inspected DDK implementation is `8e9a53e81ec6258f2068557ff5e4788c80c32995`; its documentation checkpoint is `3d2622b`. DocSpec is `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. Their existing qualification covers the boundaries in [implementation status](implementation-status.md).
+The qualified dev5 foundation binds DDK `5e90d70f74ef88053a75b8d991caf262ad74bbd0` to DocSpec `d96e00172d7d4be26da4532cda35aa05f2a3709e`. The separately qualified dev6 catalog APIs come from DDK `b2637279beef7f30f23aba3ca2b8f50f7dc02d3f`. Later native retained-job development has focused and installed-consumer evidence, but no complete successor qualification. [Implementation status](implementation-status.md) and [verification](verification.md) distinguish these boundaries.
 
 DocSpec already has typed Build, Update, Backfill, Refresh, and Evidence operations, protected group readers, retained completions, generation membership, and export recovery. Its qualified DDK managed interface exposes local independent source-only Build and based Update. DDK's native mapper accepts a flat scalar subset, and native quality captures the complete Arrow stream before decoding the complete table. These narrower interfaces explain several adoption gaps; the underlying services provide substantial reusable work.
 
@@ -19,7 +19,7 @@ The source-grounded investigations retain detailed evidence and proposed cases:
 - [Exact quality evaluation within memory and scratch limits](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/quality-access-plan.md).
 - [One native job with complete named inputs, outputs and required reports](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/whole-job-binding-plan.md).
 
-These investigations are static evidence. Their proposed executions have status `not_run`.
+These reports retain the original static investigations. The [verification record](verification.md) identifies later executed checks; a passing small case does not complete the broader application obligations below.
 
 The successor source now provides the [admitted catalog API](catalog-api.md), public field-path disclosure, recipe context and parameter ordering, scoped project extensions, and external-target loading. Its focused catalog checks passed. The first managed source-only Update increment passed the compiler-pinned native gate and dev5 installed qualification. The [implementation status](implementation-status.md#successor-work) records these narrower results separately from the broader plan below.
 
@@ -57,7 +57,7 @@ The based correction and explicit deletion increment is qualified in dev5. The n
 
 **Make multi-view qualification explicit before broadening the reader.** The existing native evidence names one candidate and one completed read; DDK quality selects one dataset. The successor policy must bind each required check instance to its complete target and reference-view set, including exact versions, groups/tables, schema interpretation, and required row/field coverage. Native acceptance verifies every associated completed read. Equal rule names on two groups are distinct obligations. Checking one cannot qualify both. Richer field metadata alone cannot establish which relations a cross-table query consumed.
 
-**Accept evidence through two concrete verifier routes.** Keep the qualified DCC profile for its supported rules. Add a separately qualified native SQL report profile for the complete application-owned report inventory already executed by the native job. This route does not translate or claim equivalence with DCC rules. It verifies the original rules, trusted evaluator/version and semantics, exact candidate and complete target/reference-view set, completed execution and applicable reads, and every required outcome. Missing, duplicate, failed, unknown or not-run obligations prevent acceptance. Generic caller-supplied passed booleans cannot satisfy either verifier. Reuse qualifying native reports without exporting their candidate through Arrow into DuckDB merely to repeat those rules. The native SQL profile and its managed acceptance remain planned; schema-only job preparation proves neither.
+**Accept evidence through two concrete verifier routes.** Keep the qualified DCC profile for its supported rules. Add a separately qualified native SQL report profile for the complete application-owned report inventory already executed by the native job. This route does not translate or claim equivalence with DCC rules. It verifies the original rules, trusted evaluator/version and semantics, exact candidate and complete target/reference-view set, completed execution and applicable reads, and every required outcome. Missing, duplicate, failed, unknown or not-run obligations prevent acceptance. Generic caller-supplied passed booleans cannot satisfy either verifier. Reuse qualifying native reports without exporting their candidate through Arrow into DuckDB merely to repeat those rules. The native SQL profile and managed acceptance now have focused local-file implementation evidence; the complete native gate and concrete application qualification remain required. Schema-only job preparation proves neither execution nor acceptance.
 
 The verifier resolves a DocSpec-retained completion under the original operation/request identity and compares its actual input, result and output inventory. Caller-supplied serialized query results and hashes alone do not prove native execution. The application owns the conditional blocking-report inventory, separately from metadata reports such as facets and coverage. For Congress's aggregate-counter profile, each required report has exact query, column and integer-type membership, exactly one complete row, and zero for every required counter. Empty, null, duplicate or truncated results refuse; a truthiness reduction is insufficient. These are profile-specific semantics, not a universal shape for every SQL report.
 
@@ -81,7 +81,7 @@ Bind that publication decision to the original attempt, accepted native result, 
 
 ## Independent acceptance examples
 
-All examples below are planned. Application originals and independently authored expected values supply the oracle; the new transformation must not generate its own expected results. Small cases establish mechanisms, while each application's complete source/consumer inventory determines replacement acceptance.
+The examples below define full acceptance obligations. Application originals and independently authored expected values supply the oracle; the new transformation must not generate its own expected results. Narrower executed results are recorded separately in [verification](verification.md). Small cases establish mechanisms, while each application's complete source/consumer inventory determines replacement acceptance.
 
 | Case | Required observation and planted failure |
 | --- | --- |
