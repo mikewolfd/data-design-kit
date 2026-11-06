@@ -10,7 +10,7 @@ from .documents import FORMAT_CHECKER, json_dumps, resolve_path
 from .quality import dataset_rules
 
 SECTIONS = ("versions", "sources", "representations", "releases", "selections", "runs", "checks")
-AUXILIARY = ("productionObservations", "lineage", "qualification", "publications", "executions", "quality", "staging")
+AUXILIARY = ("productionObservations", "lineage", "qualification", "publications", "executions", "managedExecutions", "quality", "staging")
 FILE_SCHEME = "urn:ddk:version:local-file-sha256"
 EXACT_FIELD_CHECK = "ddk:exact-field-names"
 DLT_SYSTEM_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state"}
@@ -101,6 +101,7 @@ class LocalMetadata:
         self.owners = {}
         self.bound_inputs = {}
         self.staging_observations = []
+        self.managed_jobs = []
         self.quality_issues = []
         self.operational_errors = []
         self.illustrative = False
@@ -133,7 +134,7 @@ class LocalMetadata:
         self.illustrative = raw.get("illustrative") is True
         if self.illustrative != (self.adapter == EXAMPLE_ADAPTER):
             raise CatalogError("CATALOG-METADATA-ADAPTER", "Use the example adapter only for illustrative inputs.")
-        if self.illustrative and any(raw.get(key) for key in ("executions", "quality", "staging")):
+        if self.illustrative and any(raw.get(key) for key in ("executions", "managedExecutions", "quality", "staging")):
             raise CatalogError("CATALOG-METADATA-ADAPTER", "Illustrative inputs cannot admit runtime receipts.")
         for section in SECTIONS:
             self.observations[section].extend(deepcopy(raw.get(section, [])))
@@ -146,6 +147,10 @@ class LocalMetadata:
             self._production_time(item["production"], item["observedAt"], owner_record(self.document))
         for item in raw.get("executions", ()):
             self.execution(item)
+        for item in raw.get("managedExecutions", ()):
+            from .catalog_managed_jobs import managed_execution
+
+            managed_execution(self, item)
         for item in raw.get("staging", ()):
             self.staging(item)
         for item in raw.get("quality", ()):

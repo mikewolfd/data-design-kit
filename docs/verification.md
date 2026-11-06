@@ -1,5 +1,11 @@
 # DDK verification
 
+## November 6, 2026 retained-job caller source checkpoint
+
+The successor caller has independent process-boundary examples for original prepare and action identity, repeated response loss, tampered pinned metadata, historical selected outcomes, native refusal, partial outputs, and admitted-but-not-started computation. Native original request witnesses are verified; the transport simulations isolate complete-candidate verification and establish no native execution claim. The [focused results](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-source-checkpoint-01.xml) also include existing process-failure controls, offline whole-job metadata/assembly cases, and two actual schema-only preparation cases using the immutable source06 executable.
+
+The [metadata handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-metadata-handoff.md) describes complete native membership, exact captured definitions, output-schema interpretation, and audience filtering. Missing value-rule coverage remains unresolved; accepted whole-job counter evidence alone does not establish every authored ODCS constraint. The two new actual retained-execution examples are registered as unexercised. Native lifecycle, source-proof prerequisites, publication integration and installed successor qualification remain separate required work. Dev5's qualified tuple is unchanged.
+
 ## November 6, 2026 native SQL evidence and publication plan review
 
 Separate greybeard and ETL reviewers checked the remaining shared-runtime boundaries against DocSpec, the congressional producer and retained metadata. The [review dispositions](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-sql-evidence/review-dispositions.json) record the two concrete verifier routes, native completion identity, typed blocking-report coverage, exact catalog/output membership, material dependency interpretation and durable input protection. The plan now leads with retained whole-job execution because based Update is already qualified.

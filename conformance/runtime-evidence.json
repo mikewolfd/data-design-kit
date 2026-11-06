@@ -9,6 +9,45 @@
   ],
   "cases": [
     {
+      "id": "CASE-MANAGED-JOB-REQUEST-RECOVERY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_job_transport.py::test_initial_prepare_loss_preserves_full_intent_through_repeated_inspect",
+        "tests/test_docspec_job_transport.py::test_inspect_refuses_different_original_prepare_after_first_response_loss",
+        "tests/test_docspec_job_transport.py::test_first_action_timeout_keeps_requested_identity_without_observing_candidate",
+        "tests/test_docspec_job_transport.py::test_repeated_prepare_cannot_change_original_intent_before_submission",
+        "tests/test_docspec_job_transport.py::test_original_prepare_bytes_must_remain_pinned_during_recovery"
+      ],
+      "scopeNote": "Independent bounded subprocess simulations verify request witness identity and recovery translation. The complete-candidate verifier is isolated; no native execution qualification is claimed."
+    },
+    {
+      "id": "CASE-MANAGED-JOB-HISTORICAL-SELECTION",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_job_transport.py::test_transport_loss_preserves_confirmed_historical_selection_and_acceptance",
+        "tests/test_docspec_job_transport.py::test_refused_select_retry_preserves_confirmed_historical_selection"
+      ],
+      "scopeNote": "Transport simulations keep original historical facts separate from the later command outcome; actual native selection is a separate case."
+    },
+    {
+      "id": "CASE-MANAGED-JOB-PENDING",
+      "coverage": "exercised",
+      "tests": ["tests/test_docspec_job_transport.py::test_native_pending_means_admitted_computation_has_not_started"],
+      "scopeNote": "Only the acknowledgment passes. The operation remains pending without a completed or qualified candidate."
+    },
+    {
+      "id": "CASE-MANAGED-WHOLE-JOB-NATIVE",
+      "coverage": "unexercised",
+      "tests": ["tests/test_docspec_managed_jobs.py::test_retained_job_outputs_native_acceptance_and_recovery_use_exact_original_work"],
+      "gap": "Awaiting the frozen retained-job native binary. Source06 schema-only preparation is not retained execution."
+    },
+    {
+      "id": "CASE-MANAGED-WHOLE-JOB-COUNTER-REFUSAL",
+      "coverage": "unexercised",
+      "tests": ["tests/test_docspec_managed_jobs.py::test_native_nonzero_counter_refuses_qualification_without_erasing_completed_outputs"],
+      "gap": "Awaiting actual retained native execution and qualification refusal."
+    },
+    {
       "id": "CASE-MANAGED-UPDATE-CORRECTION",
       "coverage": "exercised",
       "tests": ["tests/test_docspec_managed_update.py::test_correction_delete_quality_recovery_and_historical_replay"],

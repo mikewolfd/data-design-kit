@@ -2694,6 +2694,51 @@
       "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null}
     },
     {
+      "id": "CASE-MANAGED-JOB-REQUEST-RECOVERY",
+      "requirements": ["DDK-ADAPTER-011", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Lose the first retained-job prepare or native action response. Repeated inspection keeps one pinned original request and compares every prepare field or supplied native request/candidate identity. A self-consistent receipt for different work remains unverified and cannot supply an observed candidate. Independent subprocess simulations isolate this transport boundary from native execution qualification.",
+      "expected": {"decision": "incomplete", "checkStatus": "unknown", "exitCode": 2, "diagnostic": "DOCSPEC-BINDING"},
+      "expectedRuntime": {"execution": "unknown", "sameOperationId": true}
+    },
+    {
+      "id": "CASE-MANAGED-JOB-HISTORICAL-SELECTION",
+      "requirements": ["DDK-ADAPTER-011", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "After a confirmed retained-job selection, lose a later response or refuse a mismatched select retry. Keep the original selected outcome, candidate and accepted qualification as historical facts while recording the new command uncertainty or refusal separately.",
+      "expected": {"decision": "error", "checkStatus": "not_run", "exitCode": 3, "diagnostic": null},
+      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true}
+    },
+    {
+      "id": "CASE-MANAGED-JOB-PENDING",
+      "requirements": ["DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "A native request acknowledgment succeeds but says computation is admitted and not started. Preserve execution pending separately from the successful acknowledgment; do not invent running work, outputs, a candidate or accepted qualification.",
+      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
+      "expectedRuntime": {"execution": "pending", "selection": "pending", "sameOperationId": true}
+    },
+    {
+      "id": "CASE-MANAGED-WHOLE-JOB-NATIVE",
+      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Execute two independently authored inputs through a materialized join and aggregate, two retained exports, two blocking reports and a separate multirow metadata report. Compare duplicate, null, unmatched and integer results with independent expected rows. Native acceptance, rule-only requalification, missing caller artifacts and lost selection acknowledgment preserve the exact completed candidate and original identity.",
+      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
+      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true}
+    },
+    {
+      "id": "CASE-MANAGED-WHOLE-JOB-COUNTER-REFUSAL",
+      "requirements": ["DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Complete the same independent whole job with one deliberately nonzero blocking counter. Native qualification refuses while completed outputs, original candidate and factual execution remain available; selection stays pending and no accepted qualification exists.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null},
+      "expectedRuntime": {"execution": "succeeded", "selection": "pending"}
+    },
+    {
       "id": "CASE-MANAGED-TRANSPORT-LOSS",
       "requirements": ["DDK-RESULT-006", "DDK-ADAPTER-011"],
       "profile": "runtime.docspec-managed",

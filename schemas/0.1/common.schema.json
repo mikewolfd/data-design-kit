@@ -690,6 +690,7 @@
         "execution": {
           "enum": [
             "not_submitted",
+            "pending",
             "running",
             "succeeded",
             "failed",
