@@ -1,8 +1,8 @@
 # DDK implementation status
 
-**November 6, 2026. Local implementation complete; release qualification pending for `0.1.0-dev.2`.** The current source binds development identity to local installation records, qualifies exact capability manifests against captured declarations, binds expectations to executed sources, preserves unsuccessful case outcomes, and admits relocated evidence without changing captured bytes. The changed package needs a fresh installed run and portable release bundle.
+**November 6, 2026. Version `0.1.0-dev.2` passed installed qualification and portable acceptance.** All 226 installed tests passed, with zero failures, errors, or skips. Release qualification passed 154 case/profile combinations covering 137 cases and 13 profiles. The portable archive passed verification, fresh installation and lock checks, and four connected-workflow cases. Publication remains incomplete while the destination is unresolved.
 
-The earlier `0.1.0-dev.1` package passed 169 installed tests with no skips and all 154 required case/profile combinations across 13 profiles. Those results apply to its recorded source. The [local release record](local-release.md) preserves the package, exact source versions, dependency locks, and evidence. The prerelease remains unpublished.
+The [local release record](local-release.md) identifies the package, exact sources, dependencies, and evidence. Development identity comes from local build and installer records; exact manifest qualification, expectation-source binding, case outcomes, and relocation now have installed regression coverage. The [dev1 record](local-release-dev1.md) preserves the earlier capture separately. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete work.
 
 ## Working paths
 
@@ -17,7 +17,7 @@ The earlier `0.1.0-dev.1` package passed 169 installed tests with no skips and a
 
 The commerce workflow validates and stages the CSV inputs, executes SQL and the saved Substrait bytes, compares the exact exported files with independently authored expected rows, checks quality, generates discovery and lineage, and runs a catalog-bound query against the checked saved-plan output. Changing a shared quality definition identifies the affected consumer and its requalification requirements. The independent nested fixture exercises scoped identities and relationship paths. Native managed tests use a separate retained candidate.
 
-The tested DDK implementation is commit `d86a3384ff7fe17101f34f92dda5422bb986864e`; DocSpec is commit `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. Two independent package builds produced identical bytes. A separate core-only installation passed without native engines, RDFLib, PyArrow, or pytest installed. Five qualified adapter manifests were also discovered without importing those modules.
+The tested DDK implementation is commit `8e9a53e81ec6258f2068557ff5e4788c80c32995`; DocSpec is commit `b1270b2e964becc5844bb6ca95ee5d605c7a3d79`. Two independent package builds produced identical bytes. A separate core-only installation passed without native engines, RDFLib, PyArrow, or pytest installed. Five exact adapter manifests qualified against their captured support declarations and were discovered without native imports. Documentation updates follow this tested source snapshot.
 
 ## Commands
 
@@ -25,7 +25,7 @@ The CLI exposes `check`, `impact`, `lock`, `build`, `test`, and `catalog`. The a
 
 Invoke the source checkout with its `src` directory on `PYTHONPATH`, or use the independently built local wheel. The offline environment needs the pinned JSON Schema libraries. Development lock creation additionally requires the installed source commit and wheel digest: a checkout or installation without those records returns incomplete without writing a lock. Ordinary unlocked checks remain available. Native tools run in a separately selected environment through `--tool-python`; DocSpec requires `--docspec` and an explicit `--limits` file.
 
-The [local release instructions](local-release.md#run-the-package) provide the retained executable and a clean installation command using the captured dependency lock.
+The [portable release instructions](local-release.md#run-the-package) use the bundled installer and captured dependency locks. Installation downloads Python dependencies from an index or matching wheelhouse. Use the hash-qualified pip installation path to retain the wheel identity needed by development locks. The bundled native executables are qualified on macOS 26.6 arm64; other platforms require separate builds and qualification.
 
 ```sh
 ddk check examples/commerce/project.ddk.json --format json
@@ -38,6 +38,8 @@ ddk impact --base /baseline/project.ddk.json --candidate /candidate/project.ddk.
 
 `build --component summarize` prepares declared schemas and produces an identified SQL/Substrait bundle without running the transformation. `catalog --metadata ... --metadata-adapter local` reads owner receipts and generates the explicitly requested `dcat` and `openlineage` exports. Catalog refresh does not open data payloads.
 
+Portable evidence rechecking requires disjoint captured and copied roots and preserves the original receipt bytes. The acceptance check opened zero files from the original tree and regenerated an identical qualification report. Use `ddk.documents.read_json` for programmatic evidence loading so exact JSON numbers retain their values. This historical recheck and the fresh four-case native replay establish separate results.
+
 ## Native quality boundary
 
 Data Contract CLI 1.2.9's public file path casts columns before checking types, and its database path does not use the supplied in-memory connection. The adapter therefore pins and calls the maintained native check compiler and executor against an explicitly bound DuckDB view. It implements no replacement quality language. Native diagnostic reports, omitted rules, and per-check outcomes remain visible.
@@ -46,8 +48,8 @@ File checks bind exact Parquet paths and digests. Native checks use DocSpec's pr
 
 ## Measured behavior and limits
 
-On the small commerce fixture, three repetitions produced median times of 35 ms for core checking, 74 ms for impact analysis, and 95 ms for metadata refresh. Peak process memory was 49 MiB. Instrumented metadata refresh opened zero data payloads. These measurements apply to macOS 26.6 arm64 and Python 3.12.13; the larger synthetic-library performance targets remain unmeasured.
+On the small commerce fixture, three repetitions produced median times of 60 ms for core checking, 82 ms for impact analysis, and 98 ms for metadata refresh. Peak process memory was 49.6 MiB. Instrumented metadata refresh opened zero data payloads. These measurements apply to macOS 26.6 arm64 and Python 3.12.13; the larger synthetic-library performance targets remain unmeasured.
 
 The initial mappings are intentionally bounded: flat scalar intake, one exact Parquet file per fixture input, one output per SQL component, and one local independent Build family. Unsupported required mappings, missing checks, and unavailable adapters prevent a passing result. Extra Substrait consumers and independent standalone validation remain separate optional profiles. Public OpenLineage disclosure is unavailable in the initial adapter.
 
-Recorded tests establish the named cases on their exact source and dependency tuple. They do not establish production publication, remote evaluator authentication, arbitrary managed operations, or organization-wide consumer discovery. Pilot adoption remains outside this build.
+Recorded tests establish the named cases on their exact source and dependency tuple. Production publication, remote evaluator authentication, arbitrary managed operations, and organization-wide consumer discovery remain unqualified. The SQL-only native executable has its own exact binary identity and Cargo dependency tree; a separate feature-specific software bill of materials remains `not_run`. The full SpicyRegs and congressional-tech replacements retain their separate requested scope and remain incomplete.

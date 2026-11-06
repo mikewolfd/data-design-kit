@@ -1,5 +1,5 @@
 {
-  "status": "release-requalification-pending",
+  "status": "qualified-local-publication-pending",
   "specification": "0.1",
   "workPackages": [
     {
@@ -271,7 +271,7 @@
     {
       "id": "WP-11",
       "title": "Release qualification and handoff",
-      "status": "requalification-pending",
+      "status": "qualified-local",
       "dependsOn": [
         "WP-06",
         "WP-10",
@@ -376,18 +376,56 @@
     "pilotWorkExcluded": true
   },
   "qualification": {
-    "date": "2026-11-05",
-    "scope": "Historical 0.1.0-dev.1 local capture on its exact supported dependencies; current 0.1.0-dev.2 qualification is pending.",
+    "date": "2026-11-06",
+    "version": "0.1.0-dev.2",
+    "packageVersion": "0.1.0.dev2",
+    "scope": "Installed local qualification and portable acceptance passed on macOS 26.6 arm64 and recorded dependencies; publication and downstream replacements remain incomplete.",
     "record": "docs/local-release.md",
-    "implementationCommit": "d86a3384ff7fe17101f34f92dda5422bb986864e",
+    "implementationCommit": "8e9a53e81ec6258f2068557ff5e4788c80c32995",
     "docspecCommit": "b1270b2e964becc5844bb6ca95ee5d605c7a3d79",
+    "wheelSha256": "b705e81c15636522c4e0e41f202ee3717d264800cdf0984c91f76ab925b4cd0e",
     "installedTests": {
-      "passed": 169,
+      "passed": 226,
       "failed": 0,
-      "skipped": 0
+      "errors": 0,
+      "skipped": 0,
+      "warnings": 11,
+      "elapsedSeconds": 88.28
     },
     "qualifiedProfiles": 13,
+    "applicableConformanceCases": 137,
     "requiredCaseProfilePairs": 154,
-    "publication": "not_requested"
-  }
+    "portableAcceptance": {
+      "record": "/Users/mikewolfd/Work/artifacts/ddk-release-validation-20261106/release-acceptance.json",
+      "filesVerified": 4139,
+      "originalEvidenceTreeAccesses": 0,
+      "qualificationReportIdentical": true,
+      "freshConnectedCasesPassed": 4,
+      "fullDependencyVersionsReproduced": 14,
+      "nativeDependencyVersionsReproduced": 91,
+      "archive": "/Users/mikewolfd/Work/artifacts/ddk-0.1.0.dev2-macos-arm64.tar.gz",
+      "archiveSha256": "ff801a1892c5e3f90787e52a26c1d5b322f65bcc2be3e04bc6752cf7a2bcf628",
+      "archiveFilesVerified": 4140
+    },
+    "sqlOnlyFeatureSpecificSbom": "not_run",
+    "publication": "destination_pending"
+  },
+  "historicalQualifications": [
+    {
+      "date": "2026-11-05",
+      "scope": "Historical 0.1.0-dev.1 local capture on its recorded source and supported dependencies.",
+      "record": "docs/local-release-dev1.md",
+      "implementationCommit": "d86a3384ff7fe17101f34f92dda5422bb986864e",
+      "docspecCommit": "b1270b2e964becc5844bb6ca95ee5d605c7a3d79",
+      "installedTests": {
+        "passed": 169,
+        "failed": 0,
+        "skipped": 0
+      },
+      "qualifiedProfiles": 13,
+      "requiredCaseProfilePairs": 154,
+      "publication": "not_requested",
+      "version": "0.1.0-dev.1"
+    }
+  ]
 }

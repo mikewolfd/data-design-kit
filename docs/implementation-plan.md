@@ -1,6 +1,6 @@
 # Data Design Kit — Implementation Plan
 
-**Updated November 6, 2026. Status: local implementation complete; version `0.1.0-dev.2` awaits installed-package qualification and release handoff.**
+**Updated November 6, 2026. Status: version `0.1.0-dev.2` passed installed qualification and portable acceptance; publication awaits a destination.**
 
 ## 1. Delivery decision
 
@@ -10,20 +10,20 @@ The first DDK product release includes ODPS product definitions, ODCS dataset de
 
 The first connected workflow uses independently authored local commerce inputs, real staging and execution receipts, exact-output quality checks, and a generated catalog that binds a checked query. A companion nested-data fixture checks scoped relationships. A separate typed managed operation qualifies native quality acceptance and recovery. Project pilots are outside the build scope. This plan implements the [engineering specification](specification.md). The [work-package registry](../implementation/work-packages.json) and [conformance cases](../conformance/cases.json) track the normative requirements.
 
-The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve future adoption work separately.
+The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve that original scope. The separately requested full SpicyRegs and congressional-tech replacements remain incomplete and retain their full delivery scope.
 
 ## 2. Completed local deliverables
 
-The table records the `0.1.0-dev.1` capture. The current source adds release-evidence corrections; WP-11 remains open until the changed package passes a fresh installed run, portable-bundle verification, and the selected release handoff. The earlier results do not qualify the changed source.
+The table records the `0.1.0-dev.2` installed capture and portable acceptance. WP-11's local qualification is complete. Publication remains pending until a destination is selected. The [dev1 capture](local-release-dev1.md) retains its earlier identities and results separately.
 
 | Track | Implemented | Qualification evidence |
 | --- | --- | --- |
 | Offline core and impact | Strict document and definition loading, interface and dataset checks, graphs, policies, locks, and catalog-aware impact | Named cases passed; isolated core installation passed; small-fixture resource measurements retained |
 | Catalog and interchange | Open Data Product Standard (ODPS) port resolution, local owner receipts, scoped identities, atomic refresh, Data Catalog Vocabulary (DCAT) discovery, OpenLineage, and exact-version query binding | Independent readers and the connected workflow passed against the exact checked saved-plan output |
 | Native execution and quality | Bounded DocSpec SQL and saved Substrait execution, Data Contract CLI checks, Frictionless CSV validation, dlt Parquet staging, and one typed local managed Build workflow | Supported operations, required failures, uncertainty, exact-native acceptance, and reconciliation passed on the recorded tool versions |
-| Local release | Installable package, dependency locks, notices, software bills of materials, capability manifests, and retained evidence | All 169 installed-package tests passed; 154 case/profile combinations qualified; repeat package builds were identical |
+| Local release | Installable package, portable macOS arm64 archive, dependency locks, notices, software bills of materials, exact capability manifests, and retained evidence | All 226 installed tests passed; 154 case/profile combinations qualified; repeat wheels were identical; portable checks and four fresh connected-workflow cases passed |
 
-The [local release](local-release.md) identifies the tested source and artifacts. The [implementation status](implementation-status.md) describes the supported boundaries. The [verification record](verification.md) separates document checks from executed behavior. Public distribution, pilots, additional engines, and standalone plan validation remain separate work. The work packages below preserve the delivery requirements; their local completion status is recorded in the registry.
+The [local release](local-release.md) identifies the tested source and artifacts. The [implementation status](implementation-status.md) describes the supported boundaries. The [verification record](verification.md) separates document checks, captured execution, historical evidence relocation, and fresh native replay. Publication, additional engines, and standalone plan validation remain separate work. The work packages below preserve the delivery requirements; their local completion status is recorded in the registry.
 
 ## 3. Implementation architecture
 
@@ -278,6 +278,8 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 ### WP-11 — Release qualification and handoff
 
 **Dependencies:** WP-06, WP-10, and WP-14. **Output:** reproducible first product release with the complete DDK-VERSION-003 profile set. WP-08 and WP-12 qualify separate claims.
+
+**Current result:** local installed qualification, portable installation and relocation, fresh connected-workflow replay, and archive verification passed for `0.1.0-dev.2`. Publication awaits a destination. These results qualify the recorded source and native macOS arm64 tuple; the SQL-only executable's separate feature-specific software bill of materials remains `not_run`.
 
 - Package the offline checker and adapters with explicit installation and invocation boundaries. Verify the core-only installation and the complete first release workflow.
 - Run the required conformance and CLI cases across supported platforms. Test paths outside the source checkout.
