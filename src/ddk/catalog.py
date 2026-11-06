@@ -97,6 +97,7 @@ class Assembly:
         self.catalog = None
         self.files = {}
         self.relationship_profile = None
+        self.native_rule_profile = None
         self.relationship_assessments = []
 
     def select_relationship_profile(self, profile):
@@ -307,6 +308,11 @@ class Assembly:
             endpoint["dataset"] = alias
             fields = []
             for key_path in endpoint["paths"]:
+                release_position = any(identity["kind"] == "row_position" and identity["scope"] == "release"
+                                       and any(item["path"] == key_path for item in identity["fields"])
+                                       for identity in self.identities[alias])
+                if release_position and row["scope"] != "same_release":
+                    raise CatalogError("CATALOG-RELEASE-SCOPE", "A release-local row position requires the same exact release.")
                 field = field_at(self.dataset_schemas[alias], key_path)
                 if field is not None:
                     fields.append(resolved_key(key_path, field))
@@ -328,7 +334,8 @@ class Assembly:
             for side, cardinalities in (("source", {"one_to_one", "one_to_many"}),
                                         ("target", {"one_to_one", "many_to_one"})):
                 endpoint = row[side]
-                identities = [identity for identity in self.identities[endpoint["dataset"]] if identity["kind"] == "key"]
+                identities = [identity for identity in self.identities[endpoint["dataset"]]
+                              if identity["kind"] in {"key", "row_position"}]
                 if row["cardinality"] in cardinalities and identities and not any(
                     endpoint["paths"] == [field["path"] for field in identity["fields"]] for identity in identities
                 ):
@@ -421,6 +428,8 @@ class Assembly:
             details["relationshipProfile"] = deepcopy(self.report.metadata["relationshipProfile"])
             details["relationshipAssessments"] = sorted(self.relationship_assessments, key=json_dumps)
             self.report.metadata["relationshipAssessments"] = details["relationshipAssessments"]
+        if self.native_rule_profile is not None:
+            details["nativeRuleProfile"] = self.native_rule_profile.record()
         if self.metadata:
             details["recordOwners"] = self.metadata.owners
             details["registeredRunInputs"] = self.metadata.bound_inputs
@@ -456,6 +465,8 @@ class Assembly:
         yield {"id": "ddk.catalog", "version": VERSION}
         if self.relationship_profile is not None:
             yield deepcopy(self.relationship_profile.identity)
+        if self.native_rule_profile is not None:
+            yield deepcopy(self.native_rule_profile.identity)
         if self.metadata:
             yield self.metadata.adapter
         if "catalog.dcat" in self.exports:
@@ -605,7 +616,8 @@ class Assembly:
 
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                     permitted_roots=(), limits=None, relationship_profile=None, include_private_artifacts=False):
+                     permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None,
+                     include_private_artifacts=False):
     """Load once and return admitted metadata with its report and companions.
 
     An admitted view remains inspectable when qualification is incomplete or
@@ -646,6 +658,12 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         step = "relationships"
         assembly.select_relationship_profile(relationship_profile)
         assembly.declarations()
+        from .catalog_native_rules import select_native_rule_profile
+
+        selected_native_rules = select_native_rule_profile(native_rule_profile, inventory)
+        assembly.native_rule_profile = selected_native_rules
+        if selected_native_rules is not None and selected_native_rules.source is not None:
+            assembly.remember(owner_record(selected_native_rules.source), "implementation")
         step = "metadata"
         if metadata is not None or metadata_adapter is not None:
             if metadata is None or metadata_adapter is None:
@@ -658,7 +676,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
             document = inventory.read(failure_path)
             try:
                 assembly.metadata = LocalMetadata(document, inventory, METADATA_ADAPTERS[metadata_adapter],
-                                                  assembly.datasets, assembly.productions).read()
+                                                  assembly.datasets, assembly.productions, native_rule_profile=selected_native_rules,
+                                                  identities=[row for rows in assembly.identities.values() for row in rows]).read()
             except (KeyError, TypeError, AttributeError) as exc:
                 raise CatalogError("CATALOG-METADATA-SHAPE", "An owner record contains malformed fields.") from exc
             for document in assembly.metadata.records.values():

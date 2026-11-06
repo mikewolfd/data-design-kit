@@ -16,7 +16,7 @@ EXACT_FIELD_CHECK = "ddk:exact-field-names"
 DLT_SYSTEM_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state"}
 DCC_STATUS = {"passed": "passed", "failed": "failed", "warning": "unknown",
               "info": "unknown", "unknown": "unknown", "skipped": "not_run", "error": "unknown"}
-LOCAL_ADAPTER = {"id": "ddk.metadata.local", "version": "0.1.0"}
+LOCAL_ADAPTER = {"id": "ddk.metadata.local", "version": "0.2.0"}
 EXAMPLE_ADAPTER = {"id": "ddk.metadata.example", "version": "0.1.0"}
 
 
@@ -84,12 +84,14 @@ def _staging_metrics(report, table, loads):
 
 
 class LocalMetadata:
-    def __init__(self, document, inventory, adapter, datasets, productions):
+    def __init__(self, document, inventory, adapter, datasets, productions, *, native_rule_profile=None, identities=()):
         self.document = document
         self.inventory = inventory
         self.adapter = adapter
         self.datasets = datasets
         self.productions = productions
+        self.native_rule_profile = native_rule_profile
+        self.identities = tuple(identities)
         self.observations = {section: [] for section in SECTIONS}
         self.records = {document.path: document}
         self.lineage = {}

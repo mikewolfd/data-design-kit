@@ -47,6 +47,8 @@ The identity uses the existing tool-identity shape: an absolute `id`, exact `ver
 
 DDK checks paths, complete keys, scopes and null policy before calling the profile. The shared `equal` rule also requires equal key counts and compatible known comparison types. A `project_rule` profile owns its matching shape, including different source and target component counts; complete unique endpoint keys still apply. DDK calls the profile only when additional declaration reasoning is needed. Exceptions and malformed results preserve unknown outcomes. The offline core neither loads nor invokes the profile; the application supplies it at catalog assembly.
 
+A `row_position` identity supplies its declared complete key within the same release. It does not need a second `key` identity on the same virtual field. This is declaration reasoning: it establishes no generated positions, observed uniqueness, or relationship matches. The same-release restriction still applies when physical keys are also present.
+
 Assembly details retain `relationshipProfile` and `relationshipAssessments`, with the selected identity also in adapter and lock provenance. Support describes expected comparison or reference construction. It establishes no actual matches, cardinality, data quality, or remote existence; external construction records `externalExistence: "not_assessed"`. Profile or assessment changes require metadata and applicable reader review, with unresolved domain effects kept separate from computation changes.
 
 ## Public views
@@ -105,6 +107,24 @@ Use `report` for public responses, including early and incomplete failures. `loc
 
 Use admitted definitions and companions to prepare the native request. Execute through DocSpec and retain its exact candidate and diagnostics. Accept the required evidence against that candidate, then assemble the qualified catalog from the accepted owner records. Finalize complete controls and select or publish through the existing authorities.
 
-That complete managed sequence still needs a metadata profile. The current local adapter reads bounded-job output receipts and quality results for one exact file. It does not yet translate a managed candidate's accepted qualification or complete multi-output membership. Finalization must compare catalog versions and representations with the exact native candidate and output set; a passing definition-only catalog does not qualify unrelated files.
+The successor source adds `ddk.catalog_managed_jobs.managed_job_definition` and `managed_job_metadata`. Capture the admitted production, resolved dataset definitions and original source identities before native preparation. Map every native input and output to a catalog dataset or an explicit out-of-catalog reason. Pass the captured definition identity to DocSpec unchanged. It binds interpretation and is not a native computation or reuse key.
+
+The mapper verifies retained native request, completion, policy and accepted-qualification records. Changed definitions leave the binding unresolved and do not attach an old run to the current production. Incomplete native observations also leave that production link unresolved while preserving known outputs and the original operation. Complete admitted input membership does not establish complete row consumption. Catalog assembly reads metadata only; DocSpec retains payload custody and selection authority. Finalization must compare catalog versions and representations with the exact native candidate and output set.
+
+### Authored field rules and native reports
+
+Native policy acceptance establishes that its required reports passed. It does not establish that those reports cover every authored field rule. An application supplies a `NativeRuleProfile` from `ddk.catalog_native_rules` explicitly to `assemble_catalog(native_rule_profile=...)`. The profile has a versioned `identity`, source provenance, and `bindings(context, original_job)`. It receives immutable captured definitions, mappings and the exact original JobSpec, and returns typed `NativeRuleBinding` records.
+
+Each binding names one dataset, output, authored facet, ordered field paths, report and counter column. Supported facets are `required`, `key_unique` and `key_not_null`. The application generator verifies that its original writer and SQL cover that exact facet. DDK checks the closed authored inventory, reproduces the bindings, and joins them to the exact accepted report and integer-zero result. It derives the original SQL digest from the captured JobSpec. Missing, duplicate, changed or unsupported coverage stays unknown. Metadata never selects or imports executable profile code.
+
+Use `native_rule_artifact` to capture these bindings and original JobSpec bytes. Pin the resulting metadata by SHA-256, pass it and the same explicit profile to `managed_job_definition`, and include the pin as `native_rules` in `managed_job_metadata`. The final definition identity binds this artifact and generator provenance. Source pins establish identity; independent tests of the concrete generator and runtime still establish their supported behavior.
+
+Schema interpretation and row-value checks remain separate. A retained nonnullable field can establish its own nonnull property. A nullable field with an authored `required` rule needs the corresponding accepted counter. Composite key nonnull evidence can combine those facts only for the same output and all key fields. It establishes no uniqueness.
+
+The supported DocSpec ordered-export interpretation can establish `key_unique` when the complete explicit sort tuple equals the authored ordered top-level key, every field appears in the sealed export, and the original settings, retained settings and native runtime identity agree. A larger sort tuple containing a hidden source occurrence cannot establish uniqueness of its visible subset. Nested or virtual keys and unsupported native semantics remain unknown. Export uniqueness does not establish nonnull values or replace native policy acceptance.
+
+Public assembly requires an explicit identifier grant for the selected native-rule profile, just as for a relationship profile. Source locations follow the evidence disclosure policy. Generator identity and the native evaluator remain distinct in provenance.
+
+These APIs have focused source tests. The retained native workflow, concrete application generators and their release tuples require separate installed and runtime qualification; the [verification record](verification.md) identifies the evidence collected so far.
 
 Static relationship support and executed data checks answer different questions. A native invariant does not make an unsupported comparison rule interpretable. Missing rule support and missing candidate evidence remain separate incomplete results. The [replacement plan](replacement-runtime-plan.md) tracks the additional relationship and multi-output profiles needed by the applications.

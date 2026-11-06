@@ -1,6 +1,6 @@
 {
   "specification": "DDK 0.1",
-  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build, and successor managed Update cases. The current qualified dev4 package retains the earlier native tuple; successor qualification is separate.",
+  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build and Update, plus successor retained whole-job cases. Dev5 retains its qualified native tuple; whole-job source checks do not extend that release qualification.",
   "status": "Executable traceability for the pinned local tuple. The independent loose-mode validator remains unexercised.",
   "evidencePaths": [
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/verification-qualified.json",
@@ -37,15 +37,17 @@
     },
     {
       "id": "CASE-MANAGED-WHOLE-JOB-NATIVE",
-      "coverage": "unexercised",
+      "coverage": "exercised",
       "tests": ["tests/test_docspec_managed_jobs.py::test_retained_job_outputs_native_acceptance_and_recovery_use_exact_original_work"],
-      "gap": "Awaiting the frozen retained-job native binary. Source06 schema-only preparation is not retained execution."
+      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-native-diagnostic-05.xml"],
+      "scopeNote": "Focused actual consumer evidence against immutable retained-job source05; required complete native gate, installed successor and application acceptance remain separate."
     },
     {
       "id": "CASE-MANAGED-WHOLE-JOB-COUNTER-REFUSAL",
-      "coverage": "unexercised",
+      "coverage": "exercised",
       "tests": ["tests/test_docspec_managed_jobs.py::test_native_nonzero_counter_refuses_qualification_without_erasing_completed_outputs"],
-      "gap": "Awaiting actual retained native execution and qualification refusal."
+      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-native-diagnostic-05.xml"],
+      "scopeNote": "Actual nonzero native counter refusal preserves completed candidate outputs on source05; this is not full runtime release qualification."
     },
     {
       "id": "CASE-MANAGED-UPDATE-CORRECTION",

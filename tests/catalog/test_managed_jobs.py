@@ -3,8 +3,10 @@
 import base64
 from copy import deepcopy
 from hashlib import sha256
+import inspect
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,12 +14,13 @@ from ddk.catalog_access import CatalogError
 from ddk.catalog import assemble_catalog
 from ddk.catalog_managed_jobs import DEFINITION_SCHEME, managed_execution, managed_job_definition, managed_job_metadata
 from ddk.catalog_metadata import LOCAL_ADAPTER, LocalMetadata
+from ddk.catalog_native_rules import NativeRuleBinding, native_rule_artifact
 from ddk.core import load_project
 from ddk.docspec_job_evidence import (
     ACCEPTANCE_FIELDS, CANDIDATE_SCHEME, COMPLETION_PROFILE, COUNTER_EVALUATOR,
     COUNTER_PROFILE, COUNTER_SEMANTICS, VIEW_PROFILE, JobEvidenceError, verify_admitted_request, verify_completed_job,
 )
-from ddk.documents import read_json, schema_registry, schema_validator, validate_document
+from ddk.documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
 
 
 def _raw(value):
@@ -40,12 +43,139 @@ def _acceptance(body, policy):
     blake3 = pytest.importorskip("blake3").blake3
     return {**deepcopy(body), "identity": blake3(raw).hexdigest(), "body_sha256": sha256(raw).hexdigest(),
             "body_bytes_base64": base64.b64encode(raw).decode(), "policy": deepcopy(policy),
-            "native_record": {"table": "archive/native-lifecycle", "key": "job-accepted/original/counters-v1", "revision": 3}}
+            "native_record": {"table": "archive/native-lifecycle", "key": f"job-accepted/{body['operation']}/{body['policy_id']}", "revision": 3}}
 
 
 def _mapping_kwargs():
     return {"production": "summarize", "inputs": {"source": "orders"}, "outputs": {"public.parquet": "daily-revenue"},
             "out_of_catalog": {"inputs": [], "outputs": [{"name": "private.parquet", "reason": "Internal recovery output."}]}}
+
+
+def _original_job(tmp_path):
+    settings = {"profile": "whole", "row_group_rows": 128, "order_by": [], "columns": [], "dictionary_columns": [],
+                "delta_columns": [], "key_column": None, "created_by": "Independent metadata fixture", "footer_limit": 65536}
+    return {"scratch": str(tmp_path / "scratch"),
+            "inputs": [{"kind": "parquet", "name": "source", "path": str(tmp_path / "never-open-original.parquet")}],
+            "steps": [{"name": "shared_join", "sql": "SELECT id FROM source", "materialize": True}],
+            "outputs": [{"name": name, "path": str(tmp_path / "caller" / name), "sql": "SELECT id FROM shared_join", "settings": settings}
+                        for name in ("public.parquet", "private.parquet")],
+            "queries": [{"name": "invariants", "sql": 'SELECT COUNT(*) AS orphan_count FROM outputs."public.parquet" WHERE "id" IS NULL'},
+                        {"name": "metadata_counts", "sql": "SELECT COUNT(*) AS population FROM shared_join"}]}
+
+
+def _policy_check(checks):
+    return next(row for row in checks if row["rule"]["id"].startswith("urn:ddk:docspec-native-policy:"))
+
+
+class _FixtureRuleProfile:
+    """Independent tiny concrete generator; no actual application qualification."""
+
+    identity = {"id": "urn:test:native-output-counters", "version": "1"}
+
+    def __init__(self, source):
+        self.source = source
+
+    def publication_checks(self, context):
+        fields = context.datasets["daily-revenue"]["properties"]
+        primary = sorted((field for field in fields if field.get("primaryKey")), key=lambda field: field.get("primaryKeyPosition", -1))
+        paths = tuple((({"field": field["name"]},)) for field in primary)
+        bindings = []
+        if primary:
+            names = ','.join('"' + field["name"] + '"' for field in primary)
+            nulls = ' OR '.join('"' + field["name"] + '" IS NULL' for field in primary)
+            sql = f'SELECT COUNT(*) AS orphan_count FROM (SELECT {names} FROM outputs."public.parquet" GROUP BY {names} HAVING COUNT(*)>1 OR {nulls}) invalid_keys'
+            for facet in ("key_unique", "key_not_null"):
+                bindings.append(NativeRuleBinding("daily-revenue", "public.parquet", facet, paths, "invariants", "orphan_count"))
+        else:
+            if [field["name"] for field in fields] != ["id"]:
+                raise ValueError("This concrete profile supports the independent id fixture only")
+            sql = 'SELECT COUNT(*) AS orphan_count FROM outputs."public.parquet" WHERE "id" IS NULL'
+        for field in fields:
+            if field.get("required"):
+                if primary and field not in primary:
+                    raise ValueError("No required counter for non-key fixture field")
+                bindings.append(NativeRuleBinding("daily-revenue", "public.parquet", "required", (({"field": field["name"]},),), "invariants", "orphan_count"))
+        return [{"name": "invariants", "sql": sql}], bindings
+
+    def bindings(self, context, original_job):
+        reports, bindings = self.publication_checks(context)
+        actual = next(item for item in original_job["queries"] if item["name"] == "invariants")
+        if actual != reports[0]:
+            raise ValueError("Original report does not count the exact exported writer namespace and field/key paths")
+        return bindings
+
+
+class _RequiredOnlyProfile(_FixtureRuleProfile):
+    """An explicit profile that supplies row nonnull evidence, no unique counter."""
+
+    def publication_checks(self, context):
+        field = context.datasets["daily-revenue"]["properties"][0]
+        bindings = [NativeRuleBinding("daily-revenue", "public.parquet", "required", (({"field": "id"},),), "invariants", "orphan_count")] if field.get("required") else []
+        return [{"name": "invariants", "sql": 'SELECT COUNT(*) AS orphan_count FROM outputs."public.parquet" WHERE "id" IS NULL'}], bindings
+
+
+def _retarget_original_job(row, job):
+    """Retain changed original SQL coherently for adversarial metadata cases."""
+    row = deepcopy(row)
+    raw = _raw(job)
+    digest = sha256(raw).hexdigest()
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    manifest["job"].update(sha256=digest, size=len(raw))
+    for output in views["outputs"]:
+        output["settings"] = deepcopy(next(item["settings"] for item in job["outputs"] if item["name"] == output["name"]))
+    hashes = {item["name"]: sha256(item["sql"].encode()).hexdigest() for item in job["queries"]}
+    for report in (*manifest["reports"], *views["reports"]):
+        report["sql_sha256"] = hashes[report["name"]]
+    policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+    policy["job_sha256"] = digest
+    for report in policy["required_reports"]:
+        report["sql_sha256"] = hashes[report["name"]]
+    row["policy"] = _witness(Path(row["policy"]["reference"]["path"]), policy)
+    admitted = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    admitted["job"]["sha256"] = digest
+    admitted["policy"]["sha256"] = row["policy"]["sha256"]
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), admitted)
+    if row["accepted_qualification"] is not None:
+        body = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+        body["policy_sha256"] = row["policy"]["sha256"]
+        for report in body["reports"]:
+            report["sql_sha256"] = hashes[report["name"]]
+        row["accepted_qualification"] = _acceptance(body, row["policy"])
+    return _reseal_completion(row, manifest, views)
+
+
+def _native_rules_case(tmp_path, row, *, job=None, mutate_artifact=None, profile=None, schema=None):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    capture = assemble_catalog(project)
+    if profile is None:
+        source = tmp_path / "native-generator.py"
+        source.write_text(inspect.getsource(_FixtureRuleProfile), encoding="utf-8")
+        profile = _FixtureRuleProfile(source)
+    job = deepcopy(job or _original_job(tmp_path))
+    # Normal construction uses the public helper. Adversarial cases mutate
+    # the captured metadata afterwards and submit an opaque original identity.
+    baseline_job = deepcopy(job)
+    baseline_job["queries"][0]["sql"] = profile.publication_checks(SimpleNamespace(
+        datasets=capture.local_catalog["extensions"]["urn:ddk:catalog:assembly"]["datasetDefinitions"]))[0][0]["sql"]
+    value = native_rule_artifact(capture, _raw(baseline_job), native_rule_profile=profile, **_mapping_kwargs())
+    value["job"] = {"sha256": sha256(_raw(job)).hexdigest(), "bytes_base64": base64.b64encode(_raw(job)).decode()}
+    if mutate_artifact:
+        mutate_artifact(value)
+    rules_path = tmp_path / "native-rules.json"
+    rules_raw = _raw(value)
+    rules_path.write_bytes(rules_raw)
+    pin = {"path": str(rules_path), "sha256": sha256(rules_raw).hexdigest()}
+    base = managed_job_definition(capture, **_mapping_kwargs())
+    # This independent composition also models a caller bypassing the public
+    # generator helper; the assembler must still reject wrong semantics.
+    definition = DEFINITION_SCHEME + ":" + sha256(json_dumps({"definition": base, "nativeRules": {"sha256": pin["sha256"], "profile": value["profile"]}}).encode()).hexdigest()
+    changed = _with_output_schema(_retarget_original_job(row, job), schema or pa.schema([pa.field("id", pa.int64(), nullable=True)]), definition=definition)
+    metadata, entry, receipt = _metadata(tmp_path, changed)
+    entry["nativeRules"] = pin
+    metadata.document.path.write_bytes(_raw({"managedExecutions": [entry]}))
+    return project, metadata.document.path, pin, profile, changed, value
 
 
 def _reseal_completion(row, manifest, views):
@@ -87,6 +217,10 @@ def native_job(tmp_path):
     schema = pa.schema([pa.field("id", pa.int64(), nullable=False)])
     counters = pa.schema([pa.field("orphan_count", pa.int64(), nullable=True, metadata={b"meaning": b"unmatched keys"})])
     metadata_schema = pa.schema([pa.field("population", pa.int64(), nullable=False)])
+    job = _original_job(tmp_path)
+    job_bytes = _raw(job)
+    job_sha = sha256(job_bytes).hexdigest()
+    rule_sql_sha = sha256(job["queries"][0]["sql"].encode()).hexdigest()
     schemas = {}
 
     def register(value):
@@ -107,15 +241,15 @@ def native_job(tmp_path):
                 "size": 91, "rows": 2, "footer_bytes": 48, "schema_sha256": schema_key}
                for name, digest in (("public.parquet", "4"), ("private.parquet", "5"))]
     reports = [
-        {"name": "invariants", "sql_sha256": "6" * 64, "schema_sha256": counters_key, "rows": 1,
+        {"name": "invariants", "sql_sha256": rule_sql_sha, "schema_sha256": counters_key, "rows": 1,
          "data": [{"orphan_count": 0}], "completion": _reference(native / "invariants.json")},
-        {"name": "metadata_counts", "sql_sha256": "7" * 64, "schema_sha256": metadata_key, "rows": 1,
+        {"name": "metadata_counts", "sql_sha256": sha256(job["queries"][1]["sql"].encode()).hexdigest(), "schema_sha256": metadata_key, "rows": 1,
          "data": [{"population": 2}], "completion": _reference(native / "counts.json")},
     ]
     views = {"profile": VIEW_PROFILE, "dataset": "archive", "operation": "original", "request_digest": "a" * 64,
              "inputs": inputs, "steps": steps,
-             "outputs": [{**row, "settings": {"profile": "whole"}, "completion": _reference(native / f"{row['name']}.json")}
-                         for row in outputs],
+             "outputs": [{**row, "settings": job["outputs"][index]["settings"], "completion": _reference(native / f"{row['name']}.json")}
+                         for index, row in enumerate(outputs)],
              "reports": [{key: value for key, value in row.items() if key != "data"} | {"dependencies": [{"name": "shared_join"}]}
                          for row in reports]}
     view_witness = _witness(native / "views.json", views)
@@ -123,15 +257,15 @@ def native_job(tmp_path):
                   "outputs": [{key: value for key, value in row.items() if key not in {"path", "schema_sha256"}} for row in outputs],
                   "queries": [{"name": row["name"], "data": row["data"]} for row in reports]}
     manifest = {"profile": COMPLETION_PROFILE, "dataset": "archive", "operation": "original", "request_digest": "a" * 64,
-                "job": {"path": str(tmp_path / "never-open-job.json"), "sha256": "b" * 64, "size": 130},
+                "job": {"path": str(tmp_path / "never-open-job.json"), "sha256": job_sha, "size": len(job_bytes)},
                 "inputs": inputs, "steps": steps, "outputs": outputs, "reports": reports,
                 "view_set": view_witness, "view_set_digest": view_witness["reference"]["digest"], "schemas": schemas,
                 "evaluator": COUNTER_EVALUATOR,
-                "runtime": {"id": "docspec", "version": "test-only", "binary_sha256": "c" * 64},
+                "runtime": {"id": "docspec", "version": "test-only", "processor": "docspec.whole-job.v1", "binary_sha256": "c" * 64},
                 "execution": "completed", "result": job_result}
     policy = {"id": "counters-v1", "profile": COUNTER_PROFILE, "evaluator": COUNTER_EVALUATOR, "semantics": COUNTER_SEMANTICS,
-              "job_sha256": "b" * 64, "view_names": {key: [row["name"] for row in manifest[key]] for key in ("inputs", "steps", "outputs", "reports")},
-              "required_reports": [{"name": "invariants", "sql_sha256": "6" * 64, "schema_ipc_base64": schemas[counters_key]}]}
+              "job_sha256": job_sha, "view_names": {key: [row["name"] for row in manifest[key]] for key in ("inputs", "steps", "outputs", "reports")},
+              "required_reports": [{"name": "invariants", "sql_sha256": rule_sql_sha, "schema_ipc_base64": schemas[counters_key]}]}
     policy_witness = _witness(native / "policy.json", policy)
     capture = assemble_catalog(_authored_project(tmp_path))
     assert capture.report["decision"] == "passed"
@@ -321,7 +455,7 @@ def test_catalog_maps_scoped_output_without_opening_payloads_or_caller_job(nativ
     managed_execution(metadata, entry)
     outputs = metadata.observations["runs"][0]["outputs"]
     assert len(outputs) == 1
-    policy = next(row for row in metadata.observations["checks"] if row["evaluator"] == COUNTER_EVALUATOR)
+    policy = _policy_check(metadata.observations["checks"])
     assert policy["subject"] == outputs[0]
     assert policy["status"] == "passed"
     assert "does not assert" in policy["scope"]
@@ -346,7 +480,7 @@ def test_missing_acceptance_preserves_completion_and_required_unknown(native_job
     metadata, entry, _receipt = _metadata(tmp_path, native_job, accepted=False)
     managed_execution(metadata, entry)
     assert metadata.observations["runs"][0]["outcome"] == "succeeded"
-    assert next(row for row in metadata.observations["checks"] if row["evaluator"] == COUNTER_EVALUATOR)["status"] == "unknown"
+    assert _policy_check(metadata.observations["checks"])["status"] == "unknown"
     assert metadata.qualification and metadata.managed_jobs[0]["acceptedQualification"] is None
     with pytest.raises(JobEvidenceError) as caught:
         verify_completed_job({**native_job, "accepted_qualification": None}, require_accepted=True)
@@ -433,7 +567,7 @@ def test_real_assembly_missing_acceptance_stays_incomplete_and_preserves_prior_c
     incomplete = assemble_catalog(project, **options)
     assert incomplete.report["decision"] == "incomplete", incomplete.report
     assert incomplete.catalog["runs"][0]["outcome"] == "succeeded"
-    assert next(row for row in incomplete.catalog["checks"] if row["evaluator"] == COUNTER_EVALUATOR)["status"] == "unknown"
+    assert _policy_check(incomplete.catalog["checks"])["status"] == "unknown"
     assert "catalog.qualification" in incomplete.report["coverage"]["requestedGroups"]
     assert not incomplete.artifacts
     assert before == {path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()}
@@ -492,7 +626,7 @@ def test_old_native_acceptance_cannot_qualify_changed_authored_definitions(nativ
     assert result.report["decision"] == expected, result.report
     assert not result.artifacts
     checks = result.catalog["checks"]
-    assert next(row for row in checks if row["evaluator"] == COUNTER_EVALUATOR)["status"] == "passed"
+    assert _policy_check(checks)["status"] == "passed"
     assert next(row for row in checks if row["rule"]["id"] == "urn:ddk:check:managed-definition-capture:1")["status"] == "unknown"
     assert "production" not in result.catalog["runs"][0]
 
@@ -506,7 +640,7 @@ def test_actual_assembly_rejects_extra_observed_native_output_field(native_job, 
     assert result.report["decision"] == "failed", result.report
     check = next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-output-interpretation:1")
     assert check["status"] == "failed" and "extra" in check["reason"]
-    assert next(row for row in result.catalog["checks"] if row["evaluator"] == COUNTER_EVALUATOR)["status"] == "passed"
+    assert _policy_check(result.catalog["checks"])["status"] == "passed"
     assert not result.artifacts
 
 
@@ -528,9 +662,10 @@ def test_actual_assembly_rejects_nested_type_nullability_and_membership_mismatch
     changed = _with_output_schema(native_job, schema, definition=captured)
     metadata, _entry, _receipt = _metadata(tmp_path, changed)
     result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
-    assert result.report["decision"] == "failed", result.report
+    expected = "incomplete" if "nullability" in mismatch else "failed"
+    assert result.report["decision"] == expected, result.report
     assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-definition-capture:1")["status"] == "passed"
-    assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-output-interpretation:1")["status"] == "failed"
+    assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-output-interpretation:1")["status"] == ("passed" if "nullability" in mismatch else "failed")
     assert not result.artifacts
 
 
@@ -557,7 +692,7 @@ def test_exact_capture_does_not_turn_unsupported_authored_interpretation_into_pa
     result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
     assert result.report["decision"] == "incomplete", result.report
     assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-definition-capture:1")["status"] == "passed"
-    assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-output-interpretation:1")["status"] == "unknown"
+    assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-output-interpretation:1")["status"] == ("passed" if unsupported == "value_constraint" else "unknown")
     assert not result.artifacts
 
 
@@ -610,3 +745,404 @@ def test_changed_resolved_source_custody_cannot_requalify_identical_effective_sc
     assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-output-interpretation:1")["status"] == "passed"
     assert next(row for row in result.catalog["checks"] if row["rule"]["id"] == "urn:ddk:check:managed-definition-capture:1")["status"] == "unknown"
     assert not result.artifacts
+
+
+def test_source_backed_public_rule_api_qualifies_required_rows_without_rewriting_nullable_schema(native_job, tmp_path, monkeypatch):
+    project, metadata, pin, profile, row, value = _native_rules_case(tmp_path, native_job)
+    capture = assemble_catalog(project)
+    assert managed_job_definition(capture, native_rules=pin, native_rule_profile=profile, **_mapping_kwargs()) == verify_admitted_request(row)["definition"]
+    original = Path.open
+
+    def metadata_only(path, *args, **kwargs):
+        assert not path.name.startswith("never-open") and path.suffix != ".parquet"
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", metadata_only)
+    result = assemble_catalog(project, metadata=metadata, metadata_adapter="local", native_rule_profile=profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "passed", result.report
+    trace = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]
+    observed = trace["outputInterpretations"][0]
+    assert observed["fields"][0]["nullable"] is True
+    assert observed["rowObligations"][0]["status"] == "passed"
+    assert observed["rowObligations"][0]["nativeCounter"]["column"] == "orphan_count"
+    assert value["bindings"] == [{"dataset": "daily-revenue", "output": "public.parquet", "facet": "required",
+                                   "paths": [[{"field": "id"}]], "report": "invariants", "column": "orphan_count"}]
+    assert not validate_document(result.catalog, "catalog")
+
+
+@pytest.mark.parametrize("wrong", ["writer", "sql", "path", "column", "missing", "duplicate", "job_bytes", "source", "no_profile"])
+def test_actual_assembly_refuses_wrong_native_facet_binding(native_job, tmp_path, wrong):
+    job = _original_job(tmp_path)
+    if wrong == "writer":
+        job["queries"][0]["sql"] = job["queries"][0]["sql"].replace('outputs."public.parquet"', 'outputs."private.parquet"')
+    elif wrong == "sql":
+        job["queries"][0]["sql"] = "SELECT 0 AS orphan_count"
+
+    def mutate(value):
+        if wrong == "path":
+            value["bindings"][0]["paths"] = [[{"field": "another_field"}]]
+        elif wrong == "column":
+            value["bindings"][0]["column"] = "different_counter"
+        elif wrong == "missing":
+            value["bindings"] = []
+        elif wrong == "duplicate":
+            value["bindings"] *= 2
+        elif wrong == "job_bytes":
+            value["job"] = {"sha256": sha256(b"{}").hexdigest(), "bytes_base64": base64.b64encode(b"{}").decode()}
+
+    project, metadata, _pin, profile, _row, _value = _native_rules_case(tmp_path, native_job, job=job, mutate_artifact=mutate)
+    if wrong == "source":
+        Path(profile.source).write_text("# Different source bytes under the same declared profile version.\n", encoding="utf-8")
+    result = assemble_catalog(project, metadata=metadata, metadata_adapter="local",
+                              native_rule_profile=None if wrong == "no_profile" else profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    assert not result.artifacts
+    assert _policy_check(result.catalog["checks"])["status"] == "passed"
+    assert any(item["code"].startswith("CATALOG-NATIVE-RULE-") for check in result.report["checks"] for item in check["diagnostics"])
+    observations = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]
+    assert observations["rowObligations"][0]["status"] == "unknown"
+
+
+def test_ordered_primary_key_has_distinct_unique_and_null_rejection_bound_to_same_counter(native_job, tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    definitions_path = project.parent / "definitions.json"
+    definitions = deepcopy(read_json(definitions_path).value)
+    definitions["schema"][1]["properties"] = [
+        {"name": "id", "logicalType": "integer", "physicalType": "int64", "required": True, "primaryKey": True, "primaryKeyPosition": 2},
+        {"name": "other", "logicalType": "integer", "physicalType": "int64", "required": True, "primaryKey": True, "primaryKeyPosition": 1},
+    ]
+    definitions_path.write_bytes(_raw(definitions))
+    job = _original_job(tmp_path)
+    job["outputs"][0]["sql"] = "SELECT id,CAST(7 AS BIGINT) AS other FROM shared_join"
+    job["queries"][0]["sql"] = 'SELECT COUNT(*) AS orphan_count FROM (SELECT "other","id" FROM outputs."public.parquet" GROUP BY "other","id" HAVING COUNT(*)>1 OR "other" IS NULL OR "id" IS NULL) invalid_keys'
+    project, metadata, _pin, profile, _row, value = _native_rules_case(
+        tmp_path, native_job, job=job, schema=pa.schema([pa.field("id", pa.int64()), pa.field("other", pa.int64())]))
+    result = assemble_catalog(project, metadata=metadata, metadata_adapter="local", native_rule_profile=profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "passed", result.report
+    keys = [binding for binding in value["bindings"] if binding["facet"].startswith("key_")]
+    assert {row["facet"] for row in keys} == {"key_unique", "key_not_null"}
+    assert all(row["paths"] == [[{"field": "other"}], [{"field": "id"}]] for row in keys)
+    assert {row["column"] for row in keys} == {"orphan_count"}
+
+
+def test_binary_format_with_exact_fixed_width_is_schema_evidence(native_job, tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    path = project.parent / "definitions.json"
+    value = deepcopy(read_json(path).value)
+    value["schema"][1]["properties"][0].update(logicalType="string", physicalType="fixed[8]", logicalTypeOptions={"format": "binary"})
+    path.write_bytes(_raw(value))
+    captured = managed_job_definition(assemble_catalog(project), **_mapping_kwargs())
+    metadata, _entry, _receipt = _metadata(tmp_path, _with_output_schema(native_job, pa.schema([pa.field("id", pa.binary(8), nullable=False)]), definition=captured))
+    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "passed", result.report
+
+
+def test_authored_primary_key_survives_a_separate_project_alternate_key(native_job, tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    definitions_path = project.parent / "definitions.json"
+    definitions = deepcopy(read_json(definitions_path).value)
+    definitions["schema"][1]["properties"] = [
+        {"name": "id", "logicalType": "integer", "physicalType": "int64", "required": True, "primaryKey": True},
+        {"name": "alternate_id", "logicalType": "integer", "physicalType": "int64", "required": False},
+    ]
+    definitions_path.write_bytes(_raw(definitions))
+    project_value = deepcopy(read_json(project).value)
+    project_value["catalog"]["identities"] = [{"dataset": "daily-revenue", "kind": "key", "scope": "dataset_version",
+                                               "meaning": "An independently authored alternate key.",
+                                               "fields": [{"path": [{"field": "alternate_id"}], "virtual": False, "physicalType": "int64"}]}]
+    project.write_bytes(_raw(project_value))
+    captured = managed_job_definition(assemble_catalog(project), **_mapping_kwargs())
+    row = _with_output_schema(native_job, pa.schema([pa.field("id", pa.int64(), nullable=False), pa.field("alternate_id", pa.int64())]), definition=captured)
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    rows = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]["rowObligations"]
+    unique_paths = [row["paths"] for row in rows if row["facet"] == "key_unique"]
+    assert [[{"field": "id"}]] in unique_paths and [[{"field": "alternate_id"}]] in unique_paths
+    assert not any(row["facet"] == "key_not_null" for row in rows)
+    assert not result.artifacts
+
+
+@pytest.mark.parametrize("extra", ["missing_field", "invented_facet"])
+def test_generated_valid_plus_unauthored_extra_binding_cannot_be_silently_ignored(native_job, tmp_path, extra):
+    pa = pytest.importorskip("pyarrow")
+    project, metadata, pin, profile, row, value = _native_rules_case(tmp_path, native_job)
+
+    class ExtraProfile(_FixtureRuleProfile):
+        def bindings(self, context, original_job):
+            values = super().bindings(context, original_job)
+            return [*values, NativeRuleBinding("daily-revenue", "public.parquet", "required" if extra == "missing_field" else "key_unique",
+                                               (({"field": "missing" if extra == "missing_field" else "id"},),), "invariants", "orphan_count")]
+
+    selected = ExtraProfile(profile.source)
+    value["bindings"].append({"dataset": "daily-revenue", "output": "public.parquet",
+                              "facet": "required" if extra == "missing_field" else "key_unique",
+                              "paths": [[{"field": "missing" if extra == "missing_field" else "id"}]],
+                              "report": "invariants", "column": "orphan_count"})
+    raw = _raw(value)
+    Path(pin["path"]).write_bytes(raw)
+    pin["sha256"] = sha256(raw).hexdigest()
+    base = managed_job_definition(assemble_catalog(project), **_mapping_kwargs())
+    definition = DEFINITION_SCHEME + ":" + sha256(json_dumps({"definition": base, "nativeRules": {"sha256": pin["sha256"], "profile": value["profile"]}}).encode()).hexdigest()
+    changed = _with_output_schema(row, pa.schema([pa.field("id", pa.int64())]), definition=definition)
+    mapped, entry, _receipt = _metadata(tmp_path, changed)
+    entry["nativeRules"] = pin
+    mapped.document.path.write_bytes(_raw({"managedExecutions": [entry]}))
+    result = assemble_catalog(project, metadata=mapped.document.path, metadata_adapter="local", native_rule_profile=selected, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    assert any(item["code"] == "CATALOG-NATIVE-RULE-SCOPE" for check in result.report["checks"] for item in check["diagnostics"])
+    assert not result.artifacts
+
+
+@pytest.mark.parametrize("generator_grant, source_grant", [(False, False), (True, False), (True, True)])
+def test_public_native_facet_claim_requires_generator_identity_and_explicit_source_disclosure(native_job, tmp_path, generator_grant, source_grant):
+    project, metadata, _pin, profile, _row, _value = _native_rules_case(tmp_path, native_job)
+    options = {"metadata": metadata, "metadata_adapter": "local", "native_rule_profile": profile, "permitted_roots": (tmp_path,)}
+    local = assemble_catalog(project, **options)
+    assert local.report["decision"] == "passed"
+    catalog = local.catalog
+    selected = catalog["extensions"]["urn:ddk:catalog:assembly"]["nativeRuleProfile"]
+    assert profile.identity in catalog["adapters"]
+    ids = {catalog["id"], catalog["project"]["id"], *(item["id"] for item in catalog["products"]),
+           *(item["id"] for item in catalog["datasets"]), *(item["definition"]["contractId"] for item in catalog["datasets"]),
+           *(item["id"] for item in catalog["versions"]), *(item["rule"]["id"] for item in catalog["checks"])}
+    if generator_grant:
+        ids.add(profile.identity["id"])
+    disclosure = tmp_path / "native-disclosure.json"
+    disclosure.write_bytes(_raw({"identifiers": sorted(ids), "aliases": [COUNTER_EVALUATOR["id"]], "descriptions": True,
+                                 "evidence": [selected["source"]["uri"]] if source_grant else []}))
+    public = assemble_catalog(project, disclosure_policy=disclosure, **options)
+    if not generator_grant:
+        assert public.report["decision"] == "failed" and not public.artifacts
+        assert str(tmp_path).encode() not in _raw(public.report)
+    else:
+        assert public.report["decision"] == "passed", public.report
+        attribution = public.catalog["extensions"]["urn:ddk:catalog:assembly"]["nativeRuleProfile"]
+        assert attribution["identity"] == profile.identity
+        assert attribution["source"]["sha256"] == selected["source"]["sha256"]
+        assert attribution["source"]["uri"] == (selected["source"]["uri"] if source_grant else "urn:ddk:sha256:" + selected["source"]["sha256"])
+        assert any(row["rule"]["id"].startswith("urn:ddk:managed-value-facet:") and row["evaluator"] == COUNTER_EVALUATOR
+                   for row in public.catalog["checks"])
+
+
+def _export_key_case(tmp_path, native_job, *, hidden_sort=False, nullable=True, required=True):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    definitions_path = project.parent / "definitions.json"
+    definitions = deepcopy(read_json(definitions_path).value)
+    definitions["schema"][1]["properties"][0].update(primaryKey=True, primaryKeyPosition=1, required=required)
+    definitions_path.write_bytes(_raw(definitions))
+    job = _original_job(tmp_path)
+    settings = job["outputs"][0]["settings"]
+    settings["order_by"] = [{"field": "id"}, *([{"field": "source_occurrence"}] if hidden_sort else [])]
+    settings["columns"] = ["id"]
+    source = tmp_path / "required-generator.py"
+    source.write_text(inspect.getsource(_RequiredOnlyProfile), encoding="utf-8")
+    return _native_rules_case(tmp_path, native_job, job=job, profile=_RequiredOnlyProfile(source),
+                               schema=pa.schema([pa.field("id", pa.int64(), nullable=nullable)]))
+
+
+@pytest.mark.parametrize("nullable", [True, False])
+def test_exact_complete_visible_export_sort_tuple_supplies_unique_evidence_only(native_job, tmp_path, nullable):
+    project, metadata, _pin, profile, _row, value = _export_key_case(tmp_path, native_job, nullable=nullable)
+    assert {binding["facet"] for binding in value["bindings"]} == {"required"}
+    result = assemble_catalog(project, metadata=metadata, metadata_adapter="local", native_rule_profile=profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "passed", result.report
+    rows = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]["rowObligations"]
+    unique = next(row for row in rows if row["facet"] == "key_unique")
+    assert unique["status"] == "passed" and unique["nativeExport"]["sortFields"] == ["id"]
+    check = next(row for row in result.catalog["checks"] if "ordered export" in row["scope"])
+    assert check["evaluator"]["id"] == "docspec" and "nonnull" in check["scope"]
+    if nullable:
+        nonnull = next(row for row in rows if row["facet"] == "key_not_null")
+        assert nonnull["status"] == "passed" and "composedNonnull" in nonnull
+    else:
+        assert not any(row["facet"] == "key_not_null" for row in rows)
+
+
+def test_extra_hidden_source_occurrence_sort_cannot_prove_visible_business_key_unique(native_job, tmp_path):
+    project, metadata, _pin, profile, _row, _value = _export_key_case(tmp_path, native_job, hidden_sort=True)
+    result = assemble_catalog(project, metadata=metadata, metadata_adapter="local", native_rule_profile=profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    rows = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]["rowObligations"]
+    assert next(row for row in rows if row["facet"] == "key_unique")["status"] == "unknown"
+    assert next(row for row in rows if row["facet"] == "key_not_null")["status"] == "passed"
+    assert not result.artifacts
+
+
+def test_export_unique_does_not_discharge_nonnull_without_authored_required_binding(native_job, tmp_path):
+    project, metadata, _pin, profile, _row, _value = _export_key_case(tmp_path, native_job, required=False)
+    result = assemble_catalog(project, metadata=metadata, metadata_adapter="local", native_rule_profile=profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    rows = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]["rowObligations"]
+    assert next(row for row in rows if row["facet"] == "key_unique")["status"] == "passed"
+    assert next(row for row in rows if row["facet"] == "key_not_null")["status"] == "unknown"
+    assert not result.artifacts
+
+
+@pytest.mark.parametrize("unsupported", ["processor", "binary", "settings"])
+def test_export_unique_requires_matching_native_processor_binary_and_settings(native_job, tmp_path, unsupported):
+    project, metadata, pin, profile, row, _value = _export_key_case(tmp_path, native_job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    if unsupported == "processor":
+        manifest["runtime"]["processor"] = "uninterpreted-exporter"
+    elif unsupported == "binary":
+        manifest["runtime"]["binary_sha256"] = "d" * 64
+    else:
+        views["outputs"][0]["settings"]["order_by"] = [{"field": "source_occurrence"}]
+    changed = _reseal_completion(row, manifest, views)
+    mapped, entry, _receipt = _metadata(tmp_path, changed)
+    entry["nativeRules"] = pin
+    mapped.document.path.write_bytes(_raw({"managedExecutions": [entry]}))
+    result = assemble_catalog(project, metadata=mapped.document.path, metadata_adapter="local", native_rule_profile=profile, permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    rows = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]["rowObligations"]
+    assert next(row for row in rows if row["facet"] == "key_unique")["status"] == "unknown"
+    assert not result.artifacts
+
+
+@pytest.mark.parametrize("target", ["context", "job"])
+def test_explicit_profile_receives_immutable_definition_and_original_job_arguments(native_job, tmp_path, target):
+    source = tmp_path / "mutating-generator.py"
+    source.write_text("# Independent adversarial callback fixture.\n", encoding="utf-8")
+
+    class MutatingProfile(_FixtureRuleProfile):
+        def bindings(self, context, original_job):
+            if target == "context":
+                context.datasets["daily-revenue"]["properties"][0]["required"] = False
+            else:
+                original_job["queries"][0]["sql"] = "SELECT 0"
+            return super().bindings(context, original_job)
+
+    capture = assemble_catalog(_authored_project(tmp_path))
+    before = _raw(capture.local_catalog)
+    with pytest.raises(CatalogError) as caught:
+        native_rule_artifact(capture, _raw(_original_job(tmp_path)), native_rule_profile=MutatingProfile(source), **_mapping_kwargs())
+    assert caught.value.code == "CATALOG-NATIVE-RULE-PROFILE" and caught.value.status == "unknown"
+    assert _raw(capture.local_catalog) == before
+
+
+@pytest.mark.parametrize("positions", [(1, 1), (None, None)])
+def test_ambiguous_primary_order_stays_unknown_when_alternate_project_key_masks_core_derivation(native_job, tmp_path, positions):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    path = project.parent / "definitions.json"
+    definitions = deepcopy(read_json(path).value)
+    definitions["schema"][1]["properties"] = [
+        {"name": name, "logicalType": "integer", "physicalType": "int64", "primaryKey": True,
+         **({"primaryKeyPosition": position} if position is not None else {})}
+        for name, position in zip(("id", "other"), positions)
+    ] + [{"name": "alternate_id", "logicalType": "integer", "physicalType": "int64"}]
+    path.write_bytes(_raw(definitions))
+    value = deepcopy(read_json(project).value)
+    value["catalog"]["identities"] = [{"dataset": "daily-revenue", "kind": "key", "scope": "dataset_version", "meaning": "Separate alternate key.",
+                                        "fields": [{"path": [{"field": "alternate_id"}], "virtual": False, "physicalType": "int64"}]}]
+    project.write_bytes(_raw(value))
+    capture = assemble_catalog(project)
+    assert capture.report["decision"] == "passed"
+    row = _with_output_schema(native_job, pa.schema([pa.field(name, pa.int64()) for name in ("id", "other", "alternate_id")]),
+                              definition=managed_job_definition(capture, **_mapping_kwargs()))
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    rows = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]["rowObligations"]
+    assert next(row for row in rows if row["facet"] == "unsupported_primary_key_order")["status"] == "unknown"
+    assert not result.artifacts
+
+
+@pytest.mark.parametrize("container", ["object", "array"])
+def test_nested_authored_primary_key_remains_required_unknown(native_job, tmp_path, container):
+    pa = pytest.importorskip("pyarrow")
+    project = _authored_project(tmp_path)
+    path = project.parent / "definitions.json"
+    definitions = deepcopy(read_json(path).value)
+    code = {"name": "code", "logicalType": "string", "physicalType": "string", "primaryKey": True}
+    children = {"name": "children", "logicalType": container}
+    if container == "array":
+        children["items"] = {"logicalType": "object", "properties": [code]}
+        native = pa.list_(pa.struct([pa.field("code", pa.string())]))
+        expected_path = [{"field": "children"}, {"each": True}, {"field": "code"}]
+    else:
+        children["properties"] = [code]
+        native = pa.struct([pa.field("code", pa.string())])
+        expected_path = [{"field": "children"}, {"field": "code"}]
+    definitions["schema"][1]["properties"] = [children]
+    path.write_bytes(_raw(definitions))
+    capture = assemble_catalog(project)
+    assert capture.report["decision"] == "passed", capture.report
+    row = _with_output_schema(native_job, pa.schema([pa.field("children", native)]),
+                              definition=managed_job_definition(capture, **_mapping_kwargs()))
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    observed = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]["outputInterpretations"][0]
+    assert observed["status"] == "passed"
+    assert any(item["facet"] == "unsupported_primary_key_scope" and item["paths"] == [expected_path]
+               and item["status"] == "unknown" for item in observed["rowObligations"])
+    assert not result.artifacts
+
+
+@pytest.mark.parametrize("status", ["pending", "unknown", "failed"])
+def test_incomplete_native_observation_never_invents_a_current_production_binding(native_job, tmp_path, status):
+    project = _authored_project(tmp_path)
+    row = deepcopy(native_job)
+    row.update(status=status, candidate=None, completion_manifest=None, accepted_qualification=None)
+    row["completed_outputs"] = row["completed_outputs"][:1]
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    path = project.parent / "component.json"
+    production = deepcopy(read_json(path).value)
+    production["version"] = "99.0.0"
+    path.write_bytes(_raw(production))
+    result = assemble_catalog(project, metadata=metadata.document.path, metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    run = result.catalog["runs"][0]
+    assert "production" not in run
+    assert run["reference"]["value"]["operation"] == row["operation"]
+    assert len(run["outputs"]) == 1 and not result.artifacts
+
+
+@pytest.mark.parametrize("changed", ["policy", "expected_epoch", "expected_selection"])
+def test_original_policy_id_cannot_change_policy_bytes_or_authority_conditions(native_job, tmp_path, changed):
+    row = deepcopy(native_job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    original = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    if changed == "policy":
+        original["policy"]["sha256"] = "9" * 64
+    elif changed == "expected_epoch":
+        original["expected_epoch"] = 17
+    else:
+        original["expected_selection"] = deepcopy(row["candidate"])
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), original)
+    row = _reseal_completion(row, manifest, views)
+    with pytest.raises(JobEvidenceError, match="original policy ID"):
+        verify_completed_job(row)
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    result = assemble_catalog(_authored_project(tmp_path), metadata=metadata.document.path,
+                              metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "failed", result.report
+    assert not result.artifacts
+
+
+def test_distinct_requalification_policy_preserves_original_request_with_new_authority(native_job, tmp_path):
+    row = deepcopy(native_job)
+    original = verify_admitted_request(row)
+    policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+    policy["id"] = "counters-v2"
+    witness = _witness(Path(row["policy"]["reference"]["path"]).with_name("policy-v2.json"), policy)
+    body = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+    body.update(policy_id="counters-v2", policy_sha256=witness["sha256"], expected_epoch=17,
+                expected_selection=deepcopy(row["candidate"]))
+    row.update(policy_id="counters-v2", active_policy_id="counters-v2", policy=witness,
+               accepted_qualification=_acceptance(body, witness), selection="pending")
+    verified = verify_completed_job(row, require_accepted=True)
+    assert verified.admitted_request == original
+    assert verified.accepted["expected_epoch"] == 17 and original["expected_epoch"] == 0
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    result = assemble_catalog(_authored_project(tmp_path), metadata=metadata.document.path,
+                              metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "passed", result.report

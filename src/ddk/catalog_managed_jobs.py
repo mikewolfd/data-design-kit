@@ -9,12 +9,15 @@ from copy import deepcopy
 from hashlib import sha256
 from pathlib import Path
 
-from .catalog_access import CatalogError
+from .catalog_access import CatalogError, field_at
 from .docspec_job_evidence import (
     CANDIDATE_SCHEME, COUNTER_EVALUATOR, JobEvidenceError, interpret_output_schema,
-    verify_completed_job, verify_completed_outputs,
+    native_export_uniqueness, verify_completed_job, verify_completed_outputs,
 )
 from .documents import json_dumps
+from .catalog_native_rules import (
+    read_native_rule_pin, rule_context, select_native_rule_profile, verify_native_rule_artifact,
+)
 
 DEFINITION_SCHEME = "urn:ddk:managed-production:sha256"
 INTERPRETER = {"id": "urn:ddk:metadata:arrow-odcs", "version": "1"}
@@ -35,7 +38,8 @@ def _definition_identity(production, datasets, schemas, sources, entry):
     return f"{DEFINITION_SCHEME}:{sha256(json_dumps(binding).encode()).hexdigest()}"
 
 
-def managed_job_definition(catalog_result, *, production, inputs, outputs, out_of_catalog):
+def managed_job_definition(catalog_result, *, production, inputs, outputs, out_of_catalog,
+                           native_rules=None, native_rule_profile=None):
     """Bind native prepare.definition to one admitted definition capture.
 
     Source custody and resolved definitions qualify interpretation. This opaque
@@ -56,7 +60,19 @@ def managed_job_definition(catalog_result, *, production, inputs, outputs, out_o
         _mapping(entry, section, None, productions[production][section])
     sources = [{"uri": row["uri"], "sha256": row["sha256"]} for row in catalog["sourceInventory"]
                if row["role"] in {"project", "definition"}]
-    return _definition_identity(productions[production], datasets, schemas, sources, entry)
+    base = _definition_identity(productions[production], datasets, schemas, sources, entry)
+    if native_rules is None:
+        return base
+    document = read_native_rule_pin(native_rules)
+    selected = select_native_rule_profile(native_rule_profile)
+    context = rule_context(productions[production], schemas, catalog["identities"], entry)
+    verify_native_rule_artifact(document.value, definition=base, context=context, profile=selected)
+    return _rules_definition(base, document.sha256, document.value["profile"])
+
+
+def _rules_definition(base, digest, profile):
+    binding = {"definition": base, "nativeRules": {"sha256": digest, "profile": profile}}
+    return f"{DEFINITION_SCHEME}:{sha256(json_dumps(binding).encode()).hexdigest()}"
 
 
 def _current_definition(metadata, production, entry):
@@ -79,7 +95,7 @@ def _current_definition(metadata, production, entry):
     return identity, schemas
 
 
-def managed_job_metadata(*, receipt, production, inputs, outputs, out_of_catalog):
+def managed_job_metadata(*, receipt, production, inputs, outputs, out_of_catalog, native_rules=None):
     """Return explicit local metadata for the maintained catalog assembler.
 
     ``inputs`` and ``outputs`` map exact native names to registered DDK dataset
@@ -91,6 +107,7 @@ def managed_job_metadata(*, receipt, production, inputs, outputs, out_of_catalog
         "receipt": deepcopy(receipt), "production": production,
         "inputs": deepcopy(inputs), "outputs": deepcopy(outputs),
         "outOfCatalog": deepcopy(out_of_catalog),
+        **({"nativeRules": deepcopy(native_rules)} if native_rules is not None else {}),
     }]}
 
 
@@ -127,7 +144,7 @@ def managed_execution(metadata, entry):
     from .catalog_metadata import _need, _timestamp, owner_record, stable_id
 
     _need(entry, {"receipt", "production", "inputs", "outputs", "outOfCatalog"}, "managed execution mapping")
-    if set(entry) != {"receipt", "production", "inputs", "outputs", "outOfCatalog"}:
+    if set(entry) - {"receipt", "production", "inputs", "outputs", "outOfCatalog", "nativeRules"}:
         raise CatalogError("CATALOG-METADATA-SHAPE", "Unknown managed execution mapping member.")
     _need(entry["outOfCatalog"], {"inputs", "outputs"}, "out-of-catalog native membership")
     if set(entry["outOfCatalog"]) != {"inputs", "outputs"}:
@@ -153,7 +170,7 @@ def managed_execution(metadata, entry):
             and (receipt.get("stderrTruncated") is True or receipt.get("drainIncomplete") is True)):
         metadata.operational_errors.append(("DOCSPEC-DIAGNOSTIC-LIMIT", "DocSpec diagnostic capture did not complete.", document.path))
     if result["status"] != "completed":
-        _unresolved(metadata, result, alias, context, observed_at, record, entry, production)
+        _unresolved(metadata, result, context, observed_at, record, entry, production)
         return
     try:
         evidence = verify_completed_job(result)
@@ -162,6 +179,24 @@ def managed_execution(metadata, entry):
     input_mapping = _mapping(entry, "inputs", evidence.view_names["inputs"], production["inputs"])
     output_mapping = _mapping(entry, "outputs", evidence.view_names["outputs"], production["outputs"])
     definition_identity, schemas = _current_definition(metadata, production, entry)
+    original_job, native_bindings = None, []
+    rules_record = None
+    if "nativeRules" in entry:
+        rules_document = metadata.read_pinned_owner(metadata.document, entry["nativeRules"], "native authored-rule bindings")
+        rules_record = owner_record(rules_document)
+        base = definition_identity
+        if isinstance(rules_document.value.get("profile"), dict):
+            definition_identity = _rules_definition(base, rules_document.sha256, rules_document.value["profile"])
+        try:
+            original_job, native_bindings = verify_native_rule_artifact(
+                rules_document.value, definition=base,
+                context=rule_context(production, schemas, metadata.identities, entry), profile=metadata.native_rule_profile,
+                expected_sha256=evidence.manifest["job"]["sha256"], expected_size=evidence.manifest["job"]["size"],
+            )
+        except CatalogError as exc:
+            if exc.status not in {"unknown", "not_run"}:
+                raise
+            metadata.quality_issues.append(exc)
     definition_matches = evidence.admitted_request["definition"] == definition_identity
     outputs = []
     interpretations = []
@@ -177,6 +212,40 @@ def managed_execution(metadata, entry):
             metadata.observations["checks"].append({**identity, "status": interpreted.status, "record": record,
                                                    **({"reason": " ".join(interpreted.reasons)} if interpreted.reasons else {})})
             metadata.qualification.append(identity)
+            obligations = [*interpreted.obligations, *_key_obligations(schemas[dataset], metadata.identities, dataset, interpreted.fields)]
+            seen_obligations = set()
+            row_observations = []
+            for obligation in obligations:
+                key = json_dumps((obligation["facet"], obligation["paths"]))
+                if key in seen_obligations:
+                    continue
+                seen_obligations.add(key)
+                value_identity = {
+                    "subject": version,
+                    "rule": {"id": stable_id("managed-value-facet", dataset, obligation["facet"], obligation["paths"]),
+                             "version": definition_identity},
+                    "evaluator": COUNTER_EVALUATOR,
+                    "scope": "Authored row obligation joined to an exact accepted native counter through the explicitly supplied original generator binding.",
+                }
+                counter = _bound_counter(evidence, original_job, native_bindings, dataset, output["name"], obligation) if definition_matches else None
+                proof = {"nativeCounter": counter} if counter is not None else None
+                if proof is None and definition_matches and obligation["facet"] == "key_unique":
+                    exported = native_export_uniqueness(evidence, original_job, output["name"], obligation["paths"], interpreted, receipt["tool"])
+                    if exported is not None:
+                        proof = {"nativeExport": exported}
+                        value_identity["evaluator"] = metadata._record_tool(receipt["tool"], "DocSpec ordered exporter")
+                        value_identity["scope"] = "Native profile-1 ordered export rejects duplicate complete visible sort tuples before sealing; uniqueness only, no nonnull claim."
+                if proof is None and definition_matches and obligation["facet"] == "key_not_null":
+                    nonnull = _composed_nonnull(obligation["paths"], interpreted.fields, row_observations, output["schema_sha256"])
+                    if nonnull is not None:
+                        proof = {"composedNonnull": nonnull}
+                        value_identity["evaluator"] = INTERPRETER
+                        value_identity["scope"] = "Same-output composite key nonnull requirement from exact schema facts and individually qualified required-field evidence; no uniqueness claim."
+                metadata.observations["checks"].append({**value_identity, "status": "passed" if proof is not None else "unknown", "record": record,
+                                                       **({"reason": obligation["reason"]} if proof is None else {})})
+                metadata.qualification.append(value_identity)
+                row_observations.append({"facet": obligation["facet"], "paths": deepcopy(obligation["paths"]),
+                                         "status": "passed" if proof is not None else "unknown", **(proof or {})})
             binding = {"subject": version, "rule": {"id": "urn:ddk:check:managed-definition-capture:1", "version": definition_identity},
                        "evaluator": {"id": "urn:ddk:metadata:managed-definition", "version": "1"},
                        "scope": "Original native prepare definition binds the exact captured production and resolved authored dataset sources."}
@@ -185,7 +254,8 @@ def managed_execution(metadata, entry):
                                                       if not definition_matches else {})})
             metadata.qualification.append(binding)
             interpretations.append({"output": output["name"], "dataset": dataset, "schemaSha256": output["schema_sha256"],
-                                    "profile": INTERPRETER, "status": interpreted.status, "fields": list(interpreted.fields)})
+                                    "profile": INTERPRETER, "status": interpreted.status, "fields": list(interpreted.fields),
+                                    "rowObligations": row_observations})
     inputs, registered_inputs = _input_versions(metadata, evidence, input_mapping, record)
     run_id = stable_id("docspec-managed-job-run", context["workspace"], evidence.candidate)
     run = {
@@ -206,6 +276,7 @@ def managed_execution(metadata, entry):
             "acceptedQualification": evidence.accepted["identity"] if evidence.accepted is not None else None,
             "capturedDefinition": evidence.admitted_request["definition"], "currentDefinition": definition_identity,
             "definitionStatus": "passed" if definition_matches else "unknown", "outputInterpretations": interpretations,
+            **({"nativeRules": rules_record} if rules_record is not None else {}),
             "outOfCatalog": deepcopy(entry["outOfCatalog"]),
         })
     scope = ("Native whole-candidate accepted policy; exact output membership only. "
@@ -225,6 +296,100 @@ def managed_execution(metadata, entry):
                                                    status="unknown"))
     metadata.limits.add("Native job membership and accepted policy are preserved; data payloads and runtime retention were not rechecked during catalog refresh.")
     metadata.limits.add("Native selection is separate from publisher selection; the managed-job mapper records no publication.")
+    if "nativeRules" in entry:
+        metadata.limits.add("An explicit generator binds authored facets to accepted counters; source custody alone does not establish the generator's independent release qualification.")
+
+
+def _key_obligations(schema, identities, dataset, observed_fields):
+    """Retain only key obligations established by authored meaning and scope."""
+    reason = "An authored key obligation has no exact accepted native binding."
+    result = []
+    nullable = {json_dumps(field["logicalPath"]): field["nullable"] for field in observed_fields}
+
+    def needs_null_evidence(paths):
+        return any(nullable.get(json_dumps(path), True) for path in paths)
+
+    def nested_primary(node, path):
+        if len(path) > 1 and node.get("primaryKey") is True:
+            result.append({"facet": "unsupported_primary_key_scope", "paths": [deepcopy(path)],
+                           "reason": "A nested authored primary key needs its own supported scoped native interpretation."})
+        for field in node.get("properties", []):
+            nested_primary(field, [*path, {"field": field["name"]}])
+        if isinstance(node.get("items"), dict):
+            nested_primary(node["items"], [*path, {"each": True}])
+
+    nested_primary(schema, [])
+    primary = [field for field in schema.get("properties", []) if field.get("primaryKey") is True]
+    primary_paths = []
+    if primary:
+        positions = [field.get("primaryKeyPosition") for field in primary]
+        if len(primary) > 1 and (any(type(position) is not int or position < 1 for position in positions)
+                                 or len(set(positions)) != len(positions)):
+            result.append({"facet": "unsupported_primary_key_order", "paths": [[{"field": field["name"]}] for field in primary],
+                           "reason": "The authored composite primary key has no unambiguous position order."})
+        else:
+            primary_paths = [[{"field": field["name"]}] for field in sorted(primary, key=lambda field: field.get("primaryKeyPosition", -1))]
+            result.append({"facet": "key_unique", "paths": primary_paths, "reason": reason})
+            if needs_null_evidence(primary_paths):
+                result.append({"facet": "key_not_null", "paths": primary_paths, "reason": reason})
+    for identity in identities:
+        if identity["dataset"] != dataset or identity["kind"] != "key":
+            continue
+        paths = [deepcopy(field["path"]) for field in identity["fields"]]
+        virtual = any(field["virtual"] for field in identity["fields"])
+        nested = any(len(path) != 1 or "field" not in path[0] for path in paths)
+        if virtual or nested or identity["scope"] not in {"dataset_version", "release"}:
+            result.append({"facet": "unsupported_key_scope", "paths": paths, "reason": "Virtual, nested or unresolved key scope needs its own supported native interpretation."})
+            continue
+        result.append({"facet": "key_unique", "paths": paths, "reason": reason})
+        # Generic key declarations do not imply a null policy. Require null
+        # rejection only when each selected authored field requires a value.
+        fields = [field_at(schema, path) for path in paths]
+        rejects_null = (bool(primary_paths) and primary_paths == paths) or all(field is not None and field.get("required") is True for field in fields)
+        if rejects_null and needs_null_evidence(paths):
+            result.append({"facet": "key_not_null", "paths": paths, "reason": reason})
+    return result
+
+
+def _bound_counter(evidence, original_job, bindings, dataset, output, obligation):
+    if evidence.accepted is None or original_job is None:
+        return None
+    matches = [binding for binding in bindings if binding["dataset"] == dataset and binding["output"] == output
+               and binding["facet"] == obligation["facet"] and binding["paths"] == obligation["paths"]]
+    if len(matches) != 1:
+        return None
+    binding = matches[0]
+    if not any(item["name"] == output for item in original_job["outputs"]):
+        return None
+    query = next((item for item in original_job.get("queries", []) if item["name"] == binding["report"]), None)
+    report = next((item for item in evidence.accepted["reports"] if item["name"] == binding["report"]), None)
+    if query is None or report is None or not isinstance(query.get("sql"), str):
+        return None
+    sql_sha = sha256(query["sql"].encode()).hexdigest()
+    if report["sql_sha256"] != sql_sha:
+        return None
+    check = next((item for item in report["checks"] if item["column"] == binding["column"]), None)
+    if check is None or check["status"] != "passed" or type(check["value"]) is not int or check["value"] != 0:
+        return None
+    return {"report": report["name"], "column": binding["column"], "sqlSha256": sql_sha,
+            "schemaSha256": report["schema_sha256"], "completion": deepcopy(report["completion"]),
+            "acceptedQualification": evidence.accepted["identity"]}
+
+
+def _composed_nonnull(paths, fields, observations, schema_sha):
+    if any(len(path) != 1 or "field" not in path[0] for path in paths):
+        return None
+    nullable = {json_dumps(field["logicalPath"]): field["nullable"] for field in fields}
+    components = []
+    for path in paths:
+        if nullable.get(json_dumps(path)) is False:
+            components.append({"path": deepcopy(path), "schemaSha256": schema_sha})
+            continue
+        required = next((row for row in observations if row["facet"] == "required" and row["paths"] == [path] and row["status"] == "passed"), None)
+        if required is None:
+            return None
+        components.append({"path": deepcopy(path), "nativeCounter": deepcopy(required["nativeCounter"])})
+    return {"components": components}
 
 
 def _input_versions(metadata, evidence, mapping, record):
@@ -272,7 +437,7 @@ def _input_versions(metadata, evidence, mapping, record):
     return versions, bindings
 
 
-def _unresolved(metadata, result, production, context, observed_at, record, entry, definition):
+def _unresolved(metadata, result, context, observed_at, record, entry, definition):
     from .catalog_metadata import stable_id
 
     status = result["status"]
@@ -293,7 +458,6 @@ def _unresolved(metadata, result, production, context, observed_at, record, entr
                                       record, output=True) for row in completed if row["name"] in output_mapping]
     run = {
         "id": stable_id("docspec-managed-job-run", context["workspace"], result["dataset"], result["operation"]),
-        "production": production,
         "reference": {"scheme": "urn:ddk:docspec-managed-job-operation", "authority": Path(context["workspace"]).as_uri(),
                       "value": {"dataset": result["dataset"], "operation": result["operation"],
                                 "request_digest": result["request_digest"]}},
@@ -301,6 +465,8 @@ def _unresolved(metadata, result, production, context, observed_at, record, entr
         "inputs": [], "outputs": sorted(set(outputs)),
         "inputCoverage": {"status": "unknown", "scope": "Native job has no sealed complete candidate."},
     }
+    # A caller's mapping does not bind an incomplete native observation to the
+    # current production capture. Keep the native operation without that link.
     if status == "failed":
         run["endedAt"] = observed_at
     metadata.observations["runs"].append(run)

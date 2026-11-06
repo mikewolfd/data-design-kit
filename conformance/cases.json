@@ -2746,6 +2746,356 @@
       "scenario": "Lose a managed request response after a child starts through pipe, selector, wait or cleanup failure. Keep the original request, dataset and native operation ID; report unknown execution and operational failure without inventing a child exit or replacing the primary cause. Every process wait remains finite.",
       "expected": {"decision": "error", "checkStatus": "not_run", "exitCode": 3, "diagnostic": null},
       "expectedRuntime": {"execution": "unknown", "sameOperationId": true}
+    },
+    {
+      "id": "CASE-CATALOG-058",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Map exact retained native metadata into an actual catalog with complete scoped membership, original request bytes, captured definitions and deterministic controls. Open no payload or caller JobSpec; preserve private members in their native record and unknown row-consumption coverage.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-059",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refuse changed candidates, incomplete native output/report membership, altered original bytes, caller pass booleans and resealed acceptance with wrong checks, evaluator, semantics or retained input pins.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-060",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Require every native input and output to have exactly one catalog mapping or explicit out-of-catalog reason; refuse omitted, overlapping or unknown members.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-NATIVE-MEMBERSHIP"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-061",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain completed native computation when accepted qualification is absent. Keep required quality unknown, expose no publishable artifacts and preserve previously written controls.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-062",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-RESULT-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An admitted pending job can retain known sealed outputs without claiming a completed or qualified candidate.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-063",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-RESULT-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain known outputs and unresolved qualification when native execution is unknown or failed; preserve the native failed outcome separately from missing quality evidence.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-064",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Changed authored constraints, production identity or original definition custody cannot inherit old native acceptance, even if effective schema bytes remain equal. Do not attach the old run to the current production.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-065",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Known output field, type or membership mismatches fail schema interpretation even when the separate native policy passed.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-066",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Preserve supported nested field positions, dictionary strings, exact fixed binary width and explicit timestamp semantics in output-schema interpretation.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-067",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Unsupported authored meanings and unmatched value constraints remain unknown. Nullable nested observations preserve compatible schema facts while leaving required row properties unresolved.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-068",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Use an explicitly supplied generator and original JobSpec to bind authored required, ordered key uniqueness and key nonnull facets to exact accepted report counters. Preserve nullable schema observations and open no payload or caller JobSpec.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-069",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Wrong writer, SQL, field, counter, original job, source or profile and missing, duplicate or unauthored bindings cannot qualify authored facets. Callback inputs remain immutable.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-070",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain authored primary-key obligations independently of an alternate catalog key. Missing or duplicate primary positions remain unresolved rather than disappearing behind the alternate key.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-071",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Public native facet claims retain the explicitly granted generator identity separately from the native evaluator. Source locations require an evidence grant; private native members and diagnostics remain withheld.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-072",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public native facet claim without an explicit generator identifier grant refuses disclosure and produces safe public diagnostics.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-DISCLOSURE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-073",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An exact supported native export can establish uniqueness only for the entire visible ordered key. Same-output schema and accepted required-field facts separately establish every component of a nonnull key.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-074",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A hidden additional sort field, mismatched runtime or settings, or missing nonnull evidence prevents full key qualification. Unique larger tuples never prove a visible key subset unique; uniqueness alone never proves nonnull.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-075",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A declared row_position supplies its complete same-release key even when physical keys also exist, without a duplicate virtual key declaration or fabricated executed uniqueness evidence.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-076",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A row_position identity cannot authorize a version-pair relationship outside its same-release scope.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RELEASE-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-077",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Nested authored primary keys inside objects and list elements remain required unknown until their scoped native interpretation is supported; nullable schema metadata and an unrelated accepted policy cannot erase them.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-078",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The original native policy ID cannot acquire different original policy bytes or accepted authority conditions, even when metadata witnesses are coherently resealed.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-079",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A distinct native requalification policy ID may retain the original prepare request while binding a new policy and authority pair. Do not require original and requalified policies to be equal.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }
