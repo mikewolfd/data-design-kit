@@ -109,7 +109,15 @@
       "id": "CASE-JOB-PROCESS-LOSS",
       "coverage": "exercised",
       "tests": [
-        "tests/test_docspec_runtime.py::test_bounded_job_process_loss_keeps_native_execution_unknown"
+        "tests/test_docspec_runtime.py::test_bounded_job_process_loss_keeps_native_execution_unknown",
+        "tests/test_process_uncertainty.py::test_started_child_transport_failure_preserves_uncertainty"
+      ]
+    },
+    {
+      "id": "CASE-MANAGED-TRANSPORT-LOSS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_process_uncertainty.py::test_started_child_transport_failure_preserves_uncertainty"
       ]
     },
     {

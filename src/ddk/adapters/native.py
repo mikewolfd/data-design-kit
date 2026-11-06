@@ -115,67 +115,114 @@ def run_bounded(arguments, *, timeout, limit, env=None, stop_on_stdout_limit=Fal
     if not math.isfinite(timeout) or timeout <= 0 or type(limit) is not int or limit <= 0:
         raise ValueError("Native timeout and capture limit must be positive")
     captures, truncated = [bytearray(), bytearray()], [False, False]
-    with subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
-                          start_new_session=new_process_group) as proc:
+    proc = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                            start_new_session=new_process_group)
+    selector = None
+    timed_out, drain_incomplete, stopped, cancelled = False, False, False, False
+    deadline = monotonic() + timeout
+    drain_deadline = None
+    primary_error = None
+
+    def stop():
+        nonlocal stopped, drain_deadline
+        stopped = True
+        if drain_deadline is None:
+            drain_deadline = monotonic() + 1
+        if proc.returncode is not None:
+            return
+        try:
+            if new_process_group:
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+        except ProcessLookupError:
+            pass
+
+    def wait_until(bound):
+        return proc.wait(timeout=max(0, bound - monotonic()))
+
+    try:
         selector = selectors.DefaultSelector()
         for index, stream in enumerate((proc.stdout, proc.stderr)):
             os.set_blocking(stream.fileno(), False)
             selector.register(stream, selectors.EVENT_READ, index)
-        timed_out, drain_incomplete, stopped, cancelled = False, False, False, False
-        deadline = monotonic() + timeout
-        drain_deadline = None
-        def stop():
-            try:
-                if new_process_group:
-                    os.killpg(proc.pid, signal.SIGKILL)
-                else:
-                    proc.kill()
-            except ProcessLookupError:
-                pass
+        while True:
+            now = monotonic()
+            if not stopped and cancel_event is not None and cancel_event.is_set():
+                cancelled = True
+                stop()
+            elif not stopped and now >= deadline:
+                timed_out = True
+                stop()
+            if drain_deadline is not None and now >= drain_deadline:
+                drain_incomplete = bool(selector.get_map())
+                break
+            if not selector.get_map():
+                try:
+                    wait_until(min(now + 0.05, drain_deadline or deadline))
+                except subprocess.TimeoutExpired:
+                    continue
+                break
+            # Retain the unreaped child while pipes remain open, so its process
+            # group cannot be mistaken for a later process after PID reuse.
+            for key, _ in selector.select(0.05):
+                try:
+                    chunk = os.read(key.fileobj.fileno(), 65536)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                index = key.data
+                remaining = max(0, limit - len(captures[index]))
+                captures[index].extend(chunk[:remaining])
+                truncated[index] |= len(chunk) > remaining
+                if index == 0 and truncated[0] and stop_on_stdout_limit and not stopped:
+                    stop()
+        wait_until(drain_deadline or deadline)
+    except KeyboardInterrupt as exc:
+        primary_error = exc
+        cancelled = True
         try:
-            while selector.get_map() or proc.poll() is None:
-                now = monotonic()
-                if not stopped and cancel_event is not None and cancel_event.is_set():
-                    cancelled = stopped = True
-                    stop()
-                    drain_deadline = now + 1
-                elif not stopped and now >= deadline:
-                    timed_out = stopped = True
-                    stop()
-                    drain_deadline = now + 1
-                if drain_deadline is not None and now >= drain_deadline:
-                    drain_incomplete = bool(selector.get_map())
-                    break
-                for key, _ in selector.select(0.05):
-                    try:
-                        chunk = os.read(key.fileobj.fileno(), 65536)
-                    except BlockingIOError:
-                        continue
-                    if not chunk:
-                        selector.unregister(key.fileobj)
-                        continue
-                    index = key.data
-                    remaining = max(0, limit - len(captures[index]))
-                    captures[index].extend(chunk[:remaining])
-                    truncated[index] |= len(chunk) > remaining
-                    if index == 0 and truncated[0] and stop_on_stdout_limit and not stopped:
-                        stopped = True
-                        stop()
-                        drain_deadline = monotonic() + 1
-            proc.wait(timeout=1)
-        except KeyboardInterrupt:
-            cancelled = True
             stop()
-            proc.wait(timeout=1)
-        except BaseException:
+        except OSError as cleanup_error:
+            exc.add_note(f"Process termination cleanup: {cleanup_error}")
+        try:
+            wait_until(drain_deadline)
+        except (OSError, subprocess.TimeoutExpired) as cleanup_error:
+            exc.add_note(f"Process wait cleanup: {cleanup_error}")
+        drain_incomplete = proc.returncode is None or (selector is not None and bool(selector.get_map()))
+    except BaseException as exc:
+        primary_error = exc
+        # Cleanup must not replace the original error or enter Popen.__exit__'s
+        # unbounded wait. Unconfirmed termination remains caller uncertainty.
+        try:
             stop()
-            proc.wait(timeout=1)
-            raise
-        finally:
-            selector.close()
+        except OSError as cleanup_error:
+            exc.add_note(f"Process termination cleanup: {cleanup_error}")
+        try:
+            wait_until(drain_deadline)
+        except (OSError, subprocess.TimeoutExpired) as cleanup_error:
+            exc.add_note(f"Process wait cleanup: {cleanup_error}")
+        raise
+    finally:
+        close_errors = []
+        for name, resource in (("selector", selector), ("stdout", proc.stdout), ("stderr", proc.stderr)):
+            if resource is not None:
+                try:
+                    resource.close()
+                except OSError as exc:
+                    close_errors.append((name, exc))
+        if close_errors:
+            error = primary_error or close_errors[0][1]
+            for name, exc in close_errors:
+                error.add_note(f"Process {name} cleanup: {exc}")
+            if primary_error is None:
+                raise error
     return {"exitCode": proc.returncode, "stdout": bytes(captures[0]),
             "stderr": bytes(captures[1]), "timedOut": timed_out,
-            "stdoutTruncated": truncated[0], "stderrTruncated": truncated[1], "drainIncomplete": drain_incomplete, "cancelled": cancelled}
+            "stdoutTruncated": truncated[0], "stderrTruncated": truncated[1], "drainIncomplete": drain_incomplete,
+            "cancelled": cancelled, "cleanupDiagnostics": list(getattr(primary_error, "__notes__", ()))}
 
 
 class NativeTools:
@@ -227,8 +274,10 @@ class NativeTools:
                     response.update(status="error", reason="Native diagnostic capture exceeded its admitted limit")
             response["transport"] = result
             response["limits"] = {"timeoutSeconds": self.timeout, "captureBytes": self.capture_bytes}
-        except (OSError, ValueError, ResourceLimit) as exc:
+        except (OSError, ValueError, ResourceLimit, subprocess.TimeoutExpired) as exc:
             response = {"status": "error", "reason": str(exc)}
+            if notes := getattr(exc, "__notes__", None):
+                response["cleanupDiagnostics"] = list(notes)
         if self.redaction:
             changed = _sanitize_artifacts(folder, self.redaction)
             response = _public_response(response, self.redaction, changed)

@@ -8,6 +8,7 @@ import math
 import os
 import re
 from pathlib import Path
+import subprocess
 import tempfile
 from uuid import uuid4
 from time import monotonic
@@ -160,6 +161,7 @@ class DocSpecAdapter:
         native_versions = {}
         native_reads = []
         submitted = False
+        transport = None
         started_at = _now()
         started = monotonic()
         try:
@@ -190,13 +192,15 @@ class DocSpecAdapter:
                 key: value for key, value in os.environ.items() if value not in self.redaction.values
             }
             with request_transport(folder, compiled, transport_path, self.redaction) as path:
+                # Once handed to the process runner, a transport exception does
+                # not establish whether native execution began or completed.
+                submitted = True
                 transport = run_bounded(
                     [str(self.executable), "--limits", str(limits_path), *prefix,
                      command, "--spec", str(path)],
                     timeout=self.timeout, limit=self.capture_bytes, stop_on_stdout_limit=True, env=environment,
                     cancel_event=cancel_event,
                 )
-            submitted = True
             stdout = transport["stdout"]
             (folder / "stdout.json").write_bytes(self.redaction.captured(stdout))
             (folder / "stderr.log").write_bytes(self.redaction.captured(transport["stderr"]))
@@ -250,8 +254,10 @@ class DocSpecAdapter:
                     raise ValueError("Native response refers to a different managed operation")
         except BindingRefusal as exc:
             error = _error(exc.code, str(exc))
-        except OSError as exc:
+        except (OSError, subprocess.TimeoutExpired) as exc:
             error = _error("DOCSPEC-IO", str(exc))
+            if notes := getattr(exc, "__notes__", None):
+                error["cleanupDiagnostics"] = list(notes)
             if submitted:
                 status = "unknown"
         except (ValueError, KeyError, TypeError) as exc:
@@ -260,7 +266,7 @@ class DocSpecAdapter:
 
         native_outcome = status
         native_error = error
-        if submitted and (transport["stderrTruncated"] or transport.get("drainIncomplete")):
+        if transport is not None and (transport["stderrTruncated"] or transport.get("drainIncomplete")):
             status = "error"
             error = _error("DOCSPEC-DIAGNOSTIC-LIMIT", "Native diagnostic capture did not complete")
         receipt_path = folder / "receipt.json"
@@ -282,10 +288,12 @@ class DocSpecAdapter:
             receipt["semantics"] = semantic_profile
         if error is not None:
             receipt["error"] = error
-        if submitted:
+        if transport is not None:
             receipt["exitCode"] = transport["exitCode"]
             receipt["stderrTruncated"] = transport["stderrTruncated"]
             receipt["drainIncomplete"] = transport.get("drainIncomplete", False)
+            if transport.get("cleanupDiagnostics"):
+                receipt["cleanupDiagnostics"] = transport["cleanupDiagnostics"]
         operation = None
         if bounded:
             operation = {

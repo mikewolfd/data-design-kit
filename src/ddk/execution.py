@@ -101,6 +101,9 @@ def _record(builder, group, subject, result, *, requirement="DDK-ADAPTER-011", e
                          "DOCSPEC-INPUT-CHANGED"}:
         status, code = "not_run", "EXEC-OUTCOME-UNKNOWN"
         builder.error(diagnostic(code, reason))
+    elif native_code == "DOCSPEC-IO":
+        status, code = "not_run", "EXEC-OUTCOME-UNKNOWN" if outcome == "unknown" else "ADAPTER-IO"
+        builder.error(diagnostic(code, reason))
     elif outcome == "error":
         status, code = "unknown", "ADAPTER-ERROR"
         builder.error(diagnostic(code, reason))

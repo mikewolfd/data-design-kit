@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 process cleanup repair
+
+The first dev5 installed capture retained 347 passes and one failed process-loss check. Its [qualification report](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/distribution/qualified-01/release-qualification.ddk.json) remains failed. A one-millisecond timeout received an OS permission error; five direct repeats timed out as expected. The original failing syscall remains unresolved.
+
+Investigation and independent review found two separate defects in the existing process owner: its context-manager exit could wait without a deadline, and transport exceptions after process handoff could claim execution never started. The repair protects partial setup, uses finite cleanup waits, keeps the child unreaped while its pipes remain owned, and preserves unknown execution with the original request and managed operation ID. Cleanup errors remain alongside the original cause, and every handle receives a close attempt.
+
+The [final repair checkpoint](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/process-repair-checkpoint.json) records 11 passing child-process and process-tree probes in 7.57 seconds. They cover pipe, selector, bounded-wait, close and cancellation failures through both bounded and managed callers. Eight earlier actual native timeout/cancellation and owned-spill consumer probes passed separately. Earlier collection and fixture failures remain retained. The selected dev5 patch excludes the in-progress streaming evaluator; a new frozen installed capture remains required.
+
 ## November 6, 2026 public native-type source checkpoint
 
 The [final source checkpoint](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/public-physical-types/source-checkpoint-alias-fixed.json) identifies the six changed implementation, schema, test and documentation files. All 23 final focused cases passed in 3.19 seconds: 20 native-type and private/public-view cases plus three existing profile-disclosure controls. Independent review found a shared profile-source object between private and public results. The new isolation probe failed before the one-record copy repair and passed afterward. Both outcomes remain in the checkpoint; greybeard and ETL reviewers closed the finding.

@@ -1383,7 +1383,7 @@
       ],
       "profile": "execute.docspec-job",
       "runtimeStatus": "planned",
-      "scenario": "Terminate an ordinary job process after submission with no completion response. Report unknown outcome and only observed outputs; do not invent durable tracking or claim no work ran.",
+      "scenario": "Lose an ordinary job response through timeout, pipe or selector failure, or uncertain process cleanup. Preserve the original cause and cleanup diagnostics, use finite waits, and report unknown execution with only observed outputs. Do not invent durable tracking or claim no work ran.",
       "expected": {
         "decision": "error",
         "checkStatus": "not_run",
@@ -2692,6 +2692,15 @@
       "runtimeStatus": "planned",
       "scenario": "Lose the acceptance response and remove caller-owned evidence files. Reconcile the original accepted native evidence through selection and lifecycle compaction. Existing protection retains promised replay until explicit operation/result retirement; later payload removal leaves audit metadata without granting it a new retention promise.",
       "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null}
+    },
+    {
+      "id": "CASE-MANAGED-TRANSPORT-LOSS",
+      "requirements": ["DDK-RESULT-006", "DDK-ADAPTER-011"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Lose a managed request response after a child starts through pipe, selector, wait or cleanup failure. Keep the original request, dataset and native operation ID; report unknown execution and operational failure without inventing a child exit or replacing the primary cause. Every process wait remains finite.",
+      "expected": {"decision": "error", "checkStatus": "not_run", "exitCode": 3, "diagnostic": null},
+      "expectedRuntime": {"execution": "unknown", "sameOperationId": true}
     }
   ]
 }
