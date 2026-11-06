@@ -10,9 +10,9 @@ The visual direction is a calm, paper-colored workspace with a quiet green accen
 | Understand meaning and coverage | Overview and nested field definitions | Original paths, native types, root descriptions, identities, source scope |
 | Inspect exact records | Version and representation choice, bounded pages, row details | Exact reference, source occurrence, filter, page cursor, typed values |
 | Follow a connection | Relationship detail and destination dataset; explicit recipe form | Ordered keys, list traversal, null policy, release scope, actual versus contextual inputs |
-| Assess suitability | Evidence and provenance | Required check outcomes, evidence level, version/rule/evaluator, unknown and not_run |
+| Assess suitability | Checks & sources | Required check outcomes, evidence level, version/rule/evaluator, unknown and not_run |
 | Understand a change | Side-by-side version facts and available owner impact evidence | Exact base/candidate, metadata, requalification and computation distinguished |
-| Inspect work and selection | Activity, source records, production definitions, release membership | Owner operation references, input coverage, observed outcome and publisher selections |
+| Inspect work and selection | History, source records, production definitions, release membership | Owner operation references, input coverage, observed outcome and publisher selections |
 | Share or export | Exact-reference download, bounded page download, verified companions | Catalog digest, version/representation, query/filter context, explicit sample scope |
 
 ## System boundary
@@ -33,6 +33,6 @@ Semantic headings, landmarks, tables, labels, native buttons/selects, a skip lin
 
 SpicyGov's discovery, exact-version readers, provenance details, and explicit unavailable links supply useful task precedent. Its domain registries and legacy publication readers are not shared viewer dependencies. The two replacement readers show why release membership, field/list identities, public disclosures, and recipe input scopes matter.
 
-The shared boundary is DDK 0.1.0-dev.4, source `fb70ab825243235b4ecf77c5ebb8c636d0d06e2d`, wheel SHA-256 `7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8`. Pending shared source changes do not expand that qualification.
+The original bounded Commerce reader qualification remains DDK 0.1.0-dev.4, source `fb70ab825243235b4ecf77c5ebb8c636d0d06e2d`, wheel SHA-256 `7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8`, with the separately pinned dev2 native executable. The later Commerce and SpicyRegs metadata captures use their recorded dev5 catalog builders. A metadata refresh or newer shared checkout does not expand the reader's native qualification. Exact current and historical identities are linked from the local handoff.
 
 Official APIs checked on 2026-11-06: [Astro React integration](https://docs.astro.build/en/guides/integrations-guide/react/), [Astro Node adapter](https://docs.astro.build/en/guides/integrations-guide/node/), [server endpoints](https://docs.astro.build/en/guides/endpoints/), [React effect cleanup](https://react.dev/reference/react/useEffect), and [WAI tab keyboard behavior](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/). Astro 7.4.7 and a project-local Node 22.23.4 are pinned. The project-local runtime allows patched dependencies without changing host tools.
