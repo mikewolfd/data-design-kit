@@ -78,6 +78,18 @@ Each nonempty path must resolve to an existing, nonblank `physicalType` in a dis
 
 This grant permits the entire opaque string, including any native-only names absent from the logical definition. The publisher must review that text. Modeled child coverage alone never permits it or establishes logical/native completeness. Object and array nodes remain composite even when their children are not modeled. Root `[]` grants no native type. Existing scalar type disclosure remains unchanged.
 
+Logical-type options, such as integer bounds, timestamp formats and array limits, also require a separate explicit grant:
+
+```json
+{
+  "definitionLogicalTypeOptions": {
+    "urn:example:dataset": [[{"field": "agencies"}]]
+  }
+}
+```
+
+Each nonempty path must resolve to an existing `logicalTypeOptions` object, including an empty object, in a disclosed dataset definition. Its complete modeled subtree must already appear through `definitionFields`. DDK copies the entire options object exactly, including names in object `required` lists that have no modeled child. The publisher must review the complete value before granting it. Root, description, physical-type and parent-field grants do not grant these options or options on descendant fields. Invalid grants fail disclosure and preserve prior output. Publishing these declarations does not establish that a native reader supports them or that data passed their checks.
+
 A public view using a relationship profile must explicitly grant the profile's exact identity ID in `identifiers`. Otherwise public assembly refuses output and preserves the full reason in `local_report`. This applies even when the ID is a `file://` URI: allowing its source record alone does not disclose its tool identity. Ordinary evidence policy still governs captured source locations.
 
 Public output retains the granted profile identity and redacted source provenance so impact analysis can detect changes. Individual assessments and reasons stay withheld, with `relationshipAssessmentScope` explicitly unknown. Public consumer coverage also remains unknown; the comparison cannot infer private relationship or reader dependencies.

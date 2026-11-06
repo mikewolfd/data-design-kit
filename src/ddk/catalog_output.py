@@ -21,6 +21,7 @@ MANIFEST = "urn:ddk:catalog:output-set"
 POLICY_LISTS = {"identifiers", "aliases", "locations", "evidence", "recipes", "nativeReferences"}
 FIELD_SHAPE = {"name", "logicalType", "required"}
 FIELD_DESCRIPTIONS = {"businessName", "description", "dataGranularityDescription"}
+TYPE_DETAIL_GRANTS = {"definitionPhysicalTypes": "physicalType", "definitionLogicalTypeOptions": "logicalTypeOptions"}
 
 
 def read_disclosure(document):
@@ -32,7 +33,8 @@ def read_disclosure(document):
     policy = {field: frozenset(value.get(field, [])) for field in POLICY_LISTS}
     policy["descriptions"] = value.get("descriptions", False)
     policy["definitionFields"] = deepcopy(value.get("definitionFields", {}))
-    policy["definitionPhysicalTypes"] = deepcopy(value.get("definitionPhysicalTypes", {}))
+    for grant in TYPE_DETAIL_GRANTS:
+        policy[grant] = deepcopy(value.get(grant, {}))
     extensions = value.get("projectExtensions", [])
     seen = set()
     for entry in extensions:
@@ -160,18 +162,21 @@ def public_view(catalog, policy, details_key):
             disclosed_definitions[aliases[alias]]["name"] = next(
                 row["definition"]["object"] for row in datasets if row["id"] == identifier)
             disclosed_paths[aliases[alias]] = deepcopy(paths)
-    for identifier, paths in policy["definitionPhysicalTypes"].items():
-        alias = dataset_ids.get(identifier)
-        definition = authored_details.get("datasetDefinitions", {}).get(alias)
-        disclosed = disclosed_definitions.get(aliases.get(alias))
-        if definition is None or disclosed is None:
-            raise CatalogError("CATALOG-DISCLOSURE", "A physical type grant must name a disclosed dataset definition.")
-        for path in paths:
-            field, visible = field_at(definition, path), field_at(disclosed, path)
-            if (field is None or not isinstance(field.get("physicalType"), str) or not field["physicalType"].strip()
-                    or not _subtree_disclosed(field, visible)):
-                raise CatalogError("CATALOG-DISCLOSURE", "A physical type grant needs an existing type and complete modeled-subtree disclosure.")
-            visible["physicalType"] = field["physicalType"]
+    for grant, attribute in TYPE_DETAIL_GRANTS.items():
+        for identifier, paths in policy[grant].items():
+            alias = dataset_ids.get(identifier)
+            definition = authored_details.get("datasetDefinitions", {}).get(alias)
+            disclosed = disclosed_definitions.get(aliases.get(alias))
+            if definition is None or disclosed is None:
+                raise CatalogError("CATALOG-DISCLOSURE", f"A {attribute} grant must name a disclosed dataset definition.")
+            for path in paths:
+                field, visible = field_at(definition, path), field_at(disclosed, path)
+                value = field.get(attribute) if field is not None else None
+                valid = (isinstance(value, str) and bool(value.strip()) if attribute == "physicalType"
+                         else isinstance(value, dict))
+                if not valid or not _subtree_disclosed(field, visible):
+                    raise CatalogError("CATALOG-DISCLOSURE", f"A {attribute} grant needs an existing value and complete modeled-subtree disclosure.")
+                visible[attribute] = deepcopy(value)
     if disclosed_definitions:
         details["datasetDefinitions"] = disclosed_definitions
         details["disclosedDefinitionPaths"] = disclosed_paths
