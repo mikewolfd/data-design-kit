@@ -2581,6 +2581,40 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-CORRECTION",
+      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-013", "DDK-LOCK-005", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Correct and explicitly delete keys against an exact selected source-only local base. Preserve unaffected rows and the protected base, recover after caller loss, refuse incomplete or wrong-candidate quality, and reuse computation after a rule-only change. Historical retries after a successor and lifecycle compaction return the original result without selecting it again.",
+      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
+      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true, "newProcessingCompletions": 0}
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-NULL-EMPTY",
+      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-013"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Apply explicit null replacement and coalescing policies independently, then qualify a successful empty replacement scope. Preserve the native distinction between null, empty and missing work.",
+      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null}
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-STALE-BASE",
+      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Advance the selected source composition after preparing and qualifying an Update. Native selection refuses the stale base, retains the newer selected result, and DDK reports the selection refusal separately from completed execution.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": "EXEC-SELECTION-STALE"},
+      "expectedRuntime": {"execution": "succeeded", "selection": "refused"}
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-ACCEPTANCE-REPLAY",
+      "requirements": ["DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Lose the acceptance response and remove caller-owned evidence files. Reconcile the original accepted native evidence through selection and lifecycle compaction. Existing protection retains promised replay until explicit operation/result retirement; later payload removal leaves audit metadata without granting it a new retention promise.",
+      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null}
     }
   ]
 }

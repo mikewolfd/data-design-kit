@@ -41,10 +41,12 @@ _NATIVE_CHECK_CODES = {
     "qualification_audit_only": ("failed", "EXEC-QUALIFICATION-AUDIT-ONLY"),
     "qualification_failed": ("failed", "EXEC-QUALIFICATION-FAILED"),
     "stale_eligibility": ("failed", "EXEC-SELECTION-STALE"),
+    "stale_base": ("failed", "EXEC-SELECTION-STALE"),
     "stale_qualification_authority": ("failed", "EXEC-SELECTION-STALE"),
     "coverage_regression": ("failed", "EXEC-SELECTION-STALE"),
     "operation_conflict": ("failed", "EXEC-REQUEST-CONFLICT"),
     "unsupported_managed_build": ("not_run", "ADAPTER-OPERATION-UNSUPPORTED"),
+    "unsupported_managed_update": ("not_run", "ADAPTER-OPERATION-UNSUPPORTED"),
     "DOCSPEC-BACKEND-UNSUPPORTED": ("not_run", "ADAPTER-OPERATION-UNSUPPORTED"),
 }
 

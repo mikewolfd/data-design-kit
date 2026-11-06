@@ -77,7 +77,7 @@ class DocSpecAdapter:
                             cancel_event=cancel_event)
 
     def managed(self, workspace, request, *, prior=None, backend="local-iceberg", cancel_event=None):
-        """Submit or reconcile the original local managed Build operation."""
+        """Submit or reconcile the original local managed Build or Update."""
         if self.redaction:
             raise ValueError("Managed reconciliation requires its original native request")
         workspace = Path(workspace).resolve(strict=True)
@@ -477,14 +477,16 @@ def _managed_context(workspace, request):
     action = request.get("action")
     if action == "prepare":
         operation = request.get("build", {})
+    elif action == "prepare_update":
+        operation = request.get("update", {})
     elif action in {"inspect", "accept", "requalify", "select"}:
         operation = request
     else:
-        raise ValueError("Unsupported local managed Build action")
+        raise ValueError("Unsupported local managed action")
     dataset, operation_id = operation.get("dataset"), operation.get("operation")
     if not all(isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", value)
                for value in (dataset, operation_id)):
-        raise ValueError("Managed Build requires exact dataset and operation identifiers")
+        raise ValueError("Managed operation requires exact dataset and operation identifiers")
     return {"runtime": RUNTIME, "workspace": str(workspace), "dataset": dataset, "operationId": operation_id}
 
 

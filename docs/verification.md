@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 managed Update source checkpoint
+
+DocSpec commit `d96e00172d7d4be26da4532cda35aa05f2a3709e` passed the required `scripts/check` gate with explicit Rust 1.94. The [final handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/final-handoff.json) identifies the committed tree and retained executable. The [gate log](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/gate-source09.log) records 457 unit passes with 15 intentional ignores, 447 integration passes with two intentional ignores, 21 process-suite passes, 11 example passes, and 31 Dagster passes. The run completed in 1,056.37 seconds. Five-second samples observed peak owned-process RSS of 3,330,932,736 bytes and minimum free space of 96,394,432,512 bytes; these samples are not a hard memory guarantee. The gate-tested full binary has SHA-256 `72f3aea76d102809b18c3cbc2187b4e4a1136966030b82296ab5043c3f50ed83`.
+
+The [source09 handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/handoff-09.json) binds the unchanged implementation and test files to their earlier focused evidence. Five native and six DDK source07 checks passed. Source09 adds a passing companion-metadata budget probe and a passing actual wrapper case for lost acceptance, caller-file removal, compaction, explicit retirement and old payload removal. Separate greybeard and ETL reviews closed the final changed-boundary findings. Earlier compiler-path failures and interrupted gates remain retained and excluded from this final gate claim.
+
+Cases `CASE-MANAGED-UPDATE-CORRECTION`, `CASE-MANAGED-UPDATE-NULL-EMPTY`, `CASE-MANAGED-UPDATE-STALE-BASE`, and `CASE-MANAGED-UPDATE-ACCEPTANCE-REPLAY` register the independent expectations. The unchanged dev4 wheel still uses its earlier native tuple. Successor installed qualification, streaming quality, wider native views and retained whole-job execution remain incomplete.
+
 ## November 6, 2026 dev4 installed relationship-profile qualification
 
 The [dev4 package](local-release-dev4.md) passed all 320 installed tests with zero failures, errors or skips and 11 RDFLib warnings in 122.83 seconds. [Qualification](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/release-qualification.ddk.json) passes 177 case/profile combinations covering 160 cases and 13 declared profiles. Source `fb70ab825243235b4ecf77c5ebb8c636d0d06e2d` includes cases 041–052 and the relationship-profile disclosure/impact repairs.

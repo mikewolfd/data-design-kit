@@ -1,6 +1,6 @@
 {
   "specification": "DDK 0.1",
-  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, and one local source-only managed Build.",
+  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build, and successor managed Update cases. The current qualified dev4 package retains the earlier native tuple; successor qualification is separate.",
   "status": "Executable traceability for the pinned local tuple. The independent loose-mode validator remains unexercised.",
   "evidencePaths": [
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/verification-qualified.json",
@@ -8,6 +8,37 @@
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-runtime-focused.log"
   ],
   "cases": [
+    {
+      "id": "CASE-MANAGED-UPDATE-CORRECTION",
+      "coverage": "exercised",
+      "tests": ["tests/test_docspec_managed_update.py::test_correction_delete_quality_recovery_and_historical_replay"],
+      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"],
+      "scopeNote": "Focused source-level evidence covers independent expected correction/deletion rows, exact quality refusal, rule-only reuse, caller loss and historical replay. Installed successor qualification remains separate."
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-NULL-EMPTY",
+      "coverage": "exercised",
+      "tests": ["tests/test_docspec_managed_update.py::test_update_preserves_null_policy_and_successful_empty_child_scope"],
+      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"],
+      "scopeNote": "Focused source-level evidence distinguishes explicit null replacement, coalescing and a valid empty child scope."
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-STALE-BASE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_update.py::test_changed_source_composition_cannot_select_qualified_update",
+        "tests/test_managed_refusal_reporting.py::test_changed_update_base_preserves_native_stale_selection_refusal"
+      ],
+      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"],
+      "scopeNote": "The actual native wrapper proves refusal after the base changes; the separate declared translation probe proves DDK result reduction without claiming execution."
+    },
+    {
+      "id": "CASE-MANAGED-UPDATE-ACCEPTANCE-REPLAY",
+      "coverage": "exercised",
+      "tests": ["tests/test_docspec_managed_update.py::test_lost_acceptance_replays_after_caller_artifacts_are_removed"],
+      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-companion-09.log"],
+      "scopeNote": "The final source09 focused wrapper probe covers lost acceptance, caller-file removal, compaction, explicit retirement and old payload removal; audit metadata is not payload protection."
+    },
     {
       "id": "CASE-ADAPTER-005",
       "coverage": "exercised",

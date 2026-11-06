@@ -70,7 +70,7 @@ Current ordinary DocSpec inputs include Parquet, explicitly schematized JSON Lin
 
 ## Managed quality-gated path
 
-The implemented local profile covers the independent, unbased typed Build operation. Its native gate is separate from ordinary SQL jobs.
+The dev2 release qualifies the independent, unbased typed Build operation. The successor source adds `prepare_update` with a native `UpdateSpec` for a selected independent, source-only local base. Both use DocSpec's existing native lifecycle and quality gate. Installed successor qualification remains separate from the focused tests recorded in [implementation status](implementation-status.md).
 
 1. Record the stable operation ID and native request identity before submission. Capture required rules and applicable policy preconditions.
 2. DocSpec admits and prepares a retained candidate through its native lifecycle.
@@ -81,6 +81,8 @@ The implemented local profile covers the independent, unbased typed Build operat
 7. On a lost response, reconcile the original operation. Never create a replacement merely because the caller timed out.
 
 Keep accepted qualification records separate from the candidate's computation identity. A new rule set can qualify already computed values. It must not silently change an admitted request; it needs an explicit qualification request with its own policy binding. Missing, duplicate, stale, wrong-candidate, or incomplete required results cannot qualify selection.
+
+The native command remains `managed-build`; `prepare_update` is a distinct action carrying `update` and `policy`. DDK preserves the original dataset, operation, and native request identity on retry. Native Update owns correction, replacement, explicit deletion, and inherited-row behavior. A completed historical retry returns its original result without selecting it over a successor. A changed base refuses selection. Computed or related groups, Refresh, Backfill, and arbitrary managed SQL require separate profiles and tests.
 
 The quality bridge is an implementation gate. File-backed CLI testing does not prove that the CLI can read an unselected DocSpec candidate directly. First demonstrate a supported exact-version query/view path without an unnecessary export. If unavailable, keep native quality-gated selection unqualified and ship the bounded file-backed path independently. Do not recreate a general quality language in DDK.
 
@@ -94,7 +96,7 @@ The runtime accepts qualification; a caller cannot establish acceptance by writi
 
 ## Saved Substrait in the first product release
 
-Current local DocSpec source pins DataFusion 53.1.0 and has no Substrait job variant or dependency. The earlier DataFusion Python GitHub snapshot is research evidence for a separate candidate, not the execution dependency selected for this design.
+The qualified local DocSpec source pins DataFusion and datafusion-substrait 53.1.0 and supports the bounded saved-plan path. The earlier DataFusion Python GitHub snapshot remains research evidence for a separate candidate.
 
 Run the bounded WP-00B compatibility experiment alongside early core and catalog development to choose a tested Rust DataFusion baseline in DocSpec. WP-09B integrates saved-plan production/consumption through DocSpec's existing context after SQL integration and verifies the final dependency tuple. Reuse applicable experiment evidence and update the baseline when tests justify the change. Apply normalized-plan function and input checks after decoding, and preserve admitted memory/spill/concurrency limits. Parsing a different format must not bypass execution restrictions.
 

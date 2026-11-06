@@ -17,10 +17,11 @@ The source-grounded investigations retain detailed evidence and proposed cases:
 - [Managed operations and publication recovery](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/managed-lifecycle-plan.md).
 - [Native shapes, groups, and field identity](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/native-shape-plan.md).
 - [Exact quality evaluation within memory and scratch limits](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/quality-access-plan.md).
+- [One native job with complete named inputs, outputs and required reports](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/shared-runtime/whole-job-binding-plan.md).
 
 These investigations are static evidence. Their proposed executions have status `not_run`.
 
-The successor source now provides the [admitted catalog API](catalog-api.md), public field-path disclosure, recipe context and parameter ordering, scoped project extensions, and external-target loading. Its focused catalog checks passed. The first managed source-only Update increment has small-case evidence and is undergoing final toolchain and recovery qualification. The [implementation status](implementation-status.md#successor-work) records these narrower results separately from the broader plan below.
+The successor source now provides the [admitted catalog API](catalog-api.md), public field-path disclosure, recipe context and parameter ordering, scoped project extensions, and external-target loading. Its focused catalog checks passed. The first managed source-only Update increment passed the compiler-pinned native gate and focused recovery checks; successor installed qualification remains pending. The [implementation status](implementation-status.md#successor-work) records these narrower results separately from the broader plan below.
 
 ## Owners and shared work
 
