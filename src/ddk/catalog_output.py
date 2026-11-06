@@ -84,9 +84,24 @@ def public_view(catalog, policy, details_key):
     ids = policy["identifiers"]
     if not {catalog["id"], catalog["project"]["id"]} <= ids:
         raise CatalogError("CATALOG-DISCLOSURE", "The public catalog and project identifiers must be permitted.")
+    profile = catalog.get("extensions", {}).get(details_key, {}).get("relationshipProfile")
+    if profile is not None and profile["identity"]["id"] not in ids:
+        raise CatalogError("CATALOG-DISCLOSURE", "The selected relationship profile identifier must be permitted for a public view.")
     view["audience"] = "public"
     view["disclosurePolicy"] = _hide_uri(policy["record"], policy["evidence"])
-    view["extensions"] = {details_key: {"scope": "Only explicitly disclosed catalog records."}}
+    view["extensions"] = {details_key: {"scope": {
+        "disclosure": "Only explicitly disclosed catalog records.", "consumerCoverage": "unknown",
+    }}}
+    if profile is not None:
+        disclosed_profile = {"identity": deepcopy(profile["identity"]), "scope": profile["scope"]}
+        if "source" in profile:
+            disclosed_profile["source"] = _hide_uri(profile["source"], policy["evidence"])
+        view["extensions"][details_key].update({
+            "relationshipProfile": disclosed_profile,
+            "relationshipAssessmentScope": {
+                "status": "unknown", "reason": "Individual assessments and their consumer coverage are withheld by disclosure.",
+            },
+        })
     view["sourceInventory"] = list({
         json_dumps(redacted): redacted for item in view["sourceInventory"]
         if (redacted := _hide_uri(item, policy["evidence"]))
@@ -356,7 +371,7 @@ def _lock(inventory, catalog, exports, metadata_adapter, generated):
              for item in catalog["adapters"]}
     if "catalog.dcat" in exports:
         tools["rdflib"] = {"version": version("rdflib")}
-    roles = {"metadata": "metadata", "policy": "disclosure-policy", "recipe": "recipe"}
+    roles = {"metadata": "metadata", "policy": "disclosure-policy", "recipe": "recipe", "implementation": "implementation"}
     extra = [{"path": item["uri"], "role": roles[item["role"]], "sha256": item["sha256"]}
              for item in catalog["sourceInventory"] if item["role"] in roles]
     lock = build_lock(inventory, tools=tools, extra_files=extra, catalog_options=options)

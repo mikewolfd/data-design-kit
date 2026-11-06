@@ -2395,6 +2395,192 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-CATALOG-041",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-ARCH-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An explicitly supplied profile establishes declaration support for fixed-width native byte keys while preserving ordered composite components and leaving observed matches and qualification absent.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-042",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A fixture-owned profile interprets exact versioned text-to-integer and list-overlap declarations from resolved ordered key definitions. DDK supplies no application rule names or data observations.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-043",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-MODEL-002"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Support external digest-and-suffix reference construction while retaining the external namespace, not_assessed existence, and no version, run or qualification evidence.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-044",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-RESULT-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Unsupported exact rule versions, rule identities, native types and external meanings remain required unknown outcomes with an admitted catalog but no complete output set.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-045",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A release-local virtual key used outside its release scope fails before the application profile can override the shared guard.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RELEASE-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-046",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Untyped, malformed, unsupported-status or empty-reason profile results remain required unknown results and cannot generate a complete output set.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-PROFILE-RESULT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-047",
+      "requirements": [
+        "DDK-CATALOG-001",
+        "DDK-LOCK-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Capture the explicit profile source once per assembly, preserve its original digest and tool identity in catalog and lock, and accept an exact distribution pin without discovering source.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-048",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refuse a public catalog whose selected profile ID is a private file URI without an explicit identifier grant; retain a safe public report, local provenance and the previous complete output.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-DISCLOSURE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-049",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An empty disclosure-only field path grants root descriptions only when descriptions are enabled, without exposing children, native properties or custom metadata.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-050",
+      "requirements": [
+        "DDK-CATALOG-010",
+        "DDK-IMPACT-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Changed profile provenance or declaration assessments require metadata and reader checks only along actually assessed relationships. Preserve unresolved domain effects, unused profiles and relationships outside the snapshot without claiming computation reuse.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-051",
+      "requirements": [
+        "DDK-CATALOG-010"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Reject incoherent profile provenance, mismatched assessment identities, unsupported assessment status or invented external existence during impact comparison.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-IMPACT-PROFILE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-052",
+      "requirements": [
+        "DDK-CATALOG-007",
+        "DDK-CATALOG-010"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Compare two actual generated public catalogs after a selected profile revision or source change. Retain permitted identity and redacted source, withhold private assessments and reasons, and preserve unknown assessment/consumer scope without fabricated reader dependencies.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

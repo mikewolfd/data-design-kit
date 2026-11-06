@@ -6,18 +6,32 @@
     "lineage.openlineage"
   ],
   "verification": {
-    "scope": "Executed catalog assembly, consumer, disclosure, external-reference, and impact tests over independent fixtures. This source-checkout evidence is separate from installed package and native application qualification.",
-    "tests": "tests/catalog tests/core/test_catalog_impact.py tests/core/test_catalog_recipe_metadata.py tests/core/test_external_relationships.py",
-    "passedTests": 71,
-    "passedCases": 40,
+    "scope": "Source-checkout catalog, disclosure, relationship-profile and impact checks over independent fixtures. Installed qualification and native application acceptance are separate.",
+    "tests": "tests/catalog tests/core/test_catalog_impact.py tests/core/test_catalog_recipe_metadata.py tests/core/test_external_relationships.py tests/core/test_catalog_profile_impact.py",
+    "passedTests": 102,
+    "passedCases": 52,
     "statusMeaning": "Verified means that the test exercised the behavior and observed the expected decision and diagnostic. An expected failed or incomplete decision is a verified negative case.",
-    "standards": "RDFLib parses exported DCAT graphs. The pinned OpenLineage schemas validate exported events and version facets. A local independent receiver checks OpenLineage identity and replay."
+    "standards": "RDFLib parses exported DCAT graphs. The pinned OpenLineage schemas validate exported events and version facets. A local independent receiver checks OpenLineage identity and replay.",
+    "incrementalRuns": [
+      {
+        "passedTests": 102,
+        "scope": "Initial relationship profile, disclosure and retained catalog/impact checks."
+      },
+      {
+        "passedTests": 29,
+        "scope": "Changed public profile-identity disclosure and profile/assessment impact, after independent review."
+      },
+      {
+        "passedTests": 32,
+        "scope": "Public profile-provenance impact and private assessment scope, plus the earlier privacy/impact repairs and partial-diagnostic preservation."
+      }
+    ]
   },
   "uncoveredCases": [],
   "unsupportedCapabilities": [
     {
       "capability": "project-rule-execution",
-      "reason": "The shared relationship checker preserves project rule references and reports unknown when evaluation is required. CASE-CATALOG-029 verifies that boundary."
+      "reason": "An explicit application profile may establish support for declared matching or reference construction. DDK does not execute those comparisons or observe matches, cardinality, or remote existence; unsupported shared reasoning remains unknown."
     },
     {
       "capability": "public-openlineage",
@@ -479,6 +493,146 @@
         "tests/core/test_catalog_recipe_metadata.py::test_scoped_unknown_extension_change_is_metadata_with_unresolved_domain_impact"
       ],
       "evidence": "Change one scoped opaque project extension. Record the metadata change and unresolved domain impact without inventing a computation dependency."
+    },
+    {
+      "id": "CASE-CATALOG-041",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_selected_native_width_profile_establishes_only_declared_byte_compatibility",
+        "tests/catalog/test_relationship_profiles.py::test_composite_native_key_order_is_preserved_for_profile_reasoning"
+      ],
+      "evidence": "An explicitly supplied profile establishes declaration support for fixed-width native byte keys while preserving ordered composite components and leaving observed matches and qualification absent."
+    },
+    {
+      "id": "CASE-CATALOG-042",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_versioned_fixture_rules_use_the_resolved_ordered_types_and_list_paths"
+      ],
+      "evidence": "A fixture-owned profile interprets exact versioned text-to-integer and list-overlap declarations from resolved ordered key definitions. DDK supplies no application rule names or data observations."
+    },
+    {
+      "id": "CASE-CATALOG-043",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_external_reference_construction_does_not_observe_existence_or_qualification"
+      ],
+      "evidence": "Support external digest-and-suffix reference construction while retaining the external namespace, not_assessed existence, and no version, run or qualification evidence."
+    },
+    {
+      "id": "CASE-CATALOG-044",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_unknown_exact_rule_versions_types_and_external_meanings_remain_required_unknown"
+      ],
+      "evidence": "Unsupported exact rule versions, rule identities, native types and external meanings remain required unknown outcomes with an admitted catalog but no complete output set."
+    },
+    {
+      "id": "CASE-CATALOG-045",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RELEASE-SCOPE",
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_release_local_virtual_scope_remains_a_ddk_guard"
+      ],
+      "evidence": "A release-local virtual key used outside its release scope fails before the application profile can override the shared guard."
+    },
+    {
+      "id": "CASE-CATALOG-046",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-PROFILE-RESULT",
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_malformed_assessments_remain_required_unknown"
+      ],
+      "evidence": "Untyped, malformed, unsupported-status or empty-reason profile results remain required unknown results and cannot generate a complete output set."
+    },
+    {
+      "id": "CASE-CATALOG-047",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_profile_source_is_read_once_per_refresh_and_locked_with_original_digest",
+        "tests/catalog/test_relationship_profiles.py::test_explicit_distribution_identity_is_retained_without_source_discovery"
+      ],
+      "evidence": "Capture the explicit profile source once per assembly, preserve its original digest and tool identity in catalog and lock, and accept an exact distribution pin without discovering source."
+    },
+    {
+      "id": "CASE-CATALOG-048",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-DISCLOSURE",
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_private_file_profile_identity_requires_an_explicit_public_identifier_grant[False]"
+      ],
+      "evidence": "Refuse a public catalog whose selected profile ID is a private file URI without an explicit identifier grant; retain a safe public report, local provenance and the previous complete output."
+    },
+    {
+      "id": "CASE-CATALOG-049",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_relationship_profiles.py::test_empty_disclosure_path_grants_only_root_descriptions_and_never_native_or_child_metadata"
+      ],
+      "evidence": "An empty disclosure-only field path grants root descriptions only when descriptions are enabled, without exposing children, native properties or custom metadata."
+    },
+    {
+      "id": "CASE-CATALOG-050",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/core/test_catalog_profile_impact.py::test_profile_provenance_changes_recheck_only_actually_assessed_relationships_and_readers",
+        "tests/core/test_catalog_profile_impact.py::test_assessment_status_changes_remain_visible_without_reclassifying_computation",
+        "tests/core/test_catalog_profile_impact.py::test_selected_but_unused_profile_changes_do_not_create_relationship_dependencies",
+        "tests/core/test_catalog_profile_impact.py::test_an_assessed_relationship_outside_the_snapshot_stays_explicitly_unresolved"
+      ],
+      "evidence": "Changed profile provenance or declaration assessments require metadata and reader checks only along actually assessed relationships. Preserve unresolved domain effects, unused profiles and relationships outside the snapshot without claiming computation reuse."
+    },
+    {
+      "id": "CASE-CATALOG-051",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-IMPACT-PROFILE",
+      "tests": [
+        "tests/core/test_catalog_profile_impact.py::test_incoherent_profile_assessments_are_not_silently_compared[provenance]",
+        "tests/core/test_catalog_profile_impact.py::test_incoherent_profile_assessments_are_not_silently_compared[profile]",
+        "tests/core/test_catalog_profile_impact.py::test_incoherent_profile_assessments_are_not_silently_compared[status]",
+        "tests/core/test_catalog_profile_impact.py::test_incoherent_profile_assessments_are_not_silently_compared[existence]"
+      ],
+      "evidence": "Reject incoherent profile provenance, mismatched assessment identities, unsupported assessment status or invented external existence during impact comparison."
+    },
+    {
+      "id": "CASE-CATALOG-052",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/core/test_catalog_profile_impact.py::test_public_profile_changes_preserve_provenance_with_unknown_assessment_and_consumer_scope"
+      ],
+      "evidence": "Compare two actual generated public catalogs after a selected profile revision or source change. Retain permitted identity and redacted source, withhold private assessments and reasons, and preserve unknown assessment/consumer scope without fabricated reader dependencies."
     }
   ],
   "additionalReceiptTests": [

@@ -15,6 +15,7 @@ from .catalog_access import (
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
+from .catalog_semantics import admit_profile, resolved_key, resolved_relationship
 from .core import check_inventory, load_project
 from .documents import (
     FORMAT_CHECKER, OPENLINEAGE_SCHEMA, OPENLINEAGE_VERSION_FACET, ODCS_SCHEMA, ODPS_SCHEMA, REPOSITORY,
@@ -89,6 +90,24 @@ class Assembly:
         self.policy = None
         self.catalog = None
         self.files = {}
+        self.relationship_profile = None
+        self.relationship_assessments = []
+
+    def select_relationship_profile(self, profile):
+        if profile is None:
+            return
+        self.relationship_profile = admit_profile(profile, self.inventory)
+        selected = self.relationship_profile
+        record = {"identity": deepcopy(selected.identity), "scope": "declaration-support-only"}
+        if selected.source is not None:
+            record["source"] = owner_record(selected.source)
+            self.remember(record["source"], "implementation")
+        self.report.metadata["relationshipProfile"] = record
+        self.report.metadata["relationshipAssessments"] = self.relationship_assessments
+        self.report.mapping_limits.add(
+            "Selected relationship profiles assess declared semantics only. Actual matches, cardinality, external existence, "
+            "and data qualification require separate evidence. Supplied implementation provenance does not establish its dependency closure."
+        )
 
     def check(self, step, subject, error=None, *, path=None, required=None, evidence="inferred",
               related=(), evidence_records=()):
@@ -284,7 +303,7 @@ class Assembly:
             for key_path in endpoint["paths"]:
                 field = field_at(self.dataset_schemas[alias], key_path)
                 if field is not None:
-                    fields.append(field_type(field))
+                    fields.append(resolved_key(key_path, field))
                     continue
                 virtual = {(identity["scope"], item["physicalType"]) for identity in self.identities[alias]
                            for item in identity["fields"] if item["virtual"] and item["path"] == key_path}
@@ -295,7 +314,7 @@ class Assembly:
                 scope, physical = next(iter(virtual))
                 if scope == "release" and row["scope"] != "same_release":
                     raise CatalogError("CATALOG-RELEASE-SCOPE", "A release-local identity requires the same exact release.")
-                fields.append(field_type({"physicalType": physical, "logicalType": physical}))
+                fields.append(resolved_key(key_path, {"physicalType": physical, "logicalType": physical}, scope))
             keys[side] = fields
         if "target" in keys:
             if len(keys["source"]) != len(keys["target"]):
@@ -308,14 +327,33 @@ class Assembly:
                     endpoint["paths"] == [field["path"] for field in identity["fields"]] for identity in identities
                 ):
                     raise CatalogError("CATALOG-KEY-INCOMPLETE", "The unique endpoint needs its full declared key in order.")
-            if row["match"] == "equal" and all((*keys["source"], *keys["target"])) and keys["source"] != keys["target"]:
+            if row["match"] == "equal" and any(
+                left.shared_type is not None and right.shared_type is not None and left.shared_type != right.shared_type
+                for left, right in zip(keys["source"], keys["target"])
+            ):
                 raise CatalogError("CATALOG-KEY-TYPE", "Equal key components need compatible declared types.")
         error = None
         if row["match"] == "project_rule" or row["nulls"] == "unknown" or any(
-            kind is None for parts in keys.values() for kind in parts
+            field.shared_type is None for parts in keys.values() for field in parts
         ) or "target" not in keys:
             error = CatalogError("CATALOG-MATCH-UNSUPPORTED", "The relationship needs reasoning beyond the shared equality profile.",
                                  status="unknown")
+            if self.relationship_profile is not None and row["nulls"] != "unknown":
+                try:
+                    assessment = self.relationship_profile.assess(resolved_relationship(row, keys))
+                    error = None if assessment.status == "supported" else CatalogError(
+                        "CATALOG-PROFILE-INCOMPATIBLE" if assessment.status == "failed" else "CATALOG-PROFILE-UNSUPPORTED",
+                        assessment.reason, status="failed" if assessment.status == "failed" else "unknown",
+                    )
+                    status, reason = assessment.status, assessment.reason
+                except CatalogError as exc:
+                    error = exc
+                    status, reason = "unknown", str(exc)
+                self.relationship_assessments.append({
+                    "relationship": identifier, "profile": deepcopy(self.relationship_profile.identity),
+                    "status": status, "reason": reason, "scope": "declaration-support-only",
+                    **({"externalExistence": "not_assessed"} if "target" not in keys else {}),
+                })
         self.check("relationships", identifier, error, path=path)
         self.relationships[identifier] = row
 
@@ -373,6 +411,10 @@ class Assembly:
                 for namespace, document in sorted(self.inventory.projects.items()) if document.value.get("extensions")
             ],
         }
+        if self.relationship_profile is not None:
+            details["relationshipProfile"] = deepcopy(self.report.metadata["relationshipProfile"])
+            details["relationshipAssessments"] = sorted(self.relationship_assessments, key=json_dumps)
+            self.report.metadata["relationshipAssessments"] = details["relationshipAssessments"]
         if self.metadata:
             details["recordOwners"] = self.metadata.owners
             details["registeredRunInputs"] = self.metadata.bound_inputs
@@ -404,6 +446,8 @@ class Assembly:
 
     def adapters(self):
         yield {"id": "ddk.catalog", "version": VERSION}
+        if self.relationship_profile is not None:
+            yield deepcopy(self.relationship_profile.identity)
         if self.metadata:
             yield self.metadata.adapter
         if "catalog.dcat" in self.exports:
@@ -553,7 +597,7 @@ class Assembly:
 
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                     permitted_roots=(), limits=None):
+                     permitted_roots=(), limits=None, relationship_profile=None):
     """Load once and return admitted metadata with its report and companions.
 
     An admitted view remains inspectable when qualification is incomplete or
@@ -588,6 +632,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         products = assembly.definitions()
         assembly.check("products", "ports")
         step = "relationships"
+        assembly.select_relationship_profile(relationship_profile)
         assembly.declarations()
         step = "metadata"
         if metadata is not None or metadata_adapter is not None:
@@ -688,10 +733,11 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
 
 def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                   current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                  permitted_roots=(), limits=None):
+                  permitted_roots=(), limits=None, relationship_profile=None):
     """Build and optionally publish a catalog; return its checking report."""
     return assemble_catalog(
         project_path, metadata=metadata, metadata_adapter=metadata_adapter, exports=exports, output=output,
         current_selection=current_selection, disclosure_policy=disclosure_policy, audience=audience,
         required_groups=required_groups, permitted_roots=permitted_roots, limits=limits,
+        relationship_profile=relationship_profile,
     ).local_report

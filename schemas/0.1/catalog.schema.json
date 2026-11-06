@@ -180,6 +180,11 @@
       "type": "array",
       "items": {"$ref": "common.schema.json#/$defs/identifier"}
     },
+    "disclosureFieldPath": {
+      "description": "An explicit disclosure path; the empty path grants root descriptions without child fields.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/fieldPath/items"}
+    },
     "disclosurePolicy": {
       "type": "object",
       "properties": {
@@ -198,7 +203,7 @@
           "propertyNames": {"$ref": "common.schema.json#/$defs/identifier"},
           "additionalProperties": {
             "type": "array",
-            "items": {"$ref": "#/$defs/fieldPath"},
+            "items": {"$ref": "#/$defs/disclosureFieldPath"},
             "uniqueItems": true
           }
         },
@@ -1224,7 +1229,8 @@
             "policy",
             "schema",
             "recipe",
-            "capability"
+            "capability",
+            "implementation"
           ]
         }
       },

@@ -204,6 +204,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Verify locked runs before using caches. Detect a changed transitive definition and a changed resolver or schema revision.
 - Compare explicit base and candidate catalogs by identity. Separate content changes, declared version changes, and optionally formatting-only differences.
 - Compute affected consumers using the union of base and candidate dependency relationships; removed edges must not hide former consumers.
+- Compare selected relationship-profile provenance and assessments as well as declarations. Require metadata and reader checks for affected relationships while preserving unknown domain effects and separate computation obligations.
 - Revalidate candidate calls and report paths from changed declarations to affected consumers.
 - Apply supported acceptance-direction and output-direction containment. Return unknown for unsupported non-weakening questions.
 
@@ -312,6 +313,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Expose the admitted catalog, audience-safe report, and exact companion bytes from the same assembly. Preserve incomplete qualification and generate complete controls only for passing results. Support explicitly scoped definition and extension disclosure without reconstructing application metadata from source files.
 - Implement an explicitly selected local metadata adapter that reads actual staging, DocSpec execution, and quality receipts from the reference workflow. Preserve each observed fact's owner, exact identity, coverage, and custody. Illustrative example receipts qualify shape tests only.
 - Add independent nested/list paths, binary and composite keys, scoped row positions, and wrong-release negatives without project-specific consumers.
+- Allow an explicitly supplied application profile to reason about additional declared relationships after shared structural guards. Retain its exact provenance, preserve unsupported reasoning, and keep data observations and external existence outside this static interface.
 - Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Verify deterministic refresh with zero data-payload opens or repeated data checks.
 
 **Acceptance.** A local reader binds an exact checked output through the generated catalog, and definition-only generation leaves availability unresolved. Source, run, quality, and access references identify the same output and retain their separate assurance. One definition change propagates to the affected generated outputs and obligations.

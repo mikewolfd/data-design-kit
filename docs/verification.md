@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 6, 2026 relationship-profile source checks
+
+The pending catalog increment adds explicitly supplied application relationship reasoning and root-only description grants. Independent review found and repaired three gaps: ungranted tool IDs in public output, omitted profile/assessment changes in impact, and loss of public profile provenance during disclosure. The [latest focused capture](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/relationship-profile-rereview/attempt-2.junit.xml) passed 32 changed-boundary cases in 2.60 seconds. Its [checkpoint](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/relationship-profile-rereview/source-checkpoint-2.json) identifies the seven implementation, schema, and test files. The earlier 29-case repair capture remains separate.
+
+Public comparisons retain the permitted profile identity and redacted source while marking private assessment and consumer scope unknown. Local comparisons follow only actually assessed relationships and their readers. Source metadata is read once per assembly; sorting occurs at finalization, with partial local diagnostics preserved. These checks establish the named behaviors, not a throughput improvement, installed qualification, or runtime relationship evaluation.
+
+Cases `CASE-CATALOG-041` through `CASE-CATALOG-052` register the new independent expectations. Managed Update and streaming native quality remain separate, unqualified work.
+
 ## November 6, 2026 dev3 installed catalog qualification
 
 The [dev3 catalog increment](local-release-dev3.md) passed 266 installed tests with zero failures, errors, or skips and 11 RDFLib warnings. Its [qualification report](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/catalog-successor/distribution/qualified-02/release-qualification.ddk.json) passes 165 case/profile combinations covering 148 cases and 13 declared profiles. Two builds produced identical wheel bytes from source `3823b24c2fff08da4da3ad7f6c6b79903ef2b372`. Source and external inputs remained unchanged. Core-only identity and locked checking passed separately.

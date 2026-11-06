@@ -156,6 +156,7 @@ class Snapshot:
                     self.link(self.datasets.get(alias), node, alias)
                 else:
                     self.unresolved.add(row[side].get("externalDataset", row["id"]))
+        self.relationship_semantics(details)
         for row in value["recipes"]:
             node = self.add("recipe", row["id"], row["id"], {
                 **row, "sqlDigest": recipe_digests.get(row["sql"]),
@@ -220,6 +221,53 @@ class Snapshot:
                 self.unevidenced_rules.add(identity)
                 self.unresolved.add(identity)
 
+    def relationship_semantics(self, details):
+        profile = details.get("relationshipProfile")
+        assessments = details.get("relationshipAssessments", [])
+        assessment_scope = details.get("relationshipAssessmentScope")
+        if not isinstance(assessments, list) or (profile is None and (assessments or assessment_scope is not None)):
+            raise DocumentError("CATALOG-IMPACT-PROFILE", "Relationship assessments need an explicitly selected profile.")
+        if profile is None:
+            return
+        registry, schemas, _ = schema_registry()
+        tool = schema_validator({"$ref": f"{schemas['common']['$id']}#/$defs/toolIdentity"}, resource_registry=registry)
+        source = schema_validator({"$ref": f"{schemas['catalog']['$id']}#/$defs/inputFile"}, resource_registry=registry)
+        if (not isinstance(profile, dict) or not tool.is_valid(profile.get("identity"))
+                or profile.get("scope") != "declaration-support-only"):
+            raise DocumentError("CATALOG-IMPACT-PROFILE", "A selected relationship profile needs its exact identity and declaration scope.")
+        identity = profile["identity"]
+        if "source" in profile:
+            if not isinstance(profile["source"], dict) or not source.is_valid({**profile["source"], "role": "implementation"}):
+                raise DocumentError("CATALOG-IMPACT-PROFILE", "A profile source needs its original URI and byte digest.")
+        elif not {"commit", "distributionSha256"} & identity.keys():
+            raise DocumentError("CATALOG-IMPACT-PROFILE", "A selected relationship profile lacks implementation provenance.")
+        profile_value = profile
+        if assessment_scope is not None:
+            if (not isinstance(assessment_scope, dict) or assessment_scope.get("status") != "unknown" or assessments
+                    or not isinstance(assessment_scope.get("reason"), str) or not assessment_scope["reason"].strip()):
+                raise DocumentError("CATALOG-IMPACT-PROFILE", "Withheld assessment scope must remain explicitly unknown without individual assessments.")
+            profile_value = {**profile, "assessmentScope": assessment_scope}
+            self.unresolved.add(_identity("relationship-assessment-scope", identity["id"]))
+        profile_node = self.add("relationship-profile", identity["id"], identity["id"], profile_value, identity["version"])
+        self.unresolved.add(identity["id"])
+        for assessment in assessments:
+            if (not isinstance(assessment, dict) or not isinstance(assessment.get("relationship"), str)
+                    or not isinstance(assessment.get("status"), str) or assessment["status"] not in {"supported", "failed", "unknown"}
+                    or not isinstance(assessment.get("reason"), str) or not assessment["reason"].strip()
+                    or assessment.get("scope") != "declaration-support-only"
+                    or not json_equal(assessment.get("profile"), identity)
+                    or assessment.get("externalExistence", "not_assessed") != "not_assessed"):
+                raise DocumentError("CATALOG-IMPACT-PROFILE", "A relationship assessment must retain its selected profile, status, and declaration scope.")
+            relationship = assessment["relationship"]
+            record_id = _identity("relationship-assessment", relationship)
+            node = self.add("relationship-assessment", relationship, record_id, assessment)
+            self.link(profile_node, node, identity["id"])
+            target = ("relationship", relationship)
+            self.link(node, target if target in self.records else None, relationship)
+            # Static support identifies affected readers, without establishing
+            # domain computation or qualification effects outside this inventory.
+            self.unresolved.add(record_id)
+
     def add(self, kind, key, identity, value, revision=None):
         node = (kind, key)
         if node in self.records:
@@ -239,7 +287,8 @@ class Snapshot:
 
 def _change(kind, key, old, new, base, candidate):
     consequences = {METADATA}
-    if kind in {"representation", "publisher-release", "publisher-selection", "discovery-selector", "recipe", "relationship"}:
+    if kind in {"representation", "publisher-release", "publisher-selection", "discovery-selector", "recipe", "relationship",
+                "relationship-profile", "relationship-assessment"}:
         consequences.add(REBIND)
     if kind == "requested-quality" and new is not None and (
         old is None or not json_equal(old.value["rules"], new.value["rules"]) or not new.value["matchingPasses"]
@@ -441,8 +490,14 @@ def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), req
                 "identity": identity, "obligations": consequences,
                 "computation": "review-required" if COMPUTE in consequences else "unaffected-by-this-change",
             }
+            if kind in {"relationship-profile", "relationship-assessment"}:
+                details[f"{kind}:{key}"].update({
+                    "computation": "unknown",
+                    "domainEffects": {"status": "unknown", "reason":
+                                      "Declaration reasoning identifies reader rechecks; domain computation and qualification effects require their owners."},
+                })
             if kind in {"native-version", "representation", "publisher-release", "publisher-selection", "requested-quality",
-                        "project-extension"}:
+                        "project-extension", "relationship-profile", "relationship-assessment"}:
                 details[f"{kind}:{key}"].update({
                     "baseRecord": base_record.value if base_record else None,
                     "candidateRecord": candidate_record.value if candidate_record else None,
