@@ -2583,6 +2583,83 @@
       }
     },
     {
+      "id": "CASE-CATALOG-053",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Explicit physical-type grants with complete modeled-subtree disclosure preserve the exact native string, including native-only names. Declared objects and arrays remain composite without modeled children; nested permissions preserve only their admitted type values.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-054",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Complete logical field disclosure without explicit opaque-type permission still withholds composite native text. Root metadata grants reveal no root native type, while existing scalar disclosure remains exact.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-055",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A missing or hidden dataset, absent or blank type, invalid or root path, or incomplete modeled-subtree permission refuses public disclosure. A partial field grant plus a composite type grant preserves the previous complete output set.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-DISCLOSURE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-056",
+      "requirements": [
+        "DDK-CATALOG-001",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Return private full metadata and the public view from the same captured source and one metadata read. Later source changes or private result mutations cannot change public metadata or make it disagree with the retained artifact bytes.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-057",
+      "requirements": [
+        "DDK-CATALOG-007",
+        "DDK-RESULT-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An unresolved required qualification keeps admitted private metadata available while public artifacts remain unavailable and the report incomplete. A separate structural failure leaves both catalogs absent.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": null
+      }
+    },
+    {
       "id": "CASE-MANAGED-UPDATE-CORRECTION",
       "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-013", "DDK-LOCK-005", "DDK-RESULT-006"],
       "profile": "runtime.docspec-managed",

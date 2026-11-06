@@ -15,6 +15,7 @@ result = assemble_catalog(
 | --- | --- |
 | `report` | Check outcomes and diagnostics safe for the requested audience |
 | `local_report` | Full internal diagnostics; keep these local |
+| `local_catalog` | Full admitted metadata from the same assembly, before disclosure; keep this private |
 | `catalog` | Structurally admitted, audience-filtered catalog, or `None` when admission failed |
 | `companions` | Immutable mapping of catalog-relative paths to exact admitted SQL and other companion bytes |
 | `artifacts` | Immutable mapping containing the complete standard output set, populated only when the report passes |
@@ -22,6 +23,8 @@ result = assemble_catalog(
 An admitted catalog can accompany `failed`, `unknown`, or `not_run` qualification. Check the report before treating data as qualified. `artifacts` includes `catalog.ddk.json`, `catalog.report.json`, `catalog.lock.json`, and the requested companions. Passing these files to a publisher does not replace that publisher's authority or DocSpec's guarded selection.
 
 The existing `build_catalog` function delegates to the same assembly and returns `local_report` for compatibility. Supplying `output` uses the existing atomic directory writer and the same prepared bytes. A missing required result leaves the prior output set intact. Callers do not need to rebuild source definitions or reopen SQL to construct discovery metadata.
+
+Use `local_catalog` for private writer validation that needs complete definitions while `catalog` supplies the public view. Both come from the same captured source snapshot. A public disclosure failure can leave the admitted private metadata available; structural admission failure leaves it `None`. This private field does not prepare another output set, and its presence does not establish qualification. `companions` and `artifacts` continue to follow the requested audience.
 
 ## Recipes and definitions
 
@@ -61,11 +64,25 @@ This fragment adds grants to the ordinary policy. A field grant keeps selected f
 
 Use `definitionFields: {"urn:example:dataset": [[]]}` to grant root metadata only. With `descriptions: true`, this includes the root description without granting any child field or native/custom property. Empty paths remain invalid for identities and relationships.
 
+Composite native type strings require a separate explicit grant:
+
+```json
+{
+  "definitionPhysicalTypes": {
+    "urn:example:dataset": [[{"field": "agencies"}]]
+  }
+}
+```
+
+Each nonempty path must resolve to an existing, nonblank `physicalType` in a disclosed dataset definition. Its complete modeled subtree must already appear through `definitionFields`; a parent field grant alone does not grant its children. An incoherent grant fails disclosure and preserves prior output. DDK copies the original type string exactly, without parsing or rewriting it.
+
+This grant permits the entire opaque string, including any native-only names absent from the logical definition. The publisher must review that text. Modeled child coverage alone never permits it or establishes logical/native completeness. Object and array nodes remain composite even when their children are not modeled. Root `[]` grants no native type. Existing scalar type disclosure remains unchanged.
+
 A public view using a relationship profile must explicitly grant the profile's exact identity ID in `identifiers`. Otherwise public assembly refuses output and preserves the full reason in `local_report`. This applies even when the ID is a `file://` URI: allowing its source record alone does not disclose its tool identity. Ordinary evidence policy still governs captured source locations.
 
 Public output retains the granted profile identity and redacted source provenance so impact analysis can detect changes. Individual assessments and reasons stay withheld, with `relationshipAssessmentScope` explicitly unknown. Public consumer coverage also remains unknown; the comparison cannot infer private relationship or reader dependencies.
 
-Use `report` for public responses, including early and incomplete failures. `local_report` can contain paths and private diagnostic details and must stay internal.
+Use `report` for public responses, including early and incomplete failures. `local_report` and `local_catalog` can contain paths and private details and must stay internal.
 
 ## Required candidate integration
 

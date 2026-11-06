@@ -41,8 +41,9 @@ DETAILS = "urn:ddk:catalog:assembly"
 class CatalogResult:
     """One assembly's report, admitted view, and exact retained companion bytes.
 
-    ``report`` follows the requested audience; ``local_report`` retains internal
-    diagnostics and must not be published. ``catalog`` is absent when structural
+    ``report`` follows the requested audience; ``local_report`` and
+    ``local_catalog`` retain private diagnostics and the full admitted metadata
+    and must not be published. ``catalog`` is absent when structural
     admission did not complete. Its
     presence does not establish qualification: callers must preserve ``report``
     and its check outcomes. Companions use the paths inventoried by the catalog;
@@ -56,12 +57,13 @@ class CatalogResult:
     companions: Mapping[str, bytes]
     artifacts: Mapping[str, bytes]
     local_report: dict
+    local_catalog: dict | None = None
 
 
-def _result(report, catalog=None, companions=None, artifacts=None, *, public=False):
+def _result(report, catalog=None, companions=None, artifacts=None, *, public=False, local_catalog=None):
     view_report = public_report(report, catalog) if public else report
     return CatalogResult(view_report, catalog, companions or MappingProxyType({}),
-                         artifacts or MappingProxyType({}), report)
+                         artifacts or MappingProxyType({}), report, local_catalog)
 
 
 def _bytes(value):
@@ -623,6 +625,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     if report.missing_capabilities:
         return _result(report.build(), public=public)
     admitted = None
+    local_admitted = None
     companions = MappingProxyType({})
     artifacts = MappingProxyType({})
     step = "products"
@@ -687,6 +690,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         report.completed_profiles.add("catalog")
         step = "qualification"
         assembly.qualify()
+        local_admitted = assembly.catalog
         step = "assembly"
         if assembly.policy is not None:
             assembly.catalog, omitted_recipes = public_view(assembly.catalog, assembly.policy, DETAILS)
@@ -718,7 +722,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 assembly.metadata.adapter if assembly.metadata else None, inventory,
                 prepared=prepared,
             )
-        return _result(report.build(), admitted, companions, artifacts, public=public)
+        return _result(report.build(), admitted, companions, artifacts, public=public, local_catalog=local_admitted)
     except (CatalogError, DocumentError) as exc:
         error = exc if isinstance(exc, CatalogError) else CatalogError(exc.code, str(exc), exc.pointer)
         assembly.check(step, "build", error, path=failure_path, required=True, related=error.related)
@@ -728,7 +732,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     if admitted is not None:
         admitted["files"] = [{"path": name, "role": role, "sha256": sha256(data).hexdigest()}
                              for name, (role, data) in sorted(assembly.files.items())]
-    return _result(report.build(), admitted, companions, public=public)
+    return _result(report.build(), admitted, companions, public=public, local_catalog=local_admitted)
 
 
 def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,

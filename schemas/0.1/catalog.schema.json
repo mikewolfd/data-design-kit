@@ -207,6 +207,15 @@
             "uniqueItems": true
           }
         },
+        "definitionPhysicalTypes": {
+          "type": "object",
+          "propertyNames": {"$ref": "common.schema.json#/$defs/identifier"},
+          "additionalProperties": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/fieldPath"},
+            "uniqueItems": true
+          }
+        },
         "projectExtensions": {
           "type": "array",
           "items": {

@@ -105,7 +105,7 @@
       "specVersion": "0.1",
       "status": "experimental-unverified",
       "tools": {},
-      "version": "0.1.0-dev.4"
+      "version": "0.1.0-dev.5"
     },
     {
       "capabilities": [
@@ -226,7 +226,7 @@
       "specVersion": "0.1",
       "status": "experimental-unverified",
       "tools": {},
-      "version": "0.1.0-dev.4"
+      "version": "0.1.0-dev.5"
     },
     {
       "capabilities": [
@@ -359,13 +359,14 @@
           },
           "group": "runtime.managed",
           "limitations": [
-            "Trusted local operator; one source-only Build on local Iceberg/SQLite; arbitrary managed SQL and remote backends are unavailable."
+            "Trusted local operator; independent source-only Build and based Update on local Iceberg/SQLite; computed/related groups, arbitrary managed SQL and remote backends are unavailable."
           ],
           "nativeReferenceSchemes": [
             "urn:docspec:version-ref"
           ],
           "operations": [
             "prepare",
+            "prepare-update",
             "inspect",
             "accept-qualification",
             "guarded-select",
@@ -375,7 +376,8 @@
           "qualityAccess": "native",
           "reconciliation": "supported",
           "requestKinds": [
-            "source-only-build"
+            "source-only-build",
+            "source-only-update"
           ],
           "semanticProfiles": [
             {
@@ -422,7 +424,7 @@
       "specVersion": "0.1",
       "status": "experimental-unverified",
       "tools": {},
-      "version": "0.1.0-dev.4"
+      "version": "0.1.0-dev.5"
     },
     {
       "capabilities": [
@@ -484,7 +486,7 @@
       "specVersion": "0.1",
       "status": "experimental-unverified",
       "tools": {},
-      "version": "0.1.0-dev.4"
+      "version": "0.1.0-dev.5"
     },
     {
       "capabilities": [
@@ -538,7 +540,7 @@
       "specVersion": "0.1",
       "status": "experimental-unverified",
       "tools": {},
-      "version": "0.1.0-dev.4"
+      "version": "0.1.0-dev.5"
     }
   ]
 }

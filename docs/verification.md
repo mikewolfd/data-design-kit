@@ -1,5 +1,15 @@
 # DDK verification
 
+## November 6, 2026 public native-type source checkpoint
+
+The [final source checkpoint](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/public-physical-types/source-checkpoint-alias-fixed.json) identifies the six changed implementation, schema, test and documentation files. All 23 final focused cases passed in 3.19 seconds: 20 native-type and private/public-view cases plus three existing profile-disclosure controls. Independent review found a shared profile-source object between private and public results. The new isolation probe failed before the one-record copy repair and passed afterward. Both outcomes remain in the checkpoint; greybeard and ETL reviewers closed the finding.
+
+Earlier source evidence retains 110 broader catalog passes and the actual frozen SpicyGov request replay with an explicit type grant. The original dev4 request remains unchanged. The adapted replay preserves the exact nested native type, refuses incomplete disclosure, and preserves prior output on refusal. These checks establish behavior, not installed qualification or a measured performance gain. Assembly captures the source once and reads its metadata once; the private and public results remain separate mutable objects.
+
+Cases `CASE-CATALOG-053` through `CASE-CATALOG-057` register the independent expectations and maintained selectors. Version `0.1.0-dev.5` declares this work and the separately checked managed Update increment for successor qualification. Streaming quality and whole-job preparation remain outside this package candidate.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/managed-public-dev5/document-audit-01/document-audit.json) passed 16 schema shapes, five adapter declarations, nine upstream identities, and traceability for all 94 requirements, 17 work packages, 173 registered cases and 189 maintained test selectors. Document checks remain separate from runtime evidence.
+
 ## November 6, 2026 managed Update source checkpoint
 
 DocSpec commit `d96e00172d7d4be26da4532cda35aa05f2a3709e` passed the required `scripts/check` gate with explicit Rust 1.94. The [final handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/final-handoff.json) identifies the committed tree and retained executable. The [gate log](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/gate-source09.log) records 457 unit passes with 15 intentional ignores, 447 integration passes with two intentional ignores, 21 process-suite passes, 11 example passes, and 31 Dagster passes. The run completed in 1,056.37 seconds. Five-second samples observed peak owned-process RSS of 3,330,932,736 bytes and minimum free space of 96,394,432,512 bytes; these samples are not a hard memory guarantee. The gate-tested full binary has SHA-256 `72f3aea76d102809b18c3cbc2187b4e4a1136966030b82296ab5043c3f50ed83`.

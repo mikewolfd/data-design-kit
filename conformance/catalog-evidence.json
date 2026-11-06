@@ -633,6 +633,67 @@
         "tests/core/test_catalog_profile_impact.py::test_public_profile_changes_preserve_provenance_with_unknown_assessment_and_consumer_scope"
       ],
       "evidence": "Compare two actual generated public catalogs after a selected profile revision or source change. Retain permitted identity and redacted source, withhold private assessments and reasons, and preserve unknown assessment/consumer scope without fabricated reader dependencies."
+    },
+    {
+      "id": "CASE-CATALOG-053",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_definition_physical_types.py::test_complete_modeled_fields_and_explicit_grant_preserve_the_independent_native_string",
+        "tests/catalog/test_definition_physical_types.py::test_native_only_names_require_explicit_opaque_permission_and_never_create_logical_children",
+        "tests/catalog/test_definition_physical_types.py::test_declared_composites_without_modeled_children_still_need_explicit_permission",
+        "tests/catalog/test_definition_physical_types.py::test_nested_object_and_array_permissions_preserve_only_their_exact_native_values"
+      ],
+      "evidence": "Explicit physical-type grants with complete modeled-subtree disclosure preserve the exact native string, including native-only names. Declared objects and arrays remain composite without modeled children; nested permissions preserve only their admitted type values."
+    },
+    {
+      "id": "CASE-CATALOG-054",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_definition_physical_types.py::test_complete_modeled_fields_without_type_permission_still_withhold_the_opaque_type",
+        "tests/catalog/test_definition_physical_types.py::test_root_metadata_and_existing_scalar_disclosure_do_not_grant_root_native_type"
+      ],
+      "evidence": "Complete logical field disclosure without explicit opaque-type permission still withholds composite native text. Root metadata grants reveal no root native type, while existing scalar disclosure remains exact."
+    },
+    {
+      "id": "CASE-CATALOG-055",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-DISCLOSURE",
+      "tests": [
+        "tests/catalog/test_definition_physical_types.py::test_partial_type_grant_fails_safely_and_preserves_the_previous_output_set",
+        "tests/catalog/test_definition_physical_types.py::test_incoherent_native_type_permissions_refuse_public_output"
+      ],
+      "evidence": "A missing or hidden dataset, absent or blank type, invalid or root path, or incomplete modeled-subtree permission refuses public disclosure. A partial field grant plus a composite type grant preserves the previous complete output set."
+    },
+    {
+      "id": "CASE-CATALOG-056",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_definition_physical_types.py::test_private_and_public_views_use_one_captured_source_and_one_metadata_read",
+        "tests/catalog/test_definition_physical_types.py::test_permitted_profile_source_is_isolated_between_private_and_public_views"
+      ],
+      "evidence": "Return private full metadata and the public view from the same captured source and one metadata read. Later source changes or private result mutations cannot change public metadata or make it disagree with the retained artifact bytes."
+    },
+    {
+      "id": "CASE-CATALOG-057",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_definition_physical_types.py::test_private_catalog_keeps_unresolved_qualification_and_rejects_structural_failure"
+      ],
+      "evidence": "An unresolved required qualification keeps admitted private metadata available while public artifacts remain unavailable and the report incomplete. A separate structural failure leaves both catalogs absent."
     }
   ],
   "additionalReceiptTests": [

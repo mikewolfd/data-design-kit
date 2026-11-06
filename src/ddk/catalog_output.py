@@ -32,6 +32,7 @@ def read_disclosure(document):
     policy = {field: frozenset(value.get(field, [])) for field in POLICY_LISTS}
     policy["descriptions"] = value.get("descriptions", False)
     policy["definitionFields"] = deepcopy(value.get("definitionFields", {}))
+    policy["definitionPhysicalTypes"] = deepcopy(value.get("definitionPhysicalTypes", {}))
     extensions = value.get("projectExtensions", [])
     seen = set()
     for entry in extensions:
@@ -49,7 +50,8 @@ def _definition_view(definition, paths, descriptions):
     result = {key: deepcopy(value) for key, value in definition.items() if key in FIELD_SHAPE}
     # A composite physical spelling can embed unlisted child names. Scalar
     # physical types remain exact; recursive logical structure describes parents.
-    if "physicalType" in definition and not {"properties", "items"} & definition.keys():
+    composite = definition.get("logicalType") in {"object", "array"} or bool({"properties", "items"} & definition.keys())
+    if "physicalType" in definition and not composite:
         result["physicalType"] = definition["physicalType"]
     if descriptions and [] in paths:
         result.update({key: deepcopy(value) for key, value in definition.items() if key in FIELD_DESCRIPTIONS})
@@ -64,6 +66,14 @@ def _definition_view(definition, paths, descriptions):
     if elements:
         result["items"] = _definition_view(definition["items"], elements, descriptions)
     return result
+
+
+def _subtree_disclosed(definition, view):
+    """Check modeled children only; opaque native text has its own explicit grant."""
+    return view is not None and all(
+        _subtree_disclosed(field, field_at(view, [{"field": field["name"]}]))
+        for field in definition.get("properties", ())
+    ) and ("items" not in definition or _subtree_disclosed(definition["items"], field_at(view, [{"each": True}])))
 
 
 def _hide_uri(record, allowed):
@@ -95,7 +105,7 @@ def public_view(catalog, policy, details_key):
     if profile is not None:
         disclosed_profile = {"identity": deepcopy(profile["identity"]), "scope": profile["scope"]}
         if "source" in profile:
-            disclosed_profile["source"] = _hide_uri(profile["source"], policy["evidence"])
+            disclosed_profile["source"] = _hide_uri(deepcopy(profile["source"]), policy["evidence"])
         view["extensions"][details_key].update({
             "relationshipProfile": disclosed_profile,
             "relationshipAssessmentScope": {
@@ -146,9 +156,22 @@ def public_view(catalog, policy, details_key):
             raise CatalogError("CATALOG-DISCLOSURE", "An allowed definition field path does not resolve.")
         if paths:
             disclosed_definitions[aliases[alias]] = _definition_view(definition, paths, policy["descriptions"])
+            disclosed_definitions[aliases[alias]].pop("physicalType", None)
             disclosed_definitions[aliases[alias]]["name"] = next(
                 row["definition"]["object"] for row in datasets if row["id"] == identifier)
             disclosed_paths[aliases[alias]] = deepcopy(paths)
+    for identifier, paths in policy["definitionPhysicalTypes"].items():
+        alias = dataset_ids.get(identifier)
+        definition = authored_details.get("datasetDefinitions", {}).get(alias)
+        disclosed = disclosed_definitions.get(aliases.get(alias))
+        if definition is None or disclosed is None:
+            raise CatalogError("CATALOG-DISCLOSURE", "A physical type grant must name a disclosed dataset definition.")
+        for path in paths:
+            field, visible = field_at(definition, path), field_at(disclosed, path)
+            if (field is None or not isinstance(field.get("physicalType"), str) or not field["physicalType"].strip()
+                    or not _subtree_disclosed(field, visible)):
+                raise CatalogError("CATALOG-DISCLOSURE", "A physical type grant needs an existing type and complete modeled-subtree disclosure.")
+            visible["physicalType"] = field["physicalType"]
     if disclosed_definitions:
         details["datasetDefinitions"] = disclosed_definitions
         details["disclosedDefinitionPaths"] = disclosed_paths
