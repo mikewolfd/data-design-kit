@@ -242,9 +242,9 @@ export default function Workspace() {
         </a>
         <div className="header-context">
           <span className="header-dot" aria-hidden="true" />
-          Local preview
+          <span>Local preview</span>
           <span className="header-divider" />
-          Data Design Kit
+          <span>Data Design Kit</span>
         </div>
       </header>
       <div className="app-layout">

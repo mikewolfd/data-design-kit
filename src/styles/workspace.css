@@ -894,6 +894,7 @@ main:focus {
   display: flex;
   gap: 12px;
   align-items: center;
+  white-space: nowrap;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   padding: 2px 5px;
