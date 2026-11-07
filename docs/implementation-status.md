@@ -12,7 +12,9 @@ The optional `managed_job(..., snapshot_source=path)` forwards a private source 
 
 The qualified native paths preserve original operation and version identities across lost responses and cold recovery. Accepted proof-to-model bindings preserve source order, field identities, exact custody and required acceptance. A verified empty proof can produce an evidence catalog without claiming output data. Publication-intent recovery preserves the saved decision and audit; an external publisher still owns activation and destination-specific checks.
 
-Congress and SpicyRegs retain their own application dependency versions and scoped SDK2 checks. Congress's SDK3 adoption is pending. Their real inputs, complete producer/reader journeys and publication remain separate acceptance work. Congress's selected recovery policy requires verified recovered originals and continued official-source checks. Historical recovery evidence and each actual source-check time must remain distinct; missing observations remain unknown.
+Congress installed SDK3 and passed seven retained-proof metadata checks plus five application factory/source checks. Its other 131 installed dependency versions stayed unchanged. SpicyRegs retains SDK2 and passed four local imports, complete typed readback of 1,772 rows and recovery with the originals blocked. These are scoped [application handoffs](verification.md#november-7-2026-application-handoffs); complete producer/model/reader journeys and publication remain separate acceptance work.
+
+Congress's selected recovery policy requires verified recovered originals and continued official-source checks. Historical recovery evidence and each actual source-check time must remain distinct; missing observations remain unknown.
 
 The separate React/Astro viewer reads maintained catalog and receipt interfaces and displays processing acceptance separately from producer evidence and publisher selection. Its retained local metadata/browser checks do not establish current source availability or production publication. [Viewer evidence](verification.md#november-7-2026-viewer-processing-evidence).
 
