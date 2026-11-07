@@ -4093,6 +4093,22 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-MANAGED-SNAPSHOT-SOURCE-TRANSPORT",
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "An explicit private snapshot-source configuration path changes only the native command prefix. Preserve the original job request, operation and accepted evidence; do not open the source configuration or add it to public receipts. After response loss, source-free inspection recovers the same original intent. The option cannot enable an unsupported job owner. Independent subprocess simulations establish transport behavior only.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

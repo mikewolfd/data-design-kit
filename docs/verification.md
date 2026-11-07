@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 7, 2026 private snapshot-source transport
+
+All three frozen-source subprocess simulations passed, with zero failures, errors or skips. `managed_job(..., snapshot_source=path)` passes the configuration path to the native command without opening it or changing the original request, operation or public receipt. A lost response remains unknown; inspection without the configuration recovers the same operation. The option cannot enable an unsupported job owner. The simulated owner isolates transport behavior and supplies no native source-access or custody evidence.
+
+The [handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-adapter-01/run-01/handoff.json), SHA-256 `4c3dedd5943455a8a53a725a8fa50b5b982835409740dfb1b6de30321b61e5aa`, binds all 174 frozen source files and 37 run artifacts. Test execution took 0.47 seconds; the observer took 1.141 seconds with one early sample. Source and dependency identities stayed unchanged, with no stop or surviving process. That single sample establishes no memory peak or final allocation. Both [independent reviews](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-adapter-01/run-01/terminal-review.json) closed without a material finding.
+
+`CASE-MANAGED-SNAPSHOT-SOURCE-TRANSPORT` records the expectation and selectors. Actual native S3 reading, endpoint and credential enforcement, retained custody, installed successor integration and production acceptance remain separate. The existing `integrated.1` wheel remains unchanged and does not contain this optional keyword.
+
 ## November 7, 2026 integrated installed consumers
 
 Package `0.1.0.dev6+integrated.1` was built twice from clean commit `accb5836699a5ff9c0fbb82258c620934dd57030`. Both read-only wheels have SHA-256 `fec39a284d886272131e24231550a75d617f7eb4136355e6aad8613e0823794c`. All 112 staged DDK members match the wheel, and all 117 non-RECORD wheel members match each fresh core/full installation. The six core and fifteen full dependency versions remain unchanged. The [build handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/integrated-successor-package-01/build-02/handoff.json), SHA-256 `3d6de573a9cebcf54f9443f393a68bcc2c6dcb07b6175d93a2f0d237ea0f22e4`, retains both builds, exact requirements and installations. The earlier offline-install failure and failed launch preflight remain recorded as an unsuccessful attempt.

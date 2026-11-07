@@ -202,6 +202,71 @@ def test_initial_prepare_loss_preserves_full_intent_through_repeated_inspect(sim
     _validate_operation(confirmed["operation"])
 
 
+def test_snapshot_source_configuration_stays_outside_original_job_identity(simulated_native, monkeypatch):
+    from ddk.adapters import docspec
+
+    adapter, workspace, result, _ = simulated_native
+    source = workspace / "unopened source configuration.json"
+    calls = []
+    original_run = docspec.run_bounded
+
+    def observe(command, **kwargs):
+        calls.append(command)
+        return original_run(command, **kwargs)
+
+    monkeypatch.setattr(docspec, "run_bounded", observe)
+    request = _prepare(workspace)
+    plain = adapter.managed_job(workspace, request)
+    configured = adapter.managed_job(workspace, request, snapshot_source=source, prior=plain)
+    assert plain["status"] == configured["status"] == "succeeded"
+    assert "--snapshot-source" not in calls[0]
+    index = calls[1].index("--snapshot-source")
+    assert calls[1][index + 1:index + 3] == [str(source), "managed-job"]
+    assert not source.exists()  # DDK transports the path; native code owns its contents.
+    assert request == _prepare(workspace)
+    assert configured["result"] == result
+    assert configured["operation"]["requestIdentity"] == plain["operation"]["requestIdentity"]
+    assert configured["receipt"]["originalRequest"] == plain["receipt"]["originalRequest"]
+    assert json.loads(Path(configured["receipt"]["request"]["path"]).read_bytes()) == request
+    assert str(source) not in json.dumps(configured["receipt"])
+
+
+def test_snapshot_source_timeout_keeps_original_intent_for_source_free_recovery(simulated_native):
+    adapter, workspace, result, respond = simulated_native
+    respond(result, sleep=10)
+    adapter.timeout = 0.05
+    source = workspace / "unopened source configuration.json"
+    lost = adapter.managed_job(workspace, _prepare(workspace), snapshot_source=source)
+    assert lost["status"] == "unknown"
+    original = lost["receipt"]["originalRequest"]
+    assert original == lost["receipt"]["request"]
+    respond(result)
+    adapter.timeout = 2
+    confirmed = adapter.managed_job(workspace, _inspect(), prior=lost)
+    assert confirmed["status"] == "succeeded"
+    assert confirmed["operation"]["operationId"] == lost["operation"]["operationId"] == "original"
+    assert confirmed["receipt"]["originalRequest"] == original
+    assert confirmed["result"] == result
+    assert not source.exists()
+    _validate_operation(confirmed["operation"])
+
+
+def test_snapshot_source_does_not_enable_an_unsupported_job_owner(simulated_native, monkeypatch):
+    from ddk.adapters import docspec
+
+    adapter, workspace, _, _ = simulated_native
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Unsupported placement must refuse before native submission")
+
+    monkeypatch.setattr(docspec, "run_bounded", unexpected)
+    response = adapter.managed_job(workspace, _prepare(workspace), backend="remote",
+                                   snapshot_source=workspace / "source.json")
+    assert response["status"] == "not_submitted"
+    assert response["error"]["code"] == "DOCSPEC-BACKEND-UNSUPPORTED"
+    assert response["operation"]["operationId"] == "original"
+
+
 @pytest.mark.parametrize("field", ["definition", "job", "file_inputs", "policy", "policy_id", "expected_epoch",
                                     "expected_selection", "prerequisites"])
 def test_inspect_refuses_different_original_prepare_after_first_response_loss(simulated_native, field):

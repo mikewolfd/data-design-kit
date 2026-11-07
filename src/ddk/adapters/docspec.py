@@ -130,11 +130,14 @@ class DocSpecAdapter:
             operation_context=operation_context, prior=previous_operation, refusal=refusal, cancel_event=cancel_event,
         )
 
-    def managed_job(self, workspace, request, *, prior=None, backend="local", cancel_event=None):
+    def managed_job(self, workspace, request, *, prior=None, backend="local", snapshot_source=None,
+                    cancel_event=None):
         """Call the explicit retained whole-job protocol with its original identity.
 
         Native phases, prerequisite admission, evidence acceptance and selection
         remain DocSpec-owned. This source API does not claim a qualified profile.
+        An optional snapshot source configuration path selects native input access;
+        its contents, credentials and durable placement remain native-owned.
         """
         from .docspec_jobs import managed_job_context, managed_job_prior, verify_prepare_intent
 
@@ -149,8 +152,11 @@ class DocSpecAdapter:
         refusal = None if backend == "local" else BindingRefusal(
             "DOCSPEC-BACKEND-UNSUPPORTED", "The configured retained-job backend is unavailable",
         )
+        prefix = ["--workspace", str(workspace)]
+        if snapshot_source is not None:
+            prefix.extend(("--snapshot-source", str(Path(snapshot_source).resolve())))
         return self._invoke(
-            "managed-job", request, prefix=("--workspace", str(workspace)),
+            "managed-job", request, prefix=prefix,
             operation_context=context, prior=previous, confirmation=confirmation, original_request=original,
             identity_constraint=constraint,
             refusal=refusal, cancel_event=cancel_event,

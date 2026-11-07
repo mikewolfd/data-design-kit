@@ -633,6 +633,19 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/integrated-successor-source-01/consumer-01/handoff.json"
       ],
       "scopeNote": "Actual native source consumer evidence; installed package and complete native gate remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-SNAPSHOT-SOURCE-TRANSPORT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_job_transport.py::test_snapshot_source_configuration_stays_outside_original_job_identity",
+        "tests/test_docspec_job_transport.py::test_snapshot_source_timeout_keeps_original_intent_for_source_free_recovery",
+        "tests/test_docspec_job_transport.py::test_snapshot_source_does_not_enable_an_unsupported_job_owner"
+      ],
+      "scopeNote": "Three frozen-source subprocess simulations passed. They preserve configuration-path transport and original job identity only; actual native S3 access,placement enforcement,custody and installed successor remain unverified.",
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-adapter-01/run-01/handoff.json"
+      ]
     }
   ]
 }
