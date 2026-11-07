@@ -10,7 +10,7 @@ import socket
 import pytest
 
 from ddk.core import check_project, load_project
-from ddk.documents import DocumentError, json_dumps, parse_json, validate_document
+from ddk.documents import DocumentError, ResourceLimit, json_dumps, parse_json, validate_document
 from ddk.interfaces import schema_containment
 from ddk.results import CORE_GROUPS, ReportBuilder, diagnostic, exit_code
 
@@ -60,9 +60,10 @@ def check(folder, expected, **kwargs):
     (b'{"bad":"\xff"}', "DOC-UTF8", ""),
     (br'{"bad":"\ud800"}', "DOC-UNICODE-SURROGATE", "/bad"),
 ])
-def test_strict_json(source, code, pointer):
+@pytest.mark.parametrize("preserve_integral_decimals", [False, True])
+def test_strict_json(source, code, pointer, preserve_integral_decimals):
     with pytest.raises(DocumentError) as issue:
-        parse_json(source)
+        parse_json(source, preserve_integral_decimals=preserve_integral_decimals)
     assert (issue.value.code, issue.value.pointer) == (code, pointer)
 
 
@@ -70,6 +71,23 @@ def test_exact_decimal_value_and_bytes():
     source = b'{"value":0.1000000000000000000000000000000000001}'
     assert parse_json(source)["value"] == Decimal("0.1000000000000000000000000000000000001")
     assert parse_json(json_dumps(parse_json(source)).encode()) == parse_json(source)
+
+
+def test_native_number_mode_preserves_integer_tokens_without_changing_core_normalization():
+    raw = b'{"integer":1,"decimal":1.0,"exponent":1e0,"negativeZero":-0.0}'
+    ordinary = parse_json(raw)
+    native = parse_json(raw, preserve_integral_decimals=True)
+    assert all(type(value) is int for value in ordinary.values())
+    assert type(native["integer"]) is int
+    assert all(type(native[key]) is Decimal for key in ("decimal", "exponent", "negativeZero"))
+    assert native["negativeZero"].is_signed()
+
+
+@pytest.mark.parametrize("preserve_integral_decimals", [False, True])
+@pytest.mark.parametrize("number", [b"1e4000", b"1e10001"])
+def test_native_number_mode_keeps_numeric_capacity_limits(number, preserve_integral_decimals):
+    with pytest.raises(ResourceLimit):
+        parse_json(number, preserve_integral_decimals=preserve_integral_decimals)
 
 
 def test_offline_core_does_not_open_implementation(commerce, monkeypatch):

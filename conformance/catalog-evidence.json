@@ -24,6 +24,10 @@
       {
         "passedTests": 32,
         "scope": "Public profile-provenance impact and private assessment scope, plus the earlier privacy/impact repairs and partial-diagnostic preservation."
+      },
+      {
+        "passedTests": 312,
+        "scope": "121 managed-job metadata cases and 191 core regressions on clean base 796f937feffdc1089f83f15f346e4296466ecac3 with four owned overlays. Includes version 2 snapshot records and native integer-token preservation; no native or installed qualification."
       }
     ]
   },
@@ -967,6 +971,61 @@
         "tests/catalog/test_managed_jobs.py::test_distinct_requalification_policy_preserves_original_request_with_new_authority"
       ],
       "evidence": "A distinct native requalification policy ID may retain the original prepare request while binding a new policy and authority pair. Do not require original and requalified policies to be equal. Independently authored metadata and actual assembler checks; native execution has separate evidence."
+    },
+    {
+      "id": "CASE-CATALOG-080",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_snapshot_metadata_preserves_original_uris_and_native_ownership_without_reads"
+      ],
+      "evidence": "Version 2 native-table metadata preserves the original selector, exact requested metadata pin, original member locations and native owner without opening payloads. This is an offline consistency check, not proof of native execution or protection. Source verifier tests use independently authored metadata; installed qualification and actual native custody remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-081",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_resealed_snapshot_request_and_profile_mismatches_refuse"
+      ],
+      "evidence": "Coherently resealed version 2 metadata refuses mixed witness versions, missing or conflicting snapshot pins, overlapping file bindings and an unsupported passed-boolean prerequisite. Source verifier tests use independently authored metadata; installed qualification and actual native custody remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-082",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_resealed_snapshot_copies_require_complete_type_sensitive_equality"
+      ],
+      "evidence": "The complete candidate and its view set must both contain the same typed snapshot custody. Missing copies, boolean integers and integral decimal tokens cannot replace native integer selectors or sizes. Source verifier tests use independently authored metadata; installed qualification and actual native custody remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-083",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_resealed_snapshot_custody_cannot_invent_scope_or_ownership"
+      ],
+      "evidence": "Coherently resealed custody metadata refuses invalid roles, order, duplicate locations, foreign ownership, sizes, digests, original-operation identity and contradictory empty or selected-snapshot membership. Native seals remain responsible for actual closure completeness. Source verifier tests use independently authored metadata; installed qualification and actual native custody remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-084",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_exact_empty_snapshot_is_metadata_only_and_reuse_keeps_original_operation"
+      ],
+      "evidence": "An explicitly empty selected snapshot retains only its original metadata. Preserve an earlier origin_operation identity in authored metadata without claiming native cross-operation reuse was executed. Source verifier tests use independently authored metadata; installed qualification and actual native custody remain separate."
     }
   ],
   "additionalReceiptTests": [

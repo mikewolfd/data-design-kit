@@ -115,7 +115,7 @@ def freeze_json(value):
     return value
 
 
-def parse_json(data: bytes, *, max_nesting=DEFAULT_LIMITS["maxNesting"]):
+def parse_json(data: bytes, *, max_nesting=DEFAULT_LIMITS["maxNesting"], preserve_integral_decimals=False):
     def reject_nonfinite(_value):
         raise DocumentError("DOC-NONFINITE-NUMBER", "JSON numbers must be finite.")
 
@@ -150,7 +150,8 @@ def parse_json(data: bytes, *, max_nesting=DEFAULT_LIMITS["maxNesting"]):
                 raise ResourceLimit("JSON integer exceeded the supported exact arithmetic capacity.")
             # Draft validators also examine nested meta-schemas with their
             # built-in integer checker. Preserve mathematical integers there.
-            return int(result)
+            if not preserve_integral_decimals:
+                return int(result)
         return result
 
     try:

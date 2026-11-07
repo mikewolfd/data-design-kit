@@ -48,7 +48,9 @@
     {
       "id": "CASE-SYNTAX-001",
       "tests": [
-        "tests/core/test_core.py::test_strict_json"
+        "tests/core/test_core.py::test_strict_json",
+        "tests/core/test_core.py::test_native_number_mode_preserves_integer_tokens_without_changing_core_normalization",
+        "tests/core/test_core.py::test_native_number_mode_keeps_numeric_capacity_limits"
       ],
       "coverage": "exercised"
     },

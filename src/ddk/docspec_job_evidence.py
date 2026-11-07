@@ -12,16 +12,24 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
+from uuid import UUID
 
 from .documents import DocumentError, freeze_json, json_dumps, parse_json
+from .interfaces import json_equal
 
 CANDIDATE_SCHEME = "urn:docspec:whole-job-candidate"
 COMPLETION_PROFILE = "urn:docspec:whole-job-completion:1"
+SNAPSHOT_COMPLETION_PROFILE = "urn:docspec:whole-job-completion:2"
 COUNTER_PROFILE = "urn:docspec:quality:native-sql-zero-counters:1"
 COUNTER_EVALUATOR = {"id": "urn:docspec:evaluator:native-job-reports", "version": "1"}
 COUNTER_SEMANTICS = {"id": "urn:docspec:semantics:complete-integer-zero-row", "revision": "1"}
 VIEW_SECTIONS = ("inputs", "steps", "outputs", "reports")
 VIEW_PROFILE = "urn:docspec:whole-job-view-set:1"
+SNAPSHOT_VIEW_PROFILE = "urn:docspec:whole-job-view-set:2"
+SNAPSHOT_CUSTODY_PROFILE = "urn:docspec:whole-job-snapshot-custody:2"
+_VIEW_PROFILES = {COMPLETION_PROFILE: VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE: SNAPSHOT_VIEW_PROFILE}
+_SNAPSHOT_ROLES = {"metadata", "manifest_list", "manifest", "data", "position_deletes", "equality_deletes"}
 ACCEPTANCE_FIELDS = ("profile", "dataset", "operation", "request_digest", "candidate", "view_set_digest", "policy_id",
                      "policy_sha256", "expected_epoch", "expected_selection", "evaluator", "semantics", "reports")
 _HEX = re.compile(r"[0-9a-f]{64}")
@@ -72,7 +80,9 @@ def _decode(value, context):
 
 def _json(raw, context):
     try:
-        return parse_json(raw)
+        # Native integer fields distinguish 1 from 1.0. General document
+        # validation normalizes mathematical integers for JSON Schema instead.
+        return parse_json(raw, preserve_integral_decimals=True)
     except (DocumentError, ValueError) as exc:
         raise JobEvidenceError("DOCSPEC-JOB-EVIDENCE", f"Invalid retained {context} JSON.") from exc
 
@@ -198,7 +208,7 @@ def verify_completed_job(result, *, require_accepted=False):
     _object(manifest, ("profile", "dataset", "operation", "request_digest", "job", "view_set", "view_set_digest", "schemas",
                        "execution", "evaluator", "runtime", "result", "admitted_request", *VIEW_SECTIONS),
             "whole-job completion")
-    _require(manifest["profile"] == COMPLETION_PROFILE
+    _require(isinstance(manifest["profile"], str) and manifest["profile"] in _VIEW_PROFILES
              and manifest["execution"] == "completed" and manifest["evaluator"] == COUNTER_EVALUATOR
              and isinstance(manifest["runtime"], dict) and bool(manifest["runtime"])
              and all(manifest[key] == result[key] for key in ("dataset", "operation", "request_digest", "view_set_digest")),
@@ -271,6 +281,13 @@ def verify_admitted_request(result):
                      and _digest(member["sha256"]) and _integer(member["size"]), "Invalid original file member pin.")
             keys.append(member["key"])
         _require(len(keys) == len(set(keys)), "Original file-input pins repeat a member key.")
+    snapshots = _named(request.get("snapshot_inputs", []), "original snapshot-input pin")
+    _require(not snapshots.keys() & {item["name"] for item in request["file_inputs"]},
+             "Original snapshot and file input names overlap.")
+    for item in snapshots.values():
+        _require(set(item) == {"name", "metadata_sha256", "metadata_size"}
+                 and _digest(item["metadata_sha256"]) and _integer(item["metadata_size"], 1)
+                 and item["metadata_size"] < 2**64, "Invalid original snapshot metadata pin.")
     return freeze_json(request)
 
 
@@ -281,6 +298,18 @@ def _verify_admitted_inputs(request, manifest, views):
     expected = {view["name"]: [{key: member[key] for key in ("key", "sha256", "size")} for member in view["files"]]
                 for view in views["inputs"] if view["kind"] in {"parquet", "json_lines"}}
     _require(pins == expected, "Retained inputs differ from the complete original admitted file-member pins.")
+    snapshots = {item["name"]: item for item in request.get("snapshot_inputs", [])}
+    if manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE:
+        expected = {view["name"]: {"name": view["name"],
+                                  "metadata_sha256": view["snapshot_custody"]["metadata_sha256"],
+                                  "metadata_size": view["snapshot_custody"]["metadata_size"]}
+                    for view in views["inputs"] if view["kind"] == "native_table"}
+        _require(bool(snapshots) and snapshots == expected,
+                 "Snapshot custody differs from the complete original native-table pins.")
+        _require(request.get("prerequisites", []) == [],
+                 "Snapshot custody alone cannot verify original producer prerequisites.")
+    else:
+        _require(not snapshots, "Version 1 completion cannot establish snapshot custody.")
 
 
 def _verify_policy(witness, result, manifest):
@@ -323,7 +352,7 @@ def _same_schema(expected, actual):
 
 def _verify_views(views, reference, manifest):
     _object(views, ("profile", "dataset", "operation", "request_digest", *VIEW_SECTIONS), "whole view set")
-    _require(views["profile"] == VIEW_PROFILE and reference["owner"] == manifest["dataset"]
+    _require(views["profile"] == _VIEW_PROFILES[manifest["profile"]] and reference["owner"] == manifest["dataset"]
              and reference["digest"] == manifest["view_set_digest"]
              and all(views[key] == manifest[key] for key in ("dataset", "operation", "request_digest")),
              "The complete native view-set identity disagrees with its completion.")
@@ -339,7 +368,24 @@ def _verify_views(views, reference, manifest):
             if section == "inputs":
                 _object(view, ("kind", "selector", "files", "admission"), "admitted input")
                 verify_object_reference(view["admission"])
-                _verify_input(view)
+                snapshot_profile = manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE
+                if snapshot_profile:
+                    fields = ("kind", "selector", "files", "schema_sha256", "admission")
+                    _object(completed, fields, "completed input")
+                    verify_object_reference(completed["admission"])
+                    _require(all(json_equal(view[key], completed[key]) for key in fields)
+                             and view["admission"]["owner"] == manifest["dataset"],
+                             "Snapshot input admission differs from its native completion owner.")
+                if snapshot_profile and view["kind"] == "native_table":
+                    _require("snapshot_custody" in view and "snapshot_custody" in completed
+                             and json_equal(view["snapshot_custody"], completed["snapshot_custody"]),
+                             "Snapshot custody must agree in the complete candidate and view set.")
+                else:
+                    _require("snapshot_custody" not in view and "snapshot_custody" not in completed,
+                             "Snapshot custody requires a version 2 native-table input.")
+                if snapshot_profile:
+                    _verify_input(completed, snapshot_profile=True, owner=manifest["dataset"])
+                _verify_input(view, snapshot_profile=snapshot_profile, owner=manifest["dataset"])
             elif section == "steps":
                 _object(view, ("material_identity", "completion", "dependencies"), "completed step")
                 if view["completion"] is not None:
@@ -353,7 +399,7 @@ def _verify_views(views, reference, manifest):
                     _object(view, ("dependencies",), "native report dependencies")
 
 
-def _verify_input(view):
+def _verify_input(view, *, snapshot_profile=False, owner=None):
     selector = _object(view["selector"], ("kind", "name"), "original native input selector")
     _require(isinstance(view["kind"], str) and selector["kind"] == view["kind"] and selector["name"] == view["name"]
              and isinstance(view["files"], list), "Input admission changes its original selector identity.")
@@ -376,12 +422,71 @@ def _verify_input(view):
     else:
         _require(kind in {"native_table", "iceberg", "version"} and not view["files"],
                  "Unsupported native input selector or unexpected file replacement.")
+        if snapshot_profile:
+            _require(kind == "native_table", "Version 2 custody requires the native-table selector.")
+            _verify_snapshot_custody(view, owner)
         if kind == "version":
             version = _object(selector.get("version"), ("dataset", "version", "manifest"), "native input VersionRef")
             _require(isinstance(selector.get("workspace"), str) and Path(selector["workspace"]).is_absolute()
                      and all(isinstance(version[key], str) and _ID.fullmatch(version[key]) for key in ("dataset", "version")),
                      "Invalid original native VersionRef selector.")
             verify_object_reference(version["manifest"])
+
+
+def _absolute_native_uri(value):
+    if not isinstance(value, str) or not value or "\x00" in value:
+        return False
+    if Path(value).is_absolute():
+        return True
+    try:
+        parsed = urlsplit(value)
+        return bool(parsed.scheme and parsed.path.startswith("/") and not parsed.query and not parsed.fragment
+                    and (parsed.scheme == "file" or parsed.netloc))
+    except ValueError:
+        return False
+
+
+def _verify_snapshot_custody(view, owner):
+    """Check native custody metadata; native seals establish actual read closure."""
+    selector = view["selector"]
+    _require(set(selector) == {"kind", "name", "metadata_location", "table_uuid", "snapshot", "schema_id"},
+             "Snapshot custody requires an exact native-table selector.")
+    try:
+        valid_uuid = isinstance(selector["table_uuid"], str) and str(UUID(selector["table_uuid"])) == selector["table_uuid"]
+    except ValueError:
+        valid_uuid = False
+    _require(valid_uuid and _absolute_native_uri(selector["metadata_location"])
+             and (selector["snapshot"] is None or (_integer(selector["snapshot"]) and selector["snapshot"] < 2**63))
+             and _integer(selector["schema_id"]) and selector["schema_id"] < 2**31,
+             "Invalid native table UUID, snapshot, schema or metadata location.")
+    custody = _object(view["snapshot_custody"], ("profile", "scope", "metadata_sha256", "metadata_size", "objects"),
+                      "snapshot custody")
+    _require(set(custody) == {"profile", "scope", "metadata_sha256", "metadata_size", "objects"}
+             and custody["profile"] == SNAPSHOT_CUSTODY_PROFILE and custody["scope"] == "selected_snapshot"
+             and _digest(custody["metadata_sha256"]) and _integer(custody["metadata_size"], 1)
+             and custody["metadata_size"] < 2**64 and isinstance(custody["objects"], list),
+             "Unsupported or invalid snapshot custody scope.")
+    uris, metadata = [], []
+    for item in custody["objects"]:
+        _object(item, ("uri", "role", "sha256", "size", "retained", "origin_operation"), "snapshot object")
+        retained = verify_object_reference(item["retained"])
+        _require(set(item) == {"uri", "role", "sha256", "size", "retained", "origin_operation"}
+                 and _absolute_native_uri(item["uri"]) and isinstance(item["role"], str) and item["role"] in _SNAPSHOT_ROLES
+                 and _digest(item["sha256"]) and _integer(item["size"]) and item["size"] < 2**64
+                 and retained["bytes"] == item["size"] and retained["owner"] == owner
+                 and isinstance(item["origin_operation"], str) and _ID.fullmatch(item["origin_operation"]),
+                 "Invalid original snapshot object identity, size or native owner.")
+        uris.append(item["uri"])
+        if item["role"] == "metadata":
+            metadata.append(item)
+    _require(uris == sorted(set(uris)), "Snapshot custody requires sorted, unique original object URIs.")
+    _require(len(metadata) == 1 and metadata[0]["uri"] == selector["metadata_location"]
+             and metadata[0]["sha256"] == custody["metadata_sha256"]
+             and metadata[0]["size"] == custody["metadata_size"],
+             "Snapshot custody must preserve its one exact original metadata object.")
+    _require((len(custody["objects"]) == 1) if selector["snapshot"] is None
+             else sum(item["role"] == "manifest_list" for item in custody["objects"]) == 1,
+             "Exact empty selection retains only metadata; a selected snapshot requires one manifest list.")
 
 
 def _verify_job_result(result, manifest):

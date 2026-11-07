@@ -18,7 +18,8 @@ from ddk.catalog_native_rules import NativeRuleBinding, native_rule_artifact
 from ddk.core import load_project
 from ddk.docspec_job_evidence import (
     ACCEPTANCE_FIELDS, CANDIDATE_SCHEME, COMPLETION_PROFILE, COUNTER_EVALUATOR,
-    COUNTER_PROFILE, COUNTER_SEMANTICS, VIEW_PROFILE, JobEvidenceError, verify_admitted_request, verify_completed_job,
+    COUNTER_PROFILE, COUNTER_SEMANTICS, VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE, SNAPSHOT_VIEW_PROFILE,
+    SNAPSHOT_CUSTODY_PROFILE, JobEvidenceError, verify_admitted_request, verify_completed_job,
 )
 from ddk.documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
 
@@ -377,6 +378,187 @@ def test_exact_complete_metadata_retains_private_members_and_actual_native_resul
     assert evidence.accepted["reports"][0]["checks"] == [{"column": "orphan_count", "status": "passed", "value": 0}]
     assert evidence.manifest["reports"][1]["data"] == [{"population": 2}]
     assert evidence.admitted_request["expected_epoch"] == 0 and evidence.admitted_request["expected_selection"] is None
+
+
+@pytest.fixture
+def native_snapshot_job(native_job, tmp_path):
+    """Authored custody metadata, not a native admission or an Iceberg payload."""
+    selector = {"kind": "native_table", "name": "source", "metadata_location": "s3://fixture/table/metadata/v1.json",
+                "table_uuid": "4200827d-e8eb-4616-a0f9-ff4d222a582e", "snapshot": 1, "schema_id": 0}
+    job = _original_job(tmp_path)
+    job["inputs"] = [selector]
+    row = _retarget_original_job(native_job, job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    objects = []
+    for uri, role, raw in [
+        (selector["metadata_location"], "metadata", b"independent native metadata identity"),
+        ("s3://fixture/table/metadata/list.avro", "manifest_list", b"original manifest list"),
+        ("s3://fixture/table/metadata/manifest.avro", "manifest", b"original manifest"),
+        ("s3://fixture/table/data/original.parquet", "data", b"d"),
+    ]:
+        objects.append({"uri": uri, "role": role, "sha256": sha256(raw).hexdigest(), "size": len(raw),
+                        "retained": _reference(tmp_path / "native" / f"never-open-{role}", raw),
+                        "origin_operation": "original"})
+    objects.sort(key=lambda item: item["uri"])
+    metadata = next(item for item in objects if item["role"] == "metadata")
+    custody = {"profile": SNAPSHOT_CUSTODY_PROFILE, "scope": "selected_snapshot",
+               "metadata_sha256": metadata["sha256"], "metadata_size": metadata["size"], "objects": objects}
+    source = {**views["inputs"][0], "kind": "native_table", "selector": selector, "files": [], "snapshot_custody": custody}
+    manifest.update(profile=SNAPSHOT_COMPLETION_PROFILE, inputs=[deepcopy(source)])
+    views.update(profile=SNAPSHOT_VIEW_PROFILE, inputs=[deepcopy(source)])
+    request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    request.update(file_inputs=[], snapshot_inputs=[{"name": "source", "metadata_sha256": metadata["sha256"],
+                                                   "metadata_size": metadata["size"]}], prerequisites=[])
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+    return _reseal_completion(row, manifest, views)
+
+
+def test_snapshot_metadata_preserves_original_uris_and_native_ownership_without_reads(native_snapshot_job, monkeypatch):
+    def refuse_open(*_args, **_kwargs):
+        raise AssertionError("The metadata verifier must not reopen native or caller payloads")
+
+    monkeypatch.setattr(Path, "open", refuse_open)
+    monkeypatch.setattr("builtins.open", refuse_open)
+    checked = verify_completed_job(native_snapshot_job, require_accepted=True)
+    view = checked.view_set["inputs"][0]
+    assert checked.manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE
+    assert view["selector"] == {"kind": "native_table", "name": "source",
+                               "metadata_location": "s3://fixture/table/metadata/v1.json",
+                               "table_uuid": "4200827d-e8eb-4616-a0f9-ff4d222a582e", "snapshot": 1, "schema_id": 0}
+    assert [item["role"] for item in view["snapshot_custody"]["objects"]] == ["data", "manifest_list", "manifest", "metadata"]
+    assert all(item["retained"]["owner"] == "archive" and item["origin_operation"] == "original"
+               for item in view["snapshot_custody"]["objects"])
+
+
+@pytest.mark.parametrize("change", [
+    "v1_with_custody", "mixed_view_version", "profile_array", "no_snapshot_pins", "repeated_snapshot_pin",
+    "unbound_snapshot_pin", "changed_metadata_pin", "overlapping_file_pin", "prerequisite_boolean",
+])
+def test_resealed_snapshot_request_and_profile_mismatches_refuse(native_snapshot_job, change):
+    manifest = json.loads(base64.b64decode(native_snapshot_job["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    if change == "v1_with_custody":
+        manifest["profile"], views["profile"] = COMPLETION_PROFILE, VIEW_PROFILE
+    elif change == "mixed_view_version":
+        views["profile"] = VIEW_PROFILE
+    elif change == "profile_array":
+        manifest["profile"] = []
+    elif change == "no_snapshot_pins":
+        request["snapshot_inputs"] = []
+    elif change == "repeated_snapshot_pin":
+        request["snapshot_inputs"] *= 2
+    elif change == "unbound_snapshot_pin":
+        request["snapshot_inputs"][0]["name"] = "another"
+    elif change == "changed_metadata_pin":
+        request["snapshot_inputs"][0]["metadata_sha256"] = "f" * 64
+    elif change == "overlapping_file_pin":
+        request["file_inputs"] = [{"name": "source", "members": []}]
+    else:
+        request["prerequisites"] = [{"passed": True}]
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+    row = _reseal_completion(native_snapshot_job, manifest, views)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(row, require_accepted=True)
+
+
+@pytest.mark.parametrize("change", [
+    "missing_completed_custody", "missing_view_custody", "boolean_snapshot", "boolean_schema", "boolean_object_size",
+    "float_snapshot", "float_schema", "float_object_size", "float_admission_size",
+])
+def test_resealed_snapshot_copies_require_complete_type_sensitive_equality(native_snapshot_job, change):
+    manifest = json.loads(base64.b64decode(native_snapshot_job["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    completed, view = manifest["inputs"][0], views["inputs"][0]
+    if change == "missing_completed_custody":
+        completed.pop("snapshot_custody")
+    elif change == "missing_view_custody":
+        view.pop("snapshot_custody")
+    elif change == "boolean_snapshot":
+        completed["selector"]["snapshot"] = True
+    elif change == "boolean_schema":
+        completed["selector"]["schema_id"] = False
+    elif change == "boolean_object_size":
+        completed["snapshot_custody"]["objects"][0]["size"] = True
+    elif change == "float_snapshot":
+        completed["selector"]["snapshot"] = 1.0
+    elif change == "float_schema":
+        completed["selector"]["schema_id"] = 0.0
+    elif change == "float_object_size":
+        completed["snapshot_custody"]["objects"][0]["size"] = 1.0
+    else:
+        completed["admission"]["bytes"] = float(completed["admission"]["bytes"])
+    row = _reseal_completion(native_snapshot_job, manifest, views)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(row, require_accepted=True)
+
+
+@pytest.mark.parametrize("change", [
+    "role_array", "unknown_role", "unsorted", "repeated_uri", "foreign_owner", "size_mismatch", "relative_uri",
+    "bad_digest", "missing_origin", "wrong_metadata_uri", "missing_metadata", "extra_metadata", "empty_with_payload",
+    "missing_manifest_list", "extra_manifest_list", "invalid_uuid", "extra_selector_field", "boolean_selector",
+])
+def test_resealed_snapshot_custody_cannot_invent_scope_or_ownership(native_snapshot_job, change):
+    manifest = json.loads(base64.b64decode(native_snapshot_job["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    view = views["inputs"][0]
+    objects = view["snapshot_custody"]["objects"]
+    if change == "role_array":
+        objects[0]["role"] = []
+    elif change == "unknown_role":
+        objects[0]["role"] = "latest"
+    elif change == "unsorted":
+        objects.reverse()
+    elif change == "repeated_uri":
+        objects.insert(0, deepcopy(objects[0]))
+    elif change == "foreign_owner":
+        objects[0]["retained"]["owner"] = "another"
+    elif change == "size_mismatch":
+        objects[0]["size"] += 1
+    elif change == "relative_uri":
+        objects[0]["uri"] = "data.parquet"
+    elif change == "bad_digest":
+        objects[0]["sha256"] = "not-a-digest"
+    elif change == "missing_origin":
+        objects[0].pop("origin_operation")
+    elif change == "wrong_metadata_uri":
+        view["selector"]["metadata_location"] = "s3://fixture/table/metadata/other.json"
+    elif change == "missing_metadata":
+        objects[:] = [item for item in objects if item["role"] != "metadata"]
+    elif change == "extra_metadata":
+        objects[0]["role"] = "metadata"
+    elif change == "empty_with_payload":
+        view["selector"]["snapshot"] = None
+    elif change == "missing_manifest_list":
+        objects[:] = [item for item in objects if item["role"] != "manifest_list"]
+    elif change == "extra_manifest_list":
+        objects[0]["role"] = "manifest_list"
+    elif change == "invalid_uuid":
+        view["selector"]["table_uuid"] = "declared-table"
+    elif change == "extra_selector_field":
+        view["selector"]["latest"] = True
+    else:
+        view["selector"]["snapshot"] = True
+    manifest["inputs"][0] = deepcopy(view)
+    row = _reseal_completion(native_snapshot_job, manifest, views)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(row, require_accepted=True)
+
+
+def test_exact_empty_snapshot_is_metadata_only_and_reuse_keeps_original_operation(native_snapshot_job):
+    manifest = json.loads(base64.b64decode(native_snapshot_job["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    view = views["inputs"][0]
+    view["selector"]["snapshot"] = None
+    metadata = next(item for item in view["snapshot_custody"]["objects"] if item["role"] == "metadata")
+    metadata["origin_operation"] = "earlier_original"
+    view["snapshot_custody"]["objects"] = [metadata]
+    manifest["inputs"][0] = deepcopy(view)
+    row = _reseal_completion(native_snapshot_job, manifest, views)
+    checked = verify_completed_job(row, require_accepted=True)
+    assert checked.view_set["inputs"][0]["selector"]["snapshot"] is None
+    assert checked.view_set["inputs"][0]["snapshot_custody"]["objects"][0]["origin_operation"] == "earlier_original"
 
 
 @pytest.mark.parametrize("mutation", [

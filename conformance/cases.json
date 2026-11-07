@@ -3096,6 +3096,87 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-CATALOG-080",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Version 2 native-table metadata preserves the original selector, exact requested metadata pin, original member locations and native owner without opening payloads. This is an offline consistency check, not proof of native execution or protection.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-081",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Coherently resealed version 2 metadata refuses mixed witness versions, missing or conflicting snapshot pins, overlapping file bindings and an unsupported passed-boolean prerequisite.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-082",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The complete candidate and its view set must both contain the same typed snapshot custody. Missing copies, boolean integers and integral decimal tokens cannot replace native integer selectors or sizes.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-083",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Coherently resealed custody metadata refuses invalid roles, order, duplicate locations, foreign ownership, sizes, digests, original-operation identity and contradictory empty or selected-snapshot membership. Native seals remain responsible for actual closure completeness.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-084",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An explicitly empty selected snapshot retains only its original metadata. Preserve an earlier origin_operation identity in authored metadata without claiming native cross-operation reuse was executed.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }
