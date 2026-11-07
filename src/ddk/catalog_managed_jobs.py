@@ -302,8 +302,17 @@ def managed_execution(metadata, entry):
         metadata.observations["checks"].append(summary)
         metadata.qualification.append(identity)
     if not outputs:
-        metadata.quality_issues.append(CatalogError("CATALOG-EVIDENCE-SCOPE", "The managed-job mapping includes no catalog output version.",
-                                                   status="unknown"))
+        if evidence.manifest.get("producer_evidence", {}).get("role") == "proof":
+            if evidence.accepted is None:
+                metadata.quality_issues.append(CatalogError(
+                    "CATALOG-EVIDENCE-MISSING", "The completed producer proof has no accepted native qualification.", status="not_run"))
+            if not definition_matches:
+                metadata.quality_issues.append(CatalogError(
+                    "CATALOG-DEFINITION-CAPTURE", "The producer proof does not match the captured production and dataset definitions.",
+                    status="unknown"))
+        else:
+            metadata.quality_issues.append(CatalogError("CATALOG-EVIDENCE-SCOPE", "The managed-job mapping includes no catalog output version.",
+                                                       status="unknown"))
     metadata.limits.add("Native job membership and accepted policy are preserved; data payloads and runtime retention were not rechecked during catalog refresh.")
     metadata.limits.add("Native selection is separate from publisher selection; the managed-job mapper records no publication.")
     if "producer_evidence" in evidence.manifest:

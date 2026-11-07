@@ -3506,6 +3506,118 @@
         "exitCode": 1,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-RECOVERY",
+      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Accept an original-record proof, refuse selecting the proof itself, and use its exact native custody in the fixed model. Remove original producer and caller artifacts, interrupt the model after admission with a missing declared file, then recover under the same request after restoring those exact bytes. Verify independently authored rows, nulls, native field IDs, original custody, accepted qualification and cold replay before model selection.",
+      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
+      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true}
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-COUNTER-REFUSAL",
+      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "A completed original-record proof reports a nonzero required counter and a positive informational count. Require exact job_report_failed refusal while preserving its candidate; a model naming an invented acceptance must then receive producer_prerequisite_unaccepted without accepted qualification or selection.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-RECORD-REFUSAL",
+      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-012", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Supply correctly pinned original record bytes whose producer commit is outside the adopted inventory, then remove the source payload. Require producer_record_mismatch before payload copy, with no observed candidate, accepted qualification or selection. A refusal does not establish that nothing executed.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-FILE-REFUSAL",
+      "requirements": ["DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Use an actually accepted proof but change a model file's bytes and request pins outside the adopted file inventory, then remove that file. Require producer_file_inventory_mismatch before file opening, with no observed model candidate, accepted qualification or selection.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-PREREQUISITE-REFUSAL",
+      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Present an actual accepted unbound candidate as the model's prerequisite. Require producer_prerequisite_mismatch rather than treating a real but unrelated acceptance as the adopted proof; observe no model candidate, accepted qualification or selection.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-POLICY-REFUSAL",
+      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Use an actual accepted proof and a valid model policy document that removes one of the two fixed required reports under the same policy ID. Remove the model file and require producer_policy_mismatch before file opening, with no observed model candidate, accepted qualification or selection.",
+      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+    },
+    {
+      "id": "CASE-CATALOG-099",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A verifier-confirmed accepted producer proof has complete zero-export membership and matches its captured definitions. Admit a deterministic ordinary locked catalog with the exact source version and proof run, preserving private withholding and unknown current availability. Add no output versions, field-rule passes, release or selection claims.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-100",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The complete zero-export proof lacks native acceptance, or the caller explicitly requests dataset qualification without version-bound obligations. Preserve required not_run evidence and withhold the locked output set.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-EVIDENCE-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-101",
+      "requirements": [
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A zero-export accepted proof names a captured production or source definition that differs from the current authored definitions. Preserve required unknown status, omit the current production link and withhold the locked output set.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-DEFINITION-CAPTURE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-102",
+      "requirements": [
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Exclude every exported output of a legacy or model job from the catalog. Preserve the required unknown scope result; an omitted model output is not a known zero-export proof.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-EVIDENCE-SCOPE"
+      }
     }
   ]
 }

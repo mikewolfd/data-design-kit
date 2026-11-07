@@ -1210,6 +1210,52 @@
         "tests/catalog/test_managed_jobs.py::test_earlier_completion_profiles_cannot_gain_producer_authority"
       ],
       "evidence": "Refuse proof metadata claiming model selection or exports, missing original producer records, and producer authority added to earlier completion profiles. Preserve native execution as a separate untested capability. Independently authored metadata consistency cases from producer-metadata-source-03; actual producer execution, prerequisite acceptance and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-099",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_proof_only_catalog_preserves_known_empty_outputs_and_required_evidence[accepted]",
+        "tests/catalog/test_managed_jobs.py::test_proof_only_catalog_preserves_known_empty_outputs_and_required_evidence[public]"
+      ],
+      "evidence": "Eight independently authored assembly cases passed within the 19-case producer-proof-catalog-source-01 metadata run at clean DDK70dde52 plus the exact two source/test overlays. Result SHA-256 d6c4dced60ddb38994204712520c9e293351ccd82516166eeff01ab07209d200. Synthetic native records establish catalog mapping and refusal behavior only; native producer execution, current availability and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-100",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-EVIDENCE-MISSING",
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_proof_only_catalog_preserves_known_empty_outputs_and_required_evidence[missing_acceptance]",
+        "tests/catalog/test_managed_jobs.py::test_proof_only_catalog_preserves_known_empty_outputs_and_required_evidence[dataset_qualification]"
+      ],
+      "evidence": "Eight independently authored assembly cases passed within the 19-case producer-proof-catalog-source-01 metadata run at clean DDK70dde52 plus the exact two source/test overlays. Result SHA-256 d6c4dced60ddb38994204712520c9e293351ccd82516166eeff01ab07209d200. Synthetic native records establish catalog mapping and refusal behavior only; native producer execution, current availability and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-101",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-DEFINITION-CAPTURE",
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_proof_only_catalog_preserves_known_empty_outputs_and_required_evidence[changed_definition]"
+      ],
+      "evidence": "Eight independently authored assembly cases passed within the 19-case producer-proof-catalog-source-01 metadata run at clean DDK70dde52 plus the exact two source/test overlays. Result SHA-256 d6c4dced60ddb38994204712520c9e293351ccd82516166eeff01ab07209d200. Synthetic native records establish catalog mapping and refusal behavior only; native producer execution, current availability and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-102",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-EVIDENCE-SCOPE",
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_excluded_model_outputs_are_not_a_proof_only_catalog"
+      ],
+      "evidence": "Eight independently authored assembly cases passed within the 19-case producer-proof-catalog-source-01 metadata run at clean DDK70dde52 plus the exact two source/test overlays. Result SHA-256 d6c4dced60ddb38994204712520c9e293351ccd82516166eeff01ab07209d200. Synthetic native records establish catalog mapping and refusal behavior only; native producer execution, current availability and installed qualification remain separate."
     }
   ],
   "additionalReceiptTests": [

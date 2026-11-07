@@ -100,6 +100,8 @@ The local catalog's [producer evidence trace](catalog-api.md#native-producer-evi
 
 The local source09 runtime and public DDK consumer now exercise same-owner reuse, including chained and renamed inputs after original source and caller-file removal. Native units separately verify receiving custody through donor retirement before input sealing and preserve original provenance under result retention. Fifteen public cases pass at unchanged limits. These results qualify neither original producer prerequisites nor an installed successor. See the [reuse execution evidence](verification.md#november-6-2026-native-input-reuse-through-ddk).
 
+The later native producer source05 and six public DDK source cases exercise original-record proof admission, actual accepted-proof prerequisites, fixed model file/policy identity and same-operation cold recovery. DDK preserves the exact native proof, custody and acceptance references; DocSpec performs the checks and guards model selection. The proof itself cannot be selected. The separate [producer execution evidence](verification.md#november-7-2026-producer-prerequisites-through-ddk) records the immutable executable and source tuple. It does not establish historical writer execution, production source acceptance or installed successor qualification.
+
 ## Reuse, provenance, and uncertainty
 
 `reuseRecords` references runtime-issued computation and qualification keys. DDK does not calculate an alternative native phase key. Locks and reports retain full provenance independently of the keys relevant to reuse.

@@ -3,7 +3,7 @@
 import base64
 from collections import Counter
 from copy import deepcopy
-from hashlib import sha256
+from hashlib import sha1, sha256
 import json
 import os
 from pathlib import Path
@@ -15,6 +15,7 @@ from ddk.adapters.docspec import DocSpecAdapter
 from ddk.adapters.native import run_bounded
 from ddk.docspec_job_evidence import (
     COUNTER_EVALUATOR, COUNTER_PROFILE, COUNTER_SEMANTICS, SNAPSHOT_COMPLETION_PROFILE, verify_completed_job,
+    PRODUCER_COMPLETION_PROFILE, PRODUCER_PREREQUISITE_PROFILE,
 )
 
 
@@ -572,3 +573,316 @@ def test_native_snapshot_input_reuse_refuses_changed_native_reference(runtime, t
     assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
     assert refused["operation"]["selection"] != "selected"
     assert not Path(job["outputs"][0]["path"]).exists()
+
+
+def _producer_job_policy(runtime, tmp_path, label, job, schemas, *, required_names=("invariants",)):
+    """Prepare only schema expectations; business counts below are authored independently."""
+    artifact = _artifact(tmp_path / f"{label}-job.json", job)
+    response = runtime.prepare_job({"job": artifact, "inputs": [
+        {"name": name, "schema_ipc_base64": base64.b64encode(schema.serialize().to_pybytes()).decode()}
+        for name, schema in schemas.items()
+    ]})
+    assert response["status"] == "succeeded", response
+    prepared = response["result"]
+    required = [query for query in job["queries"] if query["name"] in required_names]
+    inferred = {query["name"]: query["schema_sha256"] for query in prepared["queries"]}
+    policy = {
+        "id": f"{label}-counts", "profile": COUNTER_PROFILE, "evaluator": COUNTER_EVALUATOR,
+        "semantics": COUNTER_SEMANTICS, "job_sha256": artifact["sha256"],
+        "view_names": {section: [item["name"] for item in job["queries" if section == "reports" else section]]
+                       for section in ("inputs", "steps", "outputs", "reports")},
+        "required_reports": [{"name": query["name"], "sql_sha256": sha256(query["sql"].encode()).hexdigest(),
+                              "schema_ipc_base64": prepared["schemas"][inferred[query["name"]]]}
+                             for query in required],
+    }
+    return artifact, _artifact(tmp_path / f"{label}-policy.json", policy), policy["id"]
+
+
+def _producer_requests(runtime, tmp_path, *, wrong_counter=False, wrong_producer=False, unrelated_accepted=False):
+    """Adopt synthetic producer facts for three original native rows and a pinned lookup.
+
+    These explicitly trusted fixture declarations test native membership checks;
+    they do not attest that a historical Git commit wrote the seeded table.
+    """
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    workspace, original_request, model_job, _policy, producer, original = _snapshot_request(runtime, tmp_path)
+    unrelated = None
+    if unrelated_accepted:
+        completed = runtime.managed_job(workspace, original_request)
+        assert completed["status"] == "succeeded", completed
+        unrelated = runtime.managed_job(workspace, _action(completed, "accept", original_request["policy_id"]), prior=completed)
+        assert unrelated["status"] == "succeeded", unrelated
+        verify_completed_job(unrelated["result"], require_accepted=True)
+    declared = pa.schema([
+        pa.field("prefix", pa.string(), nullable=False, metadata={"PARQUET:field_id": "1"}),
+        pa.field("id", pa.int64(), nullable=False, metadata={"PARQUET:field_id": "2"}),
+        pa.field("amount", pa.int64(), nullable=True, metadata={"PARQUET:field_id": "3"}),
+    ])
+    lookup_schema = pa.schema([pa.field("tag", pa.string(), nullable=False)])
+    lookup = tmp_path / "lookup.parquet"
+    pq.write_table(pa.Table.from_pylist([{"tag": "approved"}], schema=lookup_schema), lookup)
+    lookup_bytes = lookup.read_bytes()
+    file_inputs = [{"name": "lookup", "members": [
+        {"key": None, "sha256": sha256(lookup_bytes).hexdigest(), "size": len(lookup_bytes)},
+    ]}]
+    model_job["inputs"].append({"kind": "parquet", "name": "lookup", "path": str(lookup)})
+    model_job["steps"][0]["sql"] = "SELECT source.prefix,source.id,source.amount,lookup.tag FROM source CROSS JOIN lookup"
+    model_job["queries"].insert(1, {
+        "name": "null_invariants", "sql": 'SELECT COUNT(*) - 1 AS missing_delta FROM outputs."observed" WHERE amount IS NULL',
+    })
+    model_artifact, model_policy, model_policy_id = _producer_job_policy(
+        runtime, tmp_path, "producer-model", model_job, {"source": declared, "lookup": lookup_schema},
+        required_names=("invariants", "null_invariants"),
+    )
+    proof_job = {
+        "scratch": str(tmp_path / "proof-scratch"), "inputs": [deepcopy(model_job["inputs"][0])],
+        "steps": [{"name": "population", "materialize": True,
+                   "sql": "SELECT COUNT(*) AS row_count,COUNT(amount) AS present_count,"
+                          "SUM(CASE WHEN amount IS NULL THEN 1 ELSE 0 END) AS null_count FROM source"}],
+        "outputs": [],
+        "queries": [
+            {"name": "invariants", "sql": f"SELECT row_count - {4 if wrong_counter else 3} AS row_delta,"
+             "present_count - 2 AS present_delta FROM population"},
+            {"name": "diagnostics", "sql": "SELECT null_count AS null_rows FROM population"},
+        ],
+    }
+    proof_artifact, proof_policy, proof_policy_id = _producer_job_policy(
+        runtime, tmp_path, "producer-proof", proof_job, {"source": declared},
+    )
+    selector = {key: value for key, value in model_job["inputs"][0].items() if key != "name"}
+    lockfile_digest = sha256(b"independently authored producer dependency identity\n").hexdigest()
+    producer_record = _artifact(tmp_path / "original-producer.json", {
+        "version": 1, "input": "source", "selector": selector, "job": "jobs/source.json",
+        "commit": ("2" if wrong_producer else "1") * 40, "lockfile_digest": lockfile_digest,
+    })
+    record = {"source": {"namespace": "fixture-original-records", "key": "source-head.json"},
+              "sha256": producer_record["sha256"], "size": Path(producer_record["path"]).stat().st_size}
+    source_bytes = (tmp_path / "seed-job.json").read_bytes()
+    source_pin = {"sha256": sha256(source_bytes).hexdigest(), "size": len(source_bytes)}
+    source_blob = sha1(f"blob {len(source_bytes)}\0".encode() + source_bytes).hexdigest()
+    metadata_bytes = original[selector["metadata_location"]]
+    definition = _artifact(tmp_path / "producer-definition.json", {
+        "profile": "urn:docspec:whole-job-producer-definition:1", "definition": original_request["definition"],
+        "repository": {"identity": "urn:ddk:fixture:producer-declarations", "head": "1" * 40},
+        "interpretation": {"model": {"sha256": model_artifact["sha256"], "size": Path(model_artifact["path"]).stat().st_size},
+                           "compatibility_registry": {"sha256": proof_policy["sha256"], "size": Path(proof_policy["path"]).stat().st_size}},
+        "proof": {"job_sha256": proof_artifact["sha256"], "policy_id": proof_policy_id, "policy_sha256": proof_policy["sha256"]},
+        "model": {"job_sha256": model_artifact["sha256"], "policy_id": model_policy_id, "policy_sha256": model_policy["sha256"]},
+        "model_file_inputs": file_inputs,
+        "inputs": [{"name": "source", "selector": selector,
+                    "metadata": {"sha256": sha256(metadata_bytes).hexdigest(), "size": len(metadata_bytes)},
+                    "record_namespace": record["source"]["namespace"], "head_record": record,
+                    "import_anchors": [], "daily_jobs": [], "import_jobs": [],
+                    "expected_versions": {"lockfile_digest": lockfile_digest}}],
+        "producers": [{"input": "source", "commit": "1" * 40, "job": "jobs/source.json", "job_blob": source_blob,
+                       "source_files": [{"path": "jobs/source.json", "blob": source_blob, "bytes": source_pin}],
+                       "algorithm": "independently-authored-fixture-1", "versions": {"lockfile_digest": lockfile_digest}}],
+    })
+    adoption_request = _artifact(tmp_path / "producer-adoption.json", {
+        "dataset": original_request["dataset"], "adoption": "fixture-producers", "reason": "Independent native consumer fixture",
+        "expected_definition": "", "expected_epoch": 0, "expected_selection": None, "expected_adoption": None,
+        "definition": definition,
+    })
+    # Adoption is the trusted native workspace API, separate from ordinary DDK
+    # prepare/accept/select calls. DDK adds no adoption or lifecycle authority.
+    transport = run_bounded(
+        [str(runtime.executable), "--limits", str(tmp_path / "seed-limits.json"), "--workspace", str(workspace),
+         "adopt-job-producer-definition", "--spec", adoption_request["path"]],
+        timeout=runtime.timeout, limit=runtime.capture_bytes, stop_on_stdout_limit=True,
+    )
+    (tmp_path / "adoption-stdout.json").write_bytes(transport["stdout"])
+    (tmp_path / "adoption-stderr.log").write_bytes(transport["stderr"])
+    _artifact(tmp_path / "adoption-transport.json", {key: value for key, value in transport.items() if key not in {"stdout", "stderr"}})
+    assert transport["exitCode"] == 0 and not any(transport[key] for key in (
+        "timedOut", "cancelled", "stdoutTruncated", "stderrTruncated", "drainIncomplete",
+    )), transport
+    adoption = json.loads(transport["stdout"])
+    assert adoption["definition_sha256"] == definition["sha256"]
+    proof = {**deepcopy(original_request), "operation": "producer-proof", "job": proof_artifact,
+             "policy": proof_policy, "policy_id": proof_policy_id, "producer_adoption": adoption,
+             "producer_records": [{**record, "path": producer_record["path"]}]}
+    model = {**deepcopy(original_request), "operation": "producer-model", "job": model_artifact,
+             "policy": model_policy, "policy_id": model_policy_id, "producer_adoption": adoption, "file_inputs": file_inputs}
+    return {"workspace": workspace, "proof": proof, "model": model, "model_job": model_job,
+            "producer": producer, "original": original, "definition": definition, "adoption_request": adoption_request,
+            "record": producer_record, "lookup": lookup, "unrelated": unrelated}
+
+
+def _producer_model_request(fixture, proof, accepted_identity):
+    request = deepcopy(fixture["model"])
+    request["prerequisites"] = [{
+        "profile": PRODUCER_PREREQUISITE_PROFILE, "candidate": proof["result"]["candidate"],
+        "accepted_qualification": accepted_identity, "inputs": ["source"],
+    }]
+    request["snapshot_inputs"][0]["reuse_from"] = proof["result"]["input_custody"][0]
+    return request
+
+
+def _accepted_producer_proof(runtime, fixture):
+    proof = runtime.managed_job(fixture["workspace"], fixture["proof"])
+    assert proof["status"] == "succeeded", proof
+    checked = verify_completed_job(proof["result"])
+    assert checked.manifest["profile"] == PRODUCER_COMPLETION_PROFILE
+    assert checked.manifest["producer_evidence"]["role"] == "proof"
+    assert proof["result"]["completed_outputs"] == []
+    assert proof["result"]["completed_reports"][0]["data"] == [{"row_delta": 0, "present_delta": 0}]
+    assert proof["result"]["completed_reports"][1]["data"] == [{"null_rows": 1}]
+    accepted = runtime.managed_job(fixture["workspace"], _action(proof, "accept", fixture["proof"]["policy_id"]), prior=proof)
+    assert accepted["status"] == "succeeded", accepted
+    verify_completed_job(accepted["result"], require_accepted=True)
+    return accepted
+
+
+def test_native_producer_proof_model_and_cold_replay_preserve_original_evidence(runtime, tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    fixture = _producer_requests(runtime, tmp_path)
+    workspace = fixture["workspace"]
+    accepted_proof = _accepted_producer_proof(runtime, fixture)
+    identity = accepted_proof["result"]["accepted_qualification"]["identity"]
+    proof_select = {**_action(accepted_proof, "select", fixture["proof"]["policy_id"]), "accepted_qualification": identity}
+    refused = runtime.managed_job(workspace, proof_select, prior=accepted_proof)
+    assert refused["status"] == "failed" and refused["error"]["code"] == "producer_proof_not_selectable", refused
+    assert refused["operation"]["selection"] != "selected"
+    model_request = _producer_model_request(fixture, accepted_proof, identity)
+    original_objects = verify_completed_job(accepted_proof["result"]).view_set["inputs"][0]["snapshot_custody"]["objects"]
+    shutil.rmtree(fixture["producer"])
+    for artifact in (fixture["proof"]["job"], fixture["proof"]["policy"], fixture["record"],
+                     fixture["definition"], fixture["adoption_request"]):
+        Path(artifact["path"]).unlink()
+    # Missing file bytes interrupt work after native admission. The returned
+    # witness establishes that boundary; an arbitrary failure would not.
+    backup = tmp_path / "lookup-original.bin"
+    fixture["lookup"].rename(backup)
+    interrupted = runtime.managed_job(workspace, model_request)
+    assert interrupted["status"] == "failed", interrupted
+    partial = interrupted["result"]
+    assert partial["status"] == "failed" and partial["candidate"] is None
+    assert partial["operation"] == model_request["operation"] and partial["request_digest"]
+    witness = partial["admitted_request"]
+    admitted_bytes = base64.b64decode(witness["bytes_base64"], validate=True)
+    assert sha256(admitted_bytes).hexdigest() == witness["sha256"]
+    assert len(admitted_bytes) == witness["reference"]["bytes"] and json.loads(admitted_bytes) == model_request
+    backup.rename(fixture["lookup"])
+    retry_runtime = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, evidence_dir=tmp_path / "cold-producer-retry")
+    model = retry_runtime.managed_job(workspace, model_request, prior=interrupted)
+    assert model["status"] == "succeeded", model
+    assert model["result"]["request_digest"] == partial["request_digest"]
+    assert model["result"]["admitted_request"] == witness
+    checked = verify_completed_job(model["result"])
+    assert checked.manifest["profile"] == PRODUCER_COMPLETION_PROFILE
+    assert checked.admitted_request == model_request
+    evidence = checked.manifest["producer_evidence"]
+    assert evidence["role"] == "model" and evidence["prerequisite"] == model_request["prerequisites"][0]
+    view = checked.view_set["inputs"][0]
+    assert view["snapshot_custody"]["objects"] == original_objects
+    assert view["custody_grant"]["source"] == accepted_proof["result"]["input_custody"][0]
+    for item in original_objects:
+        assert not Path(item["uri"]).exists()
+        assert Path(item["retained"]["path"]).read_bytes() == fixture["original"][item["uri"]]
+    observed = pa.ipc.read_schema(pa.BufferReader(base64.b64decode(checked.manifest["schemas"][view["schema_sha256"]])))
+    assert [(field.name, str(field.type), field.nullable, field.metadata[b"PARQUET:field_id"]) for field in observed] == [
+        ("prefix", "string", False, b"1"), ("id", "int64", False, b"2"), ("amount", "int64", True, b"3"),
+    ]
+    output = model["result"]["completed_outputs"][0]
+    expected = [
+        {"prefix": "snapshot", "id": 1, "amount": 7, "tag": "approved"},
+        {"prefix": "snapshot", "id": 2, "amount": None, "tag": "approved"},
+        {"prefix": "snapshot", "id": 3, "amount": -5, "tag": "approved"},
+    ]
+    assert output["rows"] == 3 and _rows(pq.read_table(output["path"]).to_pylist()) == _rows(expected)
+    assert not Path(fixture["model_job"]["outputs"][0]["path"]).exists()
+    accepted_model = runtime.managed_job(workspace, _action(model, "accept", model_request["policy_id"]), prior=model)
+    assert accepted_model["status"] == "succeeded", accepted_model
+    verify_completed_job(accepted_model["result"], require_accepted=True)
+    for path in (model_request["job"]["path"], model_request["policy"]["path"], fixture["lookup"]):
+        Path(path).unlink()
+    cold = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, evidence_dir=tmp_path / "cold-producer-model")
+    replay = cold.managed_job(workspace, model_request, prior=accepted_model)
+    assert replay["status"] == "succeeded", replay
+    assert replay["result"]["candidate"] == model["result"]["candidate"]
+    assert replay["result"]["completed_reports"] == model["result"]["completed_reports"]
+    assert replay["result"]["accepted_qualification"] == accepted_model["result"]["accepted_qualification"]
+    assert verify_completed_job(replay["result"], require_accepted=True).manifest == checked.manifest
+    select = {**_action(model, "select", model_request["policy_id"]),
+              "accepted_qualification": accepted_model["result"]["accepted_qualification"]["identity"]}
+    selected = cold.managed_job(workspace, select, prior=replay)
+    assert selected["status"] == "succeeded" and selected["operation"]["selection"] == "selected", selected
+
+
+def test_native_producer_model_requires_actual_accepted_zero_counter_proof(runtime, tmp_path):
+    fixture = _producer_requests(runtime, tmp_path, wrong_counter=True)
+    workspace = fixture["workspace"]
+    proof = runtime.managed_job(workspace, fixture["proof"])
+    assert proof["status"] == "succeeded", proof
+    verify_completed_job(proof["result"])
+    assert proof["result"]["completed_reports"][0]["data"] == [{"row_delta": -1, "present_delta": 0}]
+    assert proof["result"]["completed_reports"][1]["data"] == [{"null_rows": 1}]
+    rejected = runtime.managed_job(workspace, _action(proof, "accept", fixture["proof"]["policy_id"]), prior=proof)
+    assert rejected["status"] == "failed" and rejected["error"]["code"] == "job_report_failed", rejected
+    assert rejected["result"]["candidate"] == proof["result"]["candidate"]
+    assert rejected["result"]["accepted_qualification"] is None
+    request = _producer_model_request(fixture, proof, "0" * 64)
+    refused = runtime.managed_job(workspace, request)
+    assert refused["status"] == "failed" and refused["error"]["code"] == "producer_prerequisite_unaccepted", refused
+    assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+    assert not Path(fixture["model_job"]["outputs"][0]["path"]).exists()
+
+
+def test_native_producer_original_membership_is_checked_before_payload_copy(runtime, tmp_path):
+    fixture = _producer_requests(runtime, tmp_path, wrong_producer=True)
+    # The record byte pin is correct. Only its original producer commit is outside
+    # the adopted inventory; a missing payload must not hide that static refusal.
+    payloads = [Path(path) for path in fixture["original"] if path.endswith(".parquet")]
+    assert len(payloads) == 1
+    payloads[0].unlink()
+    refused = runtime.managed_job(fixture["workspace"], fixture["proof"])
+    assert refused["status"] == "failed" and refused["error"]["code"] == "producer_record_mismatch", refused
+    assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+
+
+def test_native_producer_model_file_inventory_is_checked_before_file_open(runtime, tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    fixture = _producer_requests(runtime, tmp_path)
+    proof = _accepted_producer_proof(runtime, fixture)
+    request = _producer_model_request(fixture, proof, proof["result"]["accepted_qualification"]["identity"])
+    pq.write_table(pa.table({"tag": ["changed"]}), fixture["lookup"])
+    changed = fixture["lookup"].read_bytes()
+    request["file_inputs"][0]["members"][0].update(sha256=sha256(changed).hexdigest(), size=len(changed))
+    fixture["lookup"].unlink()
+    refused = runtime.managed_job(fixture["workspace"], request)
+    assert refused["status"] == "failed" and refused["error"]["code"] == "producer_file_inventory_mismatch", refused
+    assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+    assert not Path(fixture["model_job"]["outputs"][0]["path"]).exists()
+
+
+def test_native_producer_model_refuses_an_unrelated_actual_accepted_candidate(runtime, tmp_path):
+    fixture = _producer_requests(runtime, tmp_path, unrelated_accepted=True)
+    unrelated = fixture["unrelated"]
+    request = _producer_model_request(fixture, unrelated, unrelated["result"]["accepted_qualification"]["identity"])
+    refused = runtime.managed_job(fixture["workspace"], request)
+    assert refused["status"] == "failed" and refused["error"]["code"] == "producer_prerequisite_mismatch", refused
+    assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+    assert not Path(fixture["model_job"]["outputs"][0]["path"]).exists()
+
+
+def test_native_producer_model_refuses_a_weaker_fixed_policy(runtime, tmp_path):
+    fixture = _producer_requests(runtime, tmp_path)
+    proof = _accepted_producer_proof(runtime, fixture)
+    request = _producer_model_request(fixture, proof, proof["result"]["accepted_qualification"]["identity"])
+    weaker = json.loads(Path(request["policy"]["path"]).read_bytes())
+    assert [report["name"] for report in weaker["required_reports"]] == ["invariants", "null_invariants"]
+    weaker["required_reports"] = weaker["required_reports"][:1]
+    request["policy"] = _artifact(tmp_path / "weaker-model-policy.json", weaker)
+    fixture["lookup"].unlink()
+    refused = runtime.managed_job(fixture["workspace"], request)
+    assert refused["status"] == "failed" and refused["error"]["code"] == "producer_policy_mismatch", refused
+    assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+    assert not Path(fixture["model_job"]["outputs"][0]["path"]).exists()

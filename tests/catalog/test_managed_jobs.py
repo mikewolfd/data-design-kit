@@ -295,7 +295,7 @@ def native_job(tmp_path):
             "admitted_request": request_witness}
 
 
-def _metadata(tmp_path, native_job, *, accepted=True):
+def _metadata(tmp_path, native_job, *, accepted=True, mapping=None):
     native_job = deepcopy(native_job)
     if not accepted:
         native_job["accepted_qualification"] = None
@@ -306,7 +306,8 @@ def _metadata(tmp_path, native_job, *, accepted=True):
     receipt_path = tmp_path / "receipt.json"
     raw = _raw(receipt)
     receipt_path.write_bytes(raw)
-    value = managed_job_metadata(receipt={"path": str(receipt_path), "sha256": sha256(raw).hexdigest()}, **_mapping_kwargs())
+    value = managed_job_metadata(receipt={"path": str(receipt_path), "sha256": sha256(raw).hexdigest()},
+                                 **(_mapping_kwargs() if mapping is None else mapping))
     path = tmp_path / "metadata.json"
     path.write_bytes(_raw(value))
     project = _authored_project(tmp_path)
@@ -1473,6 +1474,84 @@ def test_real_assembly_missing_acceptance_stays_incomplete_and_preserves_prior_c
     assert "catalog.qualification" in incomplete.report["coverage"]["requestedGroups"]
     assert not incomplete.artifacts
     assert before == {path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("condition", ["accepted", "public", "missing_acceptance", "changed_definition", "dataset_qualification"])
+def test_proof_only_catalog_preserves_known_empty_outputs_and_required_evidence(native_snapshot_job, tmp_path, monkeypatch, condition):
+    project = _authored_project(tmp_path)
+    mapping = {"production": "summarize", "inputs": {"source": "orders"}, "outputs": {},
+               "out_of_catalog": {"inputs": [], "outputs": []}}
+    row = _producer_job(native_snapshot_job, tmp_path, "proof")
+    manifest, views, request, body = _producer_parts(row)
+    request["definition"] = managed_job_definition(assemble_catalog(project), **mapping)
+    row = _reseal_producer(row, manifest, views, request, body)
+    metadata, _entry, _receipt = _metadata(tmp_path, row, accepted=condition != "missing_acceptance", mapping=mapping)
+    if condition == "changed_definition":
+        path = project.parent / "definitions.json"
+        definition = json.loads(path.read_bytes())
+        definition["schema"][0]["properties"][0]["description"] = "Changed source meaning after proof."
+        path.write_bytes(_raw(definition))
+    original = Path.open
+
+    def metadata_only(path, *args, **kwargs):
+        assert not path.name.startswith("never-open") and path.name not in {"public.parquet", "private.parquet"}
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", metadata_only)
+    options = {"metadata": metadata.document.path, "metadata_adapter": "local", "permitted_roots": (tmp_path,)}
+    if condition == "dataset_qualification":
+        options["required_groups"] = ("catalog.qualification",)
+    result = assemble_catalog(project, **options)
+    assert result.catalog is not None and not validate_document(result.catalog, "catalog")
+    run = result.catalog["runs"][0]
+    assert run["outcome"] == "succeeded" and run["outputs"] == [] and len(run["inputs"]) == 1
+    assert run["inputCoverage"]["status"] == "unknown"
+    assert len(result.catalog["versions"]) == 1 and result.catalog["versions"][0]["dataset"] == "orders"
+    assert not result.catalog["checks"] and not result.catalog["releases"] and not result.catalog["selections"]
+    trace = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]
+    assert trace["producerEvidence"]["role"] == "proof" and trace["outputInterpretations"] == []
+    assert trace["acceptedQualification"] == (None if condition == "missing_acceptance" else row["accepted_qualification"]["identity"])
+    assert trace["definitionStatus"] == ("unknown" if condition == "changed_definition" else "passed")
+    assert ("production" in run) == (condition != "changed_definition")
+    if condition in {"accepted", "public"}:
+        assert result.report["decision"] == "passed", result.report
+        assert set(result.artifacts) == {"catalog.ddk.json", "catalog.report.json", "catalog.lock.json"}
+        again = assemble_catalog(project, **options)
+        assert again.report["decision"] == "passed" and again.artifacts == result.artifacts
+        if condition == "public":
+            catalog = result.catalog
+            identifiers = {catalog["id"], catalog["project"]["id"], *(item["id"] for item in catalog["products"]),
+                           *(item["id"] for item in catalog["datasets"]), *(item["definition"]["contractId"] for item in catalog["datasets"]),
+                           *(item["id"] for item in catalog["versions"])}
+            disclosure = tmp_path / "proof-disclosure.json"
+            disclosure.write_bytes(_raw({"identifiers": sorted(identifiers), "descriptions": True}))
+            public = assemble_catalog(project, disclosure_policy=disclosure, **options)
+            assert public.report["decision"] == "passed" and public.artifacts, public.report
+            assert "managedExecutions" not in public.catalog["extensions"]["urn:ddk:catalog:assembly"]
+            public_bytes = b"".join(public.artifacts.values()) + _raw(public.report)
+            for secret in (str(tmp_path).encode(), b"s3://fixture/table", b"native-lifecycle", b"definition-one", b"/never/open/producer-record"):
+                assert secret not in public_bytes
+    else:
+        expected_code, expected_status = (("CATALOG-DEFINITION-CAPTURE", "unknown") if condition == "changed_definition"
+                                          else ("CATALOG-EVIDENCE-MISSING", "not_run"))
+        assert result.report["decision"] == "incomplete" and not result.artifacts, result.report
+        assert any(check["status"] == expected_status and any(diagnostic["code"] == expected_code for diagnostic in check.get("diagnostics", []))
+                   for check in result.report["checks"]), result.report
+
+
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job", "native_producer_job"])
+def test_excluded_model_outputs_are_not_a_proof_only_catalog(request, fixture_name, tmp_path):
+    row = request.getfixturevalue(fixture_name)
+    mapping = {"production": "summarize", "inputs": {"source": "orders"}, "outputs": {},
+               "out_of_catalog": {"inputs": [], "outputs": [
+                   {"name": "public.parquet", "reason": "Deliberately outside this catalog."},
+                   {"name": "private.parquet", "reason": "Private output."}]}}
+    metadata, _entry, _receipt = _metadata(tmp_path, row, mapping=mapping)
+    result = assemble_catalog(_authored_project(tmp_path), metadata=metadata.document.path,
+                              metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete" and not result.artifacts
+    assert any(check["status"] == "unknown" and any(diagnostic["code"] == "CATALOG-EVIDENCE-SCOPE" for diagnostic in check.get("diagnostics", []))
+               for check in result.report["checks"]), result.report
 
 
 @pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job", "native_producer_job"])

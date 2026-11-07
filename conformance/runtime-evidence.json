@@ -376,6 +376,78 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/reuse-consumer-source-02/consumer-01/junit.xml"
       ],
       "scopeNote": "Actual local source consumer on immutable native snapshot source09, binary95a98c665717d4dd6202c62747e4f1f1b16b2d9dec7d2e572189f16c4c01c50f, at original128MiB memory/64MiB scratch. Clean DDK405ed55+sole test overlayb857a985. Same-name and renamed-input chains; native donor retirement and physical dedup are separate native unit evidence. Full gate, producer prerequisites and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-RECOVERY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_producer_proof_model_and_cold_replay_preserve_original_evidence"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Six actual source public-adapter cases on immutable native producer-v3-native-05, binary cca6b5339e076cb302158831cc74b596ee46a278ba0abef58e34ee089a05b325. Clean DDK70dde52 plus exact consumer test overlay cece715c; unchanged128MiB memory/64MiB scratch. Native daily/import ancestry and donor retirement are separate unit evidence. Historical writer execution, full gate, installed successor and production qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-COUNTER-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_producer_model_requires_actual_accepted_zero_counter_proof"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Six actual source public-adapter cases on immutable native producer-v3-native-05, binary cca6b5339e076cb302158831cc74b596ee46a278ba0abef58e34ee089a05b325. Clean DDK70dde52 plus exact consumer test overlay cece715c; unchanged128MiB memory/64MiB scratch. Native daily/import ancestry and donor retirement are separate unit evidence. Historical writer execution, full gate, installed successor and production qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-RECORD-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_producer_original_membership_is_checked_before_payload_copy"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Six actual source public-adapter cases on immutable native producer-v3-native-05, binary cca6b5339e076cb302158831cc74b596ee46a278ba0abef58e34ee089a05b325. Clean DDK70dde52 plus exact consumer test overlay cece715c; unchanged128MiB memory/64MiB scratch. Native daily/import ancestry and donor retirement are separate unit evidence. Historical writer execution, full gate, installed successor and production qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-FILE-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_producer_model_file_inventory_is_checked_before_file_open"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Six actual source public-adapter cases on immutable native producer-v3-native-05, binary cca6b5339e076cb302158831cc74b596ee46a278ba0abef58e34ee089a05b325. Clean DDK70dde52 plus exact consumer test overlay cece715c; unchanged128MiB memory/64MiB scratch. Native daily/import ancestry and donor retirement are separate unit evidence. Historical writer execution, full gate, installed successor and production qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-PREREQUISITE-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_producer_model_refuses_an_unrelated_actual_accepted_candidate"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Six actual source public-adapter cases on immutable native producer-v3-native-05, binary cca6b5339e076cb302158831cc74b596ee46a278ba0abef58e34ee089a05b325. Clean DDK70dde52 plus exact consumer test overlay cece715c; unchanged128MiB memory/64MiB scratch. Native daily/import ancestry and donor retirement are separate unit evidence. Historical writer execution, full gate, installed successor and production qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-POLICY-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_producer_model_refuses_a_weaker_fixed_policy"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-consumer-source-03/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Six actual source public-adapter cases on immutable native producer-v3-native-05, binary cca6b5339e076cb302158831cc74b596ee46a278ba0abef58e34ee089a05b325. Clean DDK70dde52 plus exact consumer test overlay cece715c; unchanged128MiB memory/64MiB scratch. Native daily/import ancestry and donor retirement are separate unit evidence. Historical writer execution, full gate, installed successor and production qualification remain separate."
     }
   ]
 }
