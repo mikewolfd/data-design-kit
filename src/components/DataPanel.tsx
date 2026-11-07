@@ -11,7 +11,7 @@ import { request } from '../lib/client';
 import { downloadJson, jsonInput, releaseFor, shortId, titleOf } from '../lib/display';
 import { Badge, Notice, Raw, Section, Value, BlankValuesHelp } from './Primitives';
 import { EvidenceRecord } from './EvidenceRecord';
-import { formatLabel, enumLabel } from '../lib/content';
+import { representationChoices } from '../lib/choice-labels';
 import { exactObjectField } from '../domain/exact';
 
 export function ResultTable({
@@ -114,6 +114,7 @@ export function DataPanel({
   const reps = snapshot.catalog.representations.filter((r) => r.version === version?.id);
   const [representationId, setRepresentation] = useState(reps.length === 1 ? reps[0].id : '');
   const [result, setResult] = useState<ReadResult>();
+  const [identityAnnouncement, setIdentityAnnouncement] = useState('');
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState('');
   const [errorDiagnostic, setErrorDiagnostic] = useState('');
@@ -129,6 +130,7 @@ export function DataPanel({
   const controller = useRef<AbortController>(null);
   const currentRequest = useRef<ReadRequest>(null);
   const rep = reps.find((r) => r.id === representationId);
+  const representationOptions = representationChoices(dataset, reps);
   const fields = snapshot.definitions[dataset.alias]?.properties ?? [];
   const readSupported =
     snapshot.capabilities.read &&
@@ -262,32 +264,69 @@ export function DataPanel({
         ) : null}
 
         <div className="data-toolbar">
-          <label className="stack-label">
-            File, table or service
-            <select
-              value={representationId}
-              onChange={(e) => {
-                setRepresentation(e.target.value);
-                setCursor(undefined);
-                setHistory([]);
-                setResult(undefined);
-              }}
-            >
-              <option value="">Choose a file, table or service</option>
-              {reps.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {shortId(r.id)} · {enumLabel(r.availability)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {rep && (
-            <span className="toolbar-note">
-              {formatLabel(rep.mediaType, rep.kind)}
-              <br />
-              <Badge status={rep.availability} />
-            </span>
-          )}
+          <div>
+            {reps.length === 1 && rep ? (
+              <div className="stack-label">
+                <span>File, table or service</span>
+                <span>{representationOptions[0].label}</span>
+              </div>
+            ) : (
+              <label className="stack-label">
+                File, table or service
+                <select
+                  value={representationId}
+                  onChange={(e) => {
+                    setRepresentation(e.target.value);
+                    setCursor(undefined);
+                    setHistory([]);
+                    setResult(undefined);
+                  }}
+                >
+                  <option value="">Choose a file, table or service</option>
+                  {representationOptions.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {!!reps.length && (
+              <details>
+                <summary>File, table or service identifiers</summary>
+                {representationOptions.some((choice) => / · Choice \d+$/.test(choice.label)) && (
+                  <p>
+                    Choice numbers distinguish entries in this list; they do not indicate age or
+                    priority.
+                  </p>
+                )}
+                {representationOptions.map((choice) => (
+                  <p key={choice.id}>
+                    {choice.label}
+                    <br />
+                    <code>{choice.id}</code>{' '}
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(choice.id);
+                          setIdentityAnnouncement('File, table or service identifier copied.');
+                        } catch {
+                          setIdentityAnnouncement(
+                            'Clipboard access is unavailable. Select and copy the identifier shown here.',
+                          );
+                        }
+                      }}
+                    >
+                      Copy identifier
+                    </button>
+                  </p>
+                ))}
+                <p role="status" aria-live="polite">
+                  {identityAnnouncement}
+                </p>
+              </details>
+            )}
+          </div>
         </div>
         {readSupported && rep && (
           <>
@@ -558,14 +597,18 @@ export function DataPanel({
         )}
         {result?.readEvidence && (
           <>
-            <Raw value={result.readEvidence} label="Read evidence and consumed version" />
-            {result.readEvidence.kind === 'owner' && (
-              <EvidenceRecord
-                snapshot={snapshot}
-                record={result.readEvidence.record}
-                label="Inspect native read receipt"
-              />
+            {result.readEvidence.details !== undefined && (
+              <Raw value={result.readEvidence.details} label="Read details" />
             )}
+            <Raw value={result.readEvidence} label="Read evidence and consumed version" />
+            {result.readEvidence.kind === 'owner' &&
+              (result.readEvidence.record || result.readEvidence.details === undefined) && (
+                <EvidenceRecord
+                  snapshot={snapshot}
+                  record={result.readEvidence.record}
+                  label="Inspect native read receipt"
+                />
+              )}
           </>
         )}
         <Raw

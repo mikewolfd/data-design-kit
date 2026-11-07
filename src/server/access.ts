@@ -52,6 +52,7 @@ export interface OwnerReader {
     hasMore?: boolean;
     consumed: ExactBinding;
     record?: RecordRef;
+    details?: ExactObject;
   }>;
 }
 export interface OwnerQuery {
@@ -259,6 +260,7 @@ function validatePage(
     rowOrder?: ReadResult['rowOrder'];
     total?: number;
     hasMore?: boolean;
+    details?: ExactObject;
   },
   limit: number,
   offset = 0,
@@ -290,9 +292,29 @@ function validatePage(
     );
   rowColumns(page.rows);
   let nodes = 0;
-  function visit(value: unknown, depth: number) {
+  const activeDetails = new WeakSet<object>();
+  function visit(value: unknown, depth: number, inlineDetails = false) {
     if (++nodes > 300_000 || depth > 48)
       fail('adapter_budget', 'The owner result exceeds the supported structure budget.', 413);
+    if (inlineDetails && value !== null && typeof value === 'object') {
+      const prototype = Object.getPrototypeOf(value);
+      if (
+        (Array.isArray(value)
+          ? prototype !== Array.prototype
+          : prototype !== Object.prototype && prototype !== null) ||
+        Reflect.ownKeys(value).some((key) => {
+          const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+          return (
+            typeof key !== 'string' ||
+            !('value' in descriptor) ||
+            (!descriptor.enumerable && !(Array.isArray(value) && key === 'length'))
+          );
+        })
+      )
+        fail('adapter_transport', 'Owner read details must contain plain exact JSON values.', 409);
+      if (activeDetails.has(value))
+        fail('adapter_transport', 'Owner read details must not contain cycles.', 409);
+    }
     if (isExactNumber(value) || value === null || typeof value === 'boolean') return;
     if (typeof value === 'string') {
       if (value.length > 1_000_000)
@@ -300,10 +322,13 @@ function validatePage(
       return;
     }
     if (Array.isArray(value)) {
-      for (const item of value) visit(item, depth + 1);
+      if (inlineDetails) activeDetails.add(value);
+      for (const item of value) visit(item, depth + 1, inlineDetails);
+      if (inlineDetails) activeDetails.delete(value);
       return;
     }
     if (isObject(value)) {
+      if (inlineDetails) activeDetails.add(value);
       if (('$number' in value || '$object' in value) && !isEscapedObject(value))
         fail(
           'adapter_transport',
@@ -313,12 +338,27 @@ function validatePage(
       const entries = exactObjectEntries(value);
       if (new Set(entries.map(([key]) => key)).size !== entries.length)
         fail('adapter_transport', 'An escaped owner object contains duplicate keys.', 409);
-      for (const [, item] of entries) visit(item, depth + 1);
+      for (const [, item] of entries) visit(item, depth + 1, inlineDetails);
+      if (inlineDetails) activeDetails.delete(value);
       return;
     }
     fail('adapter_transport', 'Owner data numbers must use exact numeric transport tags.', 409);
   }
   for (const row of page.rows) visit(row, 0);
+  // Inline owner facts share the row structure budget and the final response
+  // byte budget. Convert malformed owner objects into a bounded refusal.
+  try {
+    const details = page.details;
+    if (details !== undefined) {
+      if (!isObject(details) || isExactNumber(details))
+        fail('adapter_transport', 'Owner read details must be an exact JSON object.', 409);
+      visit(details, 0, true);
+    }
+    return details;
+  } catch (error) {
+    if (error instanceof ViewerError) throw error;
+    fail('adapter_transport', 'Owner read details could not be validated as exact JSON.', 409);
+  }
 }
 
 export class FixtureReader implements OwnerReader {
@@ -607,6 +647,7 @@ export class CatalogAccess {
       hasMore?: boolean;
       consumed: ExactBinding;
       record?: RecordRef;
+      details?: ExactObject;
     };
     if (request.filter && reader === this.fixture) {
       const rows = await this.fixture.all(loaded, binding, deadline);
@@ -665,7 +706,7 @@ export class CatalogAccess {
         }
       }
     }
-    validatePage(page, limit, offset);
+    const details = validatePage(page, limit, offset);
     if (!sameBinding(page.consumed, binding))
       fail(
         'adapter_binding',
@@ -705,6 +746,7 @@ export class CatalogAccess {
         kind: reader === this.fixture ? 'fixture' : 'owner',
         consumed: page.consumed,
         ...(page.record ? { record: page.record } : {}),
+        ...(details !== undefined ? { details } : {}),
       },
       ...(checked.release ? { release: checked.release } : {}),
     });

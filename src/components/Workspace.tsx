@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CatalogSnapshot, CatalogSummary } from '../domain/types';
 import { request } from '../lib/client';
-import {
-  downloadJson,
-  selectedVersion,
-  shortId,
-  titleOf,
-  versionsOf,
-  releaseFor,
-} from '../lib/display';
+import { downloadJson, selectedVersion, titleOf, versionsOf, releaseFor } from '../lib/display';
 import { datasetRecordAccess, enumLabel } from '../lib/content';
+import { versionChoices } from '../lib/choice-labels';
 import { Badge, Notice, Raw } from './Primitives';
 import { Overview, Evidence, Activity, Compare } from './MetadataPanels';
 import { DataPanel } from './DataPanel';
@@ -150,6 +144,10 @@ export default function Workspace() {
   const version =
     versions.find((v) => v.id === route.version) ||
     (!route.version && snapshot && dataset ? selectedVersion(snapshot, dataset) : undefined);
+  const versionOptions = snapshot && dataset ? versionChoices(snapshot, dataset, versions) : [];
+  const publisherVersion = snapshot && dataset ? selectedVersion(snapshot, dataset)?.id : undefined;
+  const versionChoiceLabel = (id: string) =>
+    `${versionOptions.find((item) => item.id === id)?.label ?? ''}${publisherVersion === id ? ' · Publisher selected' : ''}`;
   const exactLinkMismatch =
     !!snapshot && !!route.digest && route.digest !== snapshot.identity.catalogSha256;
   const boundRelease =
@@ -596,26 +594,73 @@ export default function Workspace() {
                 </div>
               </div>
               <div className="context-bar">
-                <label htmlFor="version-choice">
-                  Data version
-                  <select
-                    id="version-choice"
-                    value={version?.id || ''}
-                    onChange={(e) => navigate({ version: e.target.value, release: '' })}
-                  >
-                    <option value="">
-                      {versions.length ? 'Choose a data version' : 'No data versions listed'}
-                    </option>
-                    {versions.map((v) => (
-                      <option value={v.id} key={v.id}>
-                        {shortId(v.id)}
-                        {selectedVersion(snapshot, dataset)?.id === v.id
-                          ? ' · publisher selected'
-                          : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="version-context">
+                  {versions.length === 1 && version ? (
+                    <div className="stack-label">
+                      <span>Data version</span>
+                      <span>{versionChoiceLabel(version.id)}</span>
+                    </div>
+                  ) : (
+                    <label htmlFor="version-choice">
+                      Data version
+                      <select
+                        id="version-choice"
+                        value={version?.id || ''}
+                        onChange={(e) => navigate({ version: e.target.value, release: '' })}
+                      >
+                        <option value="">
+                          {versions.length ? 'Choose a data version' : 'No data versions listed'}
+                        </option>
+                        {versionOptions.map((choice) => (
+                          <option value={choice.id} key={choice.id}>
+                            {versionChoiceLabel(choice.id)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {!!versions.length && (
+                    <details>
+                      <summary>Data version identifiers</summary>
+                      {versionOptions.some((choice) => / · Choice \d+$/.test(choice.label)) && (
+                        <p>
+                          Choice numbers distinguish entries in this list; they do not indicate age
+                          or priority.
+                        </p>
+                      )}
+                      {versionOptions.map((choice) => (
+                        <p key={choice.id}>
+                          {choice.label}
+                          <br />
+                          <code>{choice.id}</code>{' '}
+                          <button
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(choice.id);
+                                setAnnouncement('Version identifier copied.');
+                              } catch {
+                                setAnnouncement(
+                                  'Clipboard access is unavailable. Select and copy the identifier shown here.',
+                                );
+                              }
+                            }}
+                          >
+                            Copy version identifier
+                          </button>
+                        </p>
+                      ))}
+                      <Raw
+                        label="Version and release references"
+                        value={{
+                          versions,
+                          releases: snapshot.catalog.releases.filter((release) =>
+                            release.members.some((id) => versions.some((item) => item.id === id)),
+                          ),
+                        }}
+                      />
+                    </details>
+                  )}
+                </div>
                 <div className="snapshot-context">
                   <span>Catalog copy</span>
                   <code title={snapshot.identity.catalogSha256}>

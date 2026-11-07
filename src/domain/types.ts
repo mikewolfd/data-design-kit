@@ -285,7 +285,12 @@ export type ReadResult = {
   rowOrder?: 'source-row' | 'query-result';
   attempt?: RecordRef;
   transport: 'ddk-exact-json-v1';
-  readEvidence?: { kind: 'fixture' | 'owner'; consumed: ExactBinding; record?: RecordRef };
+  readEvidence?: {
+    kind: 'fixture' | 'owner';
+    consumed: ExactBinding;
+    record?: RecordRef;
+    details?: ExactObject;
+  };
   release?: { id: string; membership: string; selected?: boolean };
 };
 export type QueryResult = Omit<ReadResult, 'binding'> & {
