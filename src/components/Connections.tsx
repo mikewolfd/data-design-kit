@@ -23,6 +23,70 @@ import { Badge, Facts, Notice, Raw, Section, BlankValuesHelp } from './Primitive
 import { enumLabel, formatLabel } from '../lib/content';
 import { ResultTable } from './DataPanel';
 import { EvidenceRecord } from './EvidenceRecord';
+import { exactEqual } from '../domain/exact';
+
+function RelationshipAssessment({
+  snapshot,
+  relationshipId,
+  external,
+}: {
+  snapshot: CatalogSnapshot;
+  relationshipId: string;
+  external: boolean;
+}) {
+  const assembly = objectOf(snapshot.catalog.extensions?.['urn:ddk:catalog:assembly']);
+  // Public disclosure and an explicit assessment scope take precedence over individual rows.
+  const disclose =
+    snapshot.audience === 'local' && !Object.hasOwn(assembly, 'relationshipAssessmentScope');
+  const profile = objectOf(assembly.relationshipProfile);
+  const identity = objectOf(profile.identity);
+  const matches =
+    disclose && Array.isArray(assembly.relationshipAssessments)
+      ? assembly.relationshipAssessments
+          .map(objectOf)
+          .filter((row) => row.relationship === relationshipId)
+      : [];
+  const assessment = matches[0];
+  const status = assessment?.status;
+  const reason = assessment?.reason;
+  const usable =
+    matches.length === 1 &&
+    profile.scope === 'declaration-support-only' &&
+    typeof identity.id === 'string' &&
+    !!identity.id &&
+    typeof identity.version === 'string' &&
+    !!identity.version &&
+    assessment.scope === 'declaration-support-only' &&
+    exactEqual(assessment.profile, profile.identity) &&
+    (status === 'supported' || status === 'failed' || status === 'unknown') &&
+    typeof reason === 'string' &&
+    !!reason.trim() &&
+    (assessment.externalExistence === undefined || assessment.externalExistence === 'not_assessed');
+  const label = usable && typeof status === 'string' ? enumLabel(status) : 'Unknown';
+  const explanation =
+    usable && typeof reason === 'string'
+      ? reason
+      : matches.length > 1
+        ? 'Multiple assessments identify this relationship; no single assessment is established.'
+        : 'No usable matching-rule assessment is supplied for this relationship.';
+  return (
+    <>
+      {disclose && (
+        <div className="relationship-assessment muted">
+          <p>Matching rule assessment: {label}</p>
+          <p>{explanation}</p>
+        </div>
+      )}
+      {external && (
+        <p className="muted">
+          {usable && assessment.externalExistence === 'not_assessed'
+            ? 'Whether this external target exists has not been assessed.'
+            : 'Whether this external target exists is unknown here.'}
+        </p>
+      )}
+    </>
+  );
+}
 
 function Recipe({
   recipe,
@@ -548,6 +612,8 @@ export function Connections({
       Object.values(r.inputs).includes(dataset.alias) ||
       Object.values(r.inputs).includes(dataset.id),
   );
+  const assembly = objectOf(snapshot.catalog.extensions?.['urn:ddk:catalog:assembly']);
+  const assessmentScope = objectOf(assembly.relationshipAssessmentScope);
   return (
     <>
       <Section
@@ -555,8 +621,18 @@ export function Connections({
         aside={<span className="muted">{relationships.length} declared</span>}
       >
         <p>
-          These links describe how fields can connect datasets. Matches have not been checked here.
+          These links describe how fields can connect datasets. Their declarations and matching-rule
+          assessments do not establish which records match.
         </p>
+        {Object.hasOwn(assembly, 'relationshipAssessmentScope') && (
+          <Notice title="Matching rule assessment: Unknown">
+            {assessmentScope.status === 'unknown' &&
+            typeof assessmentScope.reason === 'string' &&
+            assessmentScope.reason.trim()
+              ? assessmentScope.reason
+              : 'The catalog does not supply a usable assessment scope.'}
+          </Notice>
+        )}
         {relationships.length ? (
           relationships.map((r) => {
             const outgoing = r.source.dataset === dataset.alias || r.source.dataset === dataset.id;
@@ -577,7 +653,7 @@ export function Connections({
                 ? targetVersions[0]
                 : undefined;
             return (
-              <article className="relationship" key={r.id}>
+              <article className="relationship" key={r.id} data-relationship-id={r.id}>
                 <div className="relationship-route">
                   <span>{titleOf(dataset)}</span>
                   <span aria-hidden="true">{outgoing ? '→' : '←'}</span>
@@ -595,6 +671,16 @@ export function Connections({
                   )}
                 </div>
                 <p>{r.meaning}</p>
+                <p className="muted">
+                  Declared requirement:{' '}
+                  {r.resolution === 'required'
+                    ? 'Matching records required'
+                    : r.resolution === 'unresolved_allowed'
+                      ? 'Unmatched records allowed'
+                      : r.resolution === 'external'
+                        ? 'External reference'
+                        : 'Unknown'}
+                </p>
                 {!boundTarget && target && (
                   <p className="muted">
                     Opens the dataset description. This link does not open matching records.
@@ -629,10 +715,11 @@ export function Connections({
                   />
                   {r.scopeDescription && <p>{r.scopeDescription}</p>}
                 </details>
-                <span className="muted">
-                  Matches have not been checked
-                  {r.target.external ? ' · external existence not assessed' : ''}
-                </span>
+                <RelationshipAssessment
+                  snapshot={snapshot}
+                  relationshipId={r.id}
+                  external={!!r.target.external}
+                />
                 <Raw value={r} label="Technical relationship details" />
               </article>
             );

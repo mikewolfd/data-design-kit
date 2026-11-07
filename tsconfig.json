@@ -1,1 +1,1 @@
-{"extends":"astro/tsconfigs/strict","compilerOptions":{"jsx":"react-jsx","jsxImportSource":"react","types":["node"]},"include":[".astro/types.d.ts","**/*"],"exclude":["dist","node_modules","work"]}
+{"extends":"astro/tsconfigs/strict","compilerOptions":{"jsx":"react-jsx","jsxImportSource":"react","types":["node"]},"include":[".astro/types.d.ts","**/*"],"exclude":["dist","node_modules","work","outputs"]}
