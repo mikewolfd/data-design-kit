@@ -3618,6 +3618,132 @@
         "exitCode": 2,
         "diagnostic": "CATALOG-EVIDENCE-SCOPE"
       }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-OBSERVATION",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "A verified local native publication-intent receipt preserves its exact producing job, native table incarnation and saved generation. Record retained or retired payload state separately from computation, selection and external publication. Fresh unbound inspection may establish explicit absence. These independently authored metadata and subprocess simulations do not qualify native execution.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-RECOVERY",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Lose the first freeze response and preserve the complete pinned request. Require exact replay before bound inspection can confirm that proposal. Refuse changed requests, crossed operation kinds and altered or decimal-normalized pinned evidence before another submission. These independently authored metadata and subprocess simulations do not qualify native execution.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "DOCSPEC-BINDING"
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-CURRENT-CUSTODY",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "After a verified saved decision, a failed, absent, conflicting or unconfirmed refresh preserves historical identity with current payload state unknown. An exact retired payload generation cannot become retained again. These independently authored metadata and subprocess simulations do not qualify native execution.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "DOCSPEC-BINDING"
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-METADATA-REFUSAL",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Quarantine malformed or mismatched native publication metadata, including invalid enum shapes, integer tokens, table incarnation, candidate, original job identity, inline byte pins, inventory and external-effect claims. A conflicting refusal protocol remains unknown. These independently authored metadata and subprocess simulations do not qualify native execution.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "DOCSPEC-BINDING"
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-LIMITS",
+      "requirements": [
+        "DDK-SAFE-003",
+        "DDK-SAFE-004",
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Near-limit native stdout remains recoverable through a compact receipt at the same capture and metadata limits. Oversized original requests and pre-submission cancellation launch no process. An oversized final recovery record returns no success and preserves original request and raw reply. Prior decoded payloads have no consumer after their audit is verified. These independently authored metadata and subprocess simulations do not qualify native execution.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-REPORT",
+      "requirements": [
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "The publicationIntent report variant permits no computation, selection, data outputs or job-qualification claims. Success and absence require pinned observations; unknown requires a reason. Existing bounded and managed job branches retain their prior requirements. These independently authored metadata and subprocess simulations do not qualify native execution.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
     }
   ]
 }

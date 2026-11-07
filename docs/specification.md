@@ -497,6 +497,8 @@ Reports MUST keep check status separate from runtime execution and selection out
 
 Execution `pending` means the native owner admitted the operation and confirms that computation has not started. It MUST remain distinct from `not_submitted`, `running`, and `unknown`. Recovery MUST compare the complete original prepare request when available, and preserve any supplied native request and candidate constraints without treating an intended candidate as observed. A later command timeout or refusal MUST NOT erase a confirmed historical selection or its accepted qualification. Historical selection does not establish that the candidate is still the current selection.
 
+A native publication-intent action MUST use the `publicationIntent` report variant. It records a saved delivery decision, with computation and selection both `not_requested` and no data outputs or job-qualification claims. The command's request identity, native intent identity, and original producing-job identity MUST remain distinct. A verified native reference MUST preserve its table incarnation and record generation. `succeeded` requires a pinned native observation and explicit `retained` or `retired` payload state. An unbound inspect MAY report a pinned `not_found` observation; absence MUST NOT erase a previously verified saved decision. A later unconfirmed or refused refresh MAY preserve that historical identity, but its current payload state MUST be `unknown`. A lost initial freeze MUST be reconciled by replaying the exact original request unless an independently known native reference can constrain inspection. Saving the intent MUST NOT establish external authorization, dispatch, or publication.
+
 <a id="cli"></a>
 ## 14. Command-line behavior
 

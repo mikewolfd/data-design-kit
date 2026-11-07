@@ -192,7 +192,8 @@ class Document:
     data: bytes
 
 
-def read_json(path, *, max_bytes=DEFAULT_LIMITS["maxDocumentBytes"], max_nesting=DEFAULT_LIMITS["maxNesting"]):
+def read_json(path, *, max_bytes=DEFAULT_LIMITS["maxDocumentBytes"], max_nesting=DEFAULT_LIMITS["maxNesting"],
+              preserve_integral_decimals=False):
     path = Path(path).resolve()
     descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
     with os.fdopen(descriptor, "rb") as stream:
@@ -201,7 +202,9 @@ def read_json(path, *, max_bytes=DEFAULT_LIMITS["maxDocumentBytes"], max_nesting
         data = stream.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise ResourceLimit(f"Document exceeds {max_bytes} bytes.")
-    return Document(path, freeze_json(parse_json(data, max_nesting=max_nesting)), sha256(data).hexdigest(), data)
+    return Document(path, freeze_json(parse_json(data, max_nesting=max_nesting,
+                                               preserve_integral_decimals=preserve_integral_decimals)),
+                    sha256(data).hexdigest(), data)
 
 
 def resolve_path(document_path, reference, permitted_roots):

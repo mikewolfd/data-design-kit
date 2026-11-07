@@ -6,6 +6,8 @@ The [dev5 release](local-release-dev5.md) retains its earlier 358-test, 13-profi
 
 ## Successor work
 
+The source `publication_intent` adapter passes 42 new metadata and simulated-process cases plus 28 existing job-transport cases. Its report distinguishes saved intent, current payload retention, computation and external publication. Compact receipts keep cold recovery within explicit limits, and malformed or mismatched replies cannot establish custody. Actual native lifecycle execution, installed successor and publisher qualification remain separate. [Publication adapter evidence](verification.md#november-7-2026-publication-intent-metadata-and-recovery).
+
 Six actual public DDK adapter cases now pass for native producer proof/model prerequisites, exact counter refusal and same-operation recovery at unchanged limits. They preserve original custody and field IDs, require the actual accepted proof and fixed model policy, and select only the accepted model. The native checkpoint separately passes its focused owner tests and strict Clippy. Historical writer execution, production source acceptance, the successor full gate and installed qualification remain separate. [Producer consumer evidence](verification.md#november-7-2026-producer-prerequisites-through-ddk).
 
 Local catalog traces now preserve the verified native producer adoption, role, evidence reference and original model prerequisite. Eleven focused metadata checks pass for actual assembly without payload opens, missing acceptance, earlier profiles and public withholding. The full witness stays in the pinned receipt; the catalog adds no current authority or availability claim. [Catalog trace evidence](verification.md#november-7-2026-local-producer-catalog-traces).

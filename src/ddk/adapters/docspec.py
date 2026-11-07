@@ -48,12 +48,16 @@ class DocSpecAdapter:
     """Prepare and execute through an explicitly selected DocSpec executable."""
 
     def __init__(self, executable, limits, *, timeout=120, evidence_dir=None,
-                 capture_bytes=DEFAULT_CAPTURE_BYTES, source_commit=None, secret_values=()):
+                 capture_bytes=DEFAULT_CAPTURE_BYTES, metadata_bytes=DEFAULT_CAPTURE_BYTES,
+                 source_commit=None, secret_values=()):
         if not math.isfinite(timeout) or timeout <= 0 or capture_bytes <= 0:
             raise ValueError("DocSpec timeout and capture size must be positive")
+        if type(metadata_bytes) is not int or metadata_bytes <= 0:
+            raise ValueError("DocSpec recovery metadata size must be a positive byte count")
         self.executable = Path(executable).resolve(strict=True)
         self.timeout = timeout
         self.capture_bytes = capture_bytes
+        self.metadata_bytes = metadata_bytes
         self.redaction = SecretRedaction(secret_values)
         self.evidence_dir = (
             Path(evidence_dir).resolve() if evidence_dir is not None
@@ -129,6 +133,32 @@ class DocSpecAdapter:
             refusal=refusal, cancel_event=cancel_event,
         )
 
+    def publication_intent(self, workspace, request, *, prior=None, backend="local", cancel_event=None):
+        """Freeze or inspect native publication metadata without external effects.
+
+        Keep the private request and evidence directory for cold reconciliation.
+        After an unconfirmed first freeze, replay that exact request. A standalone
+        inspect observes the owner's saved decision, not the caller's proposal.
+        """
+        from .docspec_publication import publication_context, publication_prior
+
+        if self.redaction:
+            raise ValueError("Publication reconciliation requires its original native request")
+        request = deepcopy(request)
+        workspace = Path(workspace).resolve(strict=True)
+        context = publication_context(workspace, request)
+        previous, confirmation, original = publication_prior(
+            context, request, prior, max_metadata_bytes=self.metadata_bytes, max_native_bytes=self.capture_bytes,
+        )
+        refusal = None if backend == "local" else BindingRefusal(
+            "DOCSPEC-BACKEND-UNSUPPORTED", "The configured publication-intent backend is unavailable",
+        )
+        return self._invoke(
+            "job-publication-intent", request, prefix=("--workspace", str(workspace)),
+            operation_context=context, prior=previous, confirmation=confirmation,
+            original_request=original, refusal=refusal, cancel_event=cancel_event,
+        )
+
     def read_version(self, workspace, version, *, max_ipc_bytes=DEFAULT_CAPTURE_BYTES,
                      new_process_group=True):
         """Read an exact protected version from the native IPC stream in bounded memory."""
@@ -188,7 +218,8 @@ class DocSpecAdapter:
         request_path = folder / "request.json"
         limits_path = folder / "limits.json"
         request_sha256 = write_json(request_path, self.redaction.data(request) if self.redaction else request)["sha256"]
-        if command == "managed-job" and request["action"] == "prepare" and original_request is None:
+        if ((command == "managed-job" and request["action"] == "prepare")
+                or (command == "job-publication-intent" and request["action"] == "freeze")) and original_request is None:
             original_request = {"reference": {"path": str(request_path), "sha256": request_sha256}, "value": request}
         if (command == "managed-job" and request["action"] in {"accept", "select", "requalify"}
                 and identity_constraint is None and request.get("request_digest") and request.get("candidate")):
@@ -204,11 +235,14 @@ class DocSpecAdapter:
         native_reads = []
         submitted = False
         transport = None
+        native_evidence = None
         started_at = _now()
         started = monotonic()
         try:
             if refusal is not None:
                 raise refusal
+            if command == "job-publication-intent" and request_path.stat().st_size > self.metadata_bytes:
+                raise BindingRefusal("DOCSPEC-REQUEST-LIMIT", "Publication request exceeds its recovery metadata limit")
             if cancel_event is not None and cancel_event.is_set():
                 raise BindingRefusal("DOCSPEC-CANCELLED", "Caller cancelled before native submission")
             if _binary_identity(self.executable) != self._executable_stat:
@@ -245,6 +279,8 @@ class DocSpecAdapter:
                 )
             stdout = transport["stdout"]
             (folder / "stdout.json").write_bytes(self.redaction.captured(stdout))
+            native_evidence = {"kind": "native-report", "path": str(folder / "stdout.json"),
+                               "sha256": sha256(stdout).hexdigest(), "tool": RUNTIME}
             (folder / "stderr.log").write_bytes(self.redaction.captured(transport["stderr"]))
             if transport["cancelled"]:
                 status = "unknown"
@@ -278,6 +314,12 @@ class DocSpecAdapter:
                 else:
                     status = "unknown"
                     error = _error("DOCSPEC-INVALID-RECEIPT", "Native exit status conflicts with its result")
+            if command == "job-publication-intent" and status == "failed":
+                if result or not (isinstance(error.get("code"), str) and error["code"]
+                                  and isinstance(error.get("message"), str) and error["message"]):
+                    unverified_result, result = result or None, {}
+                    status = "unknown"
+                    error = _error("DOCSPEC-INVALID-RECEIPT", "Native publication refusal conflicts with its protocol")
             for path, digest in {item["path"]: item["sha256"] for item in known_inputs}.items():
                 if file_sha256(path) != digest:
                     status = "unknown"
@@ -292,6 +334,8 @@ class DocSpecAdapter:
             if operation_context is not None and (status == "succeeded" or result):
                 if (result.get("dataset") != operation_context["dataset"]
                         or result.get("operation") != operation_context["operationId"]):
+                    if command == "job-publication-intent":
+                        unverified_result = result
                     result = {}
                     raise ValueError("Native response refers to a different managed operation")
                 if command == "managed-job":
@@ -306,6 +350,18 @@ class DocSpecAdapter:
                     except ValueError:
                         unverified_result, result = result, {}
                         raise
+                elif command == "job-publication-intent":
+                    from .docspec_publication import validate_publication_response
+
+                    try:
+                        validate_publication_response(
+                            operation_context, request, result,
+                            original_request=original_request["value"] if original_request else None,
+                            prior_result=confirmation["value"] if confirmation else None,
+                        )
+                    except (ValueError, KeyError, TypeError):
+                        unverified_result, result = result, {}
+                        raise
         except BindingRefusal as exc:
             error = _error(exc.code, str(exc))
         except (OSError, subprocess.TimeoutExpired) as exc:
@@ -315,6 +371,8 @@ class DocSpecAdapter:
             if submitted:
                 status = "unknown"
         except (ValueError, KeyError, TypeError) as exc:
+            if command == "job-publication-intent" and result:
+                unverified_result, result = result, {}
             status = "unknown" if submitted else "not_submitted"
             error = _error(getattr(exc, "code", "DOCSPEC-BINDING"), str(exc))
 
@@ -340,7 +398,7 @@ class DocSpecAdapter:
         }
         if semantic_profile is not None:
             receipt["semantics"] = semantic_profile
-        if command == "managed-job" and original_request is not None:
+        if command in {"managed-job", "job-publication-intent"} and original_request is not None:
             receipt["originalRequest"] = original_request["reference"]
         if command == "managed-job" and identity_constraint is not None:
             receipt["identityConstraint"] = identity_constraint["reference"]
@@ -381,9 +439,17 @@ class DocSpecAdapter:
                 from .docspec_jobs import managed_job_operation
 
                 operation_mapper = managed_job_operation
-            operation = operation_mapper(
-                operation_context, request["action"], request_sha256, result, native_outcome, native_error, prior,
-            )
+            if command == "job-publication-intent":
+                from .docspec_publication import publication_operation
+
+                operation = publication_operation(
+                    operation_context, request["action"], request_sha256, result, native_outcome, native_error, prior,
+                    native_evidence,
+                )
+            else:
+                operation = operation_mapper(
+                    operation_context, request["action"], request_sha256, result, native_outcome, native_error, prior,
+                )
             receipt["operation"] = operation
             receipt["operationContext"] = operation_context
         if status == "error" and native_error is not None:
@@ -396,6 +462,26 @@ class DocSpecAdapter:
             error = receipt.get("error")
             operation = receipt.get("operation")
             native_reads = receipt["nativeReads"]
+        if command == "job-publication-intent":
+            from ddk.documents import json_dumps
+
+            # Native inline controls live once in bounded stdout. The private
+            # recovery record keeps only their pin and the compact observation.
+            receipt.pop("result")
+            receipt["metadataBytes"] = self.metadata_bytes
+            receipt["captureBytes"] = self.capture_bytes
+            if native_evidence is not None:
+                receipt["nativeResponse"] = native_evidence
+            if receipt.pop("unverifiedResult", None) is not None:
+                receipt["unverifiedResponse"] = native_evidence
+            if len((json_dumps(receipt) + "\n").encode()) > self.metadata_bytes:
+                # Request and raw response already have stable files. Do not
+                # return saved success for a recovery record we cannot admit.
+                raise OSError(
+                    "Publication recovery receipt exceeds its metadata limit; "
+                    f"original request retained at {original_request['reference']['path'] if original_request else request_path}; "
+                    f"native response retained at {folder / 'stdout.json'}"
+                )
         receipt_sha256 = write_json(receipt_path, receipt)["sha256"]
         response = {
             "status": status,

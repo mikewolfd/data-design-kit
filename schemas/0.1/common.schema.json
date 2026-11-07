@@ -651,7 +651,8 @@
             "running",
             "succeeded",
             "failed",
-            "unknown"
+            "unknown",
+            "not_requested"
           ]
         },
         "selection": {
@@ -682,6 +683,9 @@
         "reason": {
           "type": "string",
           "minLength": 1
+        },
+        "publicationIntent": {
+          "$ref": "common.schema.json#/$defs/publicationIntentObservation"
         }
       },
       "required": [
@@ -708,14 +712,29 @@
           },
           "then": {
             "required": [
-              "operationId",
-              "qualificationRequired"
+              "operationId"
             ],
             "properties": {
               "reconciliation": {
                 "const": "supported"
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "not": {
+                    "required": [
+                      "publicationIntent"
+                    ]
+                  }
+                },
+                "then": {
+                  "required": [
+                    "qualificationRequired"
+                  ]
+                }
+              }
+            ]
           },
           "else": {
             "properties": {
@@ -804,6 +823,23 @@
                 "required": [
                   "selection"
                 ]
+              },
+              {
+                "required": [
+                  "publicationIntent"
+                ],
+                "properties": {
+                  "publicationIntent": {
+                    "required": [
+                      "outcome"
+                    ],
+                    "properties": {
+                      "outcome": {
+                        "const": "unknown"
+                      }
+                    }
+                  }
+                }
               }
             ]
           },
@@ -829,6 +865,178 @@
               "selection": {
                 "const": "not_requested"
               }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "publicationIntent"
+            ]
+          },
+          "then": {
+            "properties": {
+              "mode": {
+                "const": "managed_operation"
+              },
+              "execution": {
+                "const": "not_requested"
+              },
+              "selection": {
+                "const": "not_requested"
+              },
+              "outputs": {
+                "maxItems": 0
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "qualificationRequired"
+                  ]
+                },
+                {
+                  "required": [
+                    "candidate"
+                  ]
+                },
+                {
+                  "required": [
+                    "acceptedQualification"
+                  ]
+                }
+              ]
+            }
+          },
+          "else": {
+            "properties": {
+              "execution": {
+                "not": {
+                  "const": "not_requested"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "publicationIntentObservation": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "freeze",
+            "inspect"
+          ]
+        },
+        "outcome": {
+          "enum": [
+            "not_submitted",
+            "succeeded",
+            "not_found",
+            "refused",
+            "unknown"
+          ]
+        },
+        "savedIntent": {
+          "$ref": "common.schema.json#/$defs/nativeVersion"
+        },
+        "payloadState": {
+          "enum": [
+            "retained",
+            "retired",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "$ref": "common.schema.json#/$defs/evidenceRecord"
+        }
+      },
+      "required": [
+        "action",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "savedIntent"
+            ]
+          },
+          "then": {
+            "required": [
+              "payloadState",
+              "evidence"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "payloadState"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "succeeded"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "required": [
+              "savedIntent",
+              "payloadState",
+              "evidence"
+            ],
+            "properties": {
+              "payloadState": {
+                "enum": [
+                  "retained",
+                  "retired"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "payloadState": {
+                "const": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "not_found"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "required": [
+              "evidence"
+            ],
+            "properties": {
+              "action": {
+                "const": "inspect"
+              }
+            },
+            "not": {
+              "required": [
+                "savedIntent"
+              ]
             }
           }
         }
