@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { CatalogAccess, type OwnerEvidenceReader } from './access';
+import { CatalogAccess, type OwnerAdapters, type OwnerEvidenceReader } from './access';
 import { CatalogStore, fail, type CatalogRegistration } from './catalog-store';
 import { fixturePins } from './fixture-pins';
 import {
@@ -7,6 +7,8 @@ import {
   createCommerceAdapter,
   readCommerceEvidence,
 } from './commerce-native';
+import { congressRegistration, congressSupportedDatasetIds } from './congress-registration';
+import { createCongressAdapter } from './congress-reader';
 
 /** Operator-selected, read-only discovery inputs. No runtime paths arrive from HTTP. */
 export const applicationRegistrations: readonly CatalogRegistration[] = [
@@ -29,7 +31,7 @@ export const applicationRegistrations: readonly CatalogRegistration[] = [
     lockSha256: '26967938b6e9e5bb067f8be52f798deb38ef2288449498b6cdde1373eddc7801',
   },
 ];
-const registrations = [...applicationRegistrations, commerceRegistration];
+const registrations = [...applicationRegistrations, commerceRegistration, congressRegistration];
 const selected = (process.env.DDK_VIEWER_APPLICATIONS ?? '')
   .split(',')
   .map((value) => value.trim())
@@ -37,7 +39,7 @@ const selected = (process.env.DDK_VIEWER_APPLICATIONS ?? '')
 if (selected.some((id) => !registrations.some((row) => row.id === id)))
   fail(
     'invalid_registration',
-    'DDK_VIEWER_APPLICATIONS accepts spicy-regs, congress, and commerce-native.',
+    'DDK_VIEWER_APPLICATIONS accepts spicy-regs, congress, commerce-native, and congress-authored.',
   );
 export const store = new CatalogStore(
   [
@@ -53,19 +55,28 @@ export const store = new CatalogStore(
 );
 const commerceEvidence: OwnerEvidenceReader = ({ record, deadline, signal }) =>
   readCommerceEvidence(record, { deadline, signal });
-export const access = new CatalogAccess(
-  store,
-  new Map(
-    selected.includes(commerceRegistration.id)
-      ? [
-          [
-            commerceRegistration.id,
-            {
-              ...createCommerceAdapter(),
-              evidence: commerceEvidence,
-            },
-          ],
-        ]
-      : [],
-  ),
-);
+const adapters = new Map<string, OwnerAdapters>();
+if (selected.includes(commerceRegistration.id))
+  adapters.set(commerceRegistration.id, {
+    ...createCommerceAdapter(),
+    evidence: commerceEvidence,
+  });
+const congressConfig = process.env.DDK_VIEWER_CONGRESS_OWNER_CONFIG;
+const congressConfigSha = process.env.DDK_VIEWER_CONGRESS_OWNER_CONFIG_SHA256;
+if (congressConfig || congressConfigSha) {
+  if (!congressConfig || !congressConfigSha || !selected.includes(congressRegistration.id))
+    fail(
+      'invalid_registration',
+      'Select congress-authored and supply both owner configuration path and SHA-256.',
+    );
+  const snapshot = await store.snapshot(congressRegistration.id);
+  adapters.set(
+    congressRegistration.id,
+    await createCongressAdapter({
+      configPath: congressConfig,
+      configSha256: congressConfigSha,
+      supportedDatasetIds: congressSupportedDatasetIds(snapshot),
+    }),
+  );
+}
+export const access = new CatalogAccess(store, adapters);
