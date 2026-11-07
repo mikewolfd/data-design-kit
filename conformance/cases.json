@@ -3416,6 +3416,96 @@
         "selection": "unknown",
         "sameOperationId": true
       }
+    },
+    {
+      "id": "CASE-CATALOG-094",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Bind version 3 producer evidence to exact original request, adoption, native custody and retained evidence bytes without opening artifacts. Preserve distinct file inputs, adopted prerequisite order and current JobSpec order; validate actual catalog shapes, assembly and public withholding.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-095",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refuse invalid native adoption identities, nil table UUIDs, and integral decimal tokens in any independently resealed identity copy, including evidence references and prerequisite candidates.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-096",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refuse conflicting completion/view/request/body bindings, unknown evidence roles, changed fixed policy identity, missing current custody or changed native evidence bytes. Inline witness consistency does not establish native producer qualification.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-097",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refuse missing, duplicated or changed model prerequisites, wrong proof candidates, incomplete input scope, aliased or unrelated proof custody, and producer record submissions in the model role. Native resolves actual accepted proof authority.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-098",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Refuse proof metadata claiming model selection or exports, missing original producer records, and producer authority added to earlier completion profiles. Preserve native execution as a separate untested capability.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     }
   ]
 }

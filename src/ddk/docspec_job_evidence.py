@@ -21,16 +21,26 @@ from .interfaces import json_equal
 CANDIDATE_SCHEME = "urn:docspec:whole-job-candidate"
 COMPLETION_PROFILE = "urn:docspec:whole-job-completion:1"
 SNAPSHOT_COMPLETION_PROFILE = "urn:docspec:whole-job-completion:2"
+PRODUCER_COMPLETION_PROFILE = "urn:docspec:whole-job-completion:3"
 COUNTER_PROFILE = "urn:docspec:quality:native-sql-zero-counters:1"
 COUNTER_EVALUATOR = {"id": "urn:docspec:evaluator:native-job-reports", "version": "1"}
 COUNTER_SEMANTICS = {"id": "urn:docspec:semantics:complete-integer-zero-row", "revision": "1"}
 VIEW_SECTIONS = ("inputs", "steps", "outputs", "reports")
 VIEW_PROFILE = "urn:docspec:whole-job-view-set:1"
 SNAPSHOT_VIEW_PROFILE = "urn:docspec:whole-job-view-set:2"
+PRODUCER_VIEW_PROFILE = "urn:docspec:whole-job-view-set:3"
 SNAPSHOT_CUSTODY_PROFILE = "urn:docspec:whole-job-snapshot-custody:2"
 INPUT_CUSTODY_SCHEME = "urn:docspec:whole-job-input-custody"
 INPUT_CUSTODY_GRANT_PROFILE = "urn:docspec:whole-job-input-custody-grant:1"
-_VIEW_PROFILES = {COMPLETION_PROFILE: VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE: SNAPSHOT_VIEW_PROFILE}
+PRODUCER_ADOPTION_SCHEME = "urn:docspec:whole-job-producer-adoption"
+PRODUCER_PREREQUISITE_PROFILE = "urn:docspec:whole-job-producer-prerequisite:1"
+_PRODUCER_EVIDENCE_PROFILES = {
+    "proof": "urn:docspec:whole-job-producer-static:1",
+    "model": "urn:docspec:whole-job-producer-prerequisite-grant:1",
+}
+_VIEW_PROFILES = {COMPLETION_PROFILE: VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE: SNAPSHOT_VIEW_PROFILE,
+                  PRODUCER_COMPLETION_PROFILE: PRODUCER_VIEW_PROFILE}
+_SNAPSHOT_COMPLETION_PROFILES = {SNAPSHOT_COMPLETION_PROFILE, PRODUCER_COMPLETION_PROFILE}
 _SNAPSHOT_ROLES = {"metadata", "manifest_list", "manifest", "data", "position_deletes", "equality_deletes"}
 ACCEPTANCE_FIELDS = ("profile", "dataset", "operation", "request_digest", "candidate", "view_set_digest", "policy_id",
                      "policy_sha256", "expected_epoch", "expected_selection", "evaluator", "semantics", "reports")
@@ -260,6 +270,7 @@ def verify_completed_job(result, *, require_accepted=False):
     _require(manifest["admitted_request"] == result["admitted_request"], "Completion changes its original admitted request witness.")
     _verify_admitted_inputs(admitted_request, manifest, view_set)
     _verify_input_custody(result, admitted_request, manifest, view_set)
+    _verify_producer_evidence(result, admitted_request, manifest, view_set)
     policy = _verify_policy(result["policy"], result, manifest)
     accepted = result["accepted_qualification"]
     if accepted is not None:
@@ -333,7 +344,7 @@ def _verify_admitted_inputs(request, manifest, views):
                 for view in views["inputs"] if view["kind"] in {"parquet", "json_lines"}}
     _require(pins == expected, "Retained inputs differ from the complete original admitted file-member pins.")
     snapshots = {item["name"]: item for item in request.get("snapshot_inputs", [])}
-    if manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE:
+    if manifest["profile"] in _SNAPSHOT_COMPLETION_PROFILES:
         expected = {view["name"]: {"name": view["name"],
                                   "metadata_sha256": view["snapshot_custody"]["metadata_sha256"],
                                   "metadata_size": view["snapshot_custody"]["metadata_size"]}
@@ -341,8 +352,6 @@ def _verify_admitted_inputs(request, manifest, views):
         pins = {name: {key: value for key, value in item.items() if key != "reuse_from"} for name, item in snapshots.items()}
         _require(bool(snapshots) and pins == expected,
                  "Snapshot custody differs from the complete original native-table pins.")
-        _require(request.get("prerequisites", []) == [],
-                 "Snapshot custody alone cannot verify original producer prerequisites.")
     else:
         _require(not snapshots, "Version 1 completion cannot establish snapshot custody.")
 
@@ -353,7 +362,7 @@ def _verify_input_custody(result, request, manifest, views):
     references = []
     native_count = 0
     for index, (view, completed) in enumerate(zip(views["inputs"], manifest["inputs"])):
-        native = manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE and view["kind"] == "native_table"
+        native = manifest["profile"] in _SNAPSHOT_COMPLETION_PROFILES and view["kind"] == "native_table"
         native_count += int(native)
         for key in ("custody_reference", "custody_grant"):
             _require((key in view) == (key in completed), "Input custody must be bound in both complete witnesses.")
@@ -394,6 +403,97 @@ def _verify_input_custody(result, request, manifest, views):
             _input_custody_reference(reference, manifest["dataset"])
     else:
         _require("input_custody" not in result, "A historical candidate cannot gain unbound custody handles.")
+
+
+def _producer_adoption(value, owner):
+    """Check an opaque native adoption identity without resolving its authority."""
+    fields = {"scheme", "scheme_version", "dataset", "adoption", "request_digest", "native_record", "definition_sha256"}
+    _object(value, fields, "native producer adoption")
+    _require(set(value) == fields and value["scheme"] == PRODUCER_ADOPTION_SCHEME and value["scheme_version"] == "1"
+             and value["dataset"] == owner
+             and isinstance(value["adoption"], str) and _ID.fullmatch(value["adoption"])
+             and _digest(value["request_digest"]) and _digest(value["definition_sha256"]),
+             "Invalid native producer adoption identity or owner.")
+    record = _object(value["native_record"], ("table", "table_uuid", "key", "revision"), "producer adoption record")
+    _require(set(record) == {"table", "table_uuid", "key", "revision"}
+             and isinstance(record["table"], str) and bool(record["table"]) and _uuid(record["table_uuid"])
+             and UUID(record["table_uuid"]).int != 0
+             and record["key"] == f"job-producer-adoption/{value['adoption']}"
+             and _integer(record["revision"], 1) and record["revision"] < 2**63,
+             "Producer adoption requires its exact native table incarnation and decision generation.")
+    return value
+
+
+def _verify_producer_evidence(result, request, manifest, views):
+    """Bind v3 native evidence bytes; static checks and grant resolution stay native."""
+    if manifest["profile"] != PRODUCER_COMPLETION_PROFILE:
+        _require(all(key not in document for document in (manifest, views)
+                     for key in ("producer_evidence", "producer_evidence_witness"))
+                 and request.get("producer_adoption") is None and request.get("producer_records", []) == []
+                 and request.get("prerequisites", []) == [],
+                 "Earlier completion profiles cannot establish producer evidence or prerequisites.")
+        return
+    evidence = _object(manifest.get("producer_evidence"), ("adoption", "role", "evidence"), "native producer evidence")
+    role = evidence["role"]
+    _require(isinstance(role, str) and role in _PRODUCER_EVIDENCE_PROFILES,
+             "Unsupported native producer evidence role.")
+    fields = {"adoption", "role", "evidence"} | ({"prerequisite"} if role == "model" else set())
+    _require(set(evidence) == fields and json_equal(views.get("producer_evidence"), evidence)
+             and "producer_evidence_witness" not in views,
+             "Complete native producer evidence must agree in the completion and view set.")
+    adoption = _producer_adoption(evidence["adoption"], manifest["dataset"])
+    _require(json_equal(request.get("producer_adoption"), adoption) and request["policy_id"] == result["policy_id"],
+             "Producer evidence changes the original adoption or fixed role policy.")
+    for copy in (views["producer_evidence"]["adoption"], request["producer_adoption"]):
+        _producer_adoption(copy, manifest["dataset"])
+    pointer = _object(evidence["evidence"], ("reference", "sha256"), "native producer evidence identity")
+    witness = _object(manifest.get("producer_evidence_witness"), ("reference", "sha256", "bytes_base64"),
+                      "native producer evidence witness")
+    _require(set(pointer) == {"reference", "sha256"} and set(witness) == {"reference", "sha256", "bytes_base64"}
+             and witness["sha256"] == pointer["sha256"], "Producer evidence needs one exact retained byte witness.")
+    for copy in (pointer, views["producer_evidence"]["evidence"]):
+        verify_object_reference(copy["reference"])
+    body, _raw, reference = _artifact(witness, "producer evidence", reference=pointer["reference"])
+    _object(body, ("profile", "dataset", "operation", "request_digest", "adoption"), "native producer evidence body")
+    _require(reference["owner"] == manifest["dataset"] and body["profile"] == _PRODUCER_EVIDENCE_PROFILES[role]
+             and all(body[key] == manifest[key] for key in ("dataset", "operation", "request_digest"))
+             and json_equal(body["adoption"], adoption),
+             "Retained producer evidence belongs to different native work or adoption.")
+    _producer_adoption(body["adoption"], manifest["dataset"])
+    native_inputs = [view for view in views["inputs"] if view["kind"] == "native_table"]
+    _require(bool(native_inputs) and all("custody_reference" in view for view in native_inputs),
+             "Producer evidence requires current custody references for every native input.")
+    for view in native_inputs:
+        record = view["custody_reference"]["native_record"]
+        _require(all(record[key] == adoption["native_record"][key] for key in ("table", "table_uuid")),
+                 "Producer adoption and input custody identify different native lifecycle tables.")
+    if role == "proof":
+        _require(request.get("prerequisites", []) == [] and request["file_inputs"] == []
+                 and isinstance(request.get("producer_records"), list) and bool(request["producer_records"])
+                 and len(native_inputs) == len(views["inputs"]) and not views["outputs"]
+                 and result["selection"] != "selected" and "prerequisite" not in body,
+                 "Producer proof cannot export, select, consume files or inherit a model prerequisite.")
+        return
+    prerequisite = _object(evidence["prerequisite"], ("profile", "candidate", "accepted_qualification", "inputs"),
+                           "native producer prerequisite")
+    names = prerequisite["inputs"]
+    _require(set(prerequisite) == {"profile", "candidate", "accepted_qualification", "inputs"}
+             and prerequisite["profile"] == PRODUCER_PREREQUISITE_PROFILE
+             and _digest(prerequisite["accepted_qualification"])
+             and isinstance(names, list) and all(isinstance(name, str) for name in names)
+             and len(names) == len(set(names)) and set(names) == {view["name"] for view in native_inputs}
+             and json_equal(request.get("prerequisites"), [prerequisite])
+             and json_equal(body.get("prerequisite"), prerequisite) and request.get("producer_records", []) == [],
+             "Model producer evidence changes its complete original prerequisite or input scope.")
+    donor = verify_job_candidate(prerequisite["candidate"])
+    for copy in (views["producer_evidence"]["prerequisite"], request["prerequisites"][0], body["prerequisite"]):
+        verify_job_candidate(copy["candidate"])
+    _require(donor["dataset"] == manifest["dataset"] and donor["operation"] != manifest["operation"],
+             "The model prerequisite must identify a distinct same-owner proof operation.")
+    for view in native_inputs:
+        source = view.get("custody_grant", {}).get("source")
+        _require(isinstance(source, dict) and source["operation"] == donor["operation"] and source["input"] == view["name"],
+                 "The model must use the proof candidate's exact same-name native input custody.")
 
 
 def _verify_policy(witness, result, manifest):
@@ -452,7 +552,7 @@ def _verify_views(views, reference, manifest):
             if section == "inputs":
                 _object(view, ("kind", "selector", "files", "admission"), "admitted input")
                 verify_object_reference(view["admission"])
-                snapshot_profile = manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE
+                snapshot_profile = manifest["profile"] in _SNAPSHOT_COMPLETION_PROFILES
                 if snapshot_profile:
                     fields = ("kind", "selector", "files", "schema_sha256", "admission")
                     _object(completed, fields, "completed input")
@@ -466,7 +566,7 @@ def _verify_views(views, reference, manifest):
                              "Snapshot custody must agree in the complete candidate and view set.")
                 else:
                     _require("snapshot_custody" not in view and "snapshot_custody" not in completed,
-                             "Snapshot custody requires a version 2 native-table input.")
+                             "Snapshot custody requires a supported native-table completion profile.")
                 if snapshot_profile:
                     _verify_input(completed, snapshot_profile=True, owner=manifest["dataset"])
                 _verify_input(view, snapshot_profile=snapshot_profile, owner=manifest["dataset"])

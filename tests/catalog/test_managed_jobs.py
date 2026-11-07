@@ -19,6 +19,7 @@ from ddk.core import load_project
 from ddk.docspec_job_evidence import (
     ACCEPTANCE_FIELDS, CANDIDATE_SCHEME, COMPLETION_PROFILE, COUNTER_EVALUATOR,
     COUNTER_PROFILE, COUNTER_SEMANTICS, VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE, SNAPSHOT_VIEW_PROFILE,
+    PRODUCER_COMPLETION_PROFILE, PRODUCER_VIEW_PROFILE, PRODUCER_PREREQUISITE_PROFILE,
     SNAPSHOT_CUSTODY_PROFILE, JobEvidenceError, verify_admitted_request, verify_completed_job,
 )
 from ddk.documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
@@ -707,6 +708,365 @@ def _with_input_custody(row, *, reuse=False):
     return _reseal_completion(row, manifest, views)
 
 
+def _producer_parts(row):
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    body = json.loads(base64.b64decode(manifest["producer_evidence_witness"]["bytes_base64"]))
+    return manifest, views, request, body
+
+
+def _reseal_producer(row, manifest, views, request, body):
+    """Reseal independent metadata identities, never native authority or proof."""
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+    witness = _witness(Path(manifest["producer_evidence_witness"]["reference"]["path"]), body)
+    manifest["producer_evidence_witness"] = witness
+    for document in (manifest, views):
+        if "producer_evidence" in document:
+            document["producer_evidence"]["evidence"] = {key: deepcopy(witness[key]) for key in ("reference", "sha256")}
+    return _reseal_completion(row, manifest, views)
+
+
+def _producer_job(native_snapshot_job, tmp_path, role):
+    row = _with_input_custody(native_snapshot_job, reuse=role == "model")
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    adoption = {"scheme": "urn:docspec:whole-job-producer-adoption", "scheme_version": "1",
+                "dataset": "archive", "adoption": "definition-one", "request_digest": "b" * 64,
+                "definition_sha256": "c" * 64,
+                "native_record": {"table": "native-lifecycle", "table_uuid": "d780a544-780b-4abb-9e1e-f7beef0aec62",
+                                  "key": "job-producer-adoption/definition-one", "revision": 9}}
+    evidence = {"adoption": adoption, "role": role}
+    body = {"profile": "urn:docspec:whole-job-producer-static:1" if role == "proof"
+                        else "urn:docspec:whole-job-producer-prerequisite-grant:1",
+            "dataset": "archive", "operation": "original", "request_digest": "a" * 64,
+            "adoption": deepcopy(adoption), "native_private_metadata": {"original_path": "/never/open/producer-record"}}
+    request["producer_adoption"] = deepcopy(adoption)
+    if role == "model":
+        donor = {"scheme": CANDIDATE_SCHEME, "scheme_version": "1", "dataset": "archive", "operation": "prior_consumer",
+                 "manifest": _reference(tmp_path / "never-open-proof-completion")}
+        prerequisite = {"profile": PRODUCER_PREREQUISITE_PROFILE, "candidate": donor,
+                        "accepted_qualification": "d" * 64, "inputs": ["source"]}
+        evidence["prerequisite"] = deepcopy(prerequisite)
+        body["prerequisite"] = deepcopy(prerequisite)
+        request["prerequisites"] = [prerequisite]
+        request["snapshot_inputs"][0]["reuse_from"]["input"] = "source"
+        for document in (manifest, views):
+            document["inputs"][0]["custody_grant"]["source"]["input"] = "source"
+    else:
+        request["producer_records"] = [{"source": {"namespace": "original-records", "key": "head.json"},
+                                        "path": "/never/open/head.json", "sha256": "e" * 64, "size": 73}]
+        for document in (manifest, views):
+            document["outputs"] = []
+        manifest["result"]["outputs"] = []
+        policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+        policy["view_names"]["outputs"] = []
+        row["policy"] = _witness(Path(row["policy"]["reference"]["path"]), policy)
+        request["policy"]["sha256"] = row["policy"]["sha256"]
+        accepted = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+        accepted["policy_sha256"] = row["policy"]["sha256"]
+        row["accepted_qualification"] = _acceptance(accepted, row["policy"])
+    manifest["profile"], views["profile"] = PRODUCER_COMPLETION_PROFILE, PRODUCER_VIEW_PROFILE
+    manifest["producer_evidence"], views["producer_evidence"] = deepcopy(evidence), deepcopy(evidence)
+    manifest["producer_evidence_witness"] = _witness(tmp_path / "never-open-producer-evidence", body)
+    row = _reseal_producer(row, manifest, views, request, body)
+    if role == "proof":
+        job = _original_job(tmp_path)
+        job["inputs"] = [deepcopy(views["inputs"][0]["selector"])]
+        job["outputs"] = []
+        job["queries"][0]["sql"] = "SELECT COUNT(*) AS orphan_count FROM shared_join WHERE id IS NULL"
+        row = _retarget_original_job(row, job)
+    return row
+
+
+@pytest.fixture
+def native_producer_job(native_snapshot_job, tmp_path):
+    return _producer_job(native_snapshot_job, tmp_path, "model")
+
+
+@pytest.mark.parametrize("role", ["proof", "model"])
+def test_producer_metadata_binds_exact_native_witness_without_resolving_authority(native_snapshot_job, tmp_path, monkeypatch, role):
+    row = _producer_job(native_snapshot_job, tmp_path, role)
+    monkeypatch.setattr(Path, "open", lambda *_args, **_kwargs: pytest.fail("Producer metadata cannot open native or original artifacts"))
+    checked = verify_completed_job(row, require_accepted=True)
+    evidence = checked.manifest["producer_evidence"]
+    assert evidence == checked.view_set["producer_evidence"]
+    assert evidence["adoption"] == checked.admitted_request["producer_adoption"]
+    assert evidence["role"] == role and checked.accepted["view_set_digest"] == row["view_set_digest"]
+    assert "producer_evidence_witness" not in checked.view_set
+    if role == "model":
+        assert checked.admitted_request["prerequisites"] == [evidence["prerequisite"]]
+        assert evidence["prerequisite"]["candidate"]["operation"] == "prior_consumer"
+    else:
+        assert checked.manifest["outputs"] == [] and checked.admitted_request["file_inputs"] == []
+
+
+def test_model_producer_metadata_keeps_file_and_native_input_pins_distinct(native_snapshot_job, native_job, tmp_path, monkeypatch):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    file_manifest = json.loads(base64.b64decode(native_job["completion_manifest"]["bytes_base64"]))
+    file_view = json.loads(base64.b64decode(file_manifest["view_set"]["bytes_base64"]))["inputs"][0]
+    file_view["name"] = file_view["selector"]["name"] = "dictionary"
+    for document in (manifest, views):
+        document["inputs"].append(deepcopy(file_view))
+    request["file_inputs"] = [{"name": "dictionary", "members": [
+        {key: member[key] for key in ("key", "sha256", "size")} for member in file_view["files"]]}]
+    policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+    policy["view_names"]["inputs"].append("dictionary")
+    row["policy"] = _witness(Path(row["policy"]["reference"]["path"]), policy)
+    request["policy"]["sha256"] = row["policy"]["sha256"]
+    accepted = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+    accepted["policy_sha256"] = row["policy"]["sha256"]
+    row["accepted_qualification"] = _acceptance(accepted, row["policy"])
+    row = _reseal_producer(row, manifest, views, request, body)
+    job = _original_job(tmp_path)
+    job["inputs"] = [deepcopy(view["selector"]) for view in views["inputs"]]
+    row = _retarget_original_job(row, job)
+    monkeypatch.setattr(Path, "open", lambda *_args, **_kwargs: pytest.fail("File/native metadata cannot open payloads"))
+    checked = verify_completed_job(row, require_accepted=True)
+    assert [view["kind"] for view in checked.view_set["inputs"]] == ["native_table", "parquet"]
+    assert checked.manifest["producer_evidence"]["prerequisite"]["inputs"] == ["source"]
+    manifest, views, request, body = _producer_parts(row)
+    request["file_inputs"][0]["members"][0]["sha256"] = "f" * 64
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("scheme", "caller-proof"), ("scheme_version", "2"), ("dataset", "foreign"),
+    ("adoption", "bad/name"), ("request_digest", "unknown"), ("definition_sha256", "unknown"),
+    ("native_record.table", "foreign-table"), ("native_record.table_uuid", "bad-uuid"),
+    ("native_record.key", "job-producer-adoption/other"), ("native_record.revision", 0),
+    ("native_record.revision", True), ("native_record.revision", 1.0), ("native_record.revision", 2**63),
+    ("extra", "unrecognized"),
+])
+def test_resealed_producer_adoption_requires_exact_native_identity(native_snapshot_job, tmp_path, field, value):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    for adoption in (manifest["producer_evidence"]["adoption"], views["producer_evidence"]["adoption"],
+                     request["producer_adoption"], body["adoption"]):
+        target = adoption
+        parts = field.split(".")
+        for part in parts[:-1]:
+            target = target[part]
+        target[parts[-1]] = value
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+@pytest.mark.parametrize("copy", ["view_adoption", "request_adoption", "body_adoption", "completion_pointer", "view_pointer",
+                                  "witness_reference", "view_candidate", "request_candidate", "body_candidate"])
+def test_each_producer_identity_copy_preserves_native_integer_tokens(native_snapshot_job, tmp_path, copy):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    locations = {"view_adoption": views["producer_evidence"]["adoption"]["native_record"],
+                 "request_adoption": request["producer_adoption"]["native_record"],
+                 "body_adoption": body["adoption"]["native_record"],
+                 "completion_pointer": manifest["producer_evidence"]["evidence"]["reference"],
+                 "view_pointer": views["producer_evidence"]["evidence"]["reference"],
+                 "witness_reference": manifest["producer_evidence_witness"]["reference"],
+                 "view_candidate": views["producer_evidence"]["prerequisite"]["candidate"]["manifest"],
+                 "request_candidate": request["prerequisites"][0]["candidate"]["manifest"],
+                 "body_candidate": body["prerequisite"]["candidate"]["manifest"]}
+    key = "revision" if copy.endswith("adoption") else "bytes"
+    locations[copy][key] = float(locations[copy][key])
+    if copy.endswith("pointer") or copy == "witness_reference":
+        changed = _reseal_completion(row, manifest, views)
+    else:
+        changed = _reseal_producer(row, manifest, views, request, body)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(changed)
+
+
+def test_producer_adoption_refuses_coherent_nil_native_table_identity(native_snapshot_job, tmp_path):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    nil = "00000000-0000-0000-0000-000000000000"
+    for adoption in (manifest["producer_evidence"]["adoption"], views["producer_evidence"]["adoption"],
+                     request["producer_adoption"], body["adoption"]):
+        adoption["native_record"]["table_uuid"] = nil
+    for document in (manifest, views):
+        document["inputs"][0]["custody_reference"]["native_record"]["table_uuid"] = nil
+        document["inputs"][0]["custody_grant"]["source"]["native_record"]["table_uuid"] = nil
+    request["snapshot_inputs"][0]["reuse_from"]["native_record"]["table_uuid"] = nil
+    row["input_custody"] = [deepcopy(manifest["inputs"][0]["custody_reference"])]
+    with pytest.raises(JobEvidenceError, match="Producer adoption"):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+def test_producer_adopted_scope_order_is_independent_of_current_jobspec_order(native_snapshot_job, tmp_path):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    other = deepcopy(views["inputs"][0])
+    other["name"] = other["selector"]["name"] = "other"
+    other["custody_reference"]["input"] = other["custody_grant"]["source"]["input"] = "other"
+    other["custody_reference"]["native_record"]["key"] = "job-input/original/1"
+    other["custody_grant"]["source"]["native_record"]["key"] = "job-input/prior_consumer/1"
+    for document in (manifest, views):
+        document["inputs"].append(deepcopy(other))
+        document["producer_evidence"]["prerequisite"]["inputs"] = ["other", "source"]
+    request["prerequisites"][0]["inputs"] = body["prerequisite"]["inputs"] = ["other", "source"]
+    request["snapshot_inputs"].append({"name": "other", "metadata_sha256": other["snapshot_custody"]["metadata_sha256"],
+                                       "metadata_size": other["snapshot_custody"]["metadata_size"],
+                                       "reuse_from": deepcopy(other["custody_grant"]["source"])})
+    row["input_custody"].append(deepcopy(other["custody_reference"]))
+    policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+    policy["view_names"]["inputs"].append("other")
+    row["policy"] = _witness(Path(row["policy"]["reference"]["path"]), policy)
+    request["policy"]["sha256"] = row["policy"]["sha256"]
+    accepted = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+    accepted["policy_sha256"] = row["policy"]["sha256"]
+    row["accepted_qualification"] = _acceptance(accepted, row["policy"])
+    row = _reseal_producer(row, manifest, views, request, body)
+    job = _original_job(tmp_path)
+    job["inputs"] = [deepcopy(view["selector"]) for view in views["inputs"]]
+    row = _retarget_original_job(row, job)
+    checked = verify_completed_job(row, require_accepted=True)
+    assert [view["name"] for view in checked.view_set["inputs"]] == ["source", "other"]
+    assert checked.manifest["producer_evidence"]["prerequisite"]["inputs"] == ["other", "source"]
+
+
+@pytest.mark.parametrize("change", [
+    "role", "extra", "view_missing", "view_role", "request_adoption", "body_adoption", "body_profile",
+    "body_owner", "body_operation", "body_request", "view_duplicate_witness", "policy_id", "custody_missing",
+])
+def test_resealed_producer_evidence_requires_consistent_original_bindings(native_snapshot_job, tmp_path, change):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    if change == "role":
+        manifest["producer_evidence"]["role"] = "caller_passed"
+    elif change == "extra":
+        manifest["producer_evidence"]["passed"] = True
+    elif change == "view_missing":
+        del views["producer_evidence"]
+    elif change == "view_role":
+        views["producer_evidence"]["role"] = "proof"
+    elif change == "request_adoption":
+        request["producer_adoption"]["definition_sha256"] = "f" * 64
+    elif change == "body_adoption":
+        body["adoption"]["definition_sha256"] = "f" * 64
+    elif change.startswith("body_"):
+        key = {"body_profile": "profile", "body_owner": "dataset", "body_operation": "operation", "body_request": "request_digest"}[change]
+        body[key] = "different"
+    elif change == "view_duplicate_witness":
+        views["producer_evidence_witness"] = deepcopy(manifest["producer_evidence_witness"])
+    elif change == "policy_id":
+        request["policy_id"] = "unadopted-policy"
+    else:
+        for document in (manifest, views):
+            del document["inputs"][0]["custody_reference"]
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+@pytest.mark.parametrize("change", ["profile", "candidate_owner", "candidate_operation", "accepted", "scope", "request_missing",
+                                   "request_duplicate", "body_missing", "model_records", "source_name", "source_operation"])
+def test_model_prerequisite_preserves_exact_proof_and_same_name_custody(native_snapshot_job, tmp_path, change):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    prerequisites = [manifest["producer_evidence"]["prerequisite"], views["producer_evidence"]["prerequisite"],
+                     request["prerequisites"][0], body["prerequisite"]]
+    if change in {"profile", "candidate_owner", "candidate_operation", "accepted", "scope"}:
+        for prerequisite in prerequisites:
+            if change == "profile":
+                prerequisite["profile"] = "caller-prerequisite"
+            elif change == "candidate_owner":
+                prerequisite["candidate"]["dataset"] = "foreign"
+            elif change == "candidate_operation":
+                prerequisite["candidate"]["operation"] = "original"
+            elif change == "accepted":
+                prerequisite["accepted_qualification"] = True
+            else:
+                prerequisite["inputs"] = ["source", "extra"]
+    elif change == "request_missing":
+        request["prerequisites"] = []
+    elif change == "request_duplicate":
+        request["prerequisites"].append(deepcopy(prerequisites[0]))
+    elif change == "body_missing":
+        del body["prerequisite"]
+    elif change == "model_records":
+        request["producer_records"] = [{"path": "/never/open/model-record"}]
+    else:
+        key = "input" if change == "source_name" else "operation"
+        value = "aliased" if change == "source_name" else "unrelated-proof"
+        source = request["snapshot_inputs"][0]["reuse_from"]
+        source[key] = value
+        if key == "operation":
+            source["native_record"]["key"] = f"job-input/{value}/0"
+        for document in (manifest, views):
+            document["inputs"][0]["custody_grant"]["source"] = deepcopy(source)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+@pytest.mark.parametrize("change", ["selected", "missing_records", "empty_records", "prerequisite"])
+def test_producer_proof_cannot_claim_model_selection_or_omit_original_records(native_snapshot_job, tmp_path, change):
+    row = _producer_job(native_snapshot_job, tmp_path, "proof")
+    manifest, views, request, body = _producer_parts(row)
+    if change == "selected":
+        row["selection"] = "selected"
+    elif change == "missing_records":
+        del request["producer_records"]
+    elif change == "empty_records":
+        request["producer_records"] = []
+    else:
+        request["prerequisites"] = [{"profile": "unverified"}]
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+def test_producer_proof_cannot_export_model_outputs(native_snapshot_job, tmp_path):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, request, body = _producer_parts(row)
+    for document in (manifest, views):
+        document["producer_evidence"]["role"] = "proof"
+        del document["producer_evidence"]["prerequisite"]
+    body["profile"] = "urn:docspec:whole-job-producer-static:1"
+    del body["prerequisite"]
+    request["prerequisites"] = []
+    request["producer_records"] = [{"source": {"namespace": "original", "key": "head.json"},
+                                    "path": "/never/open/head.json", "sha256": "e" * 64, "size": 73}]
+    with pytest.raises(JobEvidenceError, match="cannot export"):
+        verify_completed_job(_reseal_producer(row, manifest, views, request, body))
+
+
+@pytest.mark.parametrize("change", ["sha256", "digest", "size", "bytes", "owner", "missing"])
+def test_producer_witness_requires_exact_original_bytes(native_snapshot_job, tmp_path, change):
+    row = _producer_job(native_snapshot_job, tmp_path, "model")
+    manifest, views, _request, _body = _producer_parts(row)
+    witness = manifest["producer_evidence_witness"]
+    if change == "missing":
+        del manifest["producer_evidence_witness"]
+    elif change == "sha256":
+        witness["sha256"] = "f" * 64
+    elif change == "bytes":
+        witness["bytes_base64"] = base64.b64encode(b'{}').decode()
+    else:
+        witness["reference"][{"digest": "digest", "size": "bytes", "owner": "owner"}[change]] = {
+            "digest": "f" * 64, "size": 1, "owner": "foreign"}[change]
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_completion(row, manifest, views))
+
+
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+@pytest.mark.parametrize("change", ["prerequisites", "adoption", "evidence"])
+def test_earlier_completion_profiles_cannot_gain_producer_authority(request, fixture_name, change):
+    row = deepcopy(request.getfixturevalue(fixture_name))
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    admitted = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    if change == "prerequisites":
+        admitted["prerequisites"] = [{"profile": "unverified"}]
+    elif change == "adoption":
+        admitted["producer_adoption"] = {"passed": True}
+    else:
+        manifest["producer_evidence"] = {"passed": True}
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), admitted)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_completion(row, manifest, views))
+
+
 @pytest.mark.parametrize("reuse", [False, True])
 def test_bound_input_custody_preserves_opaque_identity_and_rebound_name_without_reads(native_snapshot_job, monkeypatch, reuse):
     row = _with_input_custody(native_snapshot_job, reuse=reuse)
@@ -991,7 +1351,7 @@ def test_catalog_maps_scoped_output_without_opening_payloads_or_caller_job(nativ
     assert source["reference"]["value"]["location"].endswith("never-open-captured.parquet")
 
 
-@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job", "native_producer_job"])
 def test_mapped_catalog_facts_keep_normative_shapes(request, fixture_name, tmp_path):
     native_job = request.getfixturevalue(fixture_name)
     metadata, entry, _receipt = _metadata(tmp_path, native_job)
@@ -1053,7 +1413,7 @@ def test_incomplete_execution_preserves_known_outputs_and_uncertainty(native_job
     assert not metadata.observations["checks"]
 
 
-@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job", "native_producer_job"])
 def test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads(request, fixture_name, tmp_path, monkeypatch):
     native_job = request.getfixturevalue(fixture_name)
     project = _authored_project(tmp_path)
@@ -1103,7 +1463,7 @@ def test_real_assembly_missing_acceptance_stays_incomplete_and_preserves_prior_c
     assert before == {path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()}
 
 
-@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job", "native_producer_job"])
 def test_real_public_assembly_withholds_private_members_paths_and_diagnostics(request, fixture_name, tmp_path):
     native_job = request.getfixturevalue(fixture_name)
     project = _authored_project(tmp_path)
@@ -1124,7 +1484,7 @@ def test_real_public_assembly_withholds_private_members_paths_and_diagnostics(re
     assert "managedExecutions" not in public.catalog["extensions"]["urn:ddk:catalog:assembly"]
     public_bytes = b"".join(public.artifacts.values()) + _raw(public.report) + _raw(public.catalog)
     for secret in (b"private.parquet", b"shared_join", b"native-lifecycle", b"never-open-job", str(tmp_path).encode(),
-                   b"s3://fixture/table", b"4200827d-e8eb-4616-a0f9-ff4d222a582e"):
+                   b"s3://fixture/table", b"4200827d-e8eb-4616-a0f9-ff4d222a582e", b"definition-one", b"/never/open/producer-record"):
         assert secret not in public_bytes
     assert public.local_catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"]
 
