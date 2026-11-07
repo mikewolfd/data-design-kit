@@ -4,11 +4,13 @@
 
 One fresh installed run passed 703 tests with zero failures, errors or skips. Separate offline-core API, CLI and lock checks also passed. The connected commerce workflow exercises staging, SQL, saved Substrait, output quality and a catalog-bound reader. Source declarations remain experimental. The five generated adapter manifests qualify with their admitted evidence. Earlier SDK2 results retain their original skipped outcomes and supplemental evidence.
 
+The [portable SDK3 archive](docs/local-release-integrated-3.md#portable-package) also passes fresh core/full/native installation, evidence relocation and four fresh connected-workflow cases on macOS arm64. The original 703-test qualification travels with the package unchanged.
+
 DocSpec owns execution, durable phases, source access, retained inputs, recovery, accepted quality evidence and guarded selection. Its current native gate passed 1,011 Rust and 31 Dagster tests, with 17 explicitly ignored Rust cases retained. A separate synthetic S3 fixture proves recovery after an input-read failure and offline acceptance; installed SDK2 calls recover that same accepted candidate. [Current verification](docs/verification.md#november-7-2026-sdk3-complete-installed-qualification).
 
 SDK3 also supports explicit host-owned process groups. Nine POSIX process probes passed both from source and installed, alongside the existing transport checks. These probes use stand-ins and preserve uncertain native execution after timeout. [Process evidence](docs/verification.md#november-7-2026-host-process-ownership).
 
-Congress's [original eight-table source proof](docs/verification.md#november-7-2026-congress-retained-source-proof) separately passed against retained archive snapshots. Fresh official-source checks, application publication and the complete Congress and SpicyRegs replacements remain separate work. The reusable React/Astro viewer has its own acceptance record. The [dev2 portable archive](docs/local-release.md) and older package results retain their original identities; this qualification does not create a new portable archive or hosted release.
+Congress's [original eight-table source proof](docs/verification.md#november-7-2026-congress-retained-source-proof) separately passed against retained archive snapshots. Fresh official-source checks, application publication and the complete Congress and SpicyRegs replacements remain separate work. The reusable React/Astro viewer has its own acceptance record. The [dev2 portable archive](docs/local-release.md) and older package results retain their original identities. No hosted release has been published.
 
 Data Design Kit (DDK) uses maintained data definitions to check designs, test transformations, and generate a catalog of exact versions, access methods, relationships, and evidence. Maintainers can use the same definitions to assess changes and supply documentation and consumer metadata. The adopted [build strategy](docs/build-strategy-without-pilots.md) connects local commerce inputs, real execution and quality receipts, and a generated catalog reader. Nested/scoped identities and one typed managed operation have separate acceptance cases. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete delivery work.
 
@@ -45,7 +47,7 @@ The repository pins the ODCS schema correction and retains its published compari
 
 The [implementation status](docs/implementation-status.md) documents the commands and current runtime evidence. The [verification record](docs/verification.md) separates earlier documentation checks from native execution and conformance tests. Build environments, test outputs, and local distributions remain outside the repository.
 
-The [portable release guide](docs/local-release.md#run-the-package) explains dependency downloads, native platform limits, and evidence relocation. The [dev1 record](docs/local-release-dev1.md) preserves the earlier capture separately.
+The [current portable package guide](docs/local-release-integrated-3.md#portable-package) links the archive, pinned dependency material, installation instructions and platform limits. The [dev2 portable guide](docs/local-release.md) and [dev1 record](docs/local-release-dev1.md) preserve earlier captures separately.
 
 ## License
 

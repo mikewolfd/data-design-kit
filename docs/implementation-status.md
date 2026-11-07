@@ -2,7 +2,7 @@
 
 **November 7, 2026. The integrated SDK3 package passes the complete local installed profile qualification.** All 266 required case/profile checks passed across 249 distinct cases and 13 supported profiles. One fresh installed run passed 703 tests with zero failures, errors or skips. Earlier SDK2 skips and supplemental results remain unchanged. [Package identities, evidence and use](local-release-integrated-3.md).
 
-The connected workflow passes ODPS/ODCS resolution, file staging, SQL and saved Substrait execution, exact-output quality checks, DCAT/OpenLineage generation and a catalog-bound read. Five generated adapter manifests match the exact captured support declarations. The offline core remains separately installed and checked. This establishes the local first-product-release profile set; the existing portable archive retains its earlier dev2 scope.
+The connected workflow passes ODPS/ODCS resolution, file staging, SQL and saved Substrait execution, exact-output quality checks, DCAT/OpenLineage generation and a catalog-bound read. Five generated adapter manifests match the exact captured support declarations. The offline core remains separately installed and checked. The [portable SDK3 package](local-release-integrated-3.md#portable-package) also passes fresh installations, evidence relocation and four fresh workflow cases on macOS arm64. Its copied 703-test qualification remains distinct from these new distribution checks; the dev2 archive retains its earlier scope.
 
 ## Successor work
 
@@ -16,7 +16,9 @@ Congress installed SDK3 and passed seven retained-proof metadata checks plus fiv
 
 Congress's selected recovery policy requires verified recovered originals and continued official-source checks. Historical recovery evidence and each actual source-check time must remain distinct; missing observations remain unknown.
 
-The separate React/Astro viewer reads maintained catalog and receipt interfaces and displays processing acceptance separately from producer evidence and publisher selection. Its retained local metadata/browser checks do not establish current source availability or production publication. [Viewer evidence](verification.md#november-7-2026-viewer-processing-evidence).
+Congress's retained-rules fix passed all 18 focused metadata cases and is committed as `3a7657a870ca945df88397ed89b3ea413c72532a`. It preserves the original rules bytes used by the adopted definition. SpicyRegs's corrected application package passes build, isolated installation, identity verification, lint and type checking. These [latest application checks](verification.md#november-7-2026-application-and-viewer-follow-up) leave the complete Congress model and both applications' full reader journeys open.
+
+The separate React/Astro viewer reads maintained catalog and receipt interfaces and displays processing acceptance separately from producer evidence and publisher selection. Its latest display correction passed six unit cases, type checking, build and desktop/mobile browser checks. Its retained local metadata/browser checks do not establish current source availability or production publication. [Latest viewer evidence](verification.md#november-7-2026-application-and-viewer-follow-up).
 
 Separate greybeard and ETL reviewers cover this runtime, the viewer and both applications. The [verification record](verification.md) preserves earlier source-only checks, failed or interrupted captures and older package results under their original identities. No historical result has been restamped as SDK3 evidence.
 
@@ -41,7 +43,7 @@ The CLI exposes `check`, `impact`, `lock`, `build`, `test`, and `catalog`. The a
 
 Invoke the source checkout with its `src` directory on `PYTHONPATH`, or use the independently built local wheel. The offline environment needs the pinned JSON Schema libraries. Development lock creation additionally requires the installed source commit and wheel digest: a checkout or installation without those records returns incomplete without writing a lock. Ordinary unlocked checks remain available. Native tools run in a separately selected environment through `--tool-python`; DocSpec requires `--docspec` and an explicit `--limits` file.
 
-The [portable release instructions](local-release.md#run-the-package) use the bundled installer and captured dependency locks. Installation downloads Python dependencies from an index or matching wheelhouse. Use the hash-qualified pip installation path to retain the wheel identity needed by development locks. The bundled native executables are qualified on macOS 26.6 arm64; other platforms require separate builds and qualification.
+The [current portable instructions](local-release-integrated-3.md#portable-package) use the bundled installer, captured dependency locks and a separate verified wheelhouse. The installer retains the wheel identity needed by development locks. The bundled native executables are qualified on macOS arm64 with Python 3.12.13; other platforms require separate builds and qualification.
 
 ```sh
 ddk check examples/commerce/project.ddk.json --format json
