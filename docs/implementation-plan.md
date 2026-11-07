@@ -1,6 +1,6 @@
 # Data Design Kit — Implementation Plan
 
-**Updated November 6, 2026. Status: dev6 catalog APIs passed installed qualification. Dev5 retains the earlier complete supported profile set; both full application replacements remain incomplete. Publication awaits a destination.**
+**Updated November 7, 2026. Status: integrated SDK2 passed all 13 local installed profiles and 265 required case/profile checks against the current DocSpec executable. Both full application replacements remain incomplete. Publication awaits a destination.**
 
 ## 1. Delivery decision
 
@@ -10,11 +10,11 @@ The first DDK product release includes ODPS product definitions, ODCS dataset de
 
 The first connected workflow uses independently authored local commerce inputs, real staging and execution receipts, exact-output quality checks, and a generated catalog that binds a checked query. A companion nested-data fixture checks scoped relationships. A separate typed managed operation qualifies native quality acceptance and recovery. Project pilots are outside the build scope. This plan implements the [engineering specification](specification.md). The [work-package registry](../implementation/work-packages.json) and [conformance cases](../conformance/cases.json) track the normative requirements.
 
-The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve that original scope. The separately requested full SpicyRegs and congressional-tech replacements are greenfield: their producers and readers update together. Both remain incomplete. Their [shared runtime plan](replacement-runtime-plan.md) identifies the extensions, owners, dependency order, and independent acceptance cases. Local application work can use the qualified [dev6 catalog API package](local-release-dev6.md) while broader native integration continues; native claims remain on their separately qualified tuples.
+The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve that original scope. The separately requested full SpicyRegs and congressional-tech replacements are greenfield: their producers and readers update together. Both remain incomplete. Their [shared runtime plan](replacement-runtime-plan.md) identifies the extensions, owners, dependency order, and independent acceptance cases. Local application work can use the qualified [integrated SDK2 package](local-release-integrated-2.md); its native claims retain the exact tested executable and dependency tuple. Application inputs and publication still need their own acceptance.
 
 ## 2. Completed local deliverables
 
-The table records the `0.1.0-dev.2` installed capture and portable acceptance. WP-11's local qualification is complete. Publication remains pending until a destination is selected. The [dev1 capture](local-release-dev1.md) retains its earlier identities and results separately.
+The table preserves the `0.1.0-dev.2` installed capture and portable acceptance. The newer [integrated SDK2 package](local-release-integrated-2.md) separately passes all 13 installed profiles; it does not replace the dev2 portable archive. WP-11's local qualification is complete. Publication remains pending until a destination is selected. The [dev1 capture](local-release-dev1.md) retains its earlier identities and results separately.
 
 | Track | Implemented | Qualification evidence |
 | --- | --- | --- |
@@ -281,7 +281,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Dependencies:** WP-06, WP-10, and WP-14. **Output:** reproducible first product release with the complete DDK-VERSION-003 profile set. WP-08 and WP-12 qualify separate claims.
 
-**Current result:** local installed qualification, portable installation and relocation, fresh connected-workflow replay, and archive verification passed for `0.1.0-dev.2`. Publication awaits a destination. These results qualify the recorded source and native macOS arm64 tuple; the SQL-only executable's separate feature-specific software bill of materials remains `not_run`.
+**Current result:** integrated SDK2 passes all 13 local installed profiles and 265 required case/profile checks, including its connected workflow and managed profile. Portable installation, relocation and archive verification retain their separate `0.1.0-dev.2` result. Publication awaits a destination. These results qualify the recorded source and native macOS arm64 tuple; the SQL-only executable's separate feature-specific software bill of materials remains `not_run`.
 
 - Package the offline checker and adapters with explicit installation and invocation boundaries. Verify the core-only installation and the complete first release workflow.
 - Run the required conformance and CLI cases across supported platforms. Test paths outside the source checkout.
@@ -304,7 +304,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - A changed qualification request may reuse native computed values. Keep computation keys, qualification keys, and full provenance distinct. Do not mutate the original request silently.
 - Record accepted native qualification identity, known outputs, execution outcome, selection outcome, and reconciliation capability. Reconcile lost responses under the original native operation ID.
 
-**Replacement extension, not yet qualified:** retain the supported DCC verifier and add a concrete verifier for the application's complete native SQL report inventory. Bind original rules, trusted evaluator/version and semantics, exact candidate/view sets, completed execution and applicable reads, and every required outcome. Native rules need not be re-executed through DCC materialization to qualify them. This adds no generic passed-boolean acceptance and no DCC semantic-equivalence claim. The [shared runtime plan](replacement-runtime-plan.md) records the separate implementation and acceptance work.
+**Replacement extension:** the SDK2 local managed qualification includes retained-job native SQL reports and accepted producer prerequisites. Complete application report inventories and production inputs still require application acceptance. Retain the supported DCC verifier and the concrete native report verifier. Bind original rules, trusted evaluator/version and semantics, exact candidate/view sets, completed execution and applicable reads, and every required outcome. Native rules need not be re-executed through DCC materialization to qualify them. This adds no generic passed-boolean acceptance and no DCC semantic-equivalence claim. The [shared runtime plan](replacement-runtime-plan.md) records the separate implementation and acceptance work.
 
 **Acceptance:** rule-only change performs no new computation; stale or incomplete qualification blocks selection; concurrent authority changes cannot select stale candidates; lost acknowledgment returns the original outcome without repeating completed work. File-backed quality results alone do not qualify native access. Report the managed profile as unqualified until exact-native evidence acceptance passes. Its release evidence is separate from bounded job evidence.
 

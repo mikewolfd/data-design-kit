@@ -1,11 +1,14 @@
 {
   "specification": "DDK 0.1",
-  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build and Update, plus successor retained whole-job cases. Dev5 retains its qualified native tuple; whole-job source checks do not extend that release qualification.",
+  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build and Update, retained whole-job execution, input custody and producer prerequisites. SDK2 installed qualification covers the exact current local tuple; prior source and dev5 results retain their original identities.",
   "status": "Executable traceability for the pinned local tuple. The independent loose-mode validator remains unexercised.",
   "evidencePaths": [
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/verification-qualified.json",
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/pytest-runtime-final-qualified.log",
-    "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-runtime-focused.log"
+    "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-runtime-focused.log",
+    "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk2-complete-release-supplement-01/run-01/release-qualification.ddk.json",
+    "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk2-complete-release-supplement-01/run-01/release-evidence.json",
+    "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/full-gate-s3-source-final-01-closeout.json"
   ],
   "cases": [
     {
