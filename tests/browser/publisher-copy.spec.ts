@@ -46,7 +46,7 @@ test('Commerce shows publisher check meanings and named source captures with exa
   const revenue = source.catalog.versions.find((v: any) => v.dataset === 'daily-revenue');
   await page.goto(`/?catalog=commerce-native&dataset=daily-revenue&version=${encodeURIComponent(revenue.id)}&tab=Evidence`);
   await expect(page.getByText('13 recorded; 13 passed; 0 failed; 0 unknown; 0 not run', { exact: true })).toBeVisible();
-  await expect(page.locator('.evidence-row strong', { hasText: 'Amounts are zero or greater.' })).toBeVisible();
+  await expect(page.locator('.evidence-row p', { hasText: 'Amounts are zero or greater.' })).toBeVisible();
   await expect(page.locator('.evidence-row strong', { hasText: 'title not supplied' })).toHaveCount(0);
   const orders = source.catalog.versions.find((v: any) => v.dataset === 'orders' && v.sources.length);
   await page.goto(`/?catalog=commerce-native&dataset=orders&version=${encodeURIComponent(orders.id)}&tab=Evidence`);

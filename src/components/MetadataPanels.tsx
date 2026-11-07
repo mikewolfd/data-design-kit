@@ -196,15 +196,8 @@ export function Evidence({ snapshot, dataset, version }: Context) {
           observed.map((c, i) => (
             <div className="evidence-row" key={i}>
               <div>
-                <strong>
-                  {'title' in c.rule && typeof c.rule.title === 'string'
-                    ? c.rule.title
-                    : c.reason && !['passed', 'failed', 'unknown', 'not_run'].includes(c.reason)
-                      ? c.reason
-                      : `Check ${i + 1} · title not supplied`}
-                </strong>
-                <p>{c.scope}</p>
-                {'title' in c.rule && <p>{c.reason}</p>}
+                <strong>{c.scope}</strong>
+                {c.reason && <p>{c.reason}</p>}
                 <details>
                   <summary>Rule and evaluator details</summary>
                   <p>

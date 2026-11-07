@@ -59,7 +59,7 @@ test('compare explains zero and one version and refuses same-version comparison'
   assert.match(html, /does not change when you choose data versions above/);
 });
 
-test('checks keep unknown and not run separate and show no invented rule name', async () => {
+test('checks show supplied scopes and separate reasons while preserving each status', async () => {
   const props = await context();
   props.snapshot.catalog.checks = ['passed', 'failed', 'unknown', 'not_run'].map((status) => ({
     subject: props.version.id,
@@ -67,11 +67,20 @@ test('checks keep unknown and not run separate and show no invented rule name', 
     evaluator: { id: 'urn:evaluator:test', version: 'v2' },
     status: status as 'passed',
     scope: 'Only the saved file',
+    ...(status === 'unknown' || status === 'not_run'
+      ? { reason: `Publisher explanation: ${status}` }
+      : {}),
+    record: { uri: `urn:evidence:${status}`, sha256: 'a'.repeat(64) },
   }));
   const html = renderToStaticMarkup(createElement(Evidence, props));
   assert.match(html, /4 recorded; 1 passed; 1 failed; 1 unknown; 1 not run/);
-  assert.equal((html.match(/Check \d+ · title not supplied/g) ?? []).length, 4);
+  assert.equal((html.match(/<strong>Only the saved file<\/strong>/g) ?? []).length, 4);
+  assert.doesNotMatch(html, /Check \d+ · title not supplied/);
+  assert.match(html, /<p>Publisher explanation: unknown<\/p>/);
+  assert.match(html, /<p>Publisher explanation: not_run<\/p>/);
   assert.match(html, /urn:rule:not_run/);
+  assert.match(html, /urn:evaluator:test/);
+  assert.match(html, /urn:evidence:passed/);
   assert.match(html, /Passing checks do not establish overall data/);
   assert.match(html, /does not make or refresh acceptance/);
 });
