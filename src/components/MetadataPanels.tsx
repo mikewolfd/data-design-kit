@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import ImpactPanel from './ImpactPanel';
 import { EvidenceRecord } from './EvidenceRecord';
 import type { CatalogDataset, CatalogSnapshot, CatalogVersion } from '../domain/types';
@@ -292,12 +292,79 @@ export function Evidence({ snapshot, dataset, version }: Context) {
         )}
       </Section>
       <Section title="Technical check details">
-        <p>Acceptance by the publishing system: not established here.</p>
+        <p>
+          This portal displays recorded publisher evidence. It does not make or refresh acceptance
+          decisions.
+        </p>
         <Raw value={snapshot.report.scope} label="Requested report scope" />
         <Raw value={snapshot.report.coverage} label="Check coverage" />
         <Raw value={snapshot.lock.tools} label="Recorded tool versions" />
         <Raw value={snapshot.catalog.extensions} label="Scoped definitions and extensions" />
       </Section>
+    </>
+  );
+}
+function RecordedProcessingEvidence({
+  snapshot,
+  run,
+}: {
+  snapshot: CatalogSnapshot;
+  run: CatalogSnapshot['catalog']['runs'][number];
+}) {
+  // This maintained extension is local-only. Public checks keep their own disclosed scope.
+  if (snapshot.audience !== 'local') return null;
+  const rows = objectOf(
+    snapshot.catalog.extensions?.['urn:ddk:catalog:assembly'],
+  ).managedExecutions;
+  if (!Array.isArray(rows)) return null;
+  const matches = rows.map(objectOf).filter((row) => row.run === run.id);
+  if (!matches.length) return null;
+  const trace = matches[0];
+  const record = objectOf(trace.record);
+  const digest = (value: unknown): value is string =>
+    typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+  const sameReceipt =
+    matches.length === 1 &&
+    typeof record.uri === 'string' &&
+    !!record.uri &&
+    record.uri === run.record?.uri &&
+    digest(record.sha256) &&
+    record.sha256 === run.record?.sha256;
+  let status = 'Unknown · multiple summaries identify this processing event.';
+  let identity: string | undefined;
+  if (matches.length === 1) {
+    if (!sameReceipt) {
+      status = 'Unknown · the summary does not identify the same evidence file as this event.';
+    } else if (trace.acceptedQualification === null) {
+      status = 'No acceptance identity is attached to this record.';
+    } else if (digest(trace.acceptedQualification)) {
+      status = 'An acceptance identity is recorded for this event.';
+      identity = trace.acceptedQualification;
+    } else {
+      status = 'Unknown · the summary supplies no valid acceptance identity.';
+    }
+  }
+  const facts: [string, ReactNode][] = [['Recorded processing acceptance', status]];
+  if (identity) facts.push(['Exact acceptance identity', <code>{identity}</code>]);
+  return (
+    <>
+      <div className="recorded-acceptance">
+        <Facts items={facts} />
+        <p className="muted">
+          An acceptance record covers only the processing system's named checks for that event. It
+          does not establish that every record was verified, or that the result is currently
+          accepted, selected or published.
+        </p>
+      </div>
+      {sameReceipt && Object.hasOwn(trace, 'producerEvidence') && (
+        <div className="recorded-producer-evidence">
+          <p className="muted">
+            This recorded metadata does not establish which code wrote earlier records or whether
+            proof files are still available.
+          </p>
+          <Raw value={trace.producerEvidence} label="Recorded producer evidence for this event" />
+        </div>
+      )}
     </>
   );
 }
@@ -335,6 +402,7 @@ export function Activity({ snapshot, dataset, version }: Context) {
                 value={{ inputs: r.inputs, outputs: r.outputs }}
                 label="Exact consumed inputs and outputs"
               />
+              <RecordedProcessingEvidence snapshot={snapshot} run={r} />
               <EvidenceRecord
                 snapshot={snapshot}
                 record={r.record}

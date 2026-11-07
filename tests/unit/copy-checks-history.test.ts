@@ -73,7 +73,7 @@ test('checks keep unknown and not run separate and show no invented rule name', 
   assert.equal((html.match(/Check \d+ · title not supplied/g) ?? []).length, 4);
   assert.match(html, /urn:rule:not_run/);
   assert.match(html, /Passing checks do not establish overall data/);
-  assert.match(html, /Acceptance by the publishing system: not established here/);
+  assert.match(html, /does not make or refresh acceptance/);
 });
 
 test('history keeps original processing identifiers and specific evidence capability', async () => {
