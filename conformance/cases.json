@@ -3177,6 +3177,56 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-SNAPSHOT",
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Seed a bounded native table through its public CLI and consume the exact selected snapshot through DDK managed_job. Independent expected values, nulls and native field IDs match; original member locations, hashes, sizes and retained bytes remain exact. A diagnostic count stays separate from required zero counters before acceptance and selection.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-SNAPSHOT-RECOVERY",
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-SAFE-004"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Remove the fixture payload before native admission completes and require failure without a candidate. Restore those exact payload bytes, remove original metadata and manifests, then retry the original operation through a cold DDK adapter. Actual output reading succeeds. Later remove all producer and caller originals and replay the same accepted candidate before selection.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-SNAPSHOT-PINS",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "An incorrect original metadata SHA, table UUID, schema ID or selected snapshot must produce the concrete native identity or pin refusal through DDK. Coherently update JobSpec and policy pins so unrelated artifact mismatches cannot satisfy the check. No candidate, accepted qualification or output is produced.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     }
   ]
 }

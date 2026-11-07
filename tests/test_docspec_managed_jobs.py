@@ -7,11 +7,15 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import shutil
 
 import pytest
 
 from ddk.adapters.docspec import DocSpecAdapter
-from ddk.docspec_job_evidence import COUNTER_EVALUATOR, COUNTER_PROFILE, COUNTER_SEMANTICS, verify_completed_job
+from ddk.adapters.native import run_bounded
+from ddk.docspec_job_evidence import (
+    COUNTER_EVALUATOR, COUNTER_PROFILE, COUNTER_SEMANTICS, SNAPSHOT_COMPLETION_PROFILE, verify_completed_job,
+)
 
 
 LIMITS = {
@@ -293,3 +297,181 @@ def test_native_nonzero_counter_refuses_qualification_without_erasing_completed_
     assert rejected["operation"]["outputs"] == prepared["operation"]["outputs"]
     assert rejected["result"]["accepted_qualification"] is None
     assert next(row for row in rejected["result"]["completed_reports"] if row["name"] == "invariants")["data"] == [{"row_delta": 1}]
+
+
+# Authored independently of both the producer SQL and retained consumer SQL.
+EXPECTED_SNAPSHOT = [
+    {"prefix": "snapshot", "id": 1, "amount": 7},
+    {"prefix": "snapshot", "id": 2, "amount": None},
+    {"prefix": "snapshot", "id": 3, "amount": -5},
+]
+
+
+def _snapshot_request(runtime, tmp_path):
+    """Seed original Iceberg bytes through the ordinary public native job API."""
+    pa = pytest.importorskip("pyarrow")
+    producer = tmp_path / "producer"
+    producer.mkdir()
+    table = {"namespace": ["authored"], "name": "source"}
+    schema = {"type": "struct", "schema-id": 0, "identifier-field-ids": [2], "fields": [
+        {"id": 1, "name": "prefix", "required": True, "type": "string"},
+        {"id": 2, "name": "id", "required": True, "type": "long"},
+        {"id": 3, "name": "amount", "required": False, "type": "long"},
+    ]}
+    seed = {
+        "scratch": str(producer / "scratch"), "catalog_root": str(producer / "catalog"), "inputs": [],
+        "steps": [{"name": "incoming", "sql": "SELECT 'snapshot' AS prefix,CAST(id AS BIGINT) AS id,"
+                   "CAST(amount AS BIGINT) AS amount FROM (VALUES (1,7),(2,NULL),(3,-5)) AS authored(id,amount)"}],
+        "outputs": [], "table_operations": [
+            {"kind": "create_namespace", "name": "namespace", "namespace": ["authored"], "properties": {}},
+            {"kind": "create", "name": "create", "table": table, "location": str(producer / "data"),
+             "schema": schema, "format_version": 2, "properties": {"gc.enabled": "true", "commit.retry.num-retries": "0"}},
+            {"kind": "append", "name": "append", "table": table, "current_table": "existing", "work_table": "pending",
+             "sql": "SELECT * FROM incoming", "identity_sql": "SELECT 'authored-three-values-v1' AS identity FROM pending LIMIT 1",
+             "layout": {"file_bytes": 1048576, "row_group_rows": 64, "row_group_bytes": 1048576}},
+        ],
+    }
+    # Fixture creation uses the public native CLI. DDK's ordinary calculation
+    # profile deliberately excludes catalog writes.
+    seed_spec = _artifact(tmp_path / "seed-job.json", seed)
+    seed_limits = _artifact(tmp_path / "seed-limits.json", LIMITS)
+    transport = run_bounded(
+        [str(runtime.executable), "--limits", seed_limits["path"], "job", "--spec", seed_spec["path"]],
+        timeout=runtime.timeout, limit=runtime.capture_bytes, stop_on_stdout_limit=True,
+    )
+    (tmp_path / "seed-stdout.json").write_bytes(transport["stdout"])
+    (tmp_path / "seed-stderr.log").write_bytes(transport["stderr"])
+    _artifact(tmp_path / "seed-transport.json", {key: value for key, value in transport.items() if key not in {"stdout", "stderr"}})
+    assert transport["exitCode"] == 0 and not any(transport[key] for key in (
+        "timedOut", "cancelled", "stdoutTruncated", "stderrTruncated", "drainIncomplete",
+    )), transport
+    head = json.loads(transport["stdout"])["table_operations"][-1]
+    selector = {"kind": "native_table", "name": "source",
+                **{key: head[key] for key in ("metadata_location", "table_uuid", "snapshot", "schema_id")}}
+    assert selector["snapshot"] is not None
+    original = {str(path): path.read_bytes() for path in (producer / "data").rglob("*") if path.is_file()}
+    metadata = original[selector["metadata_location"]]
+    settings = {
+        "profile": "whole", "row_group_rows": 64, "order_by": [{"field": "id"}], "columns": [],
+        "dictionary_columns": [], "delta_columns": [], "key_column": None,
+        "created_by": "DDK independently authored native snapshot fixture", "footer_limit": 65536,
+    }
+    job = {
+        "scratch": str(tmp_path / "caller-scratch"), "inputs": [selector],
+        "steps": [{"name": "selected", "sql": "SELECT prefix,id,amount FROM source"}],
+        "outputs": [{"name": "observed", "path": str(tmp_path / "unselected.parquet"),
+                     "sql": "SELECT * FROM selected", "settings": settings}],
+        "queries": [
+            {"name": "invariants", "sql": 'SELECT COUNT(*) - 3 AS row_delta FROM outputs."observed"'},
+            {"name": "diagnostics", "sql": 'SELECT COUNT(*) AS null_rows FROM outputs."observed" WHERE amount IS NULL'},
+        ],
+    }
+    declared = pa.schema([
+        pa.field("prefix", pa.string(), nullable=False, metadata={"PARQUET:field_id": "1"}),
+        pa.field("id", pa.int64(), nullable=False, metadata={"PARQUET:field_id": "2"}),
+        pa.field("amount", pa.int64(), nullable=True, metadata={"PARQUET:field_id": "3"}),
+    ])
+    job_artifact = _artifact(tmp_path / "snapshot-job.json", job)
+    prepared = runtime.prepare_job({"job": job_artifact, "inputs": [
+        {"name": "source", "schema_ipc_base64": base64.b64encode(declared.serialize().to_pybytes()).decode()},
+    ]})
+    assert prepared["status"] == "succeeded", prepared
+    counter = prepared["result"]["queries"][0]
+    policy = {
+        "id": "snapshot-counts", "profile": COUNTER_PROFILE, "evaluator": COUNTER_EVALUATOR,
+        "semantics": COUNTER_SEMANTICS, "job_sha256": job_artifact["sha256"],
+        "view_names": {"inputs": ["source"], "steps": ["selected"], "outputs": ["observed"],
+                       "reports": ["invariants", "diagnostics"]},
+        "required_reports": [{"name": "invariants", "sql_sha256": sha256(job["queries"][0]["sql"].encode()).hexdigest(),
+                              "schema_ipc_base64": prepared["result"]["schemas"][counter["schema_sha256"]]}],
+    }
+    request = {
+        "action": "prepare", "dataset": "snapshots", "operation": "original", "definition": "urn:ddk:fixture:native-snapshot:1",
+        "job": job_artifact, "file_inputs": [], "snapshot_inputs": [
+            {"name": "source", "metadata_sha256": sha256(metadata).hexdigest(), "metadata_size": len(metadata)},
+        ], "policy_id": policy["id"], "policy": _artifact(tmp_path / "snapshot-policy.json", policy),
+        "expected_epoch": 0, "expected_selection": None, "prerequisites": [],
+    }
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    return workspace, request, job, policy, producer, original
+
+
+@pytest.mark.parametrize("cold_partial", [False, True], ids=["complete-original", "missing-payload-recovery"])
+def test_native_snapshot_values_ids_and_recovery_use_original_custody(runtime, tmp_path, cold_partial):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    workspace, request, job, policy, producer, original = _snapshot_request(runtime, tmp_path)
+    if cold_partial:
+        payloads = [Path(path) for path in original if path.endswith(".parquet")]
+        assert len(payloads) == 1
+        backup = tmp_path / "fixture-payload-backup"
+        payloads[0].rename(backup)
+        failed = runtime.managed_job(workspace, request)
+        assert failed["status"] == "failed", failed
+        assert not failed["operation"].get("candidate") and failed["operation"]["selection"] != "selected"
+        backup.rename(payloads[0])
+        for path in original:
+            if not path.endswith(".parquet"):
+                Path(path).unlink()
+        assert not Path(job["inputs"][0]["metadata_location"]).exists()
+        runtime = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, evidence_dir=tmp_path / "cold-retry")
+        completed = runtime.managed_job(workspace, request, prior=failed)
+    else:
+        completed = runtime.managed_job(workspace, request)
+    assert completed["status"] == "succeeded", completed
+    verified = verify_completed_job(completed["result"])
+    assert verified.manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE
+    assert verified.admitted_request == request
+    view = verified.view_set["inputs"][0]
+    assert view["selector"] == job["inputs"][0] and view["files"] == []
+    assert sorted(item["role"] for item in view["snapshot_custody"]["objects"]) == ["data", "manifest", "manifest_list", "metadata"]
+    for item in view["snapshot_custody"]["objects"]:
+        raw = original[item["uri"]]
+        assert item["sha256"] == sha256(raw).hexdigest() and item["size"] == len(raw)
+        assert item["retained"]["owner"] == "snapshots" and item["origin_operation"] == "original"
+        retained = Path(item["retained"]["path"])
+        assert retained.is_relative_to(workspace) and retained.read_bytes() == raw
+    observed = pa.ipc.read_schema(pa.BufferReader(base64.b64decode(verified.manifest["schemas"][view["schema_sha256"]])))
+    assert [(field.name, str(field.type), field.nullable, field.metadata[b"PARQUET:field_id"]) for field in observed] == [
+        ("prefix", "string", False, b"1"), ("id", "int64", False, b"2"), ("amount", "int64", True, b"3"),
+    ]
+    output = completed["result"]["completed_outputs"][0]
+    assert output["rows"] == 3 and _rows(pq.read_table(output["path"]).to_pylist()) == _rows(EXPECTED_SNAPSHOT)
+    assert not Path(job["outputs"][0]["path"]).exists()
+    assert completed["result"]["completed_reports"][1]["data"] == [{"null_rows": 1}]
+    accepted = runtime.managed_job(workspace, _action(completed, "accept", policy["id"]), prior=completed)
+    assert accepted["status"] == "succeeded", accepted
+    verify_completed_job(accepted["result"], require_accepted=True)
+    shutil.rmtree(producer)
+    for path in (request["job"]["path"], request["policy"]["path"]):
+        Path(path).unlink()
+    cold = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, evidence_dir=tmp_path / "cold-complete")
+    replay = cold.managed_job(workspace, request, prior=accepted)
+    assert replay["status"] == "succeeded", replay
+    assert replay["result"]["candidate"] == completed["result"]["candidate"]
+    assert replay["result"]["completed_reports"] == completed["result"]["completed_reports"]
+    assert replay["result"]["accepted_qualification"] == accepted["result"]["accepted_qualification"]
+    select = {**_action(completed, "select", policy["id"]),
+              "accepted_qualification": accepted["result"]["accepted_qualification"]["identity"]}
+    selected = cold.managed_job(workspace, select, prior=replay)
+    assert selected["status"] == "succeeded" and selected["operation"]["selection"] == "selected", selected
+
+
+@pytest.mark.parametrize("changed", ["metadata_sha256", "table_uuid", "schema_id", "snapshot"])
+def test_native_snapshot_wrong_original_pin_cannot_create_a_candidate(runtime, tmp_path, changed):
+    workspace, request, job, policy, _producer, _original = _snapshot_request(runtime, tmp_path)
+    if changed == "metadata_sha256":
+        request["snapshot_inputs"][0]["metadata_sha256"] = "0" * 64
+    else:
+        job["inputs"][0][changed] = {"table_uuid": "00000000-0000-4000-8000-000000000099", "schema_id": 999, "snapshot": None}[changed]
+        request["job"] = _artifact(tmp_path / "snapshot-job.json", job)
+        policy["job_sha256"] = request["job"]["sha256"]
+        request["policy"] = _artifact(tmp_path / "snapshot-policy.json", policy)
+    refused = runtime.managed_job(workspace, request)
+    assert refused["status"] == "failed", refused
+    assert refused["error"]["code"] == ("managed_job_identity" if changed == "metadata_sha256" else "pin_mismatch")
+    assert not refused["operation"].get("candidate")
+    assert not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+    assert not Path(job["outputs"][0]["path"]).exists()

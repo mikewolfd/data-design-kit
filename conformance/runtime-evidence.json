@@ -319,6 +319,39 @@
       "tests": [
         "tests/test_docspec_runtime.py::test_managed_build_uses_exact_external_quality_and_recovers_lost_selection"
       ]
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-SNAPSHOT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_snapshot_values_ids_and_recovery_use_original_custody[complete-original]"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-consumer-source-02/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Actual local source consumer on immutable native snapshot source07 at unchanged 128 MiB memory and 64 MiB scratch. Source f3551a3 plus test overlay 6de537ee. Same-operation custody only; native full gate and installed successor qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-SNAPSHOT-RECOVERY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_snapshot_values_ids_and_recovery_use_original_custody[missing-payload-recovery]"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-consumer-source-02/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Actual local source consumer on immutable native snapshot source07 at unchanged 128 MiB memory and 64 MiB scratch. Source f3551a3 plus test overlay 6de537ee. Same-operation custody only; native full gate and installed successor qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-SNAPSHOT-PINS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_snapshot_wrong_original_pin_cannot_create_a_candidate"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-consumer-source-02/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Actual local source consumer on immutable native snapshot source07 at unchanged 128 MiB memory and 64 MiB scratch. Source f3551a3 plus test overlay 6de537ee. Same-operation custody only; native full gate and installed successor qualification remain separate."
     }
   ]
 }
