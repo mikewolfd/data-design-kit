@@ -1,6 +1,6 @@
 {
   "specification": "DDK 0.1",
-  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build and Update, retained whole-job execution, input custody and producer prerequisites. SDK2 installed qualification covers the exact current local tuple; prior source and dev5 results retain their original identities.",
+  "scope": "DocSpec preparation, bounded SQL, saved Substrait, exact native reads, local source-only managed Build and Update, retained whole-job execution, input custody and producer prerequisites. SDK3 installed qualification covers the exact current local tuple, including host process placement via POSIX stand-ins. Prior source, SDK2 and dev5 results retain their original identities.",
   "status": "Executable traceability for the pinned local tuple. The independent loose-mode validator remains unexercised.",
   "evidencePaths": [
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/verification-qualified.json",
@@ -8,6 +8,8 @@
     "/Users/mikewolfd/Work/artifacts/ddk-stack-20261105/runtime/final-runtime-focused.log",
     "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk2-complete-release-supplement-01/run-01/release-qualification.ddk.json",
     "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk2-complete-release-supplement-01/run-01/release-evidence.json",
+    "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk3-complete-release-01/run-01/release-qualification.ddk.json",
+    "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk3-complete-release-01/run-01/release-evidence.json",
     "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/full-gate-s3-source-final-01-closeout.json"
   ],
   "cases": [
@@ -645,11 +647,12 @@
         "tests/test_docspec_job_transport.py::test_snapshot_source_timeout_keeps_original_intent_for_source_free_recovery",
         "tests/test_docspec_job_transport.py::test_snapshot_source_does_not_enable_an_unsupported_job_owner"
       ],
-      "scopeNote": "Three frozen-source and three installed SDK2 subprocess simulations passed, preserving private configuration-path transport and original job identity. Two separate actual installed SDK2 prepares then confirm the same accepted native candidate with its synthetic provider stopped; no new ingestion or guarded selection. Native CLI capture has separate source-reader evidence. Real-provider access and complete native qualification remain unverified.",
+      "scopeNote": "Three frozen-source and three installed SDK2 subprocess simulations passed, preserving private configuration-path transport and original job identity. Two separate actual installed SDK2 prepares then confirm the same accepted native candidate with its synthetic provider stopped; no new ingestion or guarded selection. The simulations also passed in the complete SDK3 installed capture. Native CLI source-reader evidence and the completed native gate retain their own identities. Real-provider access remains unverified.",
       "evidencePaths": [
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-adapter-01/run-01/handoff.json",
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-installed-01/run-01/handoff.json",
-        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-native-replay-01/run-01/handoff.json"
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-native-replay-01/run-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk3-complete-release-01/run-01/handoff.json"
       ]
     },
     {
@@ -660,9 +663,10 @@
         "tests/test_docspec_process_ownership.py::test_adapter_timeout_reaps_child_and_preserves_uncertainty",
         "tests/test_docspec_process_ownership.py::test_read_can_explicitly_override_host_process_placement"
       ],
-      "scopeNote": "Nine frozen-source POSIX process probes passed, alongside 31 existing transport cases. Host TERM/KILL reaches managed-request and buffered-read stand-ins; SDK timeouts reap direct children and retain unknown execution. Installed successor and actual native host-owned placement remain separate.",
+      "scopeNote": "Nine POSIX process probes passed both from frozen source and in the installed SDK3 capture, alongside existing transport cases. Host TERM/KILL reaches managed-request and buffered-read stand-ins; SDK timeouts reap direct children and retain unknown execution. Actual native host-owned placement in supervising applications remains separate.",
       "evidencePaths": [
-        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/process-ownership-source-01/run-01/handoff.json"
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/process-ownership-source-01/run-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk3-complete-release-01/run-01/handoff.json"
       ]
     }
   ]

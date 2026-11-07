@@ -64,7 +64,7 @@ Protect inputs and candidates through DocSpec's existing native protection owner
 
 The adapter's own timeout still stops and reaps its direct native child. In host-owned mode, the supervisor remains responsible for other descendants. Terminating a process does not prove that durable native work was cancelled or rolled back. Preserve the original request and operation ID and reconcile through DocSpec; timeout reports keep execution unknown. This placement setting changes no data definition, native request identity or selection authority.
 
-Nine independent source process probes in `CASE-DOCSPEC-PROCESS-OWNERSHIP` passed, alongside 31 existing transport cases. Installed successor acceptance remains pending. The qualified SDK2 package retains its existing standalone behavior.
+Nine independent source process probes in `CASE-DOCSPEC-PROCESS-OWNERSHIP` passed, alongside 31 existing transport cases. All nine also passed in the complete [installed SDK3 qualification](local-release-integrated-3.md). These probes use harmless stand-ins; actual native host-owned placement in each supervising application remains a separate check. The qualified SDK2 package retains its existing standalone behavior.
 
 ## Bounded SQL path
 
