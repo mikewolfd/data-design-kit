@@ -1,45 +1,45 @@
 {
   "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
-  "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/catalog-final",
-  "lockSha256": "d7cac836f87f4194894fd78fca11ce137ab859c08e1c90fe104ad7657817776d",
+  "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-resume-20261106/catalog",
+  "lockSha256": "d2bae6877c2047e9d867a2b496f42a3057ae6cb36cc8a861c14c11d59533d7d2",
   "sourceLockUnchangedDuringCapture": true,
   "datasetCount": 389,
   "files": [
     {
       "path": "catalog.lock.json",
-      "sha256": "d7cac836f87f4194894fd78fca11ce137ab859c08e1c90fe104ad7657817776d",
+      "sha256": "d2bae6877c2047e9d867a2b496f42a3057ae6cb36cc8a861c14c11d59533d7d2",
       "bytes": 3592
     },
     {
       "path": "catalog.ddk.json",
-      "role": "catalog",
-      "sha256": "06de7e9dd140fc5b0493af30e6fac676775c0cc6443801f2b4fe8f150304fc7a",
-      "bytes": 4622976
+      "sha256": "74816e92b77fec53db81b1af30f03872b47ac9a0591fedc0db86fb3e4e5cf358",
+      "bytes": 4623083,
+      "role": "catalog"
     },
     {
       "path": "catalog.report.json",
-      "role": "report",
       "sha256": "fbc4d1f8d0f37f51e6af20afcdc2891dd6a5f15cbcf0b5bf119c279a5be790ce",
-      "bytes": 142051
+      "bytes": 142051,
+      "role": "report"
     }
   ],
   "priorCapture": {
     "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
-    "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/catalog",
-    "lockSha256": "8f03dc56d03772ccc868dfbd4c22d873e6c3fe79aa76c24a3869f564e902f1f6",
+    "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/catalog-final",
+    "lockSha256": "d7cac836f87f4194894fd78fca11ce137ab859c08e1c90fe104ad7657817776d",
     "sourceLockUnchangedDuringCapture": true,
     "datasetCount": 389,
     "files": [
       {
         "path": "catalog.lock.json",
-        "sha256": "8f03dc56d03772ccc868dfbd4c22d873e6c3fe79aa76c24a3869f564e902f1f6",
+        "sha256": "d7cac836f87f4194894fd78fca11ce137ab859c08e1c90fe104ad7657817776d",
         "bytes": 3592
       },
       {
         "path": "catalog.ddk.json",
         "role": "catalog",
-        "sha256": "d4b573df52e3428d2e4d2d3569ceaedd4cb827fb6aa90f9af563e5e9790119b5",
-        "bytes": 4622484
+        "sha256": "06de7e9dd140fc5b0493af30e6fac676775c0cc6443801f2b4fe8f150304fc7a",
+        "bytes": 4622976
       },
       {
         "path": "catalog.report.json",
@@ -50,21 +50,21 @@
     ],
     "priorCapture": {
       "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
-      "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/catalog",
-      "lockSha256": "2ee1cd29a0f0e2ac2e17447cb2531fb07eaffd173ff8b4a22faeed0960abdbbe",
+      "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/catalog",
+      "lockSha256": "8f03dc56d03772ccc868dfbd4c22d873e6c3fe79aa76c24a3869f564e902f1f6",
       "sourceLockUnchangedDuringCapture": true,
       "datasetCount": 389,
       "files": [
         {
           "path": "catalog.lock.json",
-          "sha256": "2ee1cd29a0f0e2ac2e17447cb2531fb07eaffd173ff8b4a22faeed0960abdbbe",
+          "sha256": "8f03dc56d03772ccc868dfbd4c22d873e6c3fe79aa76c24a3869f564e902f1f6",
           "bytes": 3592
         },
         {
           "path": "catalog.ddk.json",
           "role": "catalog",
-          "sha256": "16b37e149e9b62ba4316b5106af9874a913265887068c96fed44c0b2a55fd276",
-          "bytes": 4621810
+          "sha256": "d4b573df52e3428d2e4d2d3569ceaedd4cb827fb6aa90f9af563e5e9790119b5",
+          "bytes": 4622484
         },
         {
           "path": "catalog.report.json",
@@ -75,21 +75,21 @@
       ],
       "priorCapture": {
         "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
-        "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-spicy-catalog-20261106-final",
-        "lockSha256": "26eb4397346e056f26d511e4ccc647e59b137a15c33a6dbf9c2d98a7600b82b8",
+        "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/catalog",
+        "lockSha256": "2ee1cd29a0f0e2ac2e17447cb2531fb07eaffd173ff8b4a22faeed0960abdbbe",
         "sourceLockUnchangedDuringCapture": true,
         "datasetCount": 389,
         "files": [
           {
             "path": "catalog.lock.json",
-            "sha256": "26eb4397346e056f26d511e4ccc647e59b137a15c33a6dbf9c2d98a7600b82b8",
+            "sha256": "2ee1cd29a0f0e2ac2e17447cb2531fb07eaffd173ff8b4a22faeed0960abdbbe",
             "bytes": 3592
           },
           {
             "path": "catalog.ddk.json",
             "role": "catalog",
-            "sha256": "f346d3383c2bd3c180d112f8e06fb43fe92153de95ccf37fc0fa5b683684f2a8",
-            "bytes": 4559998
+            "sha256": "16b37e149e9b62ba4316b5106af9874a913265887068c96fed44c0b2a55fd276",
+            "bytes": 4621810
           },
           {
             "path": "catalog.report.json",
@@ -100,112 +100,150 @@
         ],
         "priorCapture": {
           "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
-          "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/work/application-snapshots/spicy-regs/c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
-          "lockSha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
+          "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-spicy-catalog-20261106-final",
+          "lockSha256": "26eb4397346e056f26d511e4ccc647e59b137a15c33a6dbf9c2d98a7600b82b8",
           "sourceLockUnchangedDuringCapture": true,
           "datasetCount": 389,
           "files": [
             {
               "path": "catalog.lock.json",
-              "sha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
+              "sha256": "26eb4397346e056f26d511e4ccc647e59b137a15c33a6dbf9c2d98a7600b82b8",
               "bytes": 3592
             },
             {
               "path": "catalog.ddk.json",
               "role": "catalog",
-              "sha256": "1331b3496444b6a2159eb6a4aa7988a58b205a743f24758b4f2b72d18a020d7b",
-              "bytes": 4353536
+              "sha256": "f346d3383c2bd3c180d112f8e06fb43fe92153de95ccf37fc0fa5b683684f2a8",
+              "bytes": 4559998
             },
             {
               "path": "catalog.report.json",
               "role": "report",
-              "sha256": "0ca33254f73ce4e31bb95afe5f4da87818e4bc41b27a1cd6071d1cc9623a58dd",
+              "sha256": "fbc4d1f8d0f37f51e6af20afcdc2891dd6a5f15cbcf0b5bf119c279a5be790ce",
               "bytes": 142051
             }
           ],
           "priorCapture": {
-            "scope": "Read-only capture of the standard public output set. No row payloads or application controls copied; no native data qualification claimed.",
-            "source": "/Users/mikewolfd/.codex/worktrees/a8e8/spicy-stack/spicy-regs/src/spicy_regs/catalog_data",
+            "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
+            "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/work/application-snapshots/spicy-regs/c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
             "lockSha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
-            "previousRegisteredLockSha256": "a2834a5787016046b3d7cc502984181139b80e13aeddcac3535a19e13e36e12c",
-            "sourceDrift": "The active source replaced its dev3 set during implementation; the reader correctly refused the earlier pin. This is an explicitly retained new dev4 capture.",
             "sourceLockUnchangedDuringCapture": true,
+            "datasetCount": 389,
             "files": [
               {
                 "path": "catalog.lock.json",
-                "bytes": 3592,
-                "sha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d"
+                "sha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
+                "bytes": 3592
               },
               {
                 "path": "catalog.ddk.json",
-                "bytes": 4353536,
-                "sha256": "1331b3496444b6a2159eb6a4aa7988a58b205a743f24758b4f2b72d18a020d7b"
+                "role": "catalog",
+                "sha256": "1331b3496444b6a2159eb6a4aa7988a58b205a743f24758b4f2b72d18a020d7b",
+                "bytes": 4353536
               },
               {
                 "path": "catalog.report.json",
-                "bytes": 142051,
-                "sha256": "0ca33254f73ce4e31bb95afe5f4da87818e4bc41b27a1cd6071d1cc9623a58dd"
+                "role": "report",
+                "sha256": "0ca33254f73ce4e31bb95afe5f4da87818e4bc41b27a1cd6071d1cc9623a58dd",
+                "bytes": 142051
               }
             ],
-            "previousObservedCatalogSha256": "d1444f4e011bf153a33aa0532033a32fbe666badad0572980edb657d4139fe3e",
-            "previousObservedReportSha256": "da70a227f6cf6e7dbba227bf54dd5592bb6f449d58b1fb2513753c0b7d6de7ea",
-            "previousObservedTool": {
-              "version": "0.1.0.dev3",
-              "commit": "3823b24c2fff08da4da3ad7f6c6b79903ef2b372",
-              "distributionSha256": "d42bc8788007f8a19f5df2cac6c52a41de2cfd055a8a50f6bb3902f154a7dcaf"
-            },
-            "oldEvidenceRetention": "Prior exact digests/tool identity were observed in this task; original dev3 output bytes were not captured before the active owner replaced them.",
-            "capturedTools": {
-              "ddk": {
-                "commit": "fb70ab825243235b4ecf77c5ebb8c636d0d06e2d",
-                "distributionSha256": "7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8",
-                "version": "0.1.0.dev4"
+            "priorCapture": {
+              "scope": "Read-only capture of the standard public output set. No row payloads or application controls copied; no native data qualification claimed.",
+              "source": "/Users/mikewolfd/.codex/worktrees/a8e8/spicy-stack/spicy-regs/src/spicy_regs/catalog_data",
+              "lockSha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d",
+              "previousRegisteredLockSha256": "a2834a5787016046b3d7cc502984181139b80e13aeddcac3535a19e13e36e12c",
+              "sourceDrift": "The active source replaced its dev3 set during implementation; the reader correctly refused the earlier pin. This is an explicitly retained new dev4 capture.",
+              "sourceLockUnchangedDuringCapture": true,
+              "files": [
+                {
+                  "path": "catalog.lock.json",
+                  "bytes": 3592,
+                  "sha256": "c7b5f8a50a4679822282fb2b04e621e0f1175a2afe33bf51fd08dbfb60f4021d"
+                },
+                {
+                  "path": "catalog.ddk.json",
+                  "bytes": 4353536,
+                  "sha256": "1331b3496444b6a2159eb6a4aa7988a58b205a743f24758b4f2b72d18a020d7b"
+                },
+                {
+                  "path": "catalog.report.json",
+                  "bytes": 142051,
+                  "sha256": "0ca33254f73ce4e31bb95afe5f4da87818e4bc41b27a1cd6071d1cc9623a58dd"
+                }
+              ],
+              "previousObservedCatalogSha256": "d1444f4e011bf153a33aa0532033a32fbe666badad0572980edb657d4139fe3e",
+              "previousObservedReportSha256": "da70a227f6cf6e7dbba227bf54dd5592bb6f449d58b1fb2513753c0b7d6de7ea",
+              "previousObservedTool": {
+                "version": "0.1.0.dev3",
+                "commit": "3823b24c2fff08da4da3ad7f6c6b79903ef2b372",
+                "distributionSha256": "d42bc8788007f8a19f5df2cac6c52a41de2cfd055a8a50f6bb3902f154a7dcaf"
               },
-              "ddk-local-definition-resolver": {
-                "distributionSha256": "eea8026ca2e2148a827a635dce8fcffa6d24f2bebbdbab7c3f4549fb44c38d6b",
-                "version": "0.1.0"
-              },
-              "ddk.catalog": {
-                "version": "0.1.0-dev.4"
-              },
-              "jsonschema": {
-                "version": "4.26.0"
-              },
-              "python": {
-                "version": "3.12.13"
-              },
-              "referencing": {
-                "version": "0.37.0"
-              },
-              "urn:spicy-regs:relationship-profile:source-identifiers": {
-                "version": "1.0.0"
+              "oldEvidenceRetention": "Prior exact digests/tool identity were observed in this task; original dev3 output bytes were not captured before the active owner replaced them.",
+              "capturedTools": {
+                "ddk": {
+                  "commit": "fb70ab825243235b4ecf77c5ebb8c636d0d06e2d",
+                  "distributionSha256": "7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8",
+                  "version": "0.1.0.dev4"
+                },
+                "ddk-local-definition-resolver": {
+                  "distributionSha256": "eea8026ca2e2148a827a635dce8fcffa6d24f2bebbdbab7c3f4549fb44c38d6b",
+                  "version": "0.1.0"
+                },
+                "ddk.catalog": {
+                  "version": "0.1.0-dev.4"
+                },
+                "jsonschema": {
+                  "version": "4.26.0"
+                },
+                "python": {
+                  "version": "3.12.13"
+                },
+                "referencing": {
+                  "version": "0.37.0"
+                },
+                "urn:spicy-regs:relationship-profile:source-identifiers": {
+                  "version": "1.0.0"
+                }
               }
             }
+          },
+          "publisherUpdate": {
+            "date": "2026-11-06",
+            "kind": "Regenerated standard metadata from maintained publisher definitions. Discovery-only capture; no native rows or native acceptance claimed.",
+            "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-original-captures/spicy-regs",
+            "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-spicy-result.json"
           }
         },
         "publisherUpdate": {
           "date": "2026-11-06",
-          "kind": "Regenerated standard metadata from maintained publisher definitions. Discovery-only capture; no native rows or native acceptance claimed.",
-          "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-original-captures/spicy-regs",
-          "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-spicy-result.json"
+          "kind": "Regenerated public metadata after tracing all originally missing field meanings. Discovery-only capture; no native-row qualification.",
+          "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/prior-viewer-capture",
+          "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/source-update.json",
+          "fieldTrace": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/field-trace.json",
+          "remainingUnknowns": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/remaining-unknowns.json"
         }
       },
       "publisherUpdate": {
         "date": "2026-11-06",
-        "kind": "Regenerated public metadata after tracing all originally missing field meanings. Discovery-only capture; no native-row qualification.",
-        "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/prior-viewer-capture",
-        "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/source-update.json",
-        "fieldTrace": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/field-trace.json",
-        "remainingUnknowns": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-field-trace-20261106/remaining-unknowns.json"
+        "kind": "Official-source review of 35 partial and 5 unknown field meanings; 26 existing descriptions revised.",
+        "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/prior-viewer-capture",
+        "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/source-update.json",
+        "fieldDecisions": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/field-decisions.json",
+        "fieldTrace": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/field-trace.json",
+        "remainingMeaningGaps": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/remaining-meaning-gaps.json",
+        "remainingUnknowns": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/remaining-unknowns.json",
+        "qualification": "Metadata only; no native records, historical capture validation, publication or deployment."
       }
     },
     "publisherUpdate": {
       "date": "2026-11-06",
-      "kind": "Official-source review of 35 partial and 5 unknown field meanings; 26 existing descriptions revised.",
+      "kind": "Official-source review of 35 partial and 5 unknown field meanings; 26 reviewed field descriptions and three related lobbying scope statements revised.",
       "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/prior-viewer-capture",
       "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/source-update.json",
       "fieldDecisions": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/field-decisions.json",
       "fieldTrace": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/field-trace.json",
+      "supplementalDecisions": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/supplemental-decisions.json",
       "remainingMeaningGaps": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/remaining-meaning-gaps.json",
       "remainingUnknowns": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/remaining-unknowns.json",
       "qualification": "Metadata only; no native records, historical capture validation, publication or deployment."
@@ -213,14 +251,11 @@
   },
   "publisherUpdate": {
     "date": "2026-11-06",
-    "kind": "Official-source review of 35 partial and 5 unknown field meanings; 26 reviewed field descriptions and three related lobbying scope statements revised.",
-    "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/prior-viewer-capture",
-    "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/source-update.json",
-    "fieldDecisions": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/field-decisions.json",
-    "fieldTrace": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/field-trace.json",
-    "supplementalDecisions": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/supplemental-decisions.json",
-    "remainingMeaningGaps": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/remaining-meaning-gaps.json",
-    "remainingUnknowns": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-official-docs-20261106/remaining-unknowns.json",
-    "qualification": "Metadata only; no native records, historical capture validation, publication or deployment."
+    "kind": "One Unified Agenda field description refined from exact official XML schema documentation. Built from isolated recorded publisher source inputs.",
+    "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-resume-20261106/source-update.json",
+    "fieldDecisions": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-resume-20261106/field-decisions.json",
+    "remainingUnknowns": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-resume-20261106/remaining-unknowns.json",
+    "sourcePatch": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/spicy-resume-20261106/publisher-description.patch",
+    "qualification": "Metadata only; external publisher checkout remains read-only. No native records, historical capture validation, publication or deployment."
   }
 }
