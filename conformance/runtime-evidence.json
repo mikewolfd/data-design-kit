@@ -352,6 +352,30 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-consumer-source-02/consumer-01/junit.xml"
       ],
       "scopeNote": "Actual local source consumer on immutable native snapshot source07 at unchanged 128 MiB memory and 64 MiB scratch. Source f3551a3 plus test overlay 6de537ee. Same-operation custody only; native full gate and installed successor qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-INPUT-REUSE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_snapshot_input_reuse_chain_preserves_original_custody"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/reuse-consumer-source-02/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/reuse-consumer-source-02/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Actual local source consumer on immutable native snapshot source09, binary95a98c665717d4dd6202c62747e4f1f1b16b2d9dec7d2e572189f16c4c01c50f, at original128MiB memory/64MiB scratch. Clean DDK405ed55+sole test overlayb857a985. Same-name and renamed-input chains; native donor retirement and physical dedup are separate native unit evidence. Full gate, producer prerequisites and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-INPUT-REUSE-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_snapshot_input_reuse_refuses_changed_native_reference"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/reuse-consumer-source-02/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/reuse-consumer-source-02/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Actual local source consumer on immutable native snapshot source09, binary95a98c665717d4dd6202c62747e4f1f1b16b2d9dec7d2e572189f16c4c01c50f, at original128MiB memory/64MiB scratch. Clean DDK405ed55+sole test overlayb857a985. Same-name and renamed-input chains; native donor retirement and physical dedup are separate native unit evidence. Full gate, producer prerequisites and installed qualification remain separate."
     }
   ]
 }

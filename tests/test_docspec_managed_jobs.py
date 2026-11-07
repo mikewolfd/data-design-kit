@@ -475,3 +475,100 @@ def test_native_snapshot_wrong_original_pin_cannot_create_a_candidate(runtime, t
     assert not refused["operation"].get("acceptedQualification")
     assert refused["operation"]["selection"] != "selected"
     assert not Path(job["outputs"][0]["path"]).exists()
+
+
+@pytest.mark.parametrize("input_name", ["source", "renamed_source"], ids=["same-name", "renamed-input"])
+def test_native_snapshot_input_reuse_chain_preserves_original_custody(runtime, tmp_path, input_name):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    workspace, request, job, policy, producer, original = _snapshot_request(runtime, tmp_path)
+    donor = runtime.managed_job(workspace, request)
+    assert donor["status"] == "succeeded", donor
+    donor_evidence = verify_completed_job(donor["result"])
+    donor_view = donor_evidence.view_set["inputs"][0]
+    donor_reference = donor["result"]["input_custody"][0]
+    assert donor_reference == donor_view["custody_reference"]
+    original_objects = deepcopy(donor_view["snapshot_custody"]["objects"])
+    shutil.rmtree(producer)
+    for path in (request["job"]["path"], request["policy"]["path"]):
+        Path(path).unlink()
+
+    receiving = deepcopy(request)
+    receiving["operation"] = "receiver"
+    receiving["snapshot_inputs"][0].update(name=input_name, reuse_from=donor_reference)
+    receiver_job = deepcopy(job)
+    receiver_job["inputs"][0]["name"] = input_name
+    receiver_job["steps"][0]["sql"] = f"SELECT prefix,id,amount FROM {input_name}"
+    receiving["job"] = _artifact(tmp_path / "receiver-job.json", receiver_job)
+    receiver_policy = deepcopy(policy)
+    receiver_policy["job_sha256"] = receiving["job"]["sha256"]
+    receiver_policy["view_names"]["inputs"] = [input_name]
+    receiving["policy"] = _artifact(tmp_path / "receiver-policy.json", receiver_policy)
+    receiver = runtime.managed_job(workspace, receiving)
+    assert receiver["status"] == "succeeded", receiver
+    checked = verify_completed_job(receiver["result"])
+    view = checked.view_set["inputs"][0]
+    assert checked.admitted_request == receiving
+    assert view["custody_grant"] == {"profile": "urn:docspec:whole-job-input-custody-grant:1", "source": donor_reference}
+    assert view["custody_reference"] == receiver["result"]["input_custody"][0]
+    assert view["custody_reference"]["operation"] == "receiver" and view["custody_reference"]["input"] == input_name
+    assert view["snapshot_custody"]["objects"] == original_objects
+
+    chained = deepcopy(receiving)
+    chained["operation"] = "chained"
+    chained["snapshot_inputs"][0]["reuse_from"] = receiver["result"]["input_custody"][0]
+    final = runtime.managed_job(workspace, chained)
+    assert final["status"] == "succeeded", final
+    checked = verify_completed_job(final["result"])
+    view = checked.view_set["inputs"][0]
+    assert view["custody_grant"]["source"] == receiver["result"]["input_custody"][0]
+    assert view["snapshot_custody"]["objects"] == original_objects
+    assert {member["origin_operation"] for member in original_objects} == {"original"}
+    for member in original_objects:
+        assert not Path(member["uri"]).exists()
+        assert Path(member["retained"]["path"]).read_bytes() == original[member["uri"]]
+    observed = pa.ipc.read_schema(pa.BufferReader(base64.b64decode(checked.manifest["schemas"][view["schema_sha256"]])))
+    assert [(field.name, str(field.type), field.nullable, field.metadata[b"PARQUET:field_id"]) for field in observed] == [
+        ("prefix", "string", False, b"1"), ("id", "int64", False, b"2"), ("amount", "int64", True, b"3"),
+    ]
+    output = final["result"]["completed_outputs"][0]
+    assert output["rows"] == 3 and _rows(pq.read_table(output["path"]).to_pylist()) == _rows(EXPECTED_SNAPSHOT)
+    assert final["result"]["completed_reports"][1]["data"] == [{"null_rows": 1}]
+    accepted = runtime.managed_job(workspace, _action(final, "accept", receiver_policy["id"]), prior=final)
+    assert accepted["status"] == "succeeded", accepted
+    verify_completed_job(accepted["result"], require_accepted=True)
+    for path in (receiving["job"]["path"], receiving["policy"]["path"]):
+        Path(path).unlink()
+    cold = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, evidence_dir=tmp_path / "cold-chain")
+    replay = cold.managed_job(workspace, chained, prior=accepted)
+    assert replay["status"] == "succeeded", replay
+    assert replay["result"]["candidate"] == final["result"]["candidate"]
+    assert replay["result"]["completed_reports"] == final["result"]["completed_reports"]
+    assert replay["result"]["accepted_qualification"] == accepted["result"]["accepted_qualification"]
+    select = {**_action(final, "select", receiver_policy["id"]),
+              "accepted_qualification": accepted["result"]["accepted_qualification"]["identity"]}
+    selected = cold.managed_job(workspace, select, prior=replay)
+    assert selected["status"] == "succeeded" and selected["operation"]["selection"] == "selected", selected
+
+
+@pytest.mark.parametrize("changed", ["table_uuid", "admission_digest", "input"])
+def test_native_snapshot_input_reuse_refuses_changed_native_reference(runtime, tmp_path, changed):
+    workspace, request, job, _policy, _producer, _original = _snapshot_request(runtime, tmp_path)
+    donor = runtime.managed_job(workspace, request)
+    assert donor["status"] == "succeeded", donor
+    verify_completed_job(donor["result"])
+    source = deepcopy(donor["result"]["input_custody"][0])
+    if changed == "table_uuid":
+        source["native_record"]["table_uuid"] = "00000000-0000-4000-8000-000000000099"
+    elif changed == "admission_digest":
+        source["admission_digest"]["value"] = "0" * 64
+    else:
+        source["input"] = "absent"
+    receiving = deepcopy(request)
+    receiving["operation"] = "refused-receiver"
+    receiving["snapshot_inputs"][0]["reuse_from"] = source
+    refused = runtime.managed_job(workspace, receiving)
+    assert refused["status"] == "failed" and refused["error"]["code"] == "managed_job_identity", refused
+    assert not refused["operation"].get("candidate") and not refused["operation"].get("acceptedQualification")
+    assert refused["operation"]["selection"] != "selected"
+    assert not Path(job["outputs"][0]["path"]).exists()

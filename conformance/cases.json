@@ -3372,6 +3372,50 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-INPUT-REUSE",
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Pass a native-issued same-owner input custody reference through two later managed operations, including a renamed input. Remove the original producer and donor caller JobSpec/policy before receiving preparation. Preserve original object identities, bytes, original-copy operation, independent rows, nulls and native field IDs. Native acceptance and cold replay after receiving caller-file loss preserve candidate, reports and accepted qualification before selection.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-NATIVE-INPUT-REUSE-REFUSAL",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-RESULT-006"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Change the lifecycle table incarnation, opaque admission digest or donor input name on an otherwise retained native custody reference. Require the exact managed_job_identity refusal and no candidate, accepted qualification or selection; preserve unknown execution and selection observations instead of claiming that no work ran.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "unknown",
+        "selection": "unknown",
+        "sameOperationId": true
+      }
     }
   ]
 }
