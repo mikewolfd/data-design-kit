@@ -13,6 +13,7 @@ import pytest
 
 from ddk.adapters.docspec import DocSpecAdapter
 from ddk.adapters.native import run_bounded
+from ddk.documents import schema_registry, schema_validator
 from ddk.docspec_job_evidence import (
     COUNTER_EVALUATOR, COUNTER_PROFILE, COUNTER_SEMANTICS, SNAPSHOT_COMPLETION_PROFILE, verify_completed_job,
     PRODUCER_COMPLETION_PROFILE, PRODUCER_PREREQUISITE_PROFILE,
@@ -298,6 +299,170 @@ def test_native_nonzero_counter_refuses_qualification_without_erasing_completed_
     assert rejected["operation"]["outputs"] == prepared["operation"]["outputs"]
     assert rejected["result"]["accepted_qualification"] is None
     assert next(row for row in rejected["result"]["completed_reports"] if row["name"] == "invariants")["data"] == [{"row_delta": 1}]
+
+
+def _publication_cli(runtime, workspace, tmp_path, label, *arguments):
+    """Use public native metadata/retirement commands and retain their transport."""
+    folder = tmp_path / label
+    folder.mkdir()
+    limits = _artifact(folder / "limits.json", LIMITS)
+    transport = run_bounded(
+        [str(runtime.executable), "--workspace", str(workspace), "--limits", limits["path"], *arguments],
+        timeout=runtime.timeout, limit=runtime.capture_bytes, stop_on_stdout_limit=True,
+    )
+    (folder / "stdout.json").write_bytes(transport["stdout"])
+    (folder / "stderr.log").write_bytes(transport["stderr"])
+    _artifact(folder / "transport.json", {key: value for key, value in transport.items()
+                                         if key not in {"stdout", "stderr"}})
+    assert transport["exitCode"] == 0 and not any(transport[key] for key in (
+        "timedOut", "cancelled", "stdoutTruncated", "stderrTruncated", "drainIncomplete",
+    )), transport
+    return json.loads(transport["stdout"])
+
+
+def _select_publication_job(runtime, workspace, request):
+    prepared = runtime.managed_job(workspace, request)
+    assert prepared["status"] == "succeeded", prepared
+    accepted = runtime.managed_job(workspace, _action(prepared, "accept", "counts-v1"), prior=prepared)
+    assert accepted["status"] == "succeeded", accepted
+    selected = runtime.managed_job(workspace, {
+        **_action(prepared, "select", "counts-v1"),
+        "accepted_qualification": accepted["result"]["accepted_qualification"]["identity"],
+    }, prior=accepted)
+    assert selected["status"] == "succeeded" and selected["operation"]["selection"] == "selected", selected
+    return selected
+
+
+def _publication_request(runtime, workspace, tmp_path, selected):
+    native = selected["result"]
+    records = _publication_cli(runtime, workspace, tmp_path, "selected-authority", "inspect", "--dataset", "whole")
+    authority = records["authority"]
+    assert authority["job_selected"] == native["candidate"]
+    assert {item["name"]: item["rows"] for item in native["completed_outputs"]} == {"joined": 5, "totals": 3}
+    controls = []
+    for name, value in (("manifest.json", {"files": ["joined.parquet"], "records": 5}),
+                        ("catalog.json", {"title": "Independently authored delivery fixture"})):
+        artifact = _artifact(tmp_path / name, value)
+        controls.append({"name": name, "content_type": "application/json", "artifact": artifact,
+                         "size": Path(artifact["path"]).stat().st_size})
+    return {
+        "action": "freeze", "dataset": native["dataset"], "operation": native["operation"],
+        "candidate": native["candidate"], "job_request_digest": native["request_digest"],
+        "policy_id": native["policy_id"],
+        "accepted_qualification": native["accepted_qualification"]["identity"],
+        "expected_epoch": authority["epoch"], "expected_selection_revision": authority["selection_revision"],
+        "scope": {"kind": "local_fixture", "publisher": "fixture", "bucket": "local",
+                  "release_prefix": "releases/original", "pointer_key": "current.json"},
+        "release_id": sha256(b"independently authored original delivery").hexdigest(),
+        "outputs": [{"name": item["name"], "object": item["completion"],
+                     **{key: item[key] for key in ("sha256", "md5", "rows")},
+                     "disposition": {"kind": "published", "name": "joined.parquet",
+                                     "content_type": "application/vnd.apache.parquet"}
+                     if item["name"] == "joined" else {"kind": "private"}}
+                    for item in native["completed_outputs"]],
+        "controls": controls,
+        "expected_pointer": {"kind": "present", "etag": '"original-publisher-token"',
+                             "bytes_base64": base64.b64encode(b'{ "previous": true }\n').decode()},
+        "pointer": {"content_type": "application/json", "cache_control": "no-cache",
+                    "bytes_base64": base64.b64encode(b'{ "release": "original" }\n').decode()},
+    }
+
+
+def _publication_state(response):
+    _, schemas, _ = schema_registry()
+    validator = schema_validator({"$ref": schemas["common"]["$id"] + "#/$defs/runtimeOperation"})
+    assert not list(validator.iter_errors(response["operation"]))
+    assert response["operation"]["execution"] == response["operation"]["selection"] == "not_requested"
+    assert response["operation"]["outputs"] == []
+    return response["operation"]["publicationIntent"]
+
+
+def test_native_publication_recovers_original_delivery_then_preserves_retired_audit(runtime, tmp_path):
+    workspace, job_request, _job, _policy = _retained_request(runtime, tmp_path)
+    selected = _select_publication_job(runtime, workspace, job_request)
+    request = _publication_request(runtime, workspace, tmp_path, selected)
+    inspect = {"action": "inspect", "dataset": "whole", "operation": "original"}
+    absent = runtime.publication_intent(workspace, inspect)
+    assert absent["status"] == "succeeded" and _publication_state(absent)["outcome"] == "not_found", absent
+    control_bytes = [Path(control["artifact"]["path"]).read_bytes() for control in request["controls"]]
+    lossy = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, capture_bytes=128,
+                          evidence_dir=tmp_path / "lost-publication")
+    lost = lossy.publication_intent(workspace, request)
+    assert lost["status"] == "unknown" and _publication_state(lost)["outcome"] == "unknown", lost
+    assert "savedIntent" not in lost["operation"]["publicationIntent"]
+    for control in request["controls"]:
+        Path(control["artifact"]["path"]).unlink()
+    cold = DocSpecAdapter(runtime.executable, LIMITS, timeout=30, evidence_dir=tmp_path / "cold-publication")
+    recovered = cold.publication_intent(workspace, request, prior=lost)
+    assert recovered["status"] == "succeeded", recovered
+    saved = _publication_state(recovered)
+    assert saved["payloadState"] == "retained"
+    result = recovered["result"]
+    assert result["external_authorization"] == result["dispatch"] == "not_run"
+    assert [base64.b64decode(value) for value in result["payload"]["controls_base64"]] == control_bytes
+    assert result["payload"]["outputs"] == request["outputs"]
+    assert result["payload"]["predecessor_bytes_base64"] == request["expected_pointer"]["bytes_base64"]
+    assert result["payload"]["pointer_bytes_base64"] == request["pointer"]["bytes_base64"]
+    assert result["intent"]["candidate"] == selected["result"]["candidate"]
+    assert saved["savedIntent"]["reference"] == result["intent"]["reference"]
+    assert saved["savedIntent"]["reference"]["intent_digest"] != request["job_request_digest"]
+
+    successor = _select_publication_job(runtime, workspace, {
+        **job_request, "operation": "successor", "expected_selection": selected["result"]["candidate"],
+    })
+    assert successor["result"]["candidate"] != selected["result"]["candidate"]
+    replay = cold.publication_intent(workspace, request, prior=recovered)
+    assert replay["status"] == "succeeded" and replay["result"] == result, replay
+    assert _publication_state(replay)["savedIntent"] == saved["savedIntent"]
+    # Native retirement owns payload custody. DDK only observes its exact result.
+    plan = _publication_cli(runtime, workspace, tmp_path, "plan-retirement",
+                            "plan-publication-intent-retirement", "--dataset", "whole",
+                            "--operation", "original", "--retirement", "delivery-ended",
+                            "--reason", "end independently authored delivery fixture")
+    record = result["intent"]["reference"]["native_record"]
+    assert plan["table_uuid"] == record["table_uuid"]
+    assert plan["records"] == [{"key": record["key"], "revision": record["revision"]}]
+    plan_file = _artifact(tmp_path / "retirement-plan.json", plan)
+    _publication_cli(runtime, workspace, tmp_path, "retirement", "retire-publication-intent", "--plan", plan_file["path"])
+    _publication_cli(runtime, workspace, tmp_path, "compaction", "compact-lifecycle", "--dataset", "whole")
+    retired = runtime.publication_intent(workspace, inspect, prior=replay)
+    assert retired["status"] == "succeeded" and _publication_state(retired)["payloadState"] == "retired", retired
+    assert retired["result"]["intent"] == result["intent"] and retired["result"]["payload"] is None
+    audit_replay = cold.publication_intent(workspace, request, prior=retired)
+    assert audit_replay["status"] == "succeeded" and audit_replay["result"] == retired["result"], audit_replay
+    assert _publication_state(audit_replay)["savedIntent"] == saved["savedIntent"]
+
+
+def test_native_publication_refuses_changed_authority_and_inventory_without_freezing(runtime, tmp_path):
+    workspace, job_request, _job, _policy = _retained_request(runtime, tmp_path)
+    selected = _select_publication_job(runtime, workspace, job_request)
+    request = _publication_request(runtime, workspace, tmp_path, selected)
+    inspect = {"action": "inspect", "dataset": "whole", "operation": "original"}
+    for field, code in (("epoch", "stale_authority"), ("acceptance", "stale_authority"),
+                        ("rows", "publication_intent_mismatch"), ("pointer", "publication_intent_mismatch")):
+        changed = deepcopy(request)
+        if field == "epoch":
+            changed["expected_epoch"] += 1
+        elif field == "acceptance":
+            changed["accepted_qualification"] = "0" * 64
+        elif field == "rows":
+            changed["outputs"][0]["rows"] += 1
+        else:
+            changed["scope"]["pointer_key"] = "releases/original/manifest.json"
+        refused = runtime.publication_intent(workspace, changed)
+        assert refused["status"] == "failed" and refused["error"]["code"] == code, (field, refused)
+        state = _publication_state(refused)
+        assert state["outcome"] == "refused" and "savedIntent" not in state
+        absent = runtime.publication_intent(workspace, inspect)
+        assert absent["status"] == "succeeded" and _publication_state(absent)["outcome"] == "not_found", absent
+    frozen = runtime.publication_intent(workspace, request)
+    assert frozen["status"] == "succeeded" and _publication_state(frozen)["payloadState"] == "retained", frozen
+    changed = deepcopy(request)
+    changed["outputs"][0]["disposition"] = {"kind": "private"}
+    refused_rebind = runtime.publication_intent(workspace, changed)
+    assert refused_rebind["status"] == "failed" and refused_rebind["error"]["code"] == "publication_intent_mismatch", refused_rebind
+    unchanged = runtime.publication_intent(workspace, inspect, prior=frozen)
+    assert unchanged["status"] == "succeeded" and unchanged["result"] == frozen["result"], unchanged
 
 
 # Authored independently of both the producer SQL and retained consumer SQL.

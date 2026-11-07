@@ -530,6 +530,30 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/publication-adapter-source-03/run-01/junit.xml"
       ],
       "scopeNote": "42 independent publication metadata/fake-process cases and 28 existing job-transport cases passed against frozen source03. No DocSpec executable, native lifecycle qualification, installed successor or external publication is claimed. All runtime/schema bytes match reviewed source02; source03 corrects a timeout-test startup assumption and documentation wording."
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-NATIVE-RECOVERY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_publication_recovers_original_delivery_then_preserves_retired_audit"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/publication-consumer-source-01/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/publication-consumer-source-01/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Two focused actual local source-consumer cases pass against immutable native publication03. This does not extend installed dev6 native qualification or establish external authorization, dispatch, full native gate or application acceptance."
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-NATIVE-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_publication_refuses_changed_authority_and_inventory_without_freezing"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/publication-consumer-source-01/consumer-01/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/publication-consumer-source-01/consumer-01/junit.xml"
+      ],
+      "scopeNote": "Two focused actual local source-consumer cases pass against immutable native publication03. This does not extend installed dev6 native qualification or establish external authorization, dispatch, full native gate or application acceptance."
     }
   ]
 }

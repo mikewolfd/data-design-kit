@@ -3744,6 +3744,50 @@
         "selection": "not_requested",
         "sameOperationId": true
       }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-NATIVE-RECOVERY",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Through the actual public DDK adapter and native CLI, lose the first freeze response, remove caller controls, recover the exact intent and control/pointer bytes, select a newer job, and replay the original intent. Retire its exact native payload generation, compact, and preserve the original audit through cold inspect and replay. Local fixture only; external authorization and dispatch remain not_run.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
+    },
+    {
+      "id": "CASE-MANAGED-PUBLICATION-NATIVE-REFUSAL",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Through the actual public DDK adapter, refuse changed epoch, accepted qualification, row inventory and colliding pointer with exact native refusal codes. Each refused initial freeze leaves explicit not_found. After a valid freeze, a changed inventory refuses and inspection returns the unchanged saved decision. Local fixture only; no provider publication claim.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "not_requested",
+        "selection": "not_requested",
+        "sameOperationId": true
+      }
     }
   ]
 }
