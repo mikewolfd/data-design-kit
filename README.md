@@ -19,6 +19,7 @@ The first product release requires ODPS product definitions, ODCS dataset defini
 - [Adapter profiles](docs/adapter-profiles.md): exact boundaries for third-party integrations and proposed capability negotiation.
 - [Runtime integration](docs/runtime-integration.md): injected services, bounded versus managed execution, native bindings, and quality-gated selection.
 - [Catalog API](docs/catalog-api.md): admitted definitions, exact companion bytes, public disclosure, and qualification boundaries.
+- [Reusable React/Astro viewer](docs/verification.md#november-6-2026-reusable-reactastro-viewer): separate local application, maintained owner readers, exact-value verification and remaining connection limits.
 - [Architecture decisions](docs/architecture-decisions.md): decisions and alternatives behind the draft.
 - [Research and references](docs/references.md): public sources, observed versions, licensing, and unresolved compatibility.
 - [Conformance cases](conformance/cases.json): independently specified runtime cases and their evidence.
