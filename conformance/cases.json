@@ -3307,6 +3307,71 @@
         "exitCode": 2,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-CATALOG-090",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Map completed version 2 native-table observations to exact catalog-only references. Preserve every original selector and metadata-pin value, literal locations and null snapshot meaning; keep retention and consumption unknown and add no available representation.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-091",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Observe one exact source through different aliases, operations, retained copies and schema observations. Keep one source version with separate receipt owners, and retain per-run schema and custody evidence outside the source-version key.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-092",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Retain earlier unpinned native-table selectors in their original evidence without promoting them into exact version 2 catalog identities or claiming availability.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-093",
+      "requirements": [
+        "DDK-CATALOG-007",
+        "DDK-CATALOG-008",
+        "DDK-CATALOG-009"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Generate deterministic catalog and standards observations for exact native-table inputs. Preserve public withholding, opaque lineage identity and discovery without an invented native reader or access distribution.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

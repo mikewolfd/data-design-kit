@@ -32,6 +32,10 @@
       {
         "passedTests": 164,
         "scope": "Isolated managed-job metadata checks on base 468e6515a041f3666c137c092d64e4d338d18262 with only verifier/test overlays. Includes43 new input-custody reference/grant cases; offline replay also preserves16 exact actual v1/v2 completion receipts without payload opens. Native reuse and installed qualification not_run."
+      },
+      {
+        "passedTests": 179,
+        "scope": "Clean base 6d9a0709473cc3a6dd36c95fb894f9a0a3760f48 with mapper/test overlays; includes 15 new native-table identity, observation, legacy-boundary, public disclosure and standards-output cases. Metadata only; no native execution or installed qualification."
       }
     ]
   },
@@ -1092,6 +1096,55 @@
         "tests/catalog/test_managed_jobs.py::test_partial_input_custody_handles_do_not_create_catalog_input_bindings"
       ],
       "evidence": "Native handles on pending, unknown or failed operations remain unresolved metadata. They create no catalog input-version binding, accepted qualification or published artifacts; input coverage stays explicitly unknown. Independently authored metadata cases; actual native grant creation, reuse and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-090",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_snapshot_catalog_binds_original_identity_without_availability_or_payload_reads",
+        "tests/catalog/test_managed_jobs.py::test_snapshot_catalog_version_identity_preserves_each_exact_pin",
+        "tests/catalog/test_managed_jobs.py::test_mapped_catalog_facts_keep_normative_shapes"
+      ],
+      "evidence": "Map completed version 2 native-table observations to exact catalog-only references. Preserve every original selector and metadata-pin value, literal locations and null snapshot meaning; keep retention and consumption unknown and add no available representation. Independently authored metadata and catalog cases; no fresh native admission, payload reads or installed qualification. Changed-pin direct helper cases exercise post-admission mapping only."
+    },
+    {
+      "id": "CASE-CATALOG-091",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_snapshot_catalog_source_identity_excludes_alias_custody_and_observed_schema",
+        "tests/catalog/test_managed_jobs.py::test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads"
+      ],
+      "evidence": "Observe one exact source through different aliases, operations, retained copies and schema observations. Keep one source version with separate receipt owners, and retain per-run schema and custody evidence outside the source-version key. Independently authored metadata and catalog cases; no fresh native admission, payload reads or installed qualification. Changed-pin direct helper cases exercise post-admission mapping only."
+    },
+    {
+      "id": "CASE-CATALOG-092",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_snapshot_catalog_does_not_promote_legacy_unpinned_selectors"
+      ],
+      "evidence": "Retain earlier unpinned native-table selectors in their original evidence without promoting them into exact version 2 catalog identities or claiming availability. Independently authored metadata and catalog cases; no fresh native admission, payload reads or installed qualification. Changed-pin direct helper cases exercise post-admission mapping only."
+    },
+    {
+      "id": "CASE-CATALOG-093",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_snapshot_catalog_exports_metadata_without_inventing_a_reader",
+        "tests/catalog/test_managed_jobs.py::test_real_public_assembly_withholds_private_members_paths_and_diagnostics",
+        "tests/catalog/test_managed_jobs.py::test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads"
+      ],
+      "evidence": "Generate deterministic catalog and standards observations for exact native-table inputs. Preserve public withholding, opaque lineage identity and discovery without an invented native reader or access distribution. Independently authored metadata and catalog cases; no fresh native admission, payload reads or installed qualification. Changed-pin direct helper cases exercise post-admission mapping only."
     }
   ],
   "additionalReceiptTests": [

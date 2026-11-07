@@ -723,6 +723,8 @@ The catalog profile MUST validate registered ODPS documents as `apiVersion: v1.1
 
 Every dataset included in a catalog MUST have a `catalogId` that identifies its logical meaning across definition revisions. A generated definition MUST record the ODCS contract ID, version, selected object, and original document digest. A version MUST identify the applicable definition and an exact native reference with its scheme, authority, and opaque native value. The scheme owns value interpretation and any digest or field identity it supplies. Opaque identifiers MUST retain their native meaning. A representation MUST identify the exact version to which it applies. Source occurrences MUST be distinguishable from content objects and from interpretations or corrections. A dataset version MUST link known source occurrences where the native records establish the association. An original MAY be represented by an occurrence and retained-content reference when a tabular definition does not apply.
 
+A catalog-only mapping of a native table MUST preserve the original table identity, metadata location and byte identity, selected snapshot including an explicit empty selection, and schema identity. Its source-version identity MUST exclude local aliases, operation IDs and retained-copy locations. Native schema observations and custody evidence MUST remain attributable to each original run. A catalog reference alone MUST NOT imply runtime resolution, current retention, producer qualification or an available representation. The [local native-table mapping](catalog-api.md#native-table-catalog-observations) defines the existing adapter's scheme interpretation.
+
 <a id="DDK-CATALOG-004"></a>
 ### DDK-CATALOG-004 — Faithful descriptions and scoped relationships
 

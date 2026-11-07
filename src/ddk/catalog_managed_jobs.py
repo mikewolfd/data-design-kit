@@ -20,6 +20,7 @@ from .catalog_native_rules import (
 )
 
 DEFINITION_SCHEME = "urn:ddk:managed-production:sha256"
+NATIVE_TABLE_CATALOG_SCHEME = "urn:ddk:catalog:docspec-native-table:1"
 INTERPRETER = {"id": "urn:ddk:metadata:arrow-odcs", "version": "1"}
 INTERPRETATION_RULE = "urn:ddk:check:managed-output-interpretation:1"
 
@@ -270,12 +271,19 @@ def managed_execution(metadata, entry):
     metadata.observations["runs"].append(run)
     metadata.bound_inputs[run_id] = registered_inputs
     if hasattr(metadata, "managed_jobs"):
+        input_observations = [
+            {"input": view["name"], "dataset": input_mapping[view["name"]],
+             "version": registered_inputs[view["name"]], "schemaSha256": view["schema_sha256"]}
+            for view in evidence.view_set["inputs"]
+            if view["kind"] == "native_table" and view["name"] in registered_inputs
+        ]
         metadata.managed_jobs.append({
             "run": run_id, "record": record, "candidate": deepcopy(evidence.candidate),
             "viewSetDigest": evidence.manifest["view_set_digest"], "policyId": result["policy_id"],
             "acceptedQualification": evidence.accepted["identity"] if evidence.accepted is not None else None,
             "capturedDefinition": evidence.admitted_request["definition"], "currentDefinition": definition_identity,
             "definitionStatus": "passed" if definition_matches else "unknown", "outputInterpretations": interpretations,
+            **({"inputObservations": input_observations} if input_observations else {}),
             **({"nativeRules": rules_record} if rules_record is not None else {}),
             "outOfCatalog": deepcopy(entry["outOfCatalog"]),
         })
@@ -401,13 +409,26 @@ def _input_versions(metadata, evidence, mapping, record):
         if name not in mapping:
             continue
         files = view["files"]
-        if view["kind"] == "version":
+        snapshot = view["kind"] == "native_table" and "snapshot_custody" in view
+        if view["kind"] == "version" or snapshot:
             selector = view["selector"]
-            reference = {"scheme": "urn:docspec:version-ref", "authority": Path(selector["workspace"]).as_uri(), "value": deepcopy(selector["version"])}
+            scope = "Exact original native input selector; current availability was not rechecked."
+            if snapshot:
+                custody = view["snapshot_custody"]
+                reference = {
+                    "scheme": NATIVE_TABLE_CATALOG_SCHEME, "authority": f"urn:uuid:{selector['table_uuid']}",
+                    "value": {**{key: deepcopy(selector[key]) for key in ("metadata_location", "table_uuid", "snapshot", "schema_id")},
+                              **{key: custody[key] for key in ("metadata_sha256", "metadata_size")}},
+                }
+                scope = ("Catalog-only observation of the original table selector and exact metadata bytes; "
+                         "the table UUID identifies the source namespace. Runtime resolution, current availability "
+                         "and producer qualification are not established.")
+            else:
+                reference = {"scheme": "urn:docspec:version-ref", "authority": Path(selector["workspace"]).as_uri(), "value": deepcopy(selector["version"])}
             dataset = metadata.datasets[mapping[name]]
             version = stable_id("docspec-native-version", dataset["id"], dataset["definition"], reference)
             fact = {"id": version, "dataset": mapping[name], "reference": reference, "retention": "unknown",
-                    "scope": "Exact original native input selector; current availability was not rechecked.", "record": record, "sources": []}
+                    "scope": scope, "record": record, "sources": []}
             old = metadata.version_facts.setdefault(version, fact)
             if old["dataset"] != fact["dataset"] or old["reference"] != reference:
                 raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "A native input has conflicting catalog version facts.")
@@ -418,7 +439,7 @@ def _input_versions(metadata, evidence, mapping, record):
             bindings[name] = version
             continue
         if view["kind"] not in {"parquet", "json_lines"}:
-            metadata.limits.add("A native table selector is retained in complete job evidence; no unsupported catalog version scheme was invented.")
+            metadata.limits.add("A native input without a supported exact catalog identity remains in the pinned job evidence.")
             continue
         member_versions = []
         for item in files:

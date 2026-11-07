@@ -12,7 +12,7 @@ import pytest
 
 from ddk.catalog_access import CatalogError
 from ddk.catalog import assemble_catalog
-from ddk.catalog_managed_jobs import DEFINITION_SCHEME, managed_execution, managed_job_definition, managed_job_metadata
+from ddk.catalog_managed_jobs import DEFINITION_SCHEME, _input_versions, managed_execution, managed_job_definition, managed_job_metadata
 from ddk.catalog_metadata import LOCAL_ADAPTER, LocalMetadata
 from ddk.catalog_native_rules import NativeRuleBinding, native_rule_artifact
 from ddk.core import load_project
@@ -429,6 +429,123 @@ def test_snapshot_metadata_preserves_original_uris_and_native_ownership_without_
     assert [item["role"] for item in view["snapshot_custody"]["objects"]] == ["data", "manifest_list", "manifest", "metadata"]
     assert all(item["retained"]["owner"] == "archive" and item["origin_operation"] == "original"
                for item in view["snapshot_custody"]["objects"])
+
+
+def test_snapshot_catalog_binds_original_identity_without_availability_or_payload_reads(native_snapshot_job, tmp_path, monkeypatch):
+    metadata, entry, _receipt = _metadata(tmp_path, native_snapshot_job)
+    original = Path.open
+
+    def metadata_only(path, *args, **kwargs):
+        assert path.name == "receipt.json", f"Unexpected source or payload read: {path}"
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", metadata_only)
+    managed_execution(metadata, entry)
+    run = metadata.observations["runs"][0]
+    assert len(run["inputs"]) == 1 and run["inputCoverage"]["status"] == "unknown"
+    version = metadata.version_facts[run["inputs"][0]]
+    assert version["reference"] == {
+        "scheme": "urn:ddk:catalog:docspec-native-table:1",
+        "authority": "urn:uuid:4200827d-e8eb-4616-a0f9-ff4d222a582e",
+        "value": {"metadata_location": "s3://fixture/table/metadata/v1.json",
+                  "table_uuid": "4200827d-e8eb-4616-a0f9-ff4d222a582e", "snapshot": 1, "schema_id": 0,
+                  "metadata_sha256": sha256(b"independent native metadata identity").hexdigest(), "metadata_size": 36},
+    }
+    assert version["retention"] == "unknown" and version["sources"] == []
+    assert version["id"] not in metadata.physical_datasets
+    assert not any(row["version"] == version["id"] for row in metadata.observations["representations"])
+    assert metadata.bound_inputs[run["id"]] == {"source": version["id"]}
+    view = verify_completed_job(native_snapshot_job).view_set["inputs"][0]
+    assert metadata.managed_jobs[0]["inputObservations"] == [
+        {"input": "source", "dataset": "orders", "version": version["id"], "schemaSha256": view["schema_sha256"]}]
+    assert metadata.managed_jobs[0]["record"] == version["record"]
+    assert _policy_check(metadata.observations["checks"])["status"] == "passed"
+
+
+def _snapshot_mapping_case(tmp_path, native_snapshot_job):
+    metadata, _entry, _receipt = _metadata(tmp_path, native_snapshot_job)
+    checked = verify_completed_job(native_snapshot_job)
+    # Test the mapping after witness admission; these variations are observations,
+    # not newly executed or accepted native jobs.
+    evidence = SimpleNamespace(view_set=json.loads(json_dumps(checked.view_set)))
+    record = {"uri": "urn:test:receipt:first", "sha256": "a" * 64}
+    versions, _bindings = _input_versions(metadata, evidence, {"source": "orders"}, record)
+    assert len(versions) == 1
+    return metadata, evidence, record, versions[0]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("metadata_location", "/original/table/../metadata/v1.json"),
+    ("metadata_location", "s3://fixture/table/%2Fmetadata/v1.json?versionId=original"),
+    ("table_uuid", "79316476-09ae-4c21-a09e-d48cd0c49a31"),
+    ("snapshot", 2), ("snapshot", None), ("schema_id", 1),
+    ("metadata_sha256", "f" * 64), ("metadata_size", 37),
+])
+def test_snapshot_catalog_version_identity_preserves_each_exact_pin(native_snapshot_job, tmp_path, field, value):
+    metadata, evidence, record, original_version = _snapshot_mapping_case(tmp_path, native_snapshot_job)
+    view = evidence.view_set["inputs"][0]
+    target = view["snapshot_custody"] if field in {"metadata_sha256", "metadata_size"} else view["selector"]
+    target[field] = value
+    versions, bindings = _input_versions(metadata, evidence, {"source": "orders"}, record)
+    assert versions != [original_version] and bindings == {"source": versions[0]}
+    reference = metadata.version_facts[versions[0]]["reference"]
+    assert reference["value"][field] == value
+    assert reference["authority"] == f"urn:uuid:{view['selector']['table_uuid']}"
+
+
+def test_snapshot_catalog_source_identity_excludes_alias_custody_and_observed_schema(native_snapshot_job, tmp_path):
+    metadata, evidence, first_record, original_version = _snapshot_mapping_case(tmp_path, native_snapshot_job)
+    view = evidence.view_set["inputs"][0]
+    view["name"] = view["selector"]["name"] = "renamed_input"
+    view["schema_sha256"] = "8" * 64
+    view["admission"]["path"] = "/different-operation/inputs.json"
+    view["custody_reference"] = _input_custody_reference(operation="later")
+    view["custody_grant"] = {"profile": "urn:docspec:whole-job-input-custody-grant:1", "source": _input_custody_reference()}
+    for item in view["snapshot_custody"]["objects"]:
+        item["retained"]["path"] = "/different-owner/retained/" + item["role"]
+        item["origin_operation"] = "earliest-copy"
+    second_record = {"uri": "urn:test:receipt:second", "sha256": "b" * 64}
+    versions, bindings = _input_versions(metadata, evidence, {"renamed_input": "orders"}, second_record)
+    assert versions == [original_version] and bindings == {"renamed_input": original_version}
+    assert metadata.owners[original_version] == [first_record, second_record]
+    assert len(metadata.version_facts) == 1
+    assert metadata.version_facts[original_version]["retention"] == "unknown"
+    assert not metadata.observations["representations"]
+
+
+def test_snapshot_catalog_does_not_promote_legacy_unpinned_selectors(native_snapshot_job, tmp_path):
+    manifest = json.loads(base64.b64decode(native_snapshot_job["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    manifest["profile"], views["profile"] = COMPLETION_PROFILE, VIEW_PROFILE
+    for view in (manifest["inputs"][0], views["inputs"][0]):
+        view.pop("snapshot_custody")
+    admitted = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    admitted.pop("snapshot_inputs")
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), admitted)
+    row = _reseal_completion(native_snapshot_job, manifest, views)
+    metadata, entry, _receipt = _metadata(tmp_path, row)
+    managed_execution(metadata, entry)
+    assert metadata.observations["runs"][0]["inputs"] == []
+    assert not any(version["dataset"] == "orders" for version in metadata.version_facts.values())
+    assert "inputObservations" not in metadata.managed_jobs[0]
+    assert any("without a supported exact catalog identity" in limit for limit in metadata.limits)
+
+
+def test_snapshot_catalog_exports_metadata_without_inventing_a_reader(native_snapshot_job, tmp_path):
+    metadata, _entry, _receipt = _metadata(tmp_path, native_snapshot_job)
+    result = assemble_catalog(_authored_project(tmp_path), metadata=metadata.document.path, metadata_adapter="local",
+                              permitted_roots=(tmp_path,), exports=("dcat", "openlineage"))
+    assert result.report["decision"] == "passed", result.report
+    version = next(row for row in result.catalog["versions"] if row["dataset"] == "orders")
+    dcat = json.loads(result.artifacts["discovery.dcat.json"])
+    node = next(row for row in dcat["@graph"] if row["@id"] == version["id"])
+    assert not node.get("dcat:distribution") and "dcat:accessURL" not in node
+    events = [json.loads(raw) for name, raw in result.artifacts.items() if name.startswith("lineage/")]
+    completed = next(event for event in events if event.get("eventType") == "COMPLETE")
+    source = completed["inputs"][0]
+    assert source["namespace"] == "urn:uuid:4200827d-e8eb-4616-a0f9-ff4d222a582e"
+    assert source["facets"]["version"]["datasetVersion"] == version["id"]
+    assert source["name"] != "s3://fixture/table/metadata/v1.json"
 
 
 @pytest.mark.parametrize("change", [
@@ -874,7 +991,9 @@ def test_catalog_maps_scoped_output_without_opening_payloads_or_caller_job(nativ
     assert source["reference"]["value"]["location"].endswith("never-open-captured.parquet")
 
 
-def test_mapped_catalog_facts_keep_normative_shapes(native_job, tmp_path):
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+def test_mapped_catalog_facts_keep_normative_shapes(request, fixture_name, tmp_path):
+    native_job = request.getfixturevalue(fixture_name)
     metadata, entry, _receipt = _metadata(tmp_path, native_job)
     managed_execution(metadata, entry)
     registry, schemas, _ = schema_registry()
@@ -934,7 +1053,9 @@ def test_incomplete_execution_preserves_known_outputs_and_uncertainty(native_job
     assert not metadata.observations["checks"]
 
 
-def test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads(native_job, tmp_path, monkeypatch):
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+def test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads(request, fixture_name, tmp_path, monkeypatch):
+    native_job = request.getfixturevalue(fixture_name)
     project = _authored_project(tmp_path)
     metadata, _entry, _receipt = _metadata(tmp_path, native_job)
     original = Path.open
@@ -982,7 +1103,9 @@ def test_real_assembly_missing_acceptance_stays_incomplete_and_preserves_prior_c
     assert before == {path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()}
 
 
-def test_real_public_assembly_withholds_private_members_paths_and_diagnostics(native_job, tmp_path):
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_snapshot_job"])
+def test_real_public_assembly_withholds_private_members_paths_and_diagnostics(request, fixture_name, tmp_path):
+    native_job = request.getfixturevalue(fixture_name)
     project = _authored_project(tmp_path)
     metadata, _entry, _receipt = _metadata(tmp_path, native_job)
     options = {"metadata": metadata.document.path, "metadata_adapter": "local", "permitted_roots": (tmp_path,)}
@@ -1000,7 +1123,8 @@ def test_real_public_assembly_withholds_private_members_paths_and_diagnostics(na
     assert public.catalog["checks"][0]["status"] == "passed"
     assert "managedExecutions" not in public.catalog["extensions"]["urn:ddk:catalog:assembly"]
     public_bytes = b"".join(public.artifacts.values()) + _raw(public.report) + _raw(public.catalog)
-    for secret in (b"private.parquet", b"shared_join", b"native-lifecycle", b"never-open-job", str(tmp_path).encode()):
+    for secret in (b"private.parquet", b"shared_join", b"native-lifecycle", b"never-open-job", str(tmp_path).encode(),
+                   b"s3://fixture/table", b"4200827d-e8eb-4616-a0f9-ff4d222a582e"):
         assert secret not in public_bytes
     assert public.local_catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"]
 
