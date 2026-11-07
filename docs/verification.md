@@ -1,5 +1,13 @@
 # DDK verification
 
+## November 7, 2026 local producer catalog traces
+
+All 11 focused metadata cases passed with zero failures, errors or skips. The local catalog now preserves the exact verified `producer_evidence` object as `managedExecutions[].producerEvidence`, alongside the separate accepted qualification identity. The cases cover version 1, 2 and 3 catalog shapes, actual deterministic assembly without payload opens, required unknown status when acceptance is missing, and public withholding. They do not execute a native producer or resolve current authority or availability.
+
+The [source manifest](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-catalog-source-01/source-manifest.json), SHA-256 `3d9355ed6e55a13fe3a77c330bbe772988c15ec9490dcf5a675ac974feac9da4`, binds clean commit `5ab50e704ead9f44316cd4d85fb53be55415ec07` plus only the catalog mapper and metadata tests. All 158 captured files and both live overlays remained unchanged. The [result](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-catalog-source-01/result.json), SHA-256 `4eba12ab5a0dda708e02a5486e2912ecc6b69880b822b329c637c00a1a2a9c8a`, records 1.924 seconds, 86,327,296 bytes of direct-child peak RSS and no surviving owned process. The RSS observation is not a process-family bound. Mapper SHA-256 is `c48998ab26797b9b0f529ac6574c104730e4023a15aa252d9f51e67154b9c847`; test-file SHA-256 is `2502ea67c2058f51dcb68197bb477c1468781e18bf5929525727659c0692cf52`.
+
+The earlier 251-case metadata result remains evidence for its original verifier snapshot. This focused change adds one missing-acceptance parameter case and strengthens the existing catalog assertions; it is not a rerun of the full suite. Cases `CASE-CATALOG-061` and `CASE-CATALOG-094` retain the relevant expectations. [API meaning](catalog-api.md#native-producer-evidence-in-local-catalogs).
+
 ## November 7, 2026 native producer evidence metadata
 
 All 251 managed metadata tests passed, with zero failures, errors or skips. The 72 new cases cover version 3 producer-evidence identity, original request and fixed policy binding, exact native witness bytes, proof/model scope, repeated native integer fields, independently ordered adopted inputs, and the actual catalog consumers. The source verifier remains metadata-only: it does not resolve adoption authority, run original producer checks, accept a prerequisite or open any native object path.

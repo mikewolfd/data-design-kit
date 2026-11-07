@@ -102,6 +102,12 @@ The source-version identity excludes input aliases, operation IDs, retained path
 
 These versions have unknown current retention and no inferred representation or reader. Input consumption coverage remains unknown. Earlier unpinned selectors remain only in their original evidence. Existing disclosure rules withhold native references and private run details unless explicitly granted. DCAT supplies discovery without an access distribution; OpenLineage uses its existing opaque catalog-version fallback. This mapping adds no runtime `nativeReferenceSchemes` support and does not qualify producer provenance. The [source checks](verification.md#november-6-2026-native-table-catalog-mapping) are separate from installed qualification.
 
+### Native producer evidence in local catalogs
+
+For verified version 3 receipts, `extensions["urn:ddk:catalog:assembly"].managedExecutions[].producerEvidence` preserves the original native `producer_evidence` object. It contains the adoption reference, proof/model role and evidence reference; a model also retains its exact original prerequisite. Native field names and values remain unchanged. The original pinned receipt holds the full witness bytes and private descriptor details.
+
+This field describes the recorded native check. `acceptedQualification` remains separate and can be null; producer references do not make missing acceptance pass. Catalog refresh establishes neither historical writer execution nor current proof availability and opens no referenced payloads. Existing disclosure rules withhold the local execution details from public output. [Focused source checks](verification.md#november-7-2026-local-producer-catalog-traces) cover these boundaries; native producer execution and installed qualification remain separate.
+
 ### Authored field rules and native reports
 
 Native policy acceptance establishes that its required reports passed. It does not establish that those reports cover every authored field rule. An application supplies a `NativeRuleProfile` from `ddk.catalog_native_rules` explicitly to `assemble_catalog(native_rule_profile=...)`. The profile has a versioned `identity`, source provenance, and `bindings(context, original_job)`. It receives immutable captured definitions, mappings and the exact original JobSpec, and returns typed `NativeRuleBinding` records.

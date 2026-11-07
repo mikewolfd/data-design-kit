@@ -1364,12 +1364,17 @@ def test_mapped_catalog_facts_keep_normative_shapes(request, fixture_name, tmp_p
             assert not list(validator.iter_errors(row)), row
 
 
-def test_missing_acceptance_preserves_completion_and_required_unknown(native_job, tmp_path):
+@pytest.mark.parametrize("fixture_name", ["native_job", "native_producer_job"])
+def test_missing_acceptance_preserves_completion_and_required_unknown(request, fixture_name, tmp_path):
+    native_job = request.getfixturevalue(fixture_name)
     metadata, entry, _receipt = _metadata(tmp_path, native_job, accepted=False)
     managed_execution(metadata, entry)
     assert metadata.observations["runs"][0]["outcome"] == "succeeded"
     assert _policy_check(metadata.observations["checks"])["status"] == "unknown"
     assert metadata.qualification and metadata.managed_jobs[0]["acceptedQualification"] is None
+    if fixture_name == "native_producer_job":
+        manifest = json.loads(base64.b64decode(native_job["completion_manifest"]["bytes_base64"]))
+        assert metadata.managed_jobs[0]["producerEvidence"] == manifest["producer_evidence"]
     with pytest.raises(JobEvidenceError) as caught:
         verify_completed_job({**native_job, "accepted_qualification": None}, require_accepted=True)
     assert caught.value.status == "not_run"
@@ -1440,6 +1445,13 @@ def test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads(req
     trace = result.catalog["extensions"]["urn:ddk:catalog:assembly"]["managedExecutions"][0]
     assert trace["acceptedQualification"] == native_job["accepted_qualification"]["identity"]
     assert trace["outOfCatalog"]["outputs"][0]["name"] == "private.parquet"
+    manifest = json.loads(base64.b64decode(native_job["completion_manifest"]["bytes_base64"]))
+    if fixture_name == "native_producer_job":
+        assert trace["producerEvidence"] == manifest["producer_evidence"]
+        assert set(trace["producerEvidence"]) == {"adoption", "role", "evidence", "prerequisite"}
+        assert "producer_evidence_witness" not in trace
+    else:
+        assert "producerEvidence" not in trace
     assert not result.catalog["releases"] and not result.catalog["selections"]
     again = assemble_catalog(project, **options)
     assert again.report["decision"] == "passed" and again.artifacts == result.artifacts

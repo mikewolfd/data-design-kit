@@ -756,7 +756,7 @@
         "tests/catalog/test_managed_jobs.py::test_missing_acceptance_preserves_completion_and_required_unknown",
         "tests/catalog/test_managed_jobs.py::test_real_assembly_missing_acceptance_stays_incomplete_and_preserves_prior_controls"
       ],
-      "evidence": "Retain completed native computation when accepted qualification is absent. Keep required quality unknown, expose no publishable artifacts and preserve previously written controls. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate."
+      "evidence": "Retain completed native computation when accepted qualification is absent. Keep required quality unknown, expose no publishable artifacts and preserve previously written controls. Source tests use independently constructed metadata; installed qualification and actual native execution remain separate. The producer-catalog-source-01 focused check also preserves original producer references while the model lacks accepted qualification."
     },
     {
       "id": "CASE-CATALOG-062",
@@ -1160,7 +1160,7 @@
         "tests/catalog/test_managed_jobs.py::test_real_assembly_binds_actual_catalog_result_and_opens_no_job_payloads[native_producer_job]",
         "tests/catalog/test_managed_jobs.py::test_real_public_assembly_withholds_private_members_paths_and_diagnostics[native_producer_job]"
       ],
-      "evidence": "Bind version 3 producer evidence to exact original request, adoption, native custody and retained evidence bytes without opening artifacts. Preserve distinct file inputs, adopted prerequisite order and current JobSpec order; validate actual catalog shapes, assembly and public withholding. Independently authored metadata consistency cases from producer-metadata-source-03; actual producer execution, prerequisite acceptance and installed qualification remain separate."
+      "evidence": "Bind version 3 producer evidence to exact original request, adoption, native custody and retained evidence bytes without opening artifacts. Preserve distinct file inputs, adopted prerequisite order and current JobSpec order; validate actual catalog shapes, assembly and public withholding. Independently authored metadata consistency cases from producer-metadata-source-03; actual producer execution, prerequisite acceptance and installed qualification remain separate. Eleven focused producer-catalog-source-01 checks additionally preserve the exact producer reference object in local managed execution traces, keep missing acceptance unknown and withhold private fields from public output."
     },
     {
       "id": "CASE-CATALOG-095",

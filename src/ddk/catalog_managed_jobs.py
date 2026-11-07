@@ -284,6 +284,8 @@ def managed_execution(metadata, entry):
             "capturedDefinition": evidence.admitted_request["definition"], "currentDefinition": definition_identity,
             "definitionStatus": "passed" if definition_matches else "unknown", "outputInterpretations": interpretations,
             **({"inputObservations": input_observations} if input_observations else {}),
+            **({"producerEvidence": deepcopy(evidence.manifest["producer_evidence"])}
+               if "producer_evidence" in evidence.manifest else {}),
             **({"nativeRules": rules_record} if rules_record is not None else {}),
             "outOfCatalog": deepcopy(entry["outOfCatalog"]),
         })
@@ -304,6 +306,8 @@ def managed_execution(metadata, entry):
                                                    status="unknown"))
     metadata.limits.add("Native job membership and accepted policy are preserved; data payloads and runtime retention were not rechecked during catalog refresh.")
     metadata.limits.add("Native selection is separate from publisher selection; the managed-job mapper records no publication.")
+    if "producer_evidence" in evidence.manifest:
+        metadata.limits.add("Producer evidence is bound to the original native receipt; historical writer execution and current proof availability were not established during catalog refresh.")
     if "nativeRules" in entry:
         metadata.limits.add("An explicit generator binds authored facets to accepted counters; source custody alone does not establish the generator's independent release qualification.")
 
