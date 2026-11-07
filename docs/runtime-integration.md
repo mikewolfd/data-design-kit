@@ -58,6 +58,14 @@ The initial proposed DocSpec reference scheme wraps its existing version referen
 
 Protect inputs and candidates through DocSpec's existing native protection ownership. An immutable identifier does not promise future availability. Expiration or missing protection causes an explicit unavailable outcome, never a fallback to latest. No export/reimport is required merely to pass a reference through DDK. An explicitly requested export is its own file artifact.
 
+## Host process ownership
+
+`DocSpecAdapter(..., new_process_group=False)` keeps its native commands in a supervising application's process group. Use this only when that host owns group-wide cleanup, including forced caller termination. The default remains a separate group for standalone calls. `read_version` inherits this setting unless its existing per-call option explicitly overrides it.
+
+The adapter's own timeout still stops and reaps its direct native child. In host-owned mode, the supervisor remains responsible for other descendants. Terminating a process does not prove that durable native work was cancelled or rolled back. Preserve the original request and operation ID and reconcile through DocSpec; timeout reports keep execution unknown. This placement setting changes no data definition, native request identity or selection authority.
+
+Nine independent source process probes in `CASE-DOCSPEC-PROCESS-OWNERSHIP` passed, alongside 31 existing transport cases. Installed successor acceptance remains pending. The qualified SDK2 package retains its existing standalone behavior.
+
 ## Bounded SQL path
 
 1. DDK performs offline checks and selects the explicit SQL profile.

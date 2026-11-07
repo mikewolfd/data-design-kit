@@ -1,5 +1,15 @@
 # DDK verification
 
+## November 7, 2026 host process ownership
+
+`DocSpecAdapter(..., new_process_group=False)` keeps structured commands and buffered `read_version` calls in a supervising application's process group. Standalone calls still create a separate group by default; an explicit read override retains its existing meaning. The supervising host owns group-wide termination, while SDK timeouts stop and reap the direct native child. This changes process placement without changing native request identity or treating termination as proof of rollback.
+
+All **40 frozen-source tests passed**, including nine actual POSIX process controls and 31 existing transport simulations, with zero failures, errors or skips in 8.58 seconds. The new controls exercise host-group TERM/KILL for managed requests and buffered reads, default/host-owned SDK timeouts and an explicit read override. Timeout replies preserve the original operation and unknown execution; host termination leaves the original request and no completed response. The processes are harmless stand-ins. This is separate from executing DocSpec or qualifying an installed successor.
+
+The [source handoff](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/process-ownership-source-01/run-01/handoff.json), SHA-256 `e31f648582fe5c532a507914e5e3bd4268ff51535029291c0734af7082af965e`, binds all 175 frozen source files and 476 retained run artifacts. Source and dependency identities stayed unchanged. Both [independent terminal reviews](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/process-ownership-source-01/run-01/terminal-review.json) closed; a fresh targeted check found none of the 18 prior owned PIDs. Group-stop probes distinguish terminated zombies from running processes, while SDK timeout probes require the direct child to be reaped.
+
+The observer recorded 9.553 seconds over nine samples, 137,084,928 bytes maximum sampled family RSS and 1,605,632 bytes maximum sampled net owned growth. No stop, cleanup error or surviving owned process occurred. These samples establish neither true peaks nor total writes. The existing SDK2 wheel and its complete qualification below remain unchanged; the host-owned option requires a separately built and checked successor.
+
 ## November 7, 2026 SDK2 complete installed qualification
 
 Package `0.1.0.dev6+integrated.2`, source `5086bf4cce6a6ad7314e248a6d447a4d3ee30f0e`, passes all **265 required case/profile checks across 248 cases and 13 profiles** with the current immutable DocSpec executable `e2ed264617b878248b11436f061e73e748dfab9347c9ef9dd3e0b8a55565baa9`. The [qualification report](/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/sdk2-complete-release-supplement-01/run-01/release-qualification.ddk.json), SHA-256 `144dbd425a3b23b98767209b9ea47aaa3dd5909c2b376227a864b1434be685b4`, records a passing first-product-release claim. Five generated adapter manifests match the exact support declarations. [Package guide](local-release-integrated-2.md).

@@ -4109,6 +4109,23 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-DOCSPEC-PROCESS-OWNERSHIP",
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-RESULT-006",
+        "DDK-SAFE-003"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "A supervising application explicitly keeps structured DocSpec requests and protected reads in its owned POSIX process group. TERM and KILL of that group stop an adapter-launched harmless native stand-in and preserve the original recorded request. Standalone placement stays the default; adapter timeout stops and reaps the direct child while retaining unknown execution and the original operation ID. A protected read can explicitly override inherited placement. Process probes establish transport containment only, not native completion or rollback.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

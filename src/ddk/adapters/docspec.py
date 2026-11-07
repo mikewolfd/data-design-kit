@@ -48,17 +48,26 @@ class BindingRefusal(ValueError):
         self.code = code
 
 class DocSpecAdapter:
-    """Prepare and execute through an explicitly selected DocSpec executable."""
+    """Prepare and execute through an explicitly selected DocSpec executable.
+
+    A supervising host can set ``new_process_group=False`` to retain native
+    children in its owned process group. That host owns group-wide cleanup;
+    adapter timeouts still stop and reap the direct native child.
+    """
 
     def __init__(self, executable, limits, *, timeout=120, evidence_dir=None,
                  capture_bytes=DEFAULT_CAPTURE_BYTES, metadata_bytes=DEFAULT_CAPTURE_BYTES,
-                 source_commit=None, secret_values=(), native_mapping_profile=PRIMITIVE_PROFILE):
+                 source_commit=None, secret_values=(), native_mapping_profile=PRIMITIVE_PROFILE,
+                 new_process_group=True):
         if not math.isfinite(timeout) or timeout <= 0 or capture_bytes <= 0:
             raise ValueError("DocSpec timeout and capture size must be positive")
         if type(metadata_bytes) is not int or metadata_bytes <= 0:
             raise ValueError("DocSpec recovery metadata size must be a positive byte count")
         if native_mapping_profile not in {PRIMITIVE_PROFILE, RECURSIVE_PROFILE}:
             raise ValueError("Select an explicitly supported native mapping profile")
+        if type(new_process_group) is not bool:
+            raise ValueError("DocSpec process-group placement must be an explicit boolean")
+        self.new_process_group = new_process_group
         self.native_mapping_profile = native_mapping_profile
         self.executable = Path(executable).resolve(strict=True)
         self.timeout = timeout
@@ -189,8 +198,8 @@ class DocSpecAdapter:
         )
 
     def read_version(self, workspace, version, *, max_ipc_bytes=DEFAULT_CAPTURE_BYTES,
-                     new_process_group=True):
-        """Read an exact protected version from the native IPC stream in bounded memory."""
+                     new_process_group=None):
+        """Read protected IPC, inheriting process placement unless overridden."""
         if not isinstance(max_ipc_bytes, int) or max_ipc_bytes <= 0:
             raise ValueError("Native Arrow IPC limit must be a positive byte count")
         workspace = Path(workspace).resolve(strict=True)
@@ -207,7 +216,7 @@ class DocSpecAdapter:
             [str(self.executable), "--limits", str(limits_path), "--workspace", str(workspace),
              "read-version", "--spec", str(request_path)],
             timeout=self.timeout, limit=max_ipc_bytes, stop_on_stdout_limit=True,
-            new_process_group=new_process_group,
+            new_process_group=self.new_process_group if new_process_group is None else new_process_group,
         )
         ipc = transport["stdout"]
         (folder / "stderr.log").write_bytes(transport["stderr"])
@@ -304,7 +313,7 @@ class DocSpecAdapter:
                     [str(self.executable), "--limits", str(limits_path), *prefix,
                      command, "--spec", str(path)],
                     timeout=self.timeout, limit=self.capture_bytes, stop_on_stdout_limit=True, env=environment,
-                    cancel_event=cancel_event,
+                    cancel_event=cancel_event, new_process_group=self.new_process_group,
                 )
             stdout = transport["stdout"]
             (folder / "stdout.json").write_bytes(self.redaction.captured(stdout))

@@ -651,6 +651,19 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-installed-01/run-01/handoff.json",
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/snapshot-source-native-replay-01/run-01/handoff.json"
       ]
+    },
+    {
+      "id": "CASE-DOCSPEC-PROCESS-OWNERSHIP",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_process_ownership.py::test_host_group_stop_reaches_native_child",
+        "tests/test_docspec_process_ownership.py::test_adapter_timeout_reaps_child_and_preserves_uncertainty",
+        "tests/test_docspec_process_ownership.py::test_read_can_explicitly_override_host_process_placement"
+      ],
+      "scopeNote": "Nine frozen-source POSIX process probes passed, alongside 31 existing transport cases. Host TERM/KILL reaches managed-request and buffered-read stand-ins; SDK timeouts reap direct children and retain unknown execution. Installed successor and actual native host-owned placement remain separate.",
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/process-ownership-source-01/run-01/handoff.json"
+      ]
     }
   ]
 }
