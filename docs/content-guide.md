@@ -32,3 +32,12 @@ Use “publisher” for responsibility for published metadata, “source” for 
 Label synthetic examples in titles or introductions, and label AI authorship when the publisher confirms it. “Model” alone does not establish artificial intelligence authorship. Preserve generation/review provenance when supplied. A documented calculation and a query that reads an already saved result need different titles; neither title should imply quality checks rerun unless they do.
 
 Before delivering a regenerated catalog, compare the new artifact with its source and retained baseline. Check that identities, nesting, numeric values, disclosure limits, unknown states and publisher selections survived unchanged. Confirm every description against source evidence and every proposed field against the native schema. Run the viewer's required validation for the integrated change. Finally, test the wording with representative visitors; editorial review alone does not establish usability improvement.
+
+
+## Publisher guides and prepared views
+
+Additional guidance uses the versioned `urn:ddk:publisher:discovery` extension in the publisher's project metadata, copied through the standard DDK assembly and disclosure route. The viewer validates its exact dataset definitions, versions, resource and recipe targets. It refuses unsupported or malformed guidance visibly while preserving the base catalog. See [the profile](../outputs/implementation-20261107/metadata/publisher-extension.md) for the supported shape and bounds.
+
+Every maintained guide should name an author, review date, evidence and a `reviewTrigger`. Review it when a referenced definition, relationship, version, resource, or access capability changes. Regenerate the publisher artifacts and verify every destination after review. A valid link does not establish that guidance still answers a visitor's question; participant evidence is a separate acceptance step.
+
+Prepared value-count views declare a question and one disclosed scalar field in publisher metadata. The viewer counts the actual returned page and preserves exact values, missing and null distinctions, exclusions, version identity and filter context. These counts do not establish source completeness, a time range for the returned records, or statistical representativeness. The synthetic Watershed example demonstrates this capability; it is not a chart of real environmental conditions.

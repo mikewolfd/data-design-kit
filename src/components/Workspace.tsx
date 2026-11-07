@@ -1,15 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CatalogSnapshot, CatalogSummary } from '../domain/types';
 import { request } from '../lib/client';
 import { downloadJson, selectedVersion, titleOf, versionsOf, releaseFor } from '../lib/display';
-import { datasetRecordAccess, enumLabel } from '../lib/content';
+import { datasetIntroduction, enumLabel, excerpt } from '../lib/content';
 import { versionChoices } from '../lib/choice-labels';
 import { Badge, Notice, Raw } from './Primitives';
 import { Overview, Evidence, Activity, Compare } from './MetadataPanels';
 import { DataPanel } from './DataPanel';
 import { Connections } from './Connections';
+import { Guides } from './Guides';
+import { publisherMetadata } from '../features/publisher-metadata';
+import { PublisherMetadataNotice } from '../features/dataset-context';
+import {
+  discoveryItems,
+  facetLabels,
+  facetOptions,
+  matchesFacets,
+  type Facet,
+  type FacetSelection,
+} from '../lib/discovery';
 
-const tabs = ['Overview', 'Data', 'Connections', 'Evidence', 'Activity', 'Compare'] as const;
+const tabs = [
+  'Overview',
+  'Data',
+  'Connections',
+  'Evidence',
+  'Activity',
+  'Compare',
+  'Guides',
+] as const;
 type Tab = (typeof tabs)[number];
 const tabLabels: Record<Tab, string> = {
   Overview: 'Overview',
@@ -18,6 +37,7 @@ const tabLabels: Record<Tab, string> = {
   Evidence: 'Checks & sources',
   Activity: 'History',
   Compare: 'Compare versions',
+  Guides: 'Guides',
 };
 type Route = {
   catalog: string;
@@ -27,6 +47,9 @@ type Route = {
   digest: string;
   search: string;
   release: string;
+  resource: string;
+  recipe: string;
+  guide: string;
 };
 function routeFromUrl(): Route {
   const q = new URLSearchParams(window.location.search),
@@ -39,6 +62,9 @@ function routeFromUrl(): Route {
     digest: q.get('snapshot') || '',
     search: q.get('q') || '',
     release: q.get('release') || '',
+    resource: q.get('resource') || '',
+    recipe: q.get('recipe') || '',
+    guide: q.get('guide') || '',
   };
 }
 export default function Workspace() {
@@ -49,6 +75,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
   const [sourceFilter, setSourceFilter] = useState('');
+  const [facets, setFacets] = useState<FacetSelection>({});
   const [announcement, setAnnouncement] = useState('');
   const [availability, setAvailability] = useState('all');
   const [limit, setLimit] = useState(40);
@@ -69,6 +96,9 @@ export default function Workspace() {
         snapshot: next.digest,
         q: next.search,
         release: next.release,
+        resource: next.resource,
+        recipe: next.recipe,
+        guide: next.guide,
       })) {
         if (v) q.set(k, v);
       }
@@ -113,6 +143,7 @@ export default function Workspace() {
     setExportOpen(false);
     setAvailability('all');
     setSourceFilter('');
+    setFacets({});
     setLimit(40);
     request<CatalogSnapshot>(`/api/catalogs/${encodeURIComponent(route.catalog)}`, abort.signal)
       .then((s) => {
@@ -153,51 +184,31 @@ export default function Workspace() {
   const boundRelease =
     route.release || (snapshot ? releaseFor(snapshot, version?.id)?.id : undefined);
   const invalidVersion = !!route.version && !version;
-  const search = route.search.toLocaleLowerCase();
-  const datasets =
-    snapshot?.catalog.datasets.filter((d) => {
-      const definition = snapshot.definitions[d.alias];
-      const sourceIds = snapshot.catalog.versions
-        .filter((v) => v.dataset === d.alias || v.dataset === d.id)
-        .flatMap((v) => v.sources);
-      const matches = [d.alias, d.id, d.title, d.rowMeaning, definition?.description]
-        .filter(Boolean)
-        .join(' ')
-        .toLocaleLowerCase()
-        .includes(search);
-      const recordState = datasetRecordAccess(snapshot, d).state;
-      return (
-        matches &&
-        (!sourceFilter || sourceIds.includes(sourceFilter)) &&
-        (availability === 'all' ||
-          (availability === 'available'
-            ? recordState === 'available'
-            : availability === 'unknown'
-              ? recordState === 'unknown'
-              : recordState !== 'available' && recordState !== 'unknown'))
-      );
-    }) ?? [];
+  const discovery = useMemo(() => (snapshot ? discoveryItems(snapshot) : []), [snapshot]);
+  const filteredItems = discovery.filter((item) => {
+    const recordState = item.access.state;
+    return (
+      item.searchRank(route.search) >= 0 &&
+      (!sourceFilter || item.sourceIds.includes(sourceFilter)) &&
+      (availability === 'all' ||
+        (availability === 'available'
+          ? recordState === 'available'
+          : availability === 'unknown'
+            ? recordState === 'unknown'
+            : recordState !== 'available' && recordState !== 'unknown'))
+    );
+  });
+  const datasets = filteredItems
+    .filter((item) => matchesFacets(item, facets))
+    .sort((a, b) => a.searchRank(route.search) - b.searchRank(route.search));
+  const metadata = snapshot ? publisherMetadata(snapshot) : undefined;
   const titleCounts = new Map<string, number>();
   for (const item of snapshot?.catalog.datasets ?? []) {
     const title = titleOf(item);
     titleCounts.set(title, (titleCounts.get(title) ?? 0) + 1);
   }
-  const description =
-    snapshot && dataset ? snapshot.definitions[dataset.alias]?.description : undefined;
-  const coverageStart = description?.indexOf('Coverage limits:') ?? -1;
-  const nullabilityStart = description?.indexOf('Nullability basis:') ?? -1;
-  const technicalDescription =
-    coverageStart >= 0 && nullabilityStart > coverageStart;
-  const coverageNote =
-    technicalDescription && description
-      ? description
-          .slice(coverageStart + 'Coverage limits:'.length, nullabilityStart)
-          .trim()
-      : undefined;
-  const summary =
-    technicalDescription
-      ? description?.slice(0, coverageStart).trim() || undefined
-      : description !== dataset?.rowMeaning ? description : undefined;
+  const { description, technicalDescription, coverageNote, summary } =
+    snapshot && dataset ? datasetIntroduction(snapshot, dataset) : {};
   const exampleDataset =
     !!snapshot?.exampleData ||
     snapshot?.mode === 'fixture' ||
@@ -212,13 +223,39 @@ export default function Workspace() {
           : 'Data catalog · DDK';
   }, [dataset, snapshot]);
   function chooseDataset(id: string, versionId?: string, releaseId?: string) {
-    navigate({ dataset: id, version: versionId || '', release: releaseId || '', tab: 'Overview' });
+    navigate({
+      dataset: id,
+      version: versionId || '',
+      release: releaseId || '',
+      resource: '',
+      recipe: '',
+      tab: 'Overview',
+    });
     setExportOpen(false);
     setTimeout(() => titleRef.current?.focus(), 0);
   }
   function switchTab(tab: Tab) {
     navigate({ tab });
     setExportOpen(false);
+  }
+  function clearDiscoveryFilters() {
+    navigate({ search: '' }, true);
+    setAvailability('all');
+    setSourceFilter('');
+    setFacets({});
+  }
+  function datasetLink() {
+    const link = new URL(window.location.href);
+    if (snapshot) {
+      link.searchParams.set('catalog', snapshot.id);
+      link.searchParams.set('snapshot', snapshot.identity.catalogSha256);
+    }
+    if (dataset) link.searchParams.set('dataset', dataset.id);
+    if (version) link.searchParams.set('version', version.id);
+    else link.searchParams.delete('version');
+    if (boundRelease) link.searchParams.set('release', boundRelease);
+    else link.searchParams.delete('release');
+    return link.href;
   }
   function exactReference() {
     if (!snapshot || !dataset) return;
@@ -237,17 +274,13 @@ export default function Workspace() {
         versionChecks: snapshot.catalog.checks.filter((c) => c.subject === version?.id),
         nativeAcceptance: 'not established',
       },
-      link: window.location.href,
+      link: datasetLink(),
     });
     setAnnouncement('Dataset reference downloaded.');
   }
   async function copyLink() {
     try {
-      const link = new URL(window.location.href);
-      if (dataset) link.searchParams.set('dataset', dataset.id);
-      if (version) link.searchParams.set('version', version.id);
-      else link.searchParams.delete('version');
-      await navigator.clipboard.writeText(link.href);
+      await navigator.clipboard.writeText(datasetLink());
       setAnnouncement(version ? 'Dataset and version link copied.' : 'Dataset link copied.');
     } catch {
       setAnnouncement('Clipboard access is unavailable. Copy the address from your browser.');
@@ -296,6 +329,9 @@ export default function Workspace() {
                   version: '',
                   digest: '',
                   release: '',
+                  resource: '',
+                  recipe: '',
+                  guide: '',
                   search: '',
                   tab: 'Overview',
                 })
@@ -349,7 +385,8 @@ export default function Workspace() {
               />
             </div>
             <p id="dataset-search-help" className="muted">
-              Search dataset titles, descriptions and identifiers.
+              Search dataset titles, descriptions, supplied alternate names and identifiers. Exact
+              identifiers appear first. Field names and other catalogs are not searched.
             </p>
             <label className="filter-label">
               Can I view records here?
@@ -385,6 +422,49 @@ export default function Workspace() {
                   ))}
                 </select>
               </label>
+            )}
+            {!!snapshot && (
+              <details className="discovery-facets">
+                <summary>More filters</summary>
+                <p className="muted">
+                  Counts are datasets matching the other filters. Period, place and format may
+                  describe any listed version or resource; they do not select one. Unknown
+                  information stays searchable.
+                </p>
+                {(Object.keys(facetLabels) as Facet[]).map((facet) => (
+                  <label key={facet} className="filter-label">
+                    {facetLabels[facet]}
+                    <select
+                      value={facets[facet] || ''}
+                      onChange={(event) => {
+                        setFacets((old) => ({ ...old, [facet]: event.target.value }));
+                        setLimit(40);
+                      }}
+                    >
+                      <option value="">All</option>
+                      {facetOptions(filteredItems, facets, facet).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label} ({option.count})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+                <button onClick={() => setFacets({})}>Clear additional filters</button>
+              </details>
+            )}
+            {!!metadata?.guides.length && (
+              <div className="discovery-guides">
+                <p className="eyebrow">Guides</p>
+                {metadata.guides.map((guide) => (
+                  <button
+                    key={guide.id}
+                    onClick={() => navigate({ tab: 'Guides', guide: guide.id })}
+                  >
+                    {guide.question}
+                  </button>
+                ))}
+              </div>
             )}
             {!!snapshot?.catalog.sources.length && (
               <details className="source-capture-help">
@@ -423,42 +503,60 @@ export default function Workspace() {
                 <p>Dataset list could not be loaded.</p>
               </div>
             )}
-            {datasets.slice(0, limit).map((d) => (
-              <button
-                key={d.id}
-                className={d.id === dataset?.id ? 'active' : ''}
-                aria-current={d.id === dataset?.id ? 'page' : undefined}
-                onClick={() => chooseDataset(d.id)}
-              >
-                <span className="dataset-symbol" aria-hidden="true">
-                  ▤
-                </span>
-                <span>
-                  <strong>{titleOf(d)}</strong>
-                  <small>
-                    {(titleCounts.get(titleOf(d)) ?? 0) > 1
-                      ? d.alias
-                      : enumLabel(d.role || 'Dataset')}{' '}
-                    · {d.definition.version}
-                  </small>
-                </span>
-                <span className="dataset-arrow" aria-hidden="true">
-                  ›
-                </span>
-              </button>
-            ))}
+            {datasets.slice(0, limit).map((item) => {
+              const d = item.dataset;
+              const intro = item.introduction;
+              const access = item.access.state;
+              return (
+                <button
+                  key={d.id}
+                  className={d.id === dataset?.id ? 'active' : ''}
+                  aria-current={d.id === dataset?.id ? 'page' : undefined}
+                  onClick={() => chooseDataset(d.id)}
+                >
+                  <span className="dataset-symbol" aria-hidden="true">
+                    ▤
+                  </span>
+                  <span>
+                    <strong>{titleOf(d)}</strong>
+                    {item.variant && <span className="dataset-variant">{item.variant}</span>}
+                    <span className="dataset-result-summary">
+                      {excerpt(intro?.purpose || intro?.rowMeaning) ||
+                        'The publisher has not supplied a description.'}
+                    </span>
+                    {intro?.purpose && intro.rowMeaning && intro.purpose !== intro.rowMeaning && (
+                      <small>One record: {excerpt(intro.rowMeaning, 160)}</small>
+                    )}
+                    {!!item.facets.publisher.length && (
+                      <small>Declared publisher: {item.facets.publisher.join('; ')}</small>
+                    )}
+                    {item.coverage && <small>Scope: {excerpt(item.coverage, 160)}</small>}
+                    <span className="dataset-result-access">
+                      {access === 'available'
+                        ? 'Records connected here'
+                        : access === 'no_versions'
+                          ? 'Description and fields only'
+                          : access === 'unknown'
+                            ? 'Record availability unknown'
+                            : 'Records not available here'}
+                    </span>
+                    <small>
+                      {(titleCounts.get(titleOf(d)) ?? 0) > 1
+                        ? d.alias
+                        : enumLabel(d.role || 'Dataset')}{' '}
+                      · {d.definition.version}
+                    </small>
+                  </span>
+                  <span className="dataset-arrow" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              );
+            })}
             {!datasets.length && !loading && !error && !catalogError && !!snapshot && (
               <div className="nav-empty">
                 <p>No datasets match these filters.</p>
-                <button
-                  onClick={() => {
-                    navigate({ search: '' }, true);
-                    setAvailability('all');
-                    setSourceFilter('');
-                  }}
-                >
-                  Clear filters
-                </button>
+                <button onClick={clearDiscoveryFilters}>Clear filters</button>
               </div>
             )}
             {datasets.length > limit && (
@@ -516,6 +614,15 @@ export default function Workspace() {
             </Notice>
           ) : snapshot && dataset ? (
             <>
+              {!datasets.some((item) => item.dataset.id === dataset.id) && (
+                <Notice
+                  title="The open dataset is outside these results"
+                  action={<button onClick={clearDiscoveryFilters}>Clear search and filters</button>}
+                >
+                  Search and filters change the dataset list. The open dataset stays selected until
+                  you choose another result.
+                </Notice>
+              )}
               <div className="breadcrumb">
                 <span>{snapshot.title}</span>
                 <span aria-hidden="true">/</span>
@@ -530,6 +637,16 @@ export default function Workspace() {
                     {titleOf(dataset)}
                   </h1>
                   {summary && <p className="dataset-subtitle">{summary}</p>}
+                  {!!metadata?.datasets.get(dataset.id)?.alternateNames?.length && (
+                    <p className="dataset-subtitle">
+                      {metadata.datasets.get(dataset.id)!.alternateNames!.map((name, index) => (
+                        <span key={index}>
+                          {index > 0 ? ' · ' : ''}
+                          {name.kind === 'former' ? 'Former name' : 'Also listed as'}: {name.name}
+                        </span>
+                      ))}
+                    </p>
+                  )}
                   {exampleDataset && (
                     <Badge status="unknown">
                       {snapshot.mode === 'fixture'
@@ -588,11 +705,16 @@ export default function Workspace() {
                         {version ? ' and selected version' : ' and dataset'}. It does not contain
                         data records. JSON is a structured data-file format.
                       </p>
-                      <p>Download records and query results from their views.</p>
+                      <p>
+                        The link identifies this dataset{version ? ' and version' : ''}. To share
+                        row filters and returned records, download the page or query result from its
+                        view.
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
+              <PublisherMetadataNotice snapshot={snapshot} />
               <div className="context-bar">
                 <div className="version-context">
                   {versions.length === 1 && version ? (
@@ -606,7 +728,14 @@ export default function Workspace() {
                       <select
                         id="version-choice"
                         value={version?.id || ''}
-                        onChange={(e) => navigate({ version: e.target.value, release: '' })}
+                        onChange={(e) =>
+                          navigate({
+                            version: e.target.value,
+                            release: '',
+                            resource: '',
+                            recipe: '',
+                          })
+                        }
                       >
                         <option value="">
                           {versions.length ? 'Choose a data version' : 'No data versions listed'}
@@ -714,7 +843,12 @@ export default function Workspace() {
                 key={`${snapshot.identity.catalogSha256}:${dataset.id}:${version?.id}:${route.tab}`}
               >
                 {route.tab === 'Overview' && (
-                  <Overview snapshot={snapshot} dataset={dataset} version={version} />
+                  <Overview
+                    snapshot={snapshot}
+                    dataset={dataset}
+                    version={version}
+                    onViewData={() => switchTab('Data')}
+                  />
                 )}
                 {route.tab === 'Data' && (
                   <DataPanel
@@ -722,6 +856,8 @@ export default function Workspace() {
                     dataset={dataset}
                     version={version}
                     releaseId={boundRelease}
+                    initialRepresentationId={route.resource}
+                    onShowMetadata={switchTab}
                   />
                 )}
                 {route.tab === 'Connections' && (
@@ -731,6 +867,7 @@ export default function Workspace() {
                     version={version}
                     releaseId={boundRelease}
                     onNavigate={chooseDataset}
+                    focusedRecipeId={route.recipe}
                   />
                 )}
                 {route.tab === 'Evidence' && (
@@ -742,6 +879,7 @@ export default function Workspace() {
                 {route.tab === 'Compare' && (
                   <Compare snapshot={snapshot} dataset={dataset} version={version} />
                 )}
+                {route.tab === 'Guides' && <Guides snapshot={snapshot} guideId={route.guide} />}
               </div>
               <footer className="workspace-footer">
                 <span>

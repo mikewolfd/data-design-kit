@@ -1,5 +1,51 @@
-import type { CatalogDataset, CatalogSnapshot, CatalogVersion } from '../domain/types';
+import type {
+  CatalogDataset,
+  CatalogRepresentation,
+  CatalogSnapshot,
+  CatalogVersion,
+} from '../domain/types';
+import { publisherMetadata } from '../features/publisher-metadata';
 import { versionsOf, words } from './display';
+
+/** Keep publisher prose intact while separating its explicitly labelled limits. */
+export function datasetIntroduction(snapshot: CatalogSnapshot, dataset: CatalogDataset) {
+  const description = snapshot.definitions[dataset.alias]?.description;
+  const coverageStart = description?.indexOf('Coverage limits:') ?? -1;
+  const nullabilityStart = description?.indexOf('Nullability basis:') ?? -1;
+  const technicalDescription = coverageStart >= 0 && nullabilityStart > coverageStart;
+  const coverageNote =
+    technicalDescription && description
+      ? description.slice(coverageStart + 'Coverage limits:'.length, nullabilityStart).trim()
+      : undefined;
+  const describedPurpose = technicalDescription
+    ? description?.slice(0, coverageStart).trim() || undefined
+    : description;
+  const purposeMarker = '\n\nDefinition purpose:';
+  const purposeOffset = describedPurpose?.indexOf(purposeMarker) ?? -1;
+  const purpose =
+    purposeOffset >= 0 ? describedPurpose!.slice(purposeOffset + 2).trim() : describedPurpose;
+  return {
+    description,
+    technicalDescription,
+    coverageNote,
+    purpose,
+    summary: purpose !== dataset.rowMeaning ? purpose : undefined,
+    rowMeaning:
+      dataset.rowMeaning ||
+      (typeof snapshot.definitions[dataset.alias]?.dataGranularityDescription === 'string'
+        ? (snapshot.definitions[dataset.alias].dataGranularityDescription as string)
+        : undefined),
+  };
+}
+
+/** A visibly abbreviated excerpt is a navigation aid, not new publisher copy. */
+export function excerpt(value: string | undefined, limit = 220): string | undefined {
+  if (!value) return undefined;
+  const text = value.replace(/\s+/g, ' ').trim();
+  if (text.length <= limit) return text;
+  const end = text.lastIndexOf(' ', limit);
+  return `${text.slice(0, end > limit / 2 ? end : limit)}…`;
+}
 
 export type RecordAccess = {
   state:
@@ -13,6 +59,14 @@ export type RecordAccess = {
   label: string;
   detail: string;
 };
+
+/** Explicit resource purpose wins; absent richer metadata does not imply a notification service. */
+export function isRecordResource(snapshot: CatalogSnapshot, representation: CatalogRepresentation) {
+  const resource = publisherMetadata(snapshot).representations.get(representation.id)?.resource;
+  return (
+    (!resource?.kind || resource.kind === 'data') && resource?.destination?.kind !== 'notification'
+  );
+}
 
 /** Describes a possible read, not the outcome of a request that has not run. */
 export function recordAccess(
@@ -50,7 +104,15 @@ export function recordAccess(
       label: 'Choose a data version',
       detail: 'Choose a data version to view its access details.',
     };
-  const files = snapshot.catalog.representations.filter((row) => row.version === version.id);
+  const listed = snapshot.catalog.representations.filter((row) => row.version === version.id);
+  const files = listed.filter((row) => isRecordResource(snapshot, row));
+  if (listed.length && !files.length)
+    return {
+      state: 'not_connected',
+      label: 'Supporting resources only',
+      detail:
+        'The listed resources supply documentation, metadata or notifications. No record resource is offered for this version.',
+    };
   if (
     version.retention === 'missing' ||
     (files.length > 0 && files.every((row) => row.availability === 'unavailable'))
@@ -124,9 +186,9 @@ export function formatLabel(mediaType?: string, kind?: string): string {
     'text/csv': 'CSV file',
     'text/tab-separated-values': 'Tab-separated text file',
   };
-  return (
+  const label =
     (mediaType && labels[mediaType]) ||
     mediaType ||
-    (kind ? enumLabel(kind) : 'Format not recorded')
-  );
+    (kind ? enumLabel(kind) : 'Format not recorded');
+  return kind === 'service' || kind === 'table' ? label.replace(/ file$/, '') : label;
 }

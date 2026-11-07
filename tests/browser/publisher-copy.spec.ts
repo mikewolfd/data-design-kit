@@ -35,7 +35,7 @@ test('SpicyRegs titles and record meanings display without implying connected ro
   ]) {
     await page.goto(`/?catalog=spicy-regs&dataset=${alias}`);
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Load records', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open records', exact: true })).toHaveCount(0);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

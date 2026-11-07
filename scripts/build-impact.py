@@ -14,6 +14,10 @@ base=deepcopy(candidate)
 base['version']='0.9.0';base['project']['version']='0.9.0'
 base['datasets'][0]['title']='Earlier watershed observations'
 base['datasets'][0]['definition']['version']='0.9.0'
+# This deliberately authored earlier example predates the new publisher guidance.
+# Retaining current definition-bound guidance would leave dangling prior-version targets.
+base['extensions']['urn:ddk:catalog:assembly']['projectExtensions']=[]
+base['sourceInventory']=[row for row in base['sourceInventory'] if not row['uri'].endswith(':publisher-discovery')]
 fields=base['extensions']['urn:ddk:catalog:assembly']['datasetDefinitions']
 fields['observations']['description']='Earlier description of the same synthetic observations'
 for field in fields['observations']['properties']:

@@ -2,6 +2,7 @@
 from pathlib import Path
 from hashlib import sha256
 import json
+from publisher_discovery import build_discovery
 
 ROOT = Path(__file__).resolve().parent
 TOOL = {"id": "urn:ddk-viewer:fixture-author", "version": "1.0.0"}
@@ -21,7 +22,8 @@ def write(root, name, value):
     return digest(data)
 
 def field(name, kind, description, **extra):
-    return {"name": name, "logicalType": kind, "description": description, **extra}
+    labels = {"id": "Record identifier", "station_code": "Station code", "concentration": "Concentration", "readings": "Nested readings", "reading": "Reading", "depth": "Reading depth", "flags": "Reading labels", "flag": "Reading label", "note": "Record note", "$number": "Literal number-tag field", "metadata": "Source metadata", "code": "Reference code", "name": "Display name", "program_code": "Program code", "amount": "Amount", "payments": "Listed payments", "payment": "Payment record", "tags": "Payment labels", "tag": "Payment label"}
+    return {"name": name, "businessName": labels[name], "logicalType": kind, "description": description, **extra}
 
 def ref(value):
     return {"scheme": "urn:ddk-viewer:synthetic-version", "authority": "urn:ddk-viewer:fixture-author", "value": value}
@@ -103,8 +105,15 @@ def build(slug, title, description, primary, secondary, definitions, rows, looku
         "files": [{"path": "catalog.report.json", "sha256": report_hash, "role": "report"}, {"path": sql_path, "sha256": sql_hash, "role": "recipe"}], "productions": [],
         "extensions": {"urn:ddk:catalog:assembly": {"datasetDefinitions": definitions, "projectExtensions": []}, "urn:ddk-viewer:fixture": {"title": title, "description": description, "synthetic": True, "nativeExecution": "not_run", "conformance": "Document shapes checked separately; no DDK producer or native conformance claim"}},
     }
+    discovery = build_discovery(slug, dataset_rows, versions, representations, data_files, root)
+    discovery_hash = write(root, 'publisher-discovery.json', discovery)
+    catalog['sourceInventory'].append({'uri': prefix + ':publisher-discovery', 'sha256': discovery_hash, 'role': 'metadata'})
+    catalog['extensions']['urn:ddk:catalog:assembly']['projectExtensions'] = [{
+        'project': catalog['project'], 'namespace': '', 'extensions': {'urn:ddk:publisher:discovery': discovery},
+    }]
     catalog_hash = write(root, "catalog.ddk.json", catalog)
     lock = {"specVersion": "0.1", "kind": "lock", "id": prefix + ":lock", "version": "1.0.0", "project": prefix + ":project", "files": [{"path": "definitions.json", "sha256": definition_hash, "role": "definition"}, {"path": "evidence.json", "sha256": evidence_hash, "role": "metadata"}, {"path": "disclosure.json", "sha256": policy_hash, "role": "disclosure-policy"}, *data_files, {"path": sql_path, "sha256": sql_hash, "role": "recipe"}], "tools": {"fixture-author": {"version": "1.0.0"}}, "standards": {"ddk": "0.1", "fixture": "independently-authored"}, "catalogOptions": {"audience": "public", "exports": []}, "extensions": {"urn:ddk:catalog:output-set": [{"path": "catalog.ddk.json", "sha256": catalog_hash, "role": "catalog"}, {"path": "catalog.report.json", "sha256": report_hash, "role": "report"}, {"path": sql_path, "sha256": sql_hash, "role": "recipe"}]}}
+    lock['files'].append({'path': 'publisher-discovery.json', 'sha256': discovery_hash, 'role': 'metadata'})
     lock_hash = write(root, "catalog.lock.json", lock)
     return {"id": slug, "lockSha256": lock_hash}
 

@@ -32,7 +32,9 @@ test('discovery preserves route IDs with visitor labels, document identity and s
   await expect(page).toHaveURL(/tab=Activity/);
   await expect(
     page.getByRole('searchbox', { name: 'Search this catalog' }),
-  ).toHaveAccessibleDescription('Search dataset titles, descriptions and identifiers.');
+  ).toHaveAccessibleDescription(
+    'Search dataset titles, descriptions, supplied alternate names and identifiers. Exact identifiers appear first. Field names and other catalogs are not searched.',
+  );
   await page.getByRole('searchbox').fill('does-not-exist');
   await expect(page.getByText('No datasets match these filters.')).toBeVisible();
   await expect(page.getByText('Dataset list could not be loaded.')).toHaveCount(0);

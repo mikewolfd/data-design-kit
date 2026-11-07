@@ -23,6 +23,10 @@ test('discovery opens no rows; exact numbers, missing, null and empty survive pa
   await open(page);
   expect(rows).toHaveLength(0);
   await page.getByRole('tab', { name: 'View data', exact: true }).click();
+  const openRecords = page.getByRole('button', { name: 'Open records', exact: true });
+  await expect(openRecords).toBeVisible();
+  expect(rows).toHaveLength(0);
+  await openRecords.click();
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: '0.200000000000000001', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'missing', exact: true }).first()).toBeVisible();
@@ -54,6 +58,7 @@ test('discovery opens no rows; exact numbers, missing, null and empty survive pa
 
 test('exact decimal filtering and error retry keep request context', async ({ page }) => {
   await open(page, 'Data');
+  await page.getByRole('button', { name: 'Open records', exact: true }).click();
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
   await page.getByRole('combobox', { name: 'Field', exact: true }).selectOption('concentration');
   await page.getByRole('combobox', { name: 'Value type', exact: true }).selectOption('number');
@@ -126,6 +131,7 @@ test('historical relationship navigation keeps target version and release', asyn
   expect(new URL(page.url()).searchParams.get('version')).toMatch(/stations:v1$/);
   expect(new URL(page.url()).searchParams.get('release')).toBeTruthy();
   await page.getByRole('tab', { name: 'View data', exact: true }).click();
+  await page.getByRole('button', { name: 'Open records', exact: true }).click();
   await expect(page.locator('.data-table')).toContainText('historical');
 });
 
@@ -135,11 +141,19 @@ test('withheld and unresolved versions remain refused or unknown', async ({ page
   await page
     .getByRole('combobox', { name: 'Data version', exact: true })
     .selectOption(data.catalog.versions.find((v: any) => v.id.endsWith(':withheld')).id);
-  await expect(page.getByText('This version is withheld', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('The publisher has withheld the exact reference needed to open these records.', {
+      exact: true,
+    }),
+  ).toBeVisible();
   await page
     .getByRole('combobox', { name: 'Data version', exact: true })
     .selectOption(data.catalog.versions.find((v: any) => v.id.endsWith(':unresolved')).id);
-  await expect(page.getByText('Record availability is unknown', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Record availability is unknown. No read request has been made.', {
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.getByRole('tab', { name: 'Checks & sources', exact: true }).click();
   await expect(page.getByText(/required checks? (is|are) unresolved or failed/)).toBeVisible();
   await expect(
@@ -206,6 +220,8 @@ test('keyboard tab activation, no console errors and desktop accessibility', asy
   await expect(page.getByRole('tabpanel', { name: 'Overview' })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('tabpanel', { name: 'View data' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open records', exact: true }).focus();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
   expect(
     (
@@ -222,6 +238,7 @@ for (const width of [390, 320])
     await page.setViewportSize({ width, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page, 'Data');
+    await page.getByRole('button', { name: 'Open records', exact: true }).click();
     await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
     for (const control of [
       page.getByRole('combobox', { name: 'Catalog', exact: true }),
@@ -332,8 +349,12 @@ test('incoming same-release links return to historical source; skip link and all
 
 test('nested scalar-list paths and source discovery retain their meaning', async ({ page }) => {
   await open(page);
-  await page.locator('.field-row summary').filter({ hasText: 'readings' }).click();
-  await page.locator('.field-row summary').filter({ hasText: 'flags' }).click();
+  await page.getByText('Nested fields in readings', { exact: true }).click();
+  await page.getByText('Nested fields in flags', { exact: true }).click();
+  await page
+    .getByLabel('Technical field details for ["readings"][each]["flags"][each]', { exact: true })
+    .click();
+  await expect(page.getByText('["readings"][each]["flags"][each]', { exact: true })).toBeVisible();
   await expect(
     page.locator('.field-meta').filter({ hasText: '["readings"][each]["flags"][each]' }),
   ).toHaveCount(1);
@@ -376,11 +397,13 @@ test('unknown pagination stays explicit and long nested values keep accessible s
     const value = await response.json();
     value.continuation = 'unknown';
     delete value.total;
+    delete value.hasMore;
     delete value.nextCursor;
     value.rows[0].readings = Array.from({ length: 51 }, (_, i) => ({ label: `occurrence ${i}` }));
     await route.fulfill({ response, json: value });
   });
   await open(page, 'Data');
+  await page.getByRole('button', { name: 'Open records', exact: true }).click();
   await expect(page.getByText('More records: unknown', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Inspect record 01', exact: true }).click();
   await expect(

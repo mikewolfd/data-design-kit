@@ -41,6 +41,7 @@ test(`${replayPath ? 'retained DocSpec responses' : 'real DocSpec execution'}: r
       expect(body.datasetId).toBe(retained.read.binding.datasetId);
       expect(body.versionId).toBe(retained.read.binding.versionId);
       expect(body.representationId).toBe(retained.read.binding.representationId);
+      expect(body.releaseId).toBe(retained.read.binding.releaseId);
       await route.fulfill({ json: retained.read });
     });
     await page.route('**/api/query', async (route) => {
@@ -65,6 +66,7 @@ test(`${replayPath ? 'retained DocSpec responses' : 'real DocSpec execution'}: r
     (r) => r.url().endsWith('/api/read') && r.request().method() === 'POST',
   );
   await page.goto(`${root}&tab=Data`);
+  await page.getByRole('button', { name: 'Open records', exact: true }).click();
   const read = await (await reading).json();
   expect(read.status).toBe('ok');
   expect(read.binding.versionId).toBe(versionId);
@@ -183,7 +185,7 @@ test('connected commerce preserves unsupported controls and all-view accessibili
   );
   expect(retained.catalog.catalogSha256).toBe(snapshot.identity.catalogSha256);
   await page.route('**/api/read', async (route) => {
-    expect(route.request().postDataJSON().versionId).toBe(retained.read.binding.versionId);
+    expect(route.request().postDataJSON()).toMatchObject(retained.read.binding);
     await route.fulfill({ json: retained.read });
   });
   await page.goto(
@@ -216,7 +218,10 @@ test('connected commerce preserves unsupported controls and all-view accessibili
           exact: true,
         })
         .click();
-      if (tab === 'Data') await expect(page.locator('.data-table tbody tr')).toHaveCount(3);
+      if (tab === 'Data') {
+        await page.getByRole('button', { name: 'Open records', exact: true }).click();
+        await expect(page.locator('.data-table tbody tr')).toHaveCount(3);
+      }
       if (width === 390 && tab === 'Data')
         await page.screenshot({ path: `${captures}/viewer-native-mobile.png` });
       expect(

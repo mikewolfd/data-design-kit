@@ -7,7 +7,7 @@
   "files": [
     {
       "path": "definitions.json",
-      "sha256": "375b440dba16d8cc51e368dc93c9b7edcbc289deee1b7088dc732da3cc7de166",
+      "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7",
       "role": "definition"
     },
     {
@@ -48,6 +48,11 @@
       "path": "recipes/observations-minimum.sql",
       "sha256": "707011624caa04c32a0c4291dcea7ae9ced427867630702009715f0f9d81bbdc",
       "role": "recipe"
+    },
+    {
+      "path": "publisher-discovery.json",
+      "sha256": "fd10db8dc51869313988f8cf9fb445d8aa629352a2d6d0a49101362af141d258",
+      "role": "metadata"
     }
   ],
   "tools": {
@@ -67,7 +72,7 @@
     "urn:ddk:catalog:output-set": [
       {
         "path": "catalog.ddk.json",
-        "sha256": "9970ffedd41f9dc65c7d260eaa1f848f5cc9bf37b20e7394e84ae73754bdd593",
+        "sha256": "c6bd7d9446973e67a602e505ec792600c20f90e9921483f0ff2d490a86c2e304",
         "role": "catalog"
       },
       {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type {
   CatalogDataset,
   CatalogSnapshot,
@@ -8,11 +8,23 @@ import type {
   ReadRequest,
 } from '../domain/types';
 import { request } from '../lib/client';
-import { downloadJson, jsonInput, releaseFor, shortId, titleOf } from '../lib/display';
+import { downloadJson, jsonInput, releaseFor } from '../lib/display';
 import { Badge, Notice, Raw, Section, Value, BlankValuesHelp } from './Primitives';
 import { EvidenceRecord } from './EvidenceRecord';
 import { representationChoices } from '../lib/choice-labels';
 import { exactObjectField } from '../domain/exact';
+import {
+  ResourceDetails,
+  ResultContext,
+  pageExport,
+  readResultMatches,
+  resourceRecordAccess,
+  resultCaption,
+  sameReadRequest,
+} from '../features/resource-details';
+import { AttributionContext, Cautions, DateContext } from '../features/dataset-context';
+import { PreparedViews } from '../features/prepared-view';
+import { publisherMetadata } from '../features/publisher-metadata';
 
 export function ResultTable({
   rows,
@@ -105,15 +117,29 @@ export function DataPanel({
   dataset,
   version,
   releaseId,
+  initialRepresentationId,
+  onShowMetadata,
 }: {
   snapshot: CatalogSnapshot;
   dataset: CatalogDataset;
   version?: CatalogVersion;
   releaseId?: string;
+  initialRepresentationId?: string;
+  onShowMetadata?: (tab: 'Evidence' | 'Connections') => void;
 }) {
+  const preparedSummaryId = useId();
+  const hasPreparedViews = !!publisherMetadata(snapshot).datasets.get(dataset.id)?.preparedViews
+    ?.length;
   const reps = snapshot.catalog.representations.filter((r) => r.version === version?.id);
-  const [representationId, setRepresentation] = useState(reps.length === 1 ? reps[0].id : '');
-  const [result, setResult] = useState<ReadResult>();
+  const [representationId, setRepresentation] = useState(
+    initialRepresentationId && reps.some((r) => r.id === initialRepresentationId)
+      ? initialRepresentationId
+      : reps.length === 1
+        ? reps[0].id
+        : '',
+  );
+  const [received, setReceived] = useState<{ request: ReadRequest; result: ReadResult }>();
+  const [readRequested, setReadRequested] = useState(false);
   const [identityAnnouncement, setIdentityAnnouncement] = useState('');
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState('');
@@ -128,7 +154,6 @@ export function DataPanel({
   const [filter, setFilter] = useState<ReadRequest['filter']>();
   const [visibleColumns, setColumns] = useState<string[]>();
   const controller = useRef<AbortController>(null);
-  const currentRequest = useRef<ReadRequest>(null);
   const rep = reps.find((r) => r.id === representationId);
   const representationOptions = representationChoices(dataset, reps);
   const fields = snapshot.definitions[dataset.alias]?.properties ?? [];
@@ -136,29 +161,55 @@ export function DataPanel({
     snapshot.capabilities.read &&
     (!snapshot.capabilities.readDatasetIds ||
       snapshot.capabilities.readDatasetIds.includes(dataset.id));
+  const resourceAccess =
+    version && rep ? resourceRecordAccess(snapshot, dataset, version, rep) : undefined;
+  const currentRequest: ReadRequest | undefined =
+    version && rep
+      ? {
+          catalogId: snapshot.id,
+          catalogSha256: snapshot.identity.catalogSha256,
+          datasetId: dataset.id,
+          versionId: version.id,
+          representationId: rep.id,
+          releaseId: releaseId || releaseFor(snapshot, version.id)?.id,
+          cursor,
+          limit: 10,
+          filter,
+        }
+      : undefined;
+  const result =
+    received && currentRequest && sameReadRequest(received.request, currentRequest)
+      ? received.result
+      : undefined;
+  const context =
+    result && received
+      ? {
+          kind: 'page' as const,
+          snapshot,
+          dataset,
+          request: received.request,
+          result,
+          visibleColumns,
+        }
+      : undefined;
   useEffect(() => {
-    if (!version || !rep || !readSupported) return;
+    if (!readRequested || !currentRequest || resourceAccess !== 'available') return;
     const abort = new AbortController();
     controller.current = abort;
-    const body: ReadRequest = {
-      catalogId: snapshot.id,
-      catalogSha256: snapshot.identity.catalogSha256,
-      datasetId: dataset.id,
-      versionId: version.id,
-      representationId: rep.id,
-      releaseId: releaseId || releaseFor(snapshot, version.id)?.id,
-      cursor,
-      limit: 10,
-      filter,
-    };
-    currentRequest.current = body;
+    const body = currentRequest;
     setLoading(true);
     setError('');
     setErrorCode('');
-    setResult(undefined);
+    setReceived(undefined);
     request<ReadResult>('/api/read', abort.signal, body)
       .then((data) => {
-        if (!abort.signal.aborted) setResult(data);
+        if (!abort.signal.aborted) {
+          if (!readResultMatches(snapshot, body, data))
+            throw new Error(
+              'The response does not match this catalog, version and resource. Open the page again to retry.',
+            );
+          setReceived({ request: body, result: data });
+        }
       })
       .catch((e) => {
         if (!abort.signal.aborted) {
@@ -181,6 +232,8 @@ export function DataPanel({
     filter,
     retry,
     readSupported,
+    resourceAccess,
+    readRequested,
   ]);
   function applyFilter(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -194,22 +247,19 @@ export function DataPanel({
       setHistory([]);
       setCursor(undefined);
       setError('');
+      setReadRequested(true);
     } catch (e) {
       setError((e as Error).message);
     }
   }
   function exportPage() {
     try {
-      downloadJson('ddk-record-page.json', {
-        format: 'ddk-viewer-page/1',
-        scope:
-          'Only the displayed page; all returned fields retained with visible column order recorded. Not a full dataset export',
-        numericEncoding: '{$number: exact JSON number lexeme}',
-        catalog: snapshot.identity,
-        request: currentRequest.current,
-        display: { columns: visibleColumns ?? result?.columns, order: 'original' },
-        result,
-      });
+      if (!result || !received)
+        throw new Error('Open the selected record page again before downloading.');
+      downloadJson(
+        'ddk-record-page.json',
+        pageExport(snapshot, received.request, result, visibleColumns),
+      );
     } catch (e) {
       setError((e as Error).message);
       setErrorCode('export_too_large');
@@ -234,11 +284,44 @@ export function DataPanel({
           {versions.length
             ? 'Select a data version above to view its access details.'
             : 'You can explore the dataset description and fields. This catalog does not include a data version to open.'}
+          {!versions.length && onShowMetadata && (
+            <div>
+              <p>Check the source references and related definitions supplied in this catalog.</p>
+              <button onClick={() => onShowMetadata('Evidence')}>Checks & sources</button>{' '}
+              <button onClick={() => onShowMetadata('Connections')}>Related data</button>
+            </div>
+          )}
         </Notice>
       </Section>
     );
   return (
     <>
+      <Section title="Files, tables and services">
+        <ResourceDetails
+          snapshot={snapshot}
+          dataset={dataset}
+          version={version}
+          selectedRepresentationId={representationId}
+          onSelectRepresentation={(id) => {
+            setReadRequested(false);
+            setRepresentation(id);
+            setCursor(undefined);
+            setHistory([]);
+            setReceived(undefined);
+          }}
+        />
+        {rep && (
+          <details className="resource-dates">
+            <summary>Dates and update expectations for this selection</summary>
+            <DateContext
+              snapshot={snapshot}
+              dataset={dataset}
+              version={version}
+              representation={rep}
+            />
+          </details>
+        )}
+      </Section>
       <Section
         title="View records"
         aside={
@@ -276,10 +359,11 @@ export function DataPanel({
                 <select
                   value={representationId}
                   onChange={(e) => {
+                    setReadRequested(false);
                     setRepresentation(e.target.value);
                     setCursor(undefined);
                     setHistory([]);
-                    setResult(undefined);
+                    setReceived(undefined);
                   }}
                 >
                   <option value="">Choose a file, table or service</option>
@@ -328,8 +412,38 @@ export function DataPanel({
             )}
           </div>
         </div>
-        {readSupported && rep && (
+        <Cautions snapshot={snapshot} dataset={dataset} version={version} representation={rep} />
+        {rep && resourceAccess !== 'available' && readSupported && (
+          <Notice title="Records cannot be opened for this resource">
+            {resourceAccess === 'unknown'
+              ? 'Record availability is unknown. No read request has been made.'
+              : resourceAccess === 'withheld'
+                ? 'The publisher has withheld the exact reference needed to open these records.'
+                : resourceAccess === 'not_records'
+                  ? 'This resource supplies documentation, metadata or notifications rather than record access.'
+                  : 'The catalog records this resource or version as unavailable.'}
+          </Notice>
+        )}
+        {readSupported && rep && resourceAccess === 'available' && (
           <>
+            {!readRequested && (
+              <div className="read-start">
+                <p>
+                  No record request runs until you open records or apply a filter. The request
+                  returns up to 10 records from this exact version and resource.
+                </p>
+                <button
+                  className="button primary"
+                  onClick={() => {
+                    setHistory([]);
+                    setCursor(undefined);
+                    setReadRequested(true);
+                  }}
+                >
+                  Open records
+                </button>
+              </div>
+            )}
             {snapshot.mode === 'fixture' ? (
               <form onSubmit={applyFilter} className="filter-form">
                 <label>
@@ -389,6 +503,7 @@ export function DataPanel({
             ) : (
               <p className="muted">Filtering records is not supported by this connection.</p>
             )}
+            {context && result?.status === 'ok' && <ResultContext {...context} />}
             <div className="result-bar">
               <span role="status" aria-live="polite">
                 {loading
@@ -404,6 +519,7 @@ export function DataPanel({
                   <button
                     onClick={() => {
                       controller.current?.abort();
+                      setReadRequested(false);
                       setLoading(false);
                       setErrorCode('');
                       setError(
@@ -415,7 +531,14 @@ export function DataPanel({
                   </button>
                 ) : null}
                 {result?.status === 'ok' && (
-                  <button onClick={exportPage}>Download this page (JSON) ↓</button>
+                  <>
+                    {hasPreparedViews && result.rows.length > 0 && (
+                      <button onClick={() => document.getElementById(preparedSummaryId)?.focus()}>
+                        View page summary
+                      </button>
+                    )}
+                    <button onClick={exportPage}>Download this page (JSON) ↓</button>
+                  </>
                 )}
               </div>
             </div>
@@ -526,11 +649,21 @@ export function DataPanel({
 
                   <BlankValuesHelp />
                   <ResultTable
-                    caption={`Records from ${titleOf(dataset)}, version ${shortId(version.id)} · this page only`}
+                    caption={context ? resultCaption(context) : undefined}
                     rows={result.rows}
                     columns={visibleColumns ?? result.columns}
                     positions={result.rowPositions}
                   />
+                  {received && (
+                    <PreparedViews
+                      id={preparedSummaryId}
+                      snapshot={snapshot}
+                      dataset={dataset}
+                      request={received.request}
+                      result={result}
+                      onDownloadUnderlying={exportPage}
+                    />
+                  )}
                 </>
               ) : (
                 <Notice
@@ -586,6 +719,15 @@ export function DataPanel({
             it.
           </Notice>
         )}
+      </Section>
+      <Section title="Credit and terms for this selection">
+        <AttributionContext
+          snapshot={snapshot}
+          dataset={dataset}
+          version={version}
+          representation={rep}
+          releaseId={releaseId}
+        />
       </Section>
       <Section title="Technical read details">
         {result?.attempt && (

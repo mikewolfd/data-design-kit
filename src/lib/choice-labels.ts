@@ -6,8 +6,17 @@ import type {
 } from '../domain/types';
 import { formatLabel, enumLabel } from './content';
 import { titleOf } from './display';
+import { formatExactValue, isExactNumber } from '../domain/exact';
 
 export type ChoiceLabel = { id: string; label: string };
+
+function observedScope(version: CatalogVersion): string | undefined {
+  if (version.referenceDisclosure === 'withheld' || version.coverage?.length !== 1) return;
+  const { observed, unit, scope } = version.coverage[0];
+  if (!(typeof observed === 'number' && Number.isFinite(observed)) && !isExactNumber(observed))
+    return;
+  return `${formatExactValue(observed)} ${unit} observed (${scope})`;
+}
 
 // The catalog has exact native references, but no human version-label field.
 // Reference syntax alone cannot establish that a value is a meaningful label.
@@ -43,6 +52,7 @@ export function versionChoices(
           titleOf(dataset),
           'Version label not supplied',
           ...formats,
+          observedScope(version),
           version.referenceDisclosure === 'withheld' ? 'Details withheld' : undefined,
         ]
           .filter(Boolean)

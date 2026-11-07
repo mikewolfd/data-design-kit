@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import type { CatalogField, RecordRef, FieldPath } from '../domain/types';
-import { textValue, pathLabel, safeLink } from '../lib/display';
+import type { RecordRef } from '../domain/types';
+import { textValue, safeLink } from '../lib/display';
 import { enumLabel } from '../lib/content';
 import { exactObjectEntries, exactStringify, isExactNumber } from '../domain/exact';
 
@@ -161,89 +161,7 @@ export function Value({
     <span className={typeof value === 'number' ? 'numeric' : undefined}>{textValue(value)}</span>
   );
 }
-function Field({
-  field,
-  path,
-  depth = 0,
-}: {
-  field: CatalogField;
-  path: FieldPath;
-  depth?: number;
-}) {
-  const [open, setOpen] = useState(false);
-  const children =
-    field.properties ?? field.items?.properties ?? (field.items ? [field.items] : []);
-  const nested = children.length > 0;
-  const info = (
-    <>
-      <code>{field.name || '[element]'}</code>
-      {field.businessName && field.businessName !== field.name && (
-        <span className="field-type">{field.businessName}</span>
-      )}
-      <span className="field-description">{field.description || 'Description not supplied'}</span>
-    </>
-  );
-  return (
-    <li className="field">
-      <div className="field-row">
-        {nested ? (
-          <details open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-            <summary>{info}</summary>
-            {open &&
-              depth < 10 &&
-              (field.items && !field.items.properties ? (
-                <ul className="field-list">
-                  <Field field={field.items} path={[...path, { each: true }]} depth={depth + 1} />
-                </ul>
-              ) : (
-                <FieldTree
-                  fields={children}
-                  path={field.items ? [...path, { each: true }] : path}
-                  depth={depth + 1}
-                />
-              ))}
-          </details>
-        ) : (
-          <div className="field-summary">{info}</div>
-        )}
-      </div>
-      <details className="field-meta">
-        <summary>Technical field details</summary>
-        <span>Storage type: {field.physicalType || field.logicalType || 'Not disclosed'}</span>
-        <span>
-          {field.required ? 'Field is required. ' : ''}Whether null is allowed:{' '}
-          {field.nullable === false ? 'No' : field.nullable === true ? 'Yes' : 'Not specified'}.
-        </span>
-        <code>{pathLabel(path)}</code>
-      </details>
-    </li>
-  );
-}
-export function FieldTree({
-  fields,
-  path = [],
-  depth = 0,
-}: {
-  fields: CatalogField[];
-  path?: FieldPath;
-  depth?: number;
-}) {
-  return (
-    <ul className="field-list">
-      {fields.slice(0, 100).map((field, i) => (
-        <Field
-          key={`${field.name}:${i}`}
-          field={field}
-          path={[...path, { field: field.name }]}
-          depth={depth}
-        />
-      ))}
-      {fields.length > 100 && (
-        <li>First 100 fields displayed. See the catalog definition for all fields.</li>
-      )}
-    </ul>
-  );
-}
+export { FieldTree } from '../features/field-dictionary/FieldTree';
 
 export function BlankValuesHelp() {
   return (

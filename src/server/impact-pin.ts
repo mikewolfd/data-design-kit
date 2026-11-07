@@ -2,6 +2,6 @@ export const impactPins = [
   {
     "catalogId": "watershed",
     "directory": "fixtures/impact",
-    "bindingSha256": "d5642e0019288f636a0ba428b5ef8bc8b305a2acf4fd7024aea51a0d128fe8ec"
+    "bindingSha256": "79588eafcea1c6e94d6b5163e1a8e00200f41b31513fdeafe98ccd16d672a279"
   }
 ] as const;

@@ -7,7 +7,7 @@
   "files": [
     {
       "path": "definitions.json",
-      "sha256": "8d6305a7482dbcc3a06d93c1da5818db20267230a4d6941ff0da6e32ec640f15",
+      "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05",
       "role": "definition"
     },
     {
@@ -42,6 +42,11 @@
       "path": "recipes/awards-minimum.sql",
       "sha256": "6839657ee4a11b0776ab7c4faaad747d30457dffa43143ef5b63ecc562b4973e",
       "role": "recipe"
+    },
+    {
+      "path": "publisher-discovery.json",
+      "sha256": "3adf62f49b5afbb9c97cd02e52e8ca06bc87dd14ed16b653ec8fd77f5cc0d658",
+      "role": "metadata"
     }
   ],
   "tools": {
@@ -61,7 +66,7 @@
     "urn:ddk:catalog:output-set": [
       {
         "path": "catalog.ddk.json",
-        "sha256": "02159ec4cbe70639664abfedf5b68d4a0d6d3ffa110a7ced5de62a06a973efb8",
+        "sha256": "4e5ef050c03c327fdff974e377c7a5c17ca7e9a6c0f5dc5082832dddf743ab53",
         "role": "catalog"
       },
       {

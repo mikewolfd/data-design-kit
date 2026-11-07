@@ -2,10 +2,10 @@
 export const fixturePins = [
   {
     "id": "watershed",
-    "lockSha256": "d054ae499d8b34927254a13a89318f97d82768f26f2c7395b2818daa54b717ca"
+    "lockSha256": "2ebbc353b92b2c3cb3788feec133cabb570da5def76cb9662cb133a3bda6fa8c"
   },
   {
     "id": "grants",
-    "lockSha256": "2ce71ba5128b3968709c2095d46a917cc2e6c1c80dbc72e6dfaaa6dfa5f18e8a"
+    "lockSha256": "38012075f96f84c8f5db64e629e4654b395670c948c464c3f38c2e5505929f76"
   }
 ] as const;

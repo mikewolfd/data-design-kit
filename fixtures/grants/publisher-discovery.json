@@ -1,0 +1,345 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "target": {
+        "kind": "dataset",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:awards",
+        "definition": {
+          "contractId": "urn:ddk-viewer:fixture:grants:definition",
+          "version": "1.0.0",
+          "object": "awards",
+          "sourceSha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+        }
+      },
+      "alternateNames": [
+        {
+          "name": "Example funding awards",
+          "kind": "alternate"
+        }
+      ],
+      "variantDescription": "Award records with separately listed payments",
+      "topics": [
+        {
+          "id": "urn:ddk-viewer:topic:grants",
+          "label": "Grant-award examples"
+        }
+      ],
+      "coverage": {
+        "geography": "Geographic coverage is not supplied for this example.",
+        "population": "Authored example records only.",
+        "inclusion": "Listed example records, preserving missing, null, empty and repeated values.",
+        "exclusions": "Real-world records and source-population completeness are outside this example."
+      },
+      "dates": [
+        {
+          "kind": "metadataUpdated",
+          "value": "2026-11-07"
+        }
+      ],
+      "updateFrequency": "No scheduled updates; these are authored examples.",
+      "publishers": [
+        {
+          "name": "DDK viewer example publisher"
+        }
+      ],
+      "citation": {
+        "text": "DDK viewer example publisher. Public-service grants. Synthetic demonstration data.",
+        "originalIdentifier": "urn:ddk-viewer:fixture:grants:dataset:awards"
+      },
+      "history": [
+        {
+          "kind": "note",
+          "date": "2026-11-07",
+          "description": "Added human-readable field labels and example guidance. Native field names and stored record values are unchanged.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:grants:definitions",
+                "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+              }
+            }
+          ]
+        }
+      ],
+      "unknowns": [
+        {
+          "fact": "Observation period",
+          "reason": "The authored records contain no observation date."
+        },
+        {
+          "fact": "Reuse terms",
+          "reason": "No resource licence or reuse terms are supplied with this example."
+        },
+        {
+          "fact": "Data support contact",
+          "reason": "No data support route is supplied with this example."
+        }
+      ],
+      "cautions": [
+        {
+          "summary": "Award amounts and payment amounts describe different things.",
+          "details": "Currency is not supplied for amount or payments[].amount. The example does not define payment timing or reconciliation to the award amount; do not add award and payment amounts together.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:grants:definitions",
+                "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "dataset",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:programs",
+        "definition": {
+          "contractId": "urn:ddk-viewer:fixture:grants:definition",
+          "version": "1.0.0",
+          "object": "programs",
+          "sourceSha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+        }
+      },
+      "alternateNames": [
+        {
+          "name": "Example funding programs",
+          "kind": "alternate"
+        }
+      ],
+      "variantDescription": "Program names keyed by program code",
+      "topics": [
+        {
+          "id": "urn:ddk-viewer:topic:grants",
+          "label": "Grant-award examples"
+        }
+      ],
+      "coverage": {
+        "geography": "Geographic coverage is not supplied for this example.",
+        "population": "Authored example records only.",
+        "inclusion": "Listed example records, preserving missing, null, empty and repeated values.",
+        "exclusions": "Real-world records and source-population completeness are outside this example."
+      },
+      "dates": [
+        {
+          "kind": "metadataUpdated",
+          "value": "2026-11-07"
+        }
+      ],
+      "updateFrequency": "No scheduled updates; these are authored examples.",
+      "publishers": [
+        {
+          "name": "DDK viewer example publisher"
+        }
+      ],
+      "citation": {
+        "text": "DDK viewer example publisher. Synthetic grant programs. Synthetic demonstration data.",
+        "originalIdentifier": "urn:ddk-viewer:fixture:grants:dataset:programs"
+      },
+      "history": [
+        {
+          "kind": "note",
+          "date": "2026-11-07",
+          "description": "Added human-readable field labels and example guidance. Native field names and stored record values are unchanged.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:grants:definitions",
+                "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+              }
+            }
+          ]
+        }
+      ],
+      "unknowns": [
+        {
+          "fact": "Observation period",
+          "reason": "The authored records contain no observation date."
+        },
+        {
+          "fact": "Reuse terms",
+          "reason": "No resource licence or reuse terms are supplied with this example."
+        },
+        {
+          "fact": "Data support contact",
+          "reason": "No data support route is supplied with this example."
+        }
+      ],
+      "cautions": [
+        {
+          "summary": "Choose the matching release before looking up names.",
+          "details": "The declared relationship uses codes within the same release. A declared link does not establish that every record has a match.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:grants:definitions",
+                "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:awards",
+        "versionId": "urn:ddk-viewer:fixture:grants:awards:v1",
+        "representationId": "urn:ddk-viewer:fixture:grants:awards:v1:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 359
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:awards",
+        "versionId": "urn:ddk-viewer:fixture:grants:awards:v2",
+        "representationId": "urn:ddk-viewer:fixture:grants:awards:v2:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 249
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:programs",
+        "versionId": "urn:ddk-viewer:fixture:grants:programs:v1",
+        "representationId": "urn:ddk-viewer:fixture:grants:programs:v1:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 95
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:awards",
+        "versionId": "urn:ddk-viewer:fixture:grants:awards:withheld",
+        "representationId": "urn:ddk-viewer:fixture:grants:awards:withheld:json"
+      },
+      "resource": {
+        "purpose": "Illustrative unavailable or unresolved resource; no example records are supplied for this reference.",
+        "accessRequirements": "No records can be read here without an available retained resource.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records."
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:grants:dataset:awards",
+        "versionId": "urn:ddk-viewer:fixture:grants:awards:unresolved",
+        "representationId": "urn:ddk-viewer:fixture:grants:awards:unresolved:service"
+      },
+      "resource": {
+        "purpose": "Illustrative unavailable or unresolved resource; no example records are supplied for this reference.",
+        "accessRequirements": "No records can be read here without an available retained resource.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records."
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    }
+  ],
+  "guides": [
+    {
+      "id": "urn:ddk-viewer:fixture:grants:guide:lookup",
+      "title": "Connect awards to programs",
+      "question": "How can I find the program named by an example grant award?",
+      "summary": "Start with the records, then use Related data to inspect the declared code relationship. Choose versions in the same release. This guide demonstrates the process with synthetic examples and makes no real-world coverage claim.",
+      "author": {
+        "name": "DDK viewer example publisher"
+      },
+      "reviewedOn": "2026-11-07",
+      "coverage": {
+        "geography": "Geographic coverage is not supplied for this example.",
+        "population": "Authored example records only.",
+        "inclusion": "Listed example records, preserving missing, null, empty and repeated values.",
+        "exclusions": "Real-world records and source-population completeness are outside this example."
+      },
+      "reviewTrigger": "Review this guide when a linked definition, matching rule, data version, resource or access capability changes. Recheck the question with a participant before treating the guide as validated.",
+      "links": [
+        {
+          "label": "Start with awards",
+          "purpose": "Open the record description, fields and available versions.",
+          "target": {
+            "kind": "dataset",
+            "datasetId": "urn:ddk-viewer:fixture:grants:dataset:awards",
+            "definition": {
+              "contractId": "urn:ddk-viewer:fixture:grants:definition",
+              "version": "1.0.0",
+              "object": "awards",
+              "sourceSha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+            }
+          }
+        },
+        {
+          "label": "Understand program names",
+          "purpose": "Open the lookup dataset and its code definition; this does not perform a join.",
+          "target": {
+            "kind": "dataset",
+            "datasetId": "urn:ddk-viewer:fixture:grants:dataset:programs",
+            "definition": {
+              "contractId": "urn:ddk-viewer:fixture:grants:definition",
+              "version": "1.0.0",
+              "object": "programs",
+              "sourceSha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+            }
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Definitions of these synthetic examples",
+          "record": {
+            "uri": "urn:ddk-viewer:fixture:grants:definitions",
+            "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05"
+          }
+        }
+      ]
+    }
+  ]
+}

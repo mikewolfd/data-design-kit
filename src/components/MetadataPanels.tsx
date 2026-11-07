@@ -2,13 +2,28 @@ import { useState, type ReactNode } from 'react';
 import ImpactPanel from './ImpactPanel';
 import { EvidenceRecord } from './EvidenceRecord';
 import type { CatalogDataset, CatalogSnapshot, CatalogVersion } from '../domain/types';
-import { Badge, FieldTree, Facts, Notice, Raw, RecordLink, Section, Value } from './Primitives';
-import { objectOf, shortId, textValue, versionsOf, words } from '../lib/display';
-import { recordAccess, enumLabel } from '../lib/content';
+import { Badge, FieldTree, Facts, Notice, Raw, RecordLink, Section } from './Primitives';
+import { objectOf, shortId, textValue, titleOf, versionsOf, words } from '../lib/display';
+import { datasetIntroduction, recordAccess } from '../lib/content';
+import { publisherMetadata } from '../features/publisher-metadata';
+import {
+  CoverageContext,
+  DateContext,
+  Cautions,
+  ProvenanceContext,
+  AttributionContext,
+  HistoryNotes,
+} from '../features/dataset-context';
 
 type Context = { snapshot: CatalogSnapshot; dataset: CatalogDataset; version?: CatalogVersion };
-export function Overview({ snapshot, dataset, version }: Context) {
+export function Overview({
+  snapshot,
+  dataset,
+  version,
+  onViewData,
+}: Context & { onViewData?: () => void }) {
   const definition = snapshot.definitions[dataset.alias];
+  const introduction = datasetIntroduction(snapshot, dataset);
   const access = recordAccess(snapshot, dataset, version);
   const representations = snapshot.catalog.representations.filter((r) => r.version === version?.id);
   const fileAvailability = representations.some((r) => r.availability === 'available')
@@ -26,19 +41,16 @@ export function Overview({ snapshot, dataset, version }: Context) {
   return (
     <>
       <div className="overview-intro">
+        <p className="eyebrow">What this dataset is for</p>
+        <p>
+          {introduction.purpose || 'The publisher has not supplied the purpose of this dataset.'}
+        </p>
         <p className="eyebrow">What one record represents</p>
         <p className="purpose">
-          {dataset.rowMeaning || 'The publisher has not supplied what one record represents.'}
+          {introduction.rowMeaning || 'The publisher has not supplied what one record represents.'}
         </p>
         <Facts
           items={[
-            [
-              'Definition',
-              <>
-                <code>{dataset.definition.object}</code>
-                <span className="subline">Revision {dataset.definition.version}</span>
-              </>,
-            ],
             ['View records here', access.label],
             [
               'File availability',
@@ -64,6 +76,16 @@ export function Overview({ snapshot, dataset, version }: Context) {
       </div>
       <Notice title="What you can do here">
         {access.detail} You can explore the field descriptions and recorded checks below.
+        <div className="intro-actions">
+          <a href="#field-dictionary">Explore field meanings</a>
+          {onViewData && versionsOf(snapshot, dataset).length > 0 && (
+            <button onClick={onViewData}>
+              {access.state === 'available'
+                ? 'View records and download options'
+                : 'View access options'}
+            </button>
+          )}
+        </div>
       </Notice>
       {products.length > 0 && (
         <Section title="Collections containing this dataset">
@@ -79,40 +101,63 @@ export function Overview({ snapshot, dataset, version }: Context) {
         </Section>
       )}
       <Section title="Coverage">
-        <CoverageFacts version={version} />
+        <CoverageContext snapshot={snapshot} dataset={dataset} version={version} />
       </Section>
-      <Section
-        title="What each field means"
-        aside={
-          <span className="muted">
-            {definition?.properties?.length ?? 0} top-level{' '}
-            {definition?.properties?.length === 1 ? 'field' : 'fields'}
-          </span>
-        }
-      >
-        {assembly.disclosedDefinitionPaths !== undefined && (
-          <Notice title="Some field definitions may be omitted from this public view">
-            An omitted field is not evidence that the source has no such field.
-          </Notice>
-        )}
-        {definition?.description && definition.description !== dataset.rowMeaning && (
-          <details>
-            <summary>Publisher’s technical dataset description</summary>
-            <p>{definition.description}</p>
-          </details>
-        )}
-        {definition?.properties?.length ? (
-          <FieldTree fields={definition.properties} />
-        ) : (
-          <p className="muted">
-            No field definitions are disclosed. Dataset metadata may still be available.
-          </p>
-        )}
+      <Section title="Important limits">
+        <Cautions snapshot={snapshot} dataset={dataset} version={version} />
+      </Section>
+      <Section title="Dates and update expectations">
+        <DateContext snapshot={snapshot} dataset={dataset} version={version} />
+      </Section>
+      <div id="field-dictionary" tabIndex={-1}>
+        <Section
+          title="What each field means"
+          aside={
+            <span className="muted">
+              {definition?.properties?.length ?? 0} top-level{' '}
+              {definition?.properties?.length === 1 ? 'field' : 'fields'}
+            </span>
+          }
+        >
+          {assembly.disclosedDefinitionPaths !== undefined && (
+            <Notice title="Some field definitions may be omitted from this public view">
+              An omitted field is not evidence that the source has no such field.
+            </Notice>
+          )}
+          {definition?.description && definition.description !== dataset.rowMeaning && (
+            <details>
+              <summary>Publisher’s technical dataset description</summary>
+              <p>{definition.description}</p>
+            </details>
+          )}
+          {definition?.properties?.length ? (
+            <FieldTree
+              fields={definition.properties}
+              identities={identities}
+              documentedValues={
+                publisherMetadata(snapshot).datasets.get(dataset.id)?.documentedValues
+              }
+            />
+          ) : (
+            <p className="muted">
+              No field definitions are disclosed. Dataset metadata may still be available.
+            </p>
+          )}
+        </Section>
+      </div>
+      <Section title="Credit, reuse terms and help">
+        <AttributionContext snapshot={snapshot} dataset={dataset} version={version} />
       </Section>
       <Section title="Identifiers & source records">
         <Facts
           items={[
             ['Dataset', <code>{dataset.id}</code>],
+            [
+              'Definition object and revision',
+              <>
+                <code>{dataset.definition.object}</code> · {dataset.definition.version}
+              </>,
+            ],
             ['Definition publisher', <code>{dataset.definition.contractId}</code>],
             ['Source definition', <RecordLink record={dataset.definition.source} />],
           ]}
@@ -128,21 +173,20 @@ export function Overview({ snapshot, dataset, version }: Context) {
 export function Evidence({ snapshot, dataset, version }: Context) {
   const [all, setAll] = useState(false);
   const relevant = snapshot.report.checks.filter(
-    (c) =>
-      c.subject === dataset.alias ||
-      c.subject === dataset.id ||
-      c.subject === version?.id ||
-      c.subject.includes(dataset.alias),
+    (c) => c.subject === dataset.alias || c.subject === dataset.id || c.subject === version?.id,
   );
   const checks = all ? snapshot.report.checks : relevant;
   const required = snapshot.report.checks.filter(
     (c) => c.required && c.applicable && c.status !== 'passed',
   );
   const observed = snapshot.catalog.checks.filter((c) => c.subject === version?.id);
-  const sources = snapshot.catalog.sources.filter((s) => version?.sources.includes(s.id));
   return (
     <>
       <Section title="What has been checked">
+        <p>
+          Dataset: <strong>{titleOf(dataset)}</strong>.{' '}
+          {version ? <>Selected version scope: {version.scope}.</> : 'No data version is selected.'}
+        </p>
         <Notice
           title={
             required.length
@@ -169,7 +213,7 @@ export function Evidence({ snapshot, dataset, version }: Context) {
         />
       </Section>
       <Section title="Coverage and remaining unknowns">
-        <CoverageFacts version={version} />
+        <CoverageContext snapshot={snapshot} dataset={dataset} version={version} />
       </Section>
       <Section title="Checks for this data version">
         <p>
@@ -197,6 +241,9 @@ export function Evidence({ snapshot, dataset, version }: Context) {
             <div className="evidence-row" key={i}>
               <div>
                 <strong>{c.scope}</strong>
+                <span className="subline">
+                  Check subject: {titleOf(dataset)} · {version?.scope}
+                </span>
                 {c.reason && <p>{c.reason}</p>}
                 <details>
                   <summary>Rule and evaluator details</summary>
@@ -266,25 +313,11 @@ export function Evidence({ snapshot, dataset, version }: Context) {
           </p>
         )}
       </Section>
-      <Section title="Source captures">
-        {sources.length ? (
-          sources.map((s) => (
-            <div className="evidence-row" key={s.id}>
-              <div>
-                <strong>{s.scope || shortId(s.id)}</strong>
-                <RecordLink record={s.record} />
-                <Raw value={s} label="Source identifiers and saved evidence" />
-              </div>
-              <Badge status={s.outcome} />
-            </div>
-          ))
-        ) : (
-          <p className="muted">
-            No source captures are linked to this version. Source coverage remains unknown.
-          </p>
-        )}
+      <Section title="Where this data comes from">
+        <ProvenanceContext snapshot={snapshot} dataset={dataset} version={version} />
       </Section>
       <Section title="Technical check details">
+        <p>Acceptance by the publishing system: not established here.</p>
         <p>
           This portal displays recorded publisher evidence. It does not make or refresh acceptance
           decisions.
@@ -372,6 +405,12 @@ export function Activity({ snapshot, dataset, version }: Context) {
   );
   return (
     <>
+      <Section title="Publisher change notes">
+        <HistoryNotes snapshot={snapshot} dataset={dataset} version={version} />
+      </Section>
+      <Section title="Dates and update expectations">
+        <DateContext snapshot={snapshot} dataset={dataset} version={version} />
+      </Section>
       <Section title="Recorded processing events">
         {runs.length ? (
           runs.map((r) => (
@@ -588,47 +627,4 @@ function coverageLabel(version: CatalogVersion) {
         )
         .join('; ')
     : 'Unknown — no coverage information recorded';
-}
-
-function CoverageFacts({ version }: { version?: CatalogVersion }) {
-  return (
-    <>
-      {version?.coverage?.length ? (
-        version.coverage.map((c, i) => (
-          <div className="evidence-row" key={i}>
-            <div>
-              <strong>{c.scope}</strong>
-              <p>
-                {c.observed === undefined ? (
-                  'Observed count not recorded.'
-                ) : (
-                  <>
-                    <Value value={c.observed} /> {c.unit === 'rows' ? 'records' : c.unit} observed.
-                  </>
-                )}
-              </p>
-              <p>
-                {c.expected === undefined ? (
-                  'Expected population total not recorded in the catalog.'
-                ) : (
-                  <>
-                    Expected population total: <Value value={c.expected} />{' '}
-                    {c.unit === 'rows' ? 'records' : c.unit}.
-                  </>
-                )}
-              </p>
-              <p>Coverage status applies to: {c.scope}</p>
-              <RecordLink record={c.record} />
-            </div>
-            <Badge status={c.status}>Coverage: {enumLabel(c.status)}</Badge>
-          </div>
-        ))
-      ) : (
-        <p className="muted">
-          Coverage is unknown. No comparable observed and expected population has been supplied for
-          this version.
-        </p>
-      )}
-    </>
-  );
 }

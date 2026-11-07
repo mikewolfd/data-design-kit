@@ -49,7 +49,7 @@ test('opaque release references stay in details rather than primary choice label
     input.catalog.releases[0].reference.value = value;
     assert.equal(
       versionChoices(input, dataset, [version])[0].label,
-      'Watershed observations · Version label not supplied · JSON file',
+      'Watershed observations · Version label not supplied · JSON file · 3 rows observed (Authored sample rows only)',
     );
   }
   input.catalog.releases[0].reference.value = 'release-1';
@@ -68,7 +68,11 @@ test('duplicate descriptions have list discriminators and never create a publish
   delete input.catalog.currentSelection;
   const dataset = input.catalog.datasets.find((row) => row.alias === 'orders')!;
   const versions = input.catalog.versions.filter((row) => row.dataset === dataset.alias);
-  const choices = versionChoices(input, dataset, versions);
+  const choices = versionChoices(
+    input,
+    dataset,
+    versions.map((version) => ({ ...version, coverage: undefined })),
+  );
   assert.ok(choices.length > 1);
   assert.match(choices[0].label, /Choice 1$/);
   assert.match(choices[1].label, /Choice 2$/);
@@ -79,5 +83,39 @@ test('duplicate descriptions have list discriminators and never create a publish
   assert.equal(
     representationChoices(dataset, [{ ...files[0], availability: 'unknown' }])[0].label,
     'Example orders · Parquet file · Availability unknown',
+  );
+});
+
+test('version choices retain exact observed counts and their supplied scope without inferring age', () => {
+  const input = snapshot('fixtures/grants/catalog.ddk.json');
+  const dataset = input.catalog.datasets.find((row) => row.alias === 'awards')!;
+  const version = input.catalog.versions.find((row) => row.id.endsWith('awards:v1'))!;
+  const coverage = version.coverage![0];
+  for (const observed of [0, { $number: '18446744073709551615' }]) {
+    const choice = versionChoices(input, dataset, [
+      { ...version, coverage: [{ ...coverage, observed }] },
+    ])[0];
+    assert.ok(
+      choice.label.includes(
+        `${typeof observed === 'number' ? observed : observed.$number} rows observed (Authored sample rows only)`,
+      ),
+    );
+    assert.doesNotMatch(choice.label, /latest|oldest|newest|current/i);
+    assert.equal(choice.id, version.id);
+  }
+  for (const coverageRows of [
+    undefined,
+    [{ ...coverage, observed: undefined }],
+    [{ ...coverage, observed: null }],
+    [coverage, { ...coverage, scope: 'A different population' }],
+  ]) {
+    assert.doesNotMatch(
+      versionChoices(input, dataset, [{ ...version, coverage: coverageRows }])[0].label,
+      /rows observed/,
+    );
+  }
+  assert.doesNotMatch(
+    versionChoices(input, dataset, [{ ...version, referenceDisclosure: 'withheld' }])[0].label,
+    /rows observed/,
   );
 });

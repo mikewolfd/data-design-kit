@@ -15,7 +15,7 @@
   "sourceInventory": [
     {
       "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-      "sha256": "24760c79edef3cdc2a52c61fa30566582f184f515512ff77526394461081ea9e",
+      "sha256": "0ceab02d57e64d9269edfcdf574b526457a1b6a1b9912da2dc31a92438746b3d",
       "role": "definition"
     },
     {
@@ -42,7 +42,7 @@
       "version": "1.0.0",
       "definition": {
         "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-        "sha256": "375b440dba16d8cc51e368dc93c9b7edcbc289deee1b7088dc732da3cc7de166"
+        "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
       },
       "ports": [
         {
@@ -75,7 +75,7 @@
         "object": "observations",
         "source": {
           "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-          "sha256": "24760c79edef3cdc2a52c61fa30566582f184f515512ff77526394461081ea9e"
+          "sha256": "0ceab02d57e64d9269edfcdf574b526457a1b6a1b9912da2dc31a92438746b3d"
         }
       }
     },
@@ -91,7 +91,7 @@
         "object": "stations",
         "source": {
           "uri": "urn:ddk-viewer:fixture:watershed:definitions",
-          "sha256": "24760c79edef3cdc2a52c61fa30566582f184f515512ff77526394461081ea9e"
+          "sha256": "0ceab02d57e64d9269edfcdf574b526457a1b6a1b9912da2dc31a92438746b3d"
         }
       }
     }
@@ -646,41 +646,49 @@
           "properties": [
             {
               "name": "id",
+              "businessName": "Record identifier",
               "logicalType": "integer",
               "description": "Identifier for this observation. Large identifiers are preserved exactly.",
               "physicalType": "int64"
             },
             {
               "name": "station_code",
+              "businessName": "Station code",
               "logicalType": "string",
               "description": "Station code, scoped through the release"
             },
             {
               "name": "concentration",
+              "businessName": "Concentration",
               "logicalType": "number",
               "description": "Exact decimal concentration in milligrams per litre",
               "physicalType": "decimal128(28,18)"
             },
             {
               "name": "readings",
+              "businessName": "Nested readings",
               "logicalType": "array",
               "description": "Null, empty and populated lists differ",
               "items": {
                 "name": "reading",
+                "businessName": "Reading",
                 "logicalType": "object",
                 "description": "Nested measurement",
                 "properties": [
                   {
                     "name": "depth",
+                    "businessName": "Reading depth",
                     "logicalType": "number",
                     "description": "Depth recorded for the nested reading. A measurement unit is not specified in this example."
                   },
                   {
                     "name": "flags",
+                    "businessName": "Reading labels",
                     "logicalType": "array",
                     "description": "Recorded labels for a reading. Repeated labels remain separate.",
                     "items": {
                       "name": "flag",
+                      "businessName": "Reading label",
                       "logicalType": "string",
                       "description": "A recorded label; value codes are not defined in this example."
                     }
@@ -690,21 +698,25 @@
             },
             {
               "name": "note",
+              "businessName": "Record note",
               "logicalType": "string",
               "description": "Earlier note description"
             },
             {
               "name": "$number",
+              "businessName": "Literal number-tag field",
               "logicalType": "string",
               "description": "Literal source key preserved by escaped transport"
             },
             {
               "name": "metadata",
+              "businessName": "Source metadata",
               "logicalType": "object",
               "description": "Literal tag-shaped source object",
               "properties": [
                 {
                   "name": "$number",
+                  "businessName": "Literal number-tag field",
                   "logicalType": "string",
                   "description": "Source text, not a number transport tag"
                 }
@@ -719,11 +731,13 @@
           "properties": [
             {
               "name": "code",
+              "businessName": "Reference code",
               "logicalType": "string",
               "description": "Station code"
             },
             {
               "name": "name",
+              "businessName": "Display name",
               "logicalType": "string",
               "description": "Station label"
             }

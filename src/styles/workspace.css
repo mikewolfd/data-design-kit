@@ -353,6 +353,27 @@ main:focus {
   color: #728269;
   margin-top: 4px;
 }
+.dataset-result-summary {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+.dataset-result-access {
+  display: block;
+  margin-top: 7px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
 .dataset-symbol {
   font-size: 18px;
   color: #829478;
@@ -1606,5 +1627,330 @@ main:focus {
     max-width: 100%;
     width: auto;
     flex: 1;
+  }
+}
+
+/* Place after the existing field tree and responsive rules. */
+.field .field-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 3px 12px;
+}
+
+.field-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.field-label {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.field-native {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.field .field-description {
+  grid-column: 1;
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.field-heading code,
+.field-meta code,
+.field-values code {
+  white-space: break-spaces;
+}
+
+.field-summary > .field-copy {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: start;
+}
+
+.field-copy {
+  min-height: 36px;
+  border: 1px solid var(--line);
+}
+
+.field-copy:focus-visible,
+.field summary:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.field-copy-status:not(:empty) {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.field .field-meta,
+.field .field-values,
+.field .field-identities,
+.field .field-row summary,
+.field-limit {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.field .field-row summary {
+  display: list-item;
+}
+
+.field .field-row summary > code {
+  display: inline;
+  min-width: 0;
+}
+
+.field .field-meta > dl,
+.field-values dl,
+.field .field-identities {
+  margin: 6px 0 0;
+}
+
+.field .field-meta > dl > div,
+.field-values dl > div,
+.field-identities > div {
+  margin: 5px 0;
+}
+
+.field .field-meta dt,
+.field-values dt,
+.field-identities dt {
+  font-weight: 600;
+}
+
+.field .field-meta dd,
+.field-values dd,
+.field-identities dd {
+  margin: 0;
+}
+
+.field .field-meta code {
+  font-size: inherit;
+}
+
+.field-meta dd .field-copy {
+  margin-inline-start: 6px;
+}
+
+.field .field-row details > .field-list,
+.field .field-row > .field-list {
+  margin: 8px 0 0;
+  border-inline-start: 1px solid var(--line);
+  padding-inline-start: clamp(5px, 2vw, 12px);
+}
+
+@media (max-width: 600px) {
+  .field-summary > .field-copy {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+
+  .field-copy {
+    min-height: 44px;
+  }
+}
+
+/* Add after the shared workspace section styles. */
+.dataset-context,
+.context-cautions {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.context-scope + .context-scope {
+  border-top: 1px solid var(--line);
+  margin-block-start: 14px;
+  padding-block-start: 14px;
+}
+
+.context-scope h3 {
+  margin-block-end: 6px;
+}
+
+.context-scope details,
+.dataset-context > details,
+.context-cautions details {
+  margin-block-start: 8px;
+}
+
+.context-links {
+  margin-block: 6px 12px;
+  padding-inline-start: 20px;
+}
+
+.context-links > li + li {
+  margin-block-start: 6px;
+}
+
+.context-cautions > .notice + .notice,
+.context-cautions + .context-cautions {
+  margin-block-start: 8px;
+}
+
+.context-cautions .notice-copy > :first-child {
+  margin-block-start: 0;
+}
+
+.context-cautions .notice-copy > :last-child {
+  margin-block-end: 0;
+}
+
+.context-citation {
+  white-space: pre-wrap;
+}
+
+.context-copy {
+  min-height: 36px;
+  border: 1px solid var(--line);
+}
+
+.context-copy-status:not(:empty) {
+  display: block;
+  margin-block-start: 5px;
+}
+
+@media (max-width: 600px) {
+  .context-copy {
+    min-height: 44px;
+  }
+}
+
+.resource-details,
+.result-context {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.resource-details > details,
+.result-context > details {
+  border: 1px solid var(--border, #dbe1e9);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.8rem;
+}
+.resource-details summary,
+.result-context summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.resource-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+.resource-facts > div {
+  min-width: 0;
+}
+.resource-facts dt {
+  font-weight: 600;
+}
+.resource-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.resource-details p,
+.result-context p,
+.result-context code {
+  overflow-wrap: anywhere;
+}
+.result-context pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Discovery keeps the deciding facts visible, including on narrow screens. */
+.dataset-variant {
+  display: block;
+  margin-top: 6px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.discovery-facets {
+  margin-top: 12px;
+}
+.discovery-facets .filter-label {
+  display: block;
+}
+.discovery-facets select {
+  width: 100%;
+}
+.discovery-guides {
+  margin-top: 16px;
+}
+.discovery-guides button {
+  display: block;
+  text-align: left;
+  text-decoration: underline;
+  line-height: 1.5;
+}
+.catalog-guide {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.catalog-guide h3 {
+  margin: 0;
+  font-size: 20px;
+}
+.guide-links {
+  padding-left: 22px;
+}
+.guide-links li {
+  margin: 16px 0;
+}
+.guide-links p {
+  margin: 5px 0;
+}
+.guide-scope > div {
+  margin: 8px 0;
+}
+.guide-scope dt {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.guide-scope dd {
+  margin: 0;
+}
+.read-start {
+  margin: 18px 0;
+}
+@media (max-width: 800px) {
+  .dataset-nav {
+    display: block;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  .dataset-nav > button {
+    width: 100%;
+    max-width: none;
+  }
+  .dataset-nav strong {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: 14px;
+  }
+  .dataset-nav small {
+    font-size: 12px;
+  }
+  .nav-label {
+    display: flex;
   }
 }

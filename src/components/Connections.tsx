@@ -16,14 +16,23 @@ import {
   objectOf,
   pathLabel,
   shortId,
+  safeLink,
   titleOf,
   words,
 } from '../lib/display';
 import { Badge, Facts, Notice, Raw, Section, BlankValuesHelp } from './Primitives';
-import { enumLabel, formatLabel } from '../lib/content';
+import { enumLabel, formatLabel, isRecordResource } from '../lib/content';
 import { ResultTable } from './DataPanel';
 import { EvidenceRecord } from './EvidenceRecord';
 import { exactEqual } from '../domain/exact';
+import { Cautions } from '../features/dataset-context';
+import { publisherMetadata } from '../features/publisher-metadata';
+import {
+  ResultContext,
+  queryExport,
+  queryResultMatches,
+  resultCaption,
+} from '../features/resource-details';
 
 function RelationshipAssessment({
   snapshot,
@@ -92,10 +101,12 @@ function Recipe({
   recipe,
   snapshot,
   version,
+  dataset,
 }: {
   recipe: CatalogRecipe;
   snapshot: CatalogSnapshot;
   version?: CatalogVersion;
+  dataset: CatalogDataset;
 }) {
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [releaseId, setRelease] = useState('');
@@ -164,7 +175,10 @@ function Recipe({
             : v.id === versionsByInput[input]),
       );
       const representations = snapshot.catalog.representations.filter(
-        (r) => r.version === versions[0]?.id && r.availability === 'available',
+        (r) =>
+          r.version === versions[0]?.id &&
+          r.availability === 'available' &&
+          isRecordResource(snapshot, r),
       );
       if (!dataset || versions.length !== 1 || !representations.length) {
         bindingProblem = `Input ${input} needs one data version and an available file, table or service in the selected group.`;
@@ -224,7 +238,13 @@ function Recipe({
     queryRef.current = body;
     try {
       const value = await request<QueryResult>('/api/query', abort.signal, body);
-      if (!abort.signal.aborted) setResult(value);
+      if (!abort.signal.aborted) {
+        if (!queryResultMatches(snapshot, body, value))
+          throw new Error(
+            'The response does not match this query and its selected inputs. Run the query again to retry.',
+          );
+        setResult(value);
+      }
     } catch (e) {
       if (!abort.signal.aborted) {
         setError((e as Error).message);
@@ -260,15 +280,21 @@ function Recipe({
     }
   }
   return (
-    <article className="recipe">
+    <article className="recipe" id={`recipe-${recipe.id}`}>
       <h3>{recipe.title || 'Query title not supplied'}</h3>
       {recipe.notes?.map((n, i) => (
         <p key={i}>{n}</p>
       ))}
       <Facts
         items={[
-          ['SQL engine', recipe.dialect],
-          ['Each result represents', recipe.resultGrain || recipe.resultDataset || 'Not supplied'],
+          [
+            'Each result represents',
+            recipe.resultGrain ||
+              snapshot.catalog.datasets.find(
+                (item) => item.alias === recipe.resultDataset || item.id === recipe.resultDataset,
+              )?.rowMeaning ||
+              'The publisher has not supplied what each result represents.',
+          ],
           [
             'Datasets used',
             Object.entries(recipe.inputs).map(([name, alias]) => (
@@ -290,33 +316,10 @@ function Recipe({
           ],
         ]}
       />
-      <Raw value={recipe} label="Technical query details" />
+      <Cautions snapshot={snapshot} recipe={recipe} />
       <p className="muted">
         Related matching rules provide context; they do not add datasets to this query.
       </p>
-      <details
-        className="sql-preview"
-        onToggle={(e) => {
-          if (e.currentTarget.open) void showSql();
-        }}
-      >
-        <summary>View SQL</summary>
-        <p>Structured Query Language (SQL) describes how this query uses the data.</p>
-        {sqlLoading ? (
-          <p role="status">Loading SQL…</p>
-        ) : (
-          <pre>{sql ?? 'Close and reopen to retry loading the SQL file.'}</pre>
-        )}
-        {sqlError && (
-          <Notice
-            title="SQL could not be loaded"
-            kind="error"
-            action={<button onClick={() => void showSql()}>Retry loading SQL</button>}
-          >
-            {sqlError}
-          </Notice>
-        )}
-      </details>
       {querySupported ? (
         <form onSubmit={run} className="recipe-form">
           <p>
@@ -482,6 +485,33 @@ function Recipe({
           />
         </Notice>
       )}
+      <details
+        className="sql-preview"
+        onToggle={(e) => {
+          if (e.currentTarget.open) void showSql();
+        }}
+      >
+        <summary>View SQL</summary>
+        <p>Structured Query Language (SQL) describes how this query uses the data.</p>
+        <p>
+          SQL engine: <code>{recipe.dialect}</code>
+        </p>
+        {sqlLoading ? (
+          <p role="status">Loading SQL…</p>
+        ) : (
+          <pre>{sql ?? 'Close and reopen to retry loading the SQL file.'}</pre>
+        )}
+        {sqlError && (
+          <Notice
+            title="SQL could not be loaded"
+            kind="error"
+            action={<button onClick={() => void showSql()}>Retry loading SQL</button>}
+          >
+            {sqlError}
+          </Notice>
+        )}
+      </details>
+      <Raw value={recipe} label="Technical query details" />
       {error && (
         <Notice
           title={
@@ -531,6 +561,16 @@ function Recipe({
       )}
       {result?.status === 'ok' && (
         <>
+          {queryRef.current && (
+            <ResultContext
+              kind="query"
+              snapshot={snapshot}
+              dataset={dataset}
+              recipe={recipe}
+              request={queryRef.current}
+              result={result}
+            />
+          )}
           <div className="result-bar">
             <Badge status="unknown">
               {result.execution?.kind === 'fixture'
@@ -540,14 +580,11 @@ function Recipe({
             <button
               onClick={() => {
                 try {
-                  downloadJson('ddk-query-result.json', {
-                    format: 'ddk-viewer-query/1',
-                    scope: 'Up to 25 returned query rows; not the full dataset',
-                    numericEncoding: '{$number: exact JSON number lexeme}',
-                    catalog: snapshot.identity,
-                    request: queryRef.current,
-                    result,
-                  });
+                  if (!queryRef.current) throw new Error('Run the query again before downloading.');
+                  downloadJson(
+                    'ddk-query-result.json',
+                    queryExport(snapshot, queryRef.current, result),
+                  );
                 } catch (e) {
                   setError((e as Error).message);
                   setErrorCode('export_too_large');
@@ -567,7 +604,18 @@ function Recipe({
             <ResultTable
               rows={result.rows}
               columns={result.columns}
-              caption={`Results from ${recipe.title || 'query without a supplied title'} · up to 25 returned rows`}
+              caption={
+                queryRef.current
+                  ? resultCaption({
+                      kind: 'query',
+                      snapshot,
+                      dataset,
+                      recipe,
+                      request: queryRef.current,
+                      result,
+                    })
+                  : undefined
+              }
             />
           ) : (
             <Notice title="No matching results">
@@ -593,13 +641,19 @@ export function Connections({
   version,
   onNavigate,
   releaseId,
+  focusedRecipeId,
 }: {
   snapshot: CatalogSnapshot;
   dataset: CatalogDataset;
   version?: CatalogVersion;
   onNavigate: (id: string, versionId?: string, releaseId?: string) => void;
   releaseId?: string;
+  focusedRecipeId?: string;
 }) {
+  useEffect(() => {
+    if (focusedRecipeId)
+      document.getElementById(`recipe-${focusedRecipeId}`)?.scrollIntoView({ block: 'start' });
+  }, [focusedRecipeId]);
   const relationships = snapshot.catalog.relationships.filter(
     (r) =>
       r.source.dataset === dataset.alias ||
@@ -610,7 +664,9 @@ export function Connections({
   const recipes = snapshot.catalog.recipes.filter(
     (r) =>
       Object.values(r.inputs).includes(dataset.alias) ||
-      Object.values(r.inputs).includes(dataset.id),
+      Object.values(r.inputs).includes(dataset.id) ||
+      r.resultDataset === dataset.alias ||
+      r.resultDataset === dataset.id,
   );
   const assembly = objectOf(snapshot.catalog.extensions?.['urn:ddk:catalog:assembly']);
   const assessmentScope = objectOf(assembly.relationshipAssessmentScope);
@@ -666,6 +722,10 @@ export function Connections({
                       {titleOf(target)} ·{' '}
                       {boundTarget ? 'version in the same release' : 'dataset description'} ↗
                     </button>
+                  ) : r.target.external && safeLink(r.target.external) ? (
+                    <a href={safeLink(r.target.external)} target="_blank" rel="noreferrer">
+                      Open external source · {new URL(r.target.external).hostname}
+                    </a>
                   ) : (
                     <code>{r.target.external || r.target.dataset}</code>
                   )}
@@ -747,6 +807,11 @@ export function Connections({
           </span>
         }
       >
+        {focusedRecipeId && !recipes.some((recipe) => recipe.id === focusedRecipeId) && (
+          <Notice title="The linked query is not listed for this dataset">
+            Choose one of the documented queries below or return to its guide.
+          </Notice>
+        )}
         {recipes.length ? (
           recipes.map((r) => (
             <Recipe
@@ -754,6 +819,7 @@ export function Connections({
               recipe={r}
               snapshot={snapshot}
               version={version}
+              dataset={dataset}
             />
           ))
         ) : (
@@ -762,6 +828,24 @@ export function Connections({
           </Notice>
         )}
       </Section>
+      {!!publisherMetadata(snapshot).contextualRelations.length && (
+        <Section title="Publisher’s upstream context">
+          <p>
+            These are publisher descriptions of upstream tables for this catalog. They do not
+            establish local datasets, executable joins, or observed matches.
+          </p>
+          {publisherMetadata(snapshot).contextualRelations.map((relation) => (
+            <details className="context-scope" key={relation.id}>
+              <summary>
+                {words(relation.table)} · {relation.family}
+              </summary>
+              <p>{relation.rowMeaning}</p>
+              <p>{relation.limits}</p>
+              <Raw value={relation} label="Exact upstream table declaration" />
+            </details>
+          ))}
+        </Section>
+      )}
     </>
   );
 }
