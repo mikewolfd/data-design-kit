@@ -554,6 +554,21 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/publication-consumer-source-01/consumer-01/junit.xml"
       ],
       "scopeNote": "Two focused actual local source-consumer cases pass against immutable native publication03. This does not extend installed dev6 native qualification or establish external authorization, dispatch, full native gate or application acceptance."
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-MODEL-BINDINGS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/catalog/test_managed_jobs.py::test_producer_model_bindings_keep_current_custody_and_original_schema_without_reads",
+        "tests/catalog/test_managed_jobs.py::test_producer_model_bindings_keep_proof_and_adopted_input_orders_distinct",
+        "tests/catalog/test_managed_jobs.py::test_producer_model_bindings_require_a_verified_accepted_proof",
+        "tests/catalog/test_managed_jobs.py::test_producer_model_bindings_refuse_incomplete_or_ambiguous_adopted_scope"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-model-bindings-source-02/handoff.json",
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-model-bindings-source-02/retained-comparison.json"
+      ],
+      "scopeNote": "Fourteen independent metadata cases and exact comparison to an earlier actual accepted native model pass. No new native execution, payload read, availability or installed qualification is claimed."
     }
   ]
 }

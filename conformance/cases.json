@@ -3788,6 +3788,22 @@
         "selection": "not_requested",
         "sameOperationId": true
       }
+    },
+    {
+      "id": "CASE-MANAGED-PRODUCER-MODEL-BINDINGS",
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011"
+      ],
+      "profile": "runtime.docspec-managed",
+      "runtimeStatus": "planned",
+      "scenario": "Compose independent selectors, exact schema IPC, adoption, current proof custody and accepted prerequisite from verified accepted version 3 proof metadata without artifact opens. Preserve proof observation order separately from explicitly supplied unique complete adopted prerequisite order. Refuse unverified, unaccepted, earlier-profile or model evidence and ambiguous/incomplete input scope. Receiving authority and local model inputs remain caller-owned; DocSpec independently resolves native admission.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

@@ -229,6 +229,45 @@ class VerifiedJobEvidence:
         return {section: tuple(row["name"] for row in self.manifest[section]) for section in VIEW_SECTIONS}
 
 
+def producer_model_bindings(proof, *, prerequisite_inputs):
+    """Compose model inputs from an already verified, accepted producer proof.
+
+    Return independent ``inputs``, ``schemas`` and native ``request`` values.
+    ``prerequisite_inputs`` preserves the caller's adopted-definition order,
+    which may differ from the proof's input order. The caller supplies receiving
+    owner/operation and authority conditions and checks its model inventory.
+    DocSpec resolves the adoption, custody and prerequisite when admitting it.
+    This helper opens no files and establishes no new acceptance or availability.
+    """
+    _require(isinstance(proof, VerifiedJobEvidence) and proof.accepted is not None
+             and proof.manifest.get("profile") == PRODUCER_COMPLETION_PROFILE
+             and proof.manifest.get("producer_evidence", {}).get("role") == "proof",
+             "Model bindings require a verified accepted producer proof.")
+    views = proof.view_set["inputs"]
+    _require(isinstance(prerequisite_inputs, (list, tuple))
+             and all(isinstance(name, str) for name in prerequisite_inputs)
+             and len(prerequisite_inputs) == len(views)
+             and len(set(prerequisite_inputs)) == len(prerequisite_inputs)
+             and set(prerequisite_inputs) == {view["name"] for view in views},
+             "Model bindings require the complete unique adopted input order.")
+    schema_by_name = {item["name"]: item["schema_sha256"] for item in proof.manifest["inputs"]}
+    return deepcopy({
+        "inputs": [view["selector"] for view in views],
+        "schemas": {view["name"]: proof.manifest["schemas"][schema_by_name[view["name"]]] for view in views},
+        "request": {
+            "producer_adoption": proof.manifest["producer_evidence"]["adoption"],
+            "snapshot_inputs": [{"name": view["name"],
+                                 "metadata_sha256": view["snapshot_custody"]["metadata_sha256"],
+                                 "metadata_size": view["snapshot_custody"]["metadata_size"],
+                                 "reuse_from": view["custody_reference"]} for view in views],
+            "prerequisites": [{"profile": PRODUCER_PREREQUISITE_PROFILE,
+                               "candidate": proof.candidate,
+                               "accepted_qualification": proof.accepted["identity"],
+                               "inputs": list(prerequisite_inputs)}],
+        },
+    })
+
+
 def verify_completed_job(result, *, require_accepted=False):
     """Check retained exact completion bytes and any attached native acceptance.
 

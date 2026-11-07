@@ -20,7 +20,7 @@ from ddk.docspec_job_evidence import (
     ACCEPTANCE_FIELDS, CANDIDATE_SCHEME, COMPLETION_PROFILE, COUNTER_EVALUATOR,
     COUNTER_PROFILE, COUNTER_SEMANTICS, VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE, SNAPSHOT_VIEW_PROFILE,
     PRODUCER_COMPLETION_PROFILE, PRODUCER_VIEW_PROFILE, PRODUCER_PREREQUISITE_PROFILE,
-    SNAPSHOT_CUSTODY_PROFILE, JobEvidenceError, verify_admitted_request, verify_completed_job,
+    SNAPSHOT_CUSTODY_PROFILE, JobEvidenceError, producer_model_bindings, verify_admitted_request, verify_completed_job,
 )
 from ddk.documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
 
@@ -784,6 +784,98 @@ def _producer_job(native_snapshot_job, tmp_path, role):
 @pytest.fixture
 def native_producer_job(native_snapshot_job, tmp_path):
     return _producer_job(native_snapshot_job, tmp_path, "model")
+
+
+def test_producer_model_bindings_keep_current_custody_and_original_schema_without_reads(native_snapshot_job, tmp_path, monkeypatch):
+    # This proof itself reused an older input; the next model must use the
+    # proof's current custody reference, not its earlier donor grant.
+    row = _producer_job(_with_input_custody(native_snapshot_job, reuse=True), tmp_path, "proof")
+    proof = verify_completed_job(row, require_accepted=True)
+    before = deepcopy(proof.manifest)
+    monkeypatch.setattr(Path, "open", lambda *_args, **_kwargs: pytest.fail("Composing proof bindings cannot open artifacts"))
+    bindings = producer_model_bindings(proof, prerequisite_inputs=["source"])
+    assert set(bindings) == {"inputs", "schemas", "request"}
+    assert bindings["inputs"] == [proof.view_set["inputs"][0]["selector"]]
+    assert bindings["schemas"] == {"source": proof.manifest["schemas"][proof.manifest["inputs"][0]["schema_sha256"]]}
+    request = bindings["request"]
+    assert set(request) == {"producer_adoption", "snapshot_inputs", "prerequisites"}
+    assert request["producer_adoption"] == proof.manifest["producer_evidence"]["adoption"]
+    snapshot = request["snapshot_inputs"][0]
+    assert snapshot["name"] == "source"
+    assert snapshot["metadata_sha256"] == proof.view_set["inputs"][0]["snapshot_custody"]["metadata_sha256"]
+    assert snapshot["metadata_size"] == proof.view_set["inputs"][0]["snapshot_custody"]["metadata_size"]
+    assert snapshot["reuse_from"] == row["input_custody"][0]
+    assert snapshot["reuse_from"]["operation"] == "original"
+    assert proof.view_set["inputs"][0]["custody_grant"]["source"]["operation"] == "prior_consumer"
+    assert request["prerequisites"] == [{"profile": PRODUCER_PREREQUISITE_PROFILE,
+                                          "candidate": proof.candidate,
+                                          "accepted_qualification": row["accepted_qualification"]["identity"],
+                                          "inputs": ["source"]}]
+    # The receiving model may edit its copies without altering admitted proof.
+    bindings["inputs"][0]["name"] = "changed"
+    bindings["schemas"].clear()
+    snapshot["reuse_from"]["operation"] = "changed"
+    request["producer_adoption"]["adoption"] = "changed"
+    request["prerequisites"][0]["candidate"]["operation"] = "changed"
+    assert proof.manifest == before
+    assert proof.candidate["operation"] == "original"
+    assert proof.view_set["inputs"][0]["custody_reference"]["operation"] == "original"
+
+
+def test_producer_model_bindings_keep_proof_and_adopted_input_orders_distinct(native_snapshot_job, tmp_path):
+    row = _producer_job(native_snapshot_job, tmp_path, "proof")
+    manifest, views, request, body = _producer_parts(row)
+    other = deepcopy(views["inputs"][0])
+    other["name"] = other["selector"]["name"] = "another"
+    other["custody_reference"]["input"] = "another"
+    other["custody_reference"]["native_record"]["key"] = "job-input/original/1"
+    for document in (manifest, views):
+        document["inputs"].append(deepcopy(other))
+    request["snapshot_inputs"].append({"name": "another",
+                                      "metadata_sha256": other["snapshot_custody"]["metadata_sha256"],
+                                      "metadata_size": other["snapshot_custody"]["metadata_size"]})
+    row["input_custody"].append(deepcopy(other["custody_reference"]))
+    policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+    policy["view_names"]["inputs"].append("another")
+    row["policy"] = _witness(Path(row["policy"]["reference"]["path"]), policy)
+    request["policy"]["sha256"] = row["policy"]["sha256"]
+    accepted = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+    accepted["policy_sha256"] = row["policy"]["sha256"]
+    row["accepted_qualification"] = _acceptance(accepted, row["policy"])
+    row = _reseal_producer(row, manifest, views, request, body)
+    job = _original_job(tmp_path)
+    job["inputs"] = [deepcopy(view["selector"]) for view in views["inputs"]]
+    job["outputs"] = []
+    job["queries"][0]["sql"] = "SELECT COUNT(*) AS orphan_count FROM shared_join WHERE id IS NULL"
+    row = _retarget_original_job(row, job)
+    bindings = producer_model_bindings(verify_completed_job(row, require_accepted=True),
+                                       prerequisite_inputs=("another", "source"))
+    assert [view["name"] for view in bindings["inputs"]] == ["source", "another"]
+    assert list(bindings["schemas"]) == ["source", "another"]
+    assert [view["name"] for view in bindings["request"]["snapshot_inputs"]] == ["source", "another"]
+    assert bindings["request"]["prerequisites"][0]["inputs"] == ["another", "source"]
+
+
+@pytest.mark.parametrize("kind", ["raw", "file", "snapshot", "model", "unaccepted_proof"])
+def test_producer_model_bindings_require_a_verified_accepted_proof(native_job, native_snapshot_job, tmp_path, kind):
+    if kind == "file":
+        proof = verify_completed_job(native_job, require_accepted=True)
+    elif kind == "snapshot":
+        proof = verify_completed_job(native_snapshot_job, require_accepted=True)
+    else:
+        row = _producer_job(native_snapshot_job, tmp_path, "model" if kind == "model" else "proof")
+        if kind == "unaccepted_proof":
+            row["accepted_qualification"] = None
+        proof = row if kind == "raw" else verify_completed_job(row)
+    with pytest.raises(JobEvidenceError, match="verified accepted producer proof"):
+        producer_model_bindings(proof, prerequisite_inputs=["source"])
+
+
+@pytest.mark.parametrize("names", [[], ["source", "source"], ["missing"], ["source", "extra"], "source", [["source"]], None])
+def test_producer_model_bindings_refuse_incomplete_or_ambiguous_adopted_scope(native_snapshot_job, tmp_path, names):
+    proof = verify_completed_job(_producer_job(native_snapshot_job, tmp_path, "proof"), require_accepted=True)
+    with pytest.raises(JobEvidenceError, match="complete unique adopted input order"):
+        producer_model_bindings(proof, prerequisite_inputs=names)
 
 
 @pytest.mark.parametrize("role", ["proof", "model"])
