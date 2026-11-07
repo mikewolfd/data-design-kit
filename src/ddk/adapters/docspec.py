@@ -15,6 +15,9 @@ from uuid import uuid4
 from time import monotonic
 
 from ddk.adapters.native import SecretRedaction, file_sha256, request_transport, run_bounded, write_json
+from ddk.adapters.docspec_schema import (
+    PRIMITIVE_PROFILE, RECURSIVE_PROFILE, source_native_read, validate_physical_snapshot,
+)
 
 
 RUNTIME = "docspec"
@@ -49,11 +52,14 @@ class DocSpecAdapter:
 
     def __init__(self, executable, limits, *, timeout=120, evidence_dir=None,
                  capture_bytes=DEFAULT_CAPTURE_BYTES, metadata_bytes=DEFAULT_CAPTURE_BYTES,
-                 source_commit=None, secret_values=()):
+                 source_commit=None, secret_values=(), native_mapping_profile=PRIMITIVE_PROFILE):
         if not math.isfinite(timeout) or timeout <= 0 or capture_bytes <= 0:
             raise ValueError("DocSpec timeout and capture size must be positive")
         if type(metadata_bytes) is not int or metadata_bytes <= 0:
             raise ValueError("DocSpec recovery metadata size must be a positive byte count")
+        if native_mapping_profile not in {PRIMITIVE_PROFILE, RECURSIVE_PROFILE}:
+            raise ValueError("Select an explicitly supported native mapping profile")
+        self.native_mapping_profile = native_mapping_profile
         self.executable = Path(executable).resolve(strict=True)
         self.timeout = timeout
         self.capture_bytes = capture_bytes
@@ -76,6 +82,23 @@ class DocSpecAdapter:
     def prepare(self, request):
         """Infer a schema and optionally produce Substrait bytes without input rows."""
         return self._invoke("job-plan", request)
+
+    def inspect_version(self, workspace, version, *, cancel_event=None):
+        """Admit one exact protected source schema without a calculation or export.
+
+        The maintained native job input path checks the unchanged VersionRef,
+        retention and source-view metadata. Empty steps, outputs and queries
+        leave that provider unscanned. This is an observation, not a retained
+        lease, complete data read, quality result or permission to select it.
+        Subsequent reads must independently pass native admission again.
+        """
+        scratch = Path(tempfile.mkdtemp(prefix="inspect-version-", dir=self.evidence_dir))
+        return self._invoke("job", {
+            "scratch": str(scratch),
+            "inputs": [{"kind": "native", "name": "source", "workspace": str(workspace),
+                        "nativeVersion": version}],
+            "steps": [], "outputs": [], "queries": [],
+        }, cancel_event=cancel_event)
 
     def prepare_job(self, request):
         """Prepare an exact complete JobSpec through the native schema-only profile.
@@ -199,7 +222,7 @@ class DocSpecAdapter:
         evidence = {"kind": "native-report", "path": str(receipt_path),
                     "sha256": sha256(data).hexdigest(), "tool": RUNTIME}
         try:
-            observed = _native_read(version, receipt)
+            observed = _native_read(version, receipt, self.native_mapping_profile)
         except ValueError as exc:
             return {"status": "unknown", "result": receipt, "evidence": evidence,
                     "error": _error("DOCSPEC-NATIVE-SCHEMA", str(exc))}
@@ -324,13 +347,28 @@ class DocSpecAdapter:
                 if file_sha256(path) != digest:
                     status = "unknown"
                     error = _error("DOCSPEC-INPUT-CHANGED", "Input bytes changed during the invocation")
-            for observation in result.get("native_versions", []):
-                version = native_versions.get(observation["name"])
-                if version is None or observation["version"] != version["reference"]:
-                    raise ValueError("Native job observation disagrees with the admitted binding")
-                native_reads.append(_native_read(version, observation))
-            if status == "succeeded" and len(native_reads) != len(native_versions):
-                raise ValueError("Native job returned incomplete version observations")
+            try:
+                observed_names = set()
+                observations = result.get("native_versions", [])
+                if not isinstance(observations, list):
+                    raise ValueError("Native version observations must be an array")
+                for observation in observations:
+                    name = observation["name"]
+                    if name in observed_names:
+                        raise ValueError("Native job returned duplicate version observations")
+                    observed_names.add(name)
+                    version = native_versions.get(name)
+                    if version is None or observation["version"] != version["reference"]:
+                        raise ValueError("Native job observation disagrees with the admitted binding")
+                    _version_reference(Path(version["namespace"]), {**version, "reference": observation["version"]})
+                    if "physical_snapshot" in observation:
+                        validate_physical_snapshot(observation["physical_snapshot"])
+                    native_reads.append(_native_read(version, observation, self.native_mapping_profile))
+                if status == "succeeded" and len(native_reads) != len(native_versions):
+                    raise ValueError("Native job returned incomplete version observations")
+            except (ValueError, KeyError, TypeError):
+                unverified_result, result, native_reads = result, {}, []
+                raise
             if operation_context is not None and (status == "succeeded" or result):
                 if (result.get("dataset") != operation_context["dataset"]
                         or result.get("operation") != operation_context["operationId"]):
@@ -363,6 +401,7 @@ class DocSpecAdapter:
                         unverified_result, result = result, {}
                         raise
         except BindingRefusal as exc:
+            status = "unknown" if submitted else "not_submitted"
             error = _error(exc.code, str(exc))
         except (OSError, subprocess.TimeoutExpired) as exc:
             error = _error("DOCSPEC-IO", str(exc))
@@ -613,7 +652,11 @@ _LOGICAL_TYPES = {
 }
 
 
-def _native_read(version, receipt):
+def _native_read(version, receipt, profile=PRIMITIVE_PROFILE):
+    if profile == RECURSIVE_PROFILE:
+        return source_native_read(version, receipt)
+    if profile != PRIMITIVE_PROFILE:
+        raise ValueError("Unsupported native mapping profile")
     fields = []
     for position, field in enumerate(receipt["schema"]["fields"]):
         physical = field["data_type"]

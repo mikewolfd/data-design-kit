@@ -32,35 +32,53 @@
     {
       "id": "CASE-MANAGED-JOB-PENDING",
       "coverage": "exercised",
-      "tests": ["tests/test_docspec_job_transport.py::test_native_pending_means_admitted_computation_has_not_started"],
+      "tests": [
+        "tests/test_docspec_job_transport.py::test_native_pending_means_admitted_computation_has_not_started"
+      ],
       "scopeNote": "Only the acknowledgment passes. The operation remains pending without a completed or qualified candidate."
     },
     {
       "id": "CASE-MANAGED-WHOLE-JOB-NATIVE",
       "coverage": "exercised",
-      "tests": ["tests/test_docspec_managed_jobs.py::test_retained_job_outputs_native_acceptance_and_recovery_use_exact_original_work"],
-      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-native-diagnostic-05.xml"],
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_retained_job_outputs_native_acceptance_and_recovery_use_exact_original_work"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-native-diagnostic-05.xml"
+      ],
       "scopeNote": "Focused actual consumer evidence against immutable retained-job source05; required complete native gate, installed successor and application acceptance remain separate."
     },
     {
       "id": "CASE-MANAGED-WHOLE-JOB-COUNTER-REFUSAL",
       "coverage": "exercised",
-      "tests": ["tests/test_docspec_managed_jobs.py::test_native_nonzero_counter_refuses_qualification_without_erasing_completed_outputs"],
-      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-native-diagnostic-05.xml"],
+      "tests": [
+        "tests/test_docspec_managed_jobs.py::test_native_nonzero_counter_refuses_qualification_without_erasing_completed_outputs"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-retained-job/ddk-native-diagnostic-05.xml"
+      ],
       "scopeNote": "Actual nonzero native counter refusal preserves completed candidate outputs on source05; this is not full runtime release qualification."
     },
     {
       "id": "CASE-MANAGED-UPDATE-CORRECTION",
       "coverage": "exercised",
-      "tests": ["tests/test_docspec_managed_update.py::test_correction_delete_quality_recovery_and_historical_replay"],
-      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"],
+      "tests": [
+        "tests/test_docspec_managed_update.py::test_correction_delete_quality_recovery_and_historical_replay"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"
+      ],
       "scopeNote": "Focused source-level evidence covers independent expected correction/deletion rows, exact quality refusal, rule-only reuse, caller loss and historical replay. Installed successor qualification remains separate."
     },
     {
       "id": "CASE-MANAGED-UPDATE-NULL-EMPTY",
       "coverage": "exercised",
-      "tests": ["tests/test_docspec_managed_update.py::test_update_preserves_null_policy_and_successful_empty_child_scope"],
-      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"],
+      "tests": [
+        "tests/test_docspec_managed_update.py::test_update_preserves_null_policy_and_successful_empty_child_scope"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"
+      ],
       "scopeNote": "Focused source-level evidence distinguishes explicit null replacement, coalescing and a valid empty child scope."
     },
     {
@@ -70,14 +88,20 @@
         "tests/test_docspec_managed_update.py::test_changed_source_composition_cannot_select_qualified_update",
         "tests/test_managed_refusal_reporting.py::test_changed_update_base_preserves_native_stale_selection_refusal"
       ],
-      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-focused-07.log"
+      ],
       "scopeNote": "The actual native wrapper proves refusal after the base changes; the separate declared translation probe proves DDK result reduction without claiming execution."
     },
     {
       "id": "CASE-MANAGED-UPDATE-ACCEPTANCE-REPLAY",
       "coverage": "exercised",
-      "tests": ["tests/test_docspec_managed_update.py::test_lost_acceptance_replays_after_caller_artifacts_are_removed"],
-      "evidencePaths": ["/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-companion-09.log"],
+      "tests": [
+        "tests/test_docspec_managed_update.py::test_lost_acceptance_replays_after_caller_artifacts_are_removed"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-update/ddk-companion-09.log"
+      ],
       "scopeNote": "The final source09 focused wrapper probe covers lost acceptance, caller-file removal, compaction, explicit retirement and old payload removal; audit metadata is not payload protection."
     },
     {
@@ -569,6 +593,46 @@
         "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/producer-model-bindings-source-02/retained-comparison.json"
       ],
       "scopeNote": "Fourteen independent metadata cases and exact comparison to an earlier actual accepted native model pass. No new native execution, payload read, availability or installed qualification is claimed."
+    },
+    {
+      "id": "CASE-NATIVE-PHYSICAL-OBSERVATION",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_inspection.py::test_inspection_keeps_exact_reference_and_recursive_schema",
+        "tests/test_docspec_inspection.py::test_observed_physical_identity_preserves_logical_version_and_schema",
+        "tests/test_docspec_inspection.py::test_physical_uri_validation_does_not_retain_global_parser_entries"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/integrated-successor-source-01/metadata-handoff.json"
+      ],
+      "scopeNote": "Independent metadata and simulated-process checks against the frozen integrated source; no native execution or installed qualification from these cases."
+    },
+    {
+      "id": "CASE-NATIVE-PHYSICAL-REFUSAL",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_inspection.py::test_incomplete_or_contradictory_observations_cannot_pass",
+        "tests/test_docspec_inspection.py::test_duplicate_observations_cannot_stand_in_for_another_input",
+        "tests/test_docspec_inspection.py::test_invalid_physical_observation_withholds_all_admitted_results",
+        "tests/test_docspec_inspection.py::test_incomplete_physical_observation_does_not_fall_back_to_legacy",
+        "tests/test_docspec_inspection.py::test_native_observations_require_an_array_even_without_native_inputs"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/integrated-successor-source-01/metadata-handoff.json"
+      ],
+      "scopeNote": "Independent metadata and simulated-process checks against the frozen integrated source; no native execution or installed qualification from these cases."
+    },
+    {
+      "id": "CASE-NATIVE-PHYSICAL-CONSUMER",
+      "coverage": "exercised",
+      "tests": [
+        "tests/test_docspec_recursive_stream.py::test_actual_native_nested_source_read",
+        "tests/test_docspec_inspection.py::test_actual_retained_recursive_version_inspection"
+      ],
+      "evidencePaths": [
+        "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/native-package-successor/integrated-successor-source-01/consumer-01/handoff.json"
+      ],
+      "scopeNote": "Actual native source consumer evidence; installed package and complete native gate remain separate."
     }
   ]
 }

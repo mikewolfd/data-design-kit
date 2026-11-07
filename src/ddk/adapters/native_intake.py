@@ -1,11 +1,10 @@
 """Native Frictionless validation, dlt staging, and typed fixture materialization."""
 
-from copy import deepcopy
 from importlib import metadata
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
 
-from ddk.arrow_mapping import MappingUnavailable, arrow_schema, typed_rows
+from ddk.arrow_mapping import SCALAR_PROFILE, map_declaration, pyarrow_schema
 from ddk.definitions import enum_values
 from .native import file_sha256, write_json
 
@@ -36,6 +35,7 @@ def table_schema(dataset, *, missing_values=None):
                           "minimum": "minimum", "maximum": "maximum"}.get(key)
             if translated:
                 field["constraints"][translated] = value
+                coverage.append({"field": name, "facet": key, "status": "exact"})
             elif key != "enum":
                 coverage.append({"field": name, "facet": key, "status": "unsupported"})
         if prop.get("quality"):
@@ -94,15 +94,11 @@ def files(request, folder):
             "tool": {"name": "frictionless", "version": metadata.version("frictionless")}}
 
 
-def _arrow(dataset):
+def _arrow(dataset, *, profile=SCALAR_PROFILE):
     import pyarrow as pa
-    types = {"string": pa.string(), "integer": pa.int64(), "number": pa.float64(),
-             "boolean": pa.bool_(), "date": pa.date32()}
-    _, mapping = arrow_schema(dataset)
-    if any(c["status"] != "exact" for c in mapping):
-        raise MappingUnavailable("Unsupported Arrow fixture mapping")
-    return pa.schema([pa.field(p["name"], types[p["logicalType"]], nullable=not p.get("required", False))
-                      for p in dataset["properties"]])
+    mapping = map_declaration(dataset, profile=profile)
+    mapping.require_physical()
+    return pyarrow_schema(mapping.schema, pa)
 
 
 def _observed_arrow(schema):
@@ -122,15 +118,27 @@ def fixture_files(request, folder):
     import pyarrow as pa
     import pyarrow.parquet as pq
     outputs = []
+    profile = request.get("mappingProfile", SCALAR_PROFILE)
     for name, item in request["inputs"].items():
         if not name.replace("_", "").replace("-", "").isalnum():
             raise ValueError("Fixture table names must be simple identifiers")
-        table = pa.Table.from_pylist(typed_rows(item["rows"], item["dataset"]), schema=_arrow(item["dataset"]))
+        mapping = map_declaration(item["dataset"], profile=profile)
+        # One captured declaration supplies both values and schema. This is
+        # exact fixture materialization, not execution of ODCS data rules.
+        rows = mapping.rows(item["rows"])
+        table = pa.Table.from_pylist(rows, schema=pyarrow_schema(mapping.schema, pa))
         path = folder / (name + ".parquet")
         pq.write_table(table, path)
         outputs.append({"name": name, "path": str(path), "sha256": file_sha256(path), "rows": len(table),
-                        "schema": arrow_schema(item["dataset"])[0]})
-    return {"status": "passed", "files": outputs, "tool": {"name": "pyarrow", "version": metadata.version("pyarrow")}}
+                        "schema": mapping.schema})
+        if profile != SCALAR_PROFILE:
+            outputs[-1].update(mappingProfile=profile, mappingCoverage=mapping.coverage,
+                               validationObligations=[entry for entry in mapping.coverage
+                                                      if entry.get("meaning") == "validation-needed"])
+    result = {"status": "passed", "files": outputs, "tool": {"name": "pyarrow", "version": metadata.version("pyarrow")}}
+    if profile != SCALAR_PROFILE:
+        result.update(mappingProfile=profile, scope="fixture-materialization-only", dataValidation="not_run")
+    return result
 
 
 def stage(request, folder):

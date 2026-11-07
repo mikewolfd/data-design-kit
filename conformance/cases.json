@@ -2661,91 +2661,205 @@
     },
     {
       "id": "CASE-MANAGED-UPDATE-CORRECTION",
-      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-013", "DDK-LOCK-005", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-013",
+        "DDK-LOCK-005",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Correct and explicitly delete keys against an exact selected source-only local base. Preserve unaffected rows and the protected base, recover after caller loss, refuse incomplete or wrong-candidate quality, and reuse computation after a rule-only change. Historical retries after a successor and lifecycle compaction return the original result without selecting it again.",
-      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
-      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true, "newProcessingCompletions": 0}
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "sameOperationId": true,
+        "newProcessingCompletions": 0
+      }
     },
     {
       "id": "CASE-MANAGED-UPDATE-NULL-EMPTY",
-      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-013"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-013"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Apply explicit null replacement and coalescing policies independently, then qualify a successful empty replacement scope. Preserve the native distinction between null, empty and missing work.",
-      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null}
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-MANAGED-UPDATE-STALE-BASE",
-      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Advance the selected source composition after preparing and qualifying an Update. Native selection refuses the stale base, retains the newer selected result, and DDK reports the selection refusal separately from completed execution.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": "EXEC-SELECTION-STALE"},
-      "expectedRuntime": {"execution": "succeeded", "selection": "refused"}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "EXEC-SELECTION-STALE"
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "refused"
+      }
     },
     {
       "id": "CASE-MANAGED-UPDATE-ACCEPTANCE-REPLAY",
-      "requirements": ["DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Lose the acceptance response and remove caller-owned evidence files. Reconcile the original accepted native evidence through selection and lifecycle compaction. Existing protection retains promised replay until explicit operation/result retirement; later payload removal leaves audit metadata without granting it a new retention promise.",
-      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null}
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-MANAGED-JOB-REQUEST-RECOVERY",
-      "requirements": ["DDK-ADAPTER-011", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Lose the first retained-job prepare or native action response. Repeated inspection keeps one pinned original request and compares every prepare field or supplied native request/candidate identity. A self-consistent receipt for different work remains unverified and cannot supply an observed candidate. Independent subprocess simulations isolate this transport boundary from native execution qualification.",
-      "expected": {"decision": "incomplete", "checkStatus": "unknown", "exitCode": 2, "diagnostic": "DOCSPEC-BINDING"},
-      "expectedRuntime": {"execution": "unknown", "sameOperationId": true}
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "DOCSPEC-BINDING"
+      },
+      "expectedRuntime": {
+        "execution": "unknown",
+        "sameOperationId": true
+      }
     },
     {
       "id": "CASE-MANAGED-JOB-HISTORICAL-SELECTION",
-      "requirements": ["DDK-ADAPTER-011", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "After a confirmed retained-job selection, lose a later response or refuse a mismatched select retry. Keep the original selected outcome, candidate and accepted qualification as historical facts while recording the new command uncertainty or refusal separately.",
-      "expected": {"decision": "error", "checkStatus": "not_run", "exitCode": 3, "diagnostic": null},
-      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true}
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "sameOperationId": true
+      }
     },
     {
       "id": "CASE-MANAGED-JOB-PENDING",
-      "requirements": ["DDK-RESULT-006"],
+      "requirements": [
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "A native request acknowledgment succeeds but says computation is admitted and not started. Preserve execution pending separately from the successful acknowledgment; do not invent running work, outputs, a candidate or accepted qualification.",
-      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
-      "expectedRuntime": {"execution": "pending", "selection": "pending", "sameOperationId": true}
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "pending",
+        "selection": "pending",
+        "sameOperationId": true
+      }
     },
     {
       "id": "CASE-MANAGED-WHOLE-JOB-NATIVE",
-      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Execute two independently authored inputs through a materialized join and aggregate, two retained exports, two blocking reports and a separate multirow metadata report. Compare duplicate, null, unmatched and integer results with independent expected rows. Native acceptance, rule-only requalification, missing caller artifacts and lost selection acknowledgment preserve the exact completed candidate and original identity.",
-      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
-      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true}
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "sameOperationId": true
+      }
     },
     {
       "id": "CASE-MANAGED-WHOLE-JOB-COUNTER-REFUSAL",
-      "requirements": ["DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Complete the same independent whole job with one deliberately nonzero blocking counter. Native qualification refuses while completed outputs, original candidate and factual execution remain available; selection stays pending and no accepted qualification exists.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null},
-      "expectedRuntime": {"execution": "succeeded", "selection": "pending"}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "pending"
+      }
     },
     {
       "id": "CASE-MANAGED-TRANSPORT-LOSS",
-      "requirements": ["DDK-RESULT-006", "DDK-ADAPTER-011"],
+      "requirements": [
+        "DDK-RESULT-006",
+        "DDK-ADAPTER-011"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Lose a managed request response after a child starts through pipe, selector, wait or cleanup failure. Keep the original request, dataset and native operation ID; report unknown execution and operational failure without inventing a child exit or replacing the primary cause. Every process wait remains finite.",
-      "expected": {"decision": "error", "checkStatus": "not_run", "exitCode": 3, "diagnostic": null},
-      "expectedRuntime": {"execution": "unknown", "sameOperationId": true}
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 3,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "unknown",
+        "sameOperationId": true
+      }
     },
     {
       "id": "CASE-CATALOG-058",
@@ -3509,52 +3623,108 @@
     },
     {
       "id": "CASE-MANAGED-PRODUCER-RECOVERY",
-      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Accept an original-record proof, refuse selecting the proof itself, and use its exact native custody in the fixed model. Remove original producer and caller artifacts, interrupt the model after admission with a missing declared file, then recover under the same request after restoring those exact bytes. Verify independently authored rows, nulls, native field IDs, original custody, accepted qualification and cold replay before model selection.",
-      "expected": {"decision": "passed", "checkStatus": "passed", "exitCode": 0, "diagnostic": null},
-      "expectedRuntime": {"execution": "succeeded", "selection": "selected", "sameOperationId": true}
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "succeeded",
+        "selection": "selected",
+        "sameOperationId": true
+      }
     },
     {
       "id": "CASE-MANAGED-PRODUCER-COUNTER-REFUSAL",
-      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "A completed original-record proof reports a nonzero required counter and a positive informational count. Require exact job_report_failed refusal while preserving its candidate; a model naming an invented acceptance must then receive producer_prerequisite_unaccepted without accepted qualification or selection.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-MANAGED-PRODUCER-RECORD-REFUSAL",
-      "requirements": ["DDK-ADAPTER-011", "DDK-ADAPTER-012", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-011",
+        "DDK-ADAPTER-012",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Supply correctly pinned original record bytes whose producer commit is outside the adopted inventory, then remove the source payload. Require producer_record_mismatch before payload copy, with no observed candidate, accepted qualification or selection. A refusal does not establish that nothing executed.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-MANAGED-PRODUCER-FILE-REFUSAL",
-      "requirements": ["DDK-ADAPTER-012", "DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Use an actually accepted proof but change a model file's bytes and request pins outside the adopted file inventory, then remove that file. Require producer_file_inventory_mismatch before file opening, with no observed model candidate, accepted qualification or selection.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-MANAGED-PRODUCER-PREREQUISITE-REFUSAL",
-      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Present an actual accepted unbound candidate as the model's prerequisite. Require producer_prerequisite_mismatch rather than treating a real but unrelated acceptance as the adopted proof; observe no model candidate, accepted qualification or selection.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-MANAGED-PRODUCER-POLICY-REFUSAL",
-      "requirements": ["DDK-ADAPTER-013", "DDK-RESULT-006"],
+      "requirements": [
+        "DDK-ADAPTER-013",
+        "DDK-RESULT-006"
+      ],
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Use an actual accepted proof and a valid model policy document that removes one of the two fixed required reports under the same policy ID. Remove the model file and require producer_policy_mismatch before file opening, with no observed model candidate, accepted qualification or selection.",
-      "expected": {"decision": "failed", "checkStatus": "failed", "exitCode": 1, "diagnostic": null}
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
     },
     {
       "id": "CASE-CATALOG-099",
@@ -3798,6 +3968,125 @@
       "profile": "runtime.docspec-managed",
       "runtimeStatus": "planned",
       "scenario": "Compose independent selectors, exact schema IPC, adoption, current proof custody and accepted prerequisite from verified accepted version 3 proof metadata without artifact opens. Preserve proof observation order separately from explicitly supplied unique complete adopted prerequisite order. Refuse unverified, unaccepted, earlier-profile or model evidence and ambiguous/incomplete input scope. Receiving authority and local model inputs remain caller-owned; DocSpec independently resolves native admission.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-103",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A disclosed complete release retains its exact version membership and selection while withholding the ungranted private native reference; a separate explicit native-reference grant retains it.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-104",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Omitting a release member from public disclosure changes complete membership to partial and never upgrades an already partial or unknown scope.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-105",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A paired consumer refuses altered release identity, membership, completeness, native reference, selection authority, purpose, release, observation time or current selection.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-106",
+      "requirements": [
+        "DDK-CATALOG-006",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Local version and release observations with withheld native references refuse before public disclosure; only public output can replace an admitted exact reference with a withheld marker.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-NATIVE-REFERENCE"
+      }
+    },
+    {
+      "id": "CASE-NATIVE-PHYSICAL-OBSERVATION",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-RESULT-006",
+        "DDK-SAFE-003"
+      ],
+      "profile": "execute.docspec-job",
+      "runtimeStatus": "planned",
+      "scenario": "A protected version observation preserves the original logical VersionRef and Arrow schema while retaining the native physical selector and stored metadata byte pin. Empty snapshots remain null. Legacy omitted observations supply no producer pin. No metadata or payload opens or retained parser-cache entries occur during validation.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-NATIVE-PHYSICAL-REFUSAL",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-RESULT-006",
+        "DDK-SAFE-003"
+      ],
+      "profile": "execute.docspec-job",
+      "runtimeStatus": "planned",
+      "scenario": "Malformed physical metadata, invalid physical-selector integer tokens, ambiguous or incomplete native input membership and normalized URI spellings cannot produce an admitted observation. Preserve raw evidence under unverifiedResult and return unknown without nativeReads. Logical VersionRef identity checks retain their separate report outcome.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      },
+      "expectedRuntime": {
+        "execution": "unknown",
+        "selection": "not_requested"
+      }
+    },
+    {
+      "id": "CASE-NATIVE-PHYSICAL-CONSUMER",
+      "requirements": [
+        "DDK-ADAPTER-012",
+        "DDK-RESULT-006",
+        "DDK-SAFE-003"
+      ],
+      "profile": "execute.docspec-job",
+      "runtimeStatus": "planned",
+      "scenario": "Through the actual native runtime, preserve independently authored nested values, native field IDs and exact protected versions. Compare physical selector and stored-byte identity, repeat from a cold adapter and refuse corrupt metadata and unavailable or mismatched versions. Metadata observation supplies no later custody or acceptance.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",

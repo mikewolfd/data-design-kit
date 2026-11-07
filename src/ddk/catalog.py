@@ -3,16 +3,17 @@
 from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 from hashlib import sha256
 from pathlib import Path
 from types import MappingProxyType
 
 from .catalog_access import (
-    CatalogError, compare_equal, field_at, field_type, relationship_keys,
+    CatalogError, compare_equal, field_at, field_type, relationship_keys, row_identity_paths,
     resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
+from .catalog_delivery import PAIRED_VIEW, paired_view_record
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
 from .catalog_semantics import admit_profile, resolved_key, resolved_relationship
@@ -58,12 +59,15 @@ class CatalogResult:
     artifacts: Mapping[str, bytes]
     local_report: dict
     local_catalog: dict | None = None
+    local_artifacts: Mapping[str, bytes] = dataclass_field(default_factory=lambda: MappingProxyType({}))
 
 
-def _result(report, catalog=None, companions=None, artifacts=None, *, public=False, local_catalog=None):
+def _result(report, catalog=None, companions=None, artifacts=None, *, public=False, local_catalog=None,
+            local_artifacts=None):
     view_report = public_report(report, catalog) if public else report
     return CatalogResult(view_report, catalog, companions or MappingProxyType({}),
-                         artifacts or MappingProxyType({}), report, local_catalog)
+                         artifacts or MappingProxyType({}), report, local_catalog,
+                         local_artifacts or MappingProxyType({}))
 
 
 def _bytes(value):
@@ -94,6 +98,7 @@ class Assembly:
         self.files = {}
         self.relationship_profile = None
         self.native_rule_profile = None
+        self.managed_schema_profiles = {}
         self.relationship_assessments = []
 
     def select_relationship_profile(self, profile):
@@ -261,13 +266,12 @@ class Assembly:
         self.production_definitions()
 
     def derive_identity(self, alias, schema):
+        row_paths = row_identity_paths(schema)
         authored = [identity for identity in self.identities[alias] if identity["kind"] == "key"]
         if authored:
             return
-        fields = [item for item in schema.get("customProperties", ())
-                  if item.get("vendor") == "ddk" and item.get("property") == "rowIdentity"]
-        if fields:
-            names = fields[0]["value"]
+        if row_paths is not None:
+            names = [path[0]["field"] for path in row_paths]
         else:
             primary = [field for field in schema.get("properties", ()) if field.get("primaryKey") is True]
             if not primary:
@@ -276,8 +280,7 @@ class Assembly:
             if len(primary) > 1 and (any(position < 1 for position in positions) or len(set(positions)) != len(positions)):
                 raise CatalogError("CATALOG-KEY-INCOMPLETE", "A composite ODCS key needs unambiguous positions.")
             names = [field["name"] for field in sorted(primary, key=lambda field: field.get("primaryKeyPosition", -1))]
-        if (len(fields) > 1 or not isinstance(names, list) or not names or any(not isinstance(name, str) for name in names)
-                or len(set(names)) != len(names)):
+        if len(set(names)) != len(names):
             raise CatalogError("CATALOG-KEY-INCOMPLETE", "An ODCS row identity needs unique ordered field names.")
         identity = {"dataset": alias, "kind": "key", "scope": "dataset_version",
                     "meaning": "Declared row identity from the selected ODCS object.", "fields": []}
@@ -325,7 +328,7 @@ class Assembly:
                 fields.append(resolved_key(key_path, {"physicalType": physical, "logicalType": physical}, scope))
             keys[side] = fields
         if "target" in keys:
-            if len(keys["source"]) != len(keys["target"]):
+            if row["match"] == "equal" and len(keys["source"]) != len(keys["target"]):
                 raise CatalogError("CATALOG-KEY-INCOMPLETE", "Both endpoints must supply every ordered key component.")
             for side, cardinalities in (("source", {"one_to_one", "one_to_many"}),
                                         ("target", {"one_to_one", "many_to_one"})):
@@ -426,6 +429,8 @@ class Assembly:
             self.report.metadata["relationshipAssessments"] = details["relationshipAssessments"]
         if self.native_rule_profile is not None:
             details["nativeRuleProfile"] = self.native_rule_profile.record()
+        if self.managed_schema_profiles:
+            details["managedSchemaProfiles"] = deepcopy(self.managed_schema_profiles)
         if self.metadata:
             details["recordOwners"] = self.metadata.owners
             details["registeredRunInputs"] = self.metadata.bound_inputs
@@ -491,6 +496,8 @@ class Assembly:
         facts = {}
         for section in ("sources", "versions", "releases", "runs"):
             for row in self.catalog[section]:
+                if "reference" not in row:
+                    raise CatalogError("CATALOG-NATIVE-REFERENCE", "Local owner observations need exact references before public disclosure.")
                 key = (section, json_dumps(row["reference"]), row.get("scope", ""), row.get("dataset", ""))
                 old = facts.setdefault(key, row)
                 if old != row:
@@ -612,7 +619,8 @@ class Assembly:
 
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                     permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None):
+                     permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None,
+                     include_private_artifacts=False, managed_schema_profiles=None):
     """Load once and return admitted metadata with its report and companions.
 
     An admitted view remains inspectable when qualification is incomplete or
@@ -622,6 +630,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         exports = (exports,)
     profiles = sorted({EXPORTS.get(name, name) for name in exports})
     public = audience == "public" or disclosure_policy is not None
+    if type(include_private_artifacts) is not bool or (include_private_artifacts and not public):
+        raise ValueError("Private access artifacts require an explicitly requested public assembly")
     inventory = load_project(project_path, permitted_roots, limits)
     assembly = Assembly(inventory, profiles)
     report = inventory.report
@@ -641,11 +651,20 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     local_admitted = None
     companions = MappingProxyType({})
     artifacts = MappingProxyType({})
+    local_artifacts = MappingProxyType({})
     step = "products"
     failure_path = inventory.path
     try:
         assembly.project_records()
         products = assembly.definitions()
+        if managed_schema_profiles is not None:
+            from .arrow_observation import MANAGED_SCHEMA_PROFILES
+            if (not isinstance(managed_schema_profiles, Mapping)
+                    or set(managed_schema_profiles) - assembly.datasets.keys()
+                    or any(not isinstance(value, str) or value not in MANAGED_SCHEMA_PROFILES
+                           for value in managed_schema_profiles.values())):
+                raise CatalogError("CATALOG-SCHEMA-PROFILE", "Select supported managed schema profiles for registered dataset aliases.", status="unknown")
+            assembly.managed_schema_profiles = deepcopy(dict(managed_schema_profiles))
         assembly.check("products", "ports")
         step = "relationships"
         assembly.select_relationship_profile(relationship_profile)
@@ -669,6 +688,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
             try:
                 assembly.metadata = LocalMetadata(document, inventory, METADATA_ADAPTERS[metadata_adapter],
                                                   assembly.datasets, assembly.productions, native_rule_profile=selected_native_rules,
+                                                  schema_profiles=assembly.managed_schema_profiles,
                                                   identities=[row for rows in assembly.identities.values() for row in rows]).read()
             except (KeyError, TypeError, AttributeError) as exc:
                 raise CatalogError("CATALOG-METADATA-SHAPE", "An owner record contains malformed fields.") from exc
@@ -733,6 +753,30 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 assembly.metadata.adapter if assembly.metadata else None, inventory,
             )
             artifacts = MappingProxyType({name: data for name, (_, data) in prepared.items()})
+            if include_private_artifacts:
+                if set(profiles) - {"catalog.dcat"}:
+                    raise CatalogError("CATALOG-PRIVATE-EXPORT-UNSUPPORTED",
+                                       "Paired private preparation supports the declared DCAT export only.")
+                # Reuse the same admitted source and SQL bytes. No second load,
+                # row scan, public-to-private guess or publication takes place.
+                private_catalog = deepcopy(local_admitted)
+                private_files = {recipe["sql"]: ("recipe", assembly.queries[recipe["id"]][1])
+                                 for recipe in private_catalog["recipes"]}
+                if "catalog.dcat" in profiles:
+                    private_files["discovery.dcat.json"] = ("dcat", _bytes(dcat_document(private_catalog)))
+                private_prepared = prepare_output_set(
+                    private_catalog, private_files, result, profiles,
+                    assembly.metadata.adapter if assembly.metadata else None, inventory,
+                )
+                from .documents import parse_json
+
+                private_lock = parse_json(private_prepared["catalog.lock.json"][1])
+                private_lock["extensions"][PAIRED_VIEW] = paired_view_record(
+                    assembly.catalog, private_catalog, artifacts["catalog.lock.json"],
+                )
+                _schema(private_lock, "lock")
+                private_prepared["catalog.lock.json"] = ("lock", _bytes(private_lock))
+                local_artifacts = MappingProxyType({name: data for name, (_, data) in private_prepared.items()})
         # Qualification can remain unresolved while the assembled discovery record is inspectable.
         if output is None or result["decision"] != "passed":
             report.metadata["catalog"] = assembly.catalog
@@ -742,7 +786,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 assembly.metadata.adapter if assembly.metadata else None, inventory,
                 prepared=prepared,
             )
-        return _result(report.build(), admitted, companions, artifacts, public=public, local_catalog=local_admitted)
+        return _result(report.build(), admitted, companions, artifacts, public=public, local_catalog=local_admitted,
+                       local_artifacts=local_artifacts)
     except (CatalogError, DocumentError) as exc:
         error = exc if isinstance(exc, CatalogError) else CatalogError(exc.code, str(exc), exc.pointer)
         assembly.check(step, "build", error, path=failure_path, required=True, related=error.related)

@@ -33,6 +33,23 @@ def field_at(schema, path):
     return field
 
 
+def row_identity_paths(schema):
+    """Read the one ordered ODCS row identity for catalog and data-check owners."""
+    declared = [item for item in schema.get("customProperties", ())
+                if item.get("vendor") == "ddk" and item.get("property") == "rowIdentity"]
+    if not declared:
+        return None
+    names = declared[0]["value"]
+    if (len(declared) != 1 or not isinstance(names, list) or not names
+            or any(not isinstance(name, str) for name in names) or len(set(names)) != len(names)):
+        raise CatalogError("CATALOG-KEY-INCOMPLETE", "An ODCS row identity needs unique ordered field names.")
+    paths = [[{"field": name}] for name in names]
+    for name, path in zip(names, paths):
+        if field_at(schema, path) is None:
+            raise CatalogError("CATALOG-KEY-PATH", f"Declared identity field {name!r} is missing.")
+    return paths
+
+
 def field_type(field):
     """The initial equality profile recognizes only native bytes and supported logical scalars."""
     logical = field.get("logicalType")
@@ -184,22 +201,36 @@ def resolve_query(catalog, recipe_id, *, release=None, selection=None, versions=
 
 
 def run_checked_query(catalog_path, recipe_id, reader, **binding_args):
-    """Bind and verify the recipe before giving exact references to the injected reader."""
-    document = read_json(catalog_path)
-    issues = validate_document(document.value, "catalog")
-    if issues:
-        raise CatalogError(issues[0].code, issues[0].message, issues[0].pointer)
-    binding = resolve_query(document.value, recipe_id, **binding_args)
-    recipe = _record(document.value["recipes"], recipe_id, "query recipe")
-    candidates = [item for item in document.value["files"] if item["path"] == recipe["sql"] and item["role"] == "recipe"]
+    """Use a path or one externally pinned CatalogArtifacts capture for the read."""
+    from .catalog_delivery import CatalogArtifacts
+
+    captured = catalog_path if isinstance(catalog_path, CatalogArtifacts) else None
+    if captured is not None:
+        if not captured.externally_pinned:
+            raise CatalogError("CATALOG-EXTERNAL-PIN", "Captured data access requires an externally pinned catalog.")
+        catalog = captured.catalog
+    else:
+        document = read_json(catalog_path)
+        issues = validate_document(document.value, "catalog")
+        if issues:
+            raise CatalogError(issues[0].code, issues[0].message, issues[0].pointer)
+        catalog = document.value
+    binding = resolve_query(catalog, recipe_id, **binding_args)
+    recipe = _record(catalog["recipes"], recipe_id, "query recipe")
+    candidates = [item for item in catalog["files"] if item["path"] == recipe["sql"] and item["role"] == "recipe"]
     if len(candidates) != 1:
         raise CatalogError("CATALOG-RECIPE-INTEGRITY", "The SQL has no unique companion inventory entry.")
     if any("reference" not in item for item in binding["inputs"].values()):
         raise CatalogError("CATALOG-VERSION-WITHHELD", "The exact native reference is unavailable in this catalog view.",
                            status="unknown")
-    sql_path = resolve_path(document.path, recipe["sql"], (document.path.parent,))
-    with sql_path.open("rb") as stream:
-        sql = stream.read(DEFAULT_LIMITS["maxDocumentBytes"] + 1)
+    if captured is not None:
+        sql = captured.companions.get(recipe["sql"])
+        if not isinstance(sql, bytes):
+            raise CatalogError("CATALOG-RECIPE-INTEGRITY", "The selected capture omits its exact SQL companion bytes.")
+    else:
+        sql_path = resolve_path(document.path, recipe["sql"], (document.path.parent,))
+        with sql_path.open("rb") as stream:
+            sql = stream.read(DEFAULT_LIMITS["maxDocumentBytes"] + 1)
     if len(sql) > DEFAULT_LIMITS["maxDocumentBytes"]:
         raise ResourceLimit("The recipe exceeds the default document byte limit.")
     if sha256(sql).hexdigest() != candidates[0]["sha256"]:

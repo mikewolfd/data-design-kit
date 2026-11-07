@@ -1,4 +1,4 @@
-"""Explicit opaque native-type disclosure from one admitted definition snapshot."""
+"""Explicit native types and logical options from one admitted definition snapshot."""
 
 from collections import Counter
 from copy import deepcopy
@@ -68,12 +68,14 @@ def inputs(tmp_path):
     return tmp_path
 
 
-def policy(root, fields, types=None):
+def policy(root, fields, types=None, logical_options=None):
     value = {"identifiers": ["urn:test:physical-types:catalog", "urn:test:physical-types:project",
                              "urn:test:physical-types:product", "urn:test:physical-types:contract", DATASET],
              "aliases": ["records"], "descriptions": True, "definitionFields": {DATASET: fields}}
     if types is not None:
         value["definitionPhysicalTypes"] = {DATASET: types}
+    if logical_options is not None:
+        value["definitionLogicalTypeOptions"] = {DATASET: logical_options}
     save(root / "disclosure.json", value)
     return value
 
@@ -90,6 +92,111 @@ def definition(result, *, local=False):
 
 def field(result, name="agencies", *, local=False):
     return next(row for row in definition(result, local=local)["properties"] if row["name"] == name)
+
+
+@pytest.mark.parametrize("logical_type,options", [
+    ("integer", {"format": "i64", "minimum": -9223372036854775808, "maximum": 9223372036854775807}),
+    ("string", {"format": "binary", "pattern": "^private-format-[0-9]+$", "minLength": 0}),
+    ("timestamp", {"format": "yyyy-MM-dd HH:mm:ss.SSSSSSXXX", "timezone": True, "defaultTimezone": "Etc/UTC"}),
+    ("integer", {}),
+])
+def test_logical_options_require_explicit_permission_and_preserve_exact_values(inputs, logical_type, options):
+    source = inputs / "schema.odcs.json"
+    contract = json.loads(source.read_bytes())
+    scalar = contract["schema"][0]["properties"][4]
+    scalar.pop("physicalType")
+    scalar.update(logicalType=logical_type, logicalTypeOptions=options)
+    save(source, contract)
+    path = [{"field": "scalar"}]
+    policy(inputs, [path])
+    withheld = assemble(inputs)
+    assert withheld.report["decision"] == "passed", withheld.local_report
+    assert "logicalTypeOptions" not in field(withheld, "scalar")
+    assert field(withheld, "scalar", local=True)["logicalTypeOptions"] == options
+
+    policy(inputs, [path], logical_options=[path])
+    allowed = assemble(inputs)
+    assert allowed.report["decision"] == "passed", allowed.local_report
+    assert field(allowed, "scalar")["logicalTypeOptions"] == options
+    assert not validate_document(allowed.catalog, "catalog")
+    captured = dict(allowed.artifacts)
+    field(allowed, "scalar")["logicalTypeOptions"]["changed_after_assembly"] = True
+    assert field(allowed, "scalar", local=True)["logicalTypeOptions"] == options
+    assert dict(allowed.artifacts) == captured
+
+
+def test_options_permission_is_path_specific_and_does_not_grant_descendants(inputs):
+    source = inputs / "schema.odcs.json"
+    contract = json.loads(source.read_bytes())
+    agencies = contract["schema"][0]["properties"][0]
+    agencies["logicalTypeOptions"] = {"minItems": 0, "maxItems": 5, "uniqueItems": False}
+    agencies["items"]["properties"][0]["logicalTypeOptions"] = {"format": "i64"}
+    save(source, contract)
+    policy(inputs, FULL, [AGENCIES], logical_options=[AGENCIES])
+    parent = assemble(inputs)
+    assert parent.report["decision"] == "passed", parent.local_report
+    assert field(parent)["logicalTypeOptions"] == {"minItems": 0, "maxItems": 5, "uniqueItems": False}
+    assert "logicalTypeOptions" not in field(parent)["items"]["properties"][0]
+    leaf = [*ELEMENT, {"field": "id"}]
+    policy(inputs, FULL, [AGENCIES], logical_options=[AGENCIES, leaf])
+    both = assemble(inputs)
+    assert both.report["decision"] == "passed", both.local_report
+    assert field(both)["items"]["properties"][0]["logicalTypeOptions"] == {"format": "i64"}
+
+
+def test_object_options_are_withheld_from_partial_views_and_preserve_prior_output(inputs):
+    source = inputs / "schema.odcs.json"
+    contract = json.loads(source.read_bytes())
+    options = {"required": ["id", "private_unmodeled_name"], "minProperties": 2}
+    contract["schema"][0]["properties"][0]["items"]["logicalTypeOptions"] = options
+    save(source, contract)
+    policy(inputs, FULL, logical_options=[ELEMENT])
+    output = inputs / "published"
+    previous = assemble(inputs, output=output)
+    assert previous.report["decision"] == "passed", previous.local_report
+    assert field(previous)["items"]["logicalTypeOptions"] == options
+    assert [row["name"] for row in field(previous)["items"]["properties"]] == NAMES
+    field(previous)["items"]["logicalTypeOptions"]["required"].append("changed_after_assembly")
+    assert field(previous, local=True)["items"]["logicalTypeOptions"] == options
+    partial = [[*ELEMENT, {"field": "id"}]]
+    policy(inputs, partial)
+    hidden = assemble(inputs)
+    assert hidden.report["decision"] == "passed", hidden.local_report
+    assert b"private_unmodeled_name" not in b"".join(hidden.artifacts.values())
+    policy(inputs, partial, logical_options=[ELEMENT])
+    refused = assemble(inputs, output=output)
+    assert refused.report["decision"] == "failed" and not refused.artifacts
+    assert {path.relative_to(output).as_posix(): path.read_bytes() for path in output.rglob("*") if path.is_file()} == dict(previous.artifacts)
+
+
+@pytest.mark.parametrize("grant", [[], [{"field": "missing"}], [{"field": "scalar"}]])
+def test_logical_option_grants_refuse_root_missing_field_and_missing_options(inputs, grant):
+    policy(inputs, FULL, logical_options=[grant])
+    result = assemble(inputs)
+    assert result.report["decision"] == "failed" and not result.artifacts
+    assert (result.local_catalog is not None) == bool(grant)
+    assert any(item["code"] == "CATALOG-DISCLOSURE" for check in result.report["checks"] for item in check["diagnostics"])
+    policy(inputs, FULL)
+    hidden = assemble(inputs)
+    assert hidden.report["decision"] == "passed", hidden.local_report
+    assert "logicalTypeOptions" not in definition(hidden)
+    assert b"private_sibling" not in b"".join(hidden.artifacts.values())
+
+
+def test_logical_options_grant_uses_original_dataset_identity_when_alias_is_private(inputs):
+    source = inputs / "schema.odcs.json"
+    contract = json.loads(source.read_bytes())
+    contract["schema"][0]["properties"][4]["logicalTypeOptions"] = {"maxLength": 9}
+    save(source, contract)
+    path = [{"field": "scalar"}]
+    value = policy(inputs, [path], logical_options=[path])
+    value["aliases"] = []
+    save(inputs / "disclosure.json", value)
+    result = assemble(inputs)
+    assert result.report["decision"] == "passed", result.local_report
+    definitions = result.catalog["extensions"][DETAILS]["datasetDefinitions"]
+    assert "records" not in definitions
+    assert next(iter(definitions.values()))["properties"][0]["logicalTypeOptions"] == {"maxLength": 9}
 
 
 @pytest.mark.parametrize("reversed_grants", [False, True])

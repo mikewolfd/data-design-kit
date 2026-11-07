@@ -19,12 +19,17 @@ result = assemble_catalog(
 | `catalog` | Structurally admitted, audience-filtered catalog, or `None` when admission failed |
 | `companions` | Immutable mapping of catalog-relative paths to exact admitted SQL and other companion bytes |
 | `artifacts` | Immutable mapping containing the complete standard output set, populated only when the report passes |
+| `local_artifacts` | Explicitly requested private standard output set from the same assembly; never deliver through public artifact routes |
 
 An admitted catalog can accompany `failed`, `unknown`, or `not_run` qualification. Check the report before treating data as qualified. `artifacts` includes `catalog.ddk.json`, `catalog.report.json`, `catalog.lock.json`, and the requested companions. Passing these files to a publisher does not replace that publisher's authority or DocSpec's guarded selection.
 
 The existing `build_catalog` function delegates to the same assembly and returns `local_report` for compatibility. Supplying `output` uses the existing atomic directory writer and the same prepared bytes. A missing required result leaves the prior output set intact. Callers do not need to rebuild source definitions or reopen SQL to construct discovery metadata.
 
 Use `local_catalog` for private writer validation that needs complete definitions while `catalog` supplies the public view. Both come from the same captured source snapshot. A public disclosure failure can leave the admitted private metadata available; structural admission failure leaves it `None`. This private field does not prepare another output set, and its presence does not establish qualification. `companions` and `artifacts` continue to follow the requested audience.
+
+For a service that must keep native storage references private, request `include_private_artifacts=True` on an explicit public assembly. A passing result then supplies `local_artifacts` as a second standard set, using the same admitted definitions, metadata and original SQL bytes. The private lock records `urn:ddk:catalog:paired-public-view:1`: the exact public lock SHA-256, catalog ID, and explicit public/local aliases for each disclosed dataset ID. The public set contains neither that mapping nor the private lock. No second source load or data scan occurs. This option does not write the private set; stage each immutable set and configure both externally selected lock pins before starting a reader.
+
+`ddk.catalog_delivery.load_catalog_artifacts` captures a complete standard set under byte and file limits, checks its schemas and digests, and rejects mixed, missing, extra, linked or special files. It never follows source-inventory locations or reads data payloads. `verify_catalog_pair(public, local)` requires both external pins and the private lock's exact public association; it also checks version, representation, release membership, selection, recipe-input and SQL meaning. It returns the assembly's explicit alias mapping. Consumers must authorize client IDs from the public view and compare the observed native field tree against the public disclosed definition. The full private definition does not grant access to withheld fields. Partial field disclosure requires provider-level projection before unrestricted SQL can be offered.
 
 ## Recipes and definitions
 
@@ -40,13 +45,23 @@ The identity uses the existing tool-identity shape: an absolute `id`, exact `ver
 
 `ResolvedRelationship` contains the immutable declaration, ordered source keys, and ordered target keys, or `None` for an external target. Each `ResolvedKey` retains its path, native definition, shared comparison type when supported, and virtual scope. Return `RelationshipAssessment("supported", reason)`, `"failed"`, or `"unknown"`. Unsupported exact versions, types, and meanings must remain unknown.
 
-DDK checks paths, complete keys, key counts, scopes, known equality types, and null policy before calling the profile. It calls the profile only when additional declaration reasoning is needed. Exceptions and malformed results preserve unknown outcomes. The offline core neither loads nor invokes the profile; the application supplies it at catalog assembly.
+DDK checks paths, complete keys, scopes and null policy before calling the profile. The shared `equal` rule also requires equal key counts and compatible known comparison types. A `project_rule` profile owns its matching shape, including different source and target component counts; complete unique endpoint keys still apply. DDK calls the profile only when additional declaration reasoning is needed. Exceptions and malformed results preserve unknown outcomes. The offline core neither loads nor invokes the profile; the application supplies it at catalog assembly.
 
 A `row_position` identity supplies its declared complete key within the same release. It does not need a second `key` identity on the same virtual field. This is declaration reasoning: it establishes no generated positions, observed uniqueness, or relationship matches. The same-release restriction still applies when physical keys are also present.
 
 Assembly details retain `relationshipProfile` and `relationshipAssessments`, with the selected identity also in adapter and lock provenance. Support describes expected comparison or reference construction. It establishes no actual matches, cardinality, data quality, or remote existence; external construction records `externalExistence: "not_assessed"`. Profile or assessment changes require metadata and applicable reader review, with unresolved domain effects kept separate from computation changes.
 
 ## Public views
+
+An explicitly disclosed release retains its membership even when its native
+reference is private. Like a version, it carries either `reference` or
+`referenceDisclosure: "withheld"`. Listing its identifier in `nativeReferences`
+also grants its complete native reference. If any member version is withheld,
+a complete release becomes partial; partial and unknown membership stay as
+declared. Selection records still require their own disclosed authority and
+release. Neither membership disclosure nor a withheld reference grants data
+access or establishes publication. Local owner observations require the exact
+reference before disclosure.
 
 Select a public view with an explicit disclosure policy. Its shape is defined in the [catalog schema](../schemas/0.1/catalog.schema.json). Existing identifier, alias, description, recipe, access, and evidence rules still apply. Definitions and project extensions remain withheld unless granted:
 
@@ -80,6 +95,18 @@ Each nonempty path must resolve to an existing, nonblank `physicalType` in a dis
 
 This grant permits the entire opaque string, including any native-only names absent from the logical definition. The publisher must review that text. Modeled child coverage alone never permits it or establishes logical/native completeness. Object and array nodes remain composite even when their children are not modeled. Root `[]` grants no native type. Existing scalar type disclosure remains unchanged.
 
+Logical-type options, such as integer bounds, timestamp formats and array limits, also require a separate explicit grant:
+
+```json
+{
+  "definitionLogicalTypeOptions": {
+    "urn:example:dataset": [[{"field": "agencies"}]]
+  }
+}
+```
+
+Each nonempty path must resolve to an existing `logicalTypeOptions` object, including an empty object, in a disclosed dataset definition. Its complete modeled subtree must already appear through `definitionFields`. DDK copies the entire options object exactly, including names in object `required` lists that have no modeled child. The publisher must review the complete value before granting it. Root, description, physical-type and parent-field grants do not grant these options or options on descendant fields. Invalid grants fail disclosure and preserve prior output. Publishing these declarations does not establish that a native reader supports them or that data passed their checks.
+
 A public view using a relationship profile must explicitly grant the profile's exact identity ID in `identifiers`. Otherwise public assembly refuses output and preserves the full reason in `local_report`. This applies even when the ID is a `file://` URI: allowing its source record alone does not disclose its tool identity. Ordinary evidence policy still governs captured source locations.
 
 Public output retains the granted profile identity and redacted source provenance so impact analysis can detect changes. Individual assessments and reasons stay withheld, with `relationshipAssessmentScope` explicitly unknown. Public consumer coverage also remains unknown; the comparison cannot infer private relationship or reader dependencies.
@@ -87,6 +114,17 @@ Public output retains the granted profile identity and redacted source provenanc
 Use `report` for public responses, including early and incomplete failures. `local_report` and `local_catalog` can contain paths and private details and must stay internal.
 
 ## Required candidate integration
+
+`run_checked_query` accepts the `CatalogArtifacts` object returned by
+`load_catalog_artifacts`, as well as its existing path argument. A captured read
+requires the external lock pin and uses that capture's exact recipe and SQL
+bytes. It performs no catalog, lock or SQL file reopen. The loader freezes the
+captured catalog, report and lock recursively. A later delivery-directory
+replacement cannot silently change a running reader's selected metadata.
+The injected reader still admits the exact data references and retains native
+read evidence. Public captures with withheld native references still refuse;
+the application must verify its private/public pair and preserve the public
+request's scope before using its private capture.
 
 Use admitted definitions and companions to prepare the native request. Execute through DocSpec and retain its exact candidate and diagnostics. Accept the required evidence against that candidate, then assemble the qualified catalog from the accepted owner records. Finalize complete controls and select or publish through the existing authorities.
 
@@ -119,6 +157,32 @@ Each binding names one dataset, output, authored facet, ordered field paths, rep
 Use `native_rule_artifact` to capture these bindings and original JobSpec bytes. Pin the resulting metadata by SHA-256, pass it and the same explicit profile to `managed_job_definition`, and include the pin as `native_rules` in `managed_job_metadata`. The final definition identity binds this artifact and generator provenance. Source pins establish identity; independent tests of the concrete generator and runtime still establish their supported behavior.
 
 Schema interpretation and row-value checks remain separate. A retained nonnullable field can establish its own nonnull property. A nullable field with an authored `required` rule needs the corresponding accepted counter. Composite key nonnull evidence can combine those facts only for the same output and all key fields. It establishes no uniqueness.
+
+Select `managed_schema_profiles={"output-alias": "urn:ddk:metadata:arrow-odcs:2"}`
+on both the initial and final `assemble_catalog` calls to use the maintained
+Arrow declaration mapper for that output dataset. This explicit profile checks
+the complete observed Arrow field tree against
+`urn:ddk:odcs:arrow-declaration:2`: names, order, nested shapes, integer/float
+widths, temporal units and exact timezone spelling. Numeric `format: i64`, for
+example, describes `Int64` and creates no separate row-value obligation.
+Numeric bounds, strings' semantic formats, enum, object presence, array limits,
+relationships and other value rules still need their own evidence.
+
+The selection is per dataset. Unselected outputs retain the original schema
+interpreter, including its existing fixed-binary spelling. Invalid aliases or
+unsupported profile identifiers refuse. The selection enters the original
+managed definition identity and the immutable `NativeRuleContext.schema_profiles`;
+changing it cannot reinterpret an older accepted job as a newly qualified one.
+Neither metadata nor an opaque SQL type string selects a profile. There is no
+fallback when the explicit declaration mapper cannot preserve a type. See the
+[mapping boundaries](arrow-declaration-profile.md#observing-managed-output-schemas)
+and [independent cases](../tests/catalog/test_managed_schema_profiles.py).
+
+Root ODCS `ddk.rowIdentity` and project alternate keys retain separate ordered
+uniqueness obligations. Both catalog identity derivation and managed field-rule
+coverage use the same row-identity parser. A project key cannot hide a malformed,
+repeated or missing-field ODCS row identity, and evidence for one key cannot
+qualify a different key.
 
 The supported DocSpec ordered-export interpretation can establish `key_unique` when the complete explicit sort tuple equals the authored ordered top-level key, every field appears in the sealed export, and the original settings, retained settings and native runtime identity agree. A larger sort tuple containing a hidden source occurrence cannot establish uniqueness of its visible subset. Nested or virtual keys and unsupported native semantics remain unknown. Export uniqueness does not establish nonnull values or replace native policy acceptance.
 

@@ -135,6 +135,45 @@ def relationship_check(result):
     return next(check for check in result.report["checks"] if check["subject"] == RELATIONSHIP)
 
 
+@pytest.mark.parametrize("status,decision", [("supported", "passed"), ("unknown", "incomplete"), ("failed", "failed")])
+def test_project_rule_owns_unequal_endpoint_arity(project, status, decision):
+    rule = {"id": "urn:test:fixture:contextual-receipt", "version": "1.0.0"}
+    change(project, lambda row: row.update(
+        match="project_rule", rule=rule,
+        source={"dataset": "left", "paths": [field_path("record_id")]},
+        target={"dataset": "right", "paths": [field_path("record_id"), field_path("suffix"), field_path("number_text")]},
+    ))
+
+    class ReceiptDeclarationProfile(FixtureProfile):
+        def assess(self, relationship):
+            self.requests.append(relationship)
+            assert dict(relationship.declaration["rule"]) == rule
+            assert [key.definition["name"] for key in relationship.source] == ["record_id"]
+            assert [key.definition["name"] for key in relationship.target] == ["record_id", "suffix", "number_text"]
+            return RelationshipAssessment(status, "Exact fixture-owned receipt key/context declaration; no observed match claim.")
+
+    profile = ReceiptDeclarationProfile()
+    result = assemble(project, profile)
+    assert result.report["decision"] == decision, result.local_report
+    assert len(profile.requests) == 1
+    assert relationship_check(result)["status"] == ("passed" if status == "supported" else status)
+    if status != "supported":
+        assert not result.artifacts
+
+
+def test_shared_equality_still_refuses_unequal_key_arity_before_profile(project):
+    change(project, lambda row: row.update(
+        source={"dataset": "left", "paths": [field_path("record_id")]},
+        target={"dataset": "right", "paths": [field_path("record_id"), field_path("suffix")]},
+    ))
+    profile = FixtureProfile()
+    result = assemble(project, profile)
+    assert result.report["decision"] == "failed"
+    assert profile.requests == []
+    assert any(item["code"] == "CATALOG-KEY-INCOMPLETE"
+               for check in result.report["checks"] for item in check["diagnostics"])
+
+
 def test_shared_supported_equality_does_not_call_the_selected_profile(project):
     change(project, lambda row: [row[side].update(paths=[field_path("record_id")]) for side in ("source", "target")])
     profile = FixtureProfile()

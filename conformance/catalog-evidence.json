@@ -36,6 +36,13 @@
       {
         "passedTests": 179,
         "scope": "Clean base 6d9a0709473cc3a6dd36c95fb894f9a0a3760f48 with mapper/test overlays; includes 15 new native-table identity, observation, legacy-boundary, public disclosure and standards-output cases. Metadata only; no native execution or installed qualification."
+      },
+      {
+        "passedTests": 615,
+        "skippedTests": 7,
+        "scope": "Source core/catalog/type/adapter controls including seventeen release-disclosure cases; optional evaluator/native execution remains separate.",
+        "evidence": "/Users/mikewolfd/.codex/worktrees/a8e8/spicy-stack/docs/ddk-replacement/evidence/full-stack/release-disclosure/revision-01/invocation.json",
+        "evidenceSha256": "a0f3b43f59476443eedfeffb8d96b2a6b3b661051c2de66e752cc3b73f1e909c"
       }
     ]
   },
@@ -1256,6 +1263,51 @@
         "tests/catalog/test_managed_jobs.py::test_excluded_model_outputs_are_not_a_proof_only_catalog"
       ],
       "evidence": "Eight independently authored assembly cases passed within the 19-case producer-proof-catalog-source-01 metadata run at clean DDK70dde52 plus the exact two source/test overlays. Result SHA-256 d6c4dced60ddb38994204712520c9e293351ccd82516166eeff01ab07209d200. Synthetic native records establish catalog mapping and refusal behavior only; native producer execution, current availability and installed qualification remain separate."
+    },
+    {
+      "id": "CASE-CATALOG-103",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_release_disclosure.py::test_release_disclosure_keeps_exact_members_and_selection",
+        "tests/catalog/test_release_disclosure.py::test_release_requires_exactly_one_reference_mode"
+      ],
+      "evidence": "A disclosed complete release retains its exact version membership and selection while withholding the ungranted private native reference; a separate explicit native-reference grant retains it. Independently specified membership and adversarial source changes; no native execution or publication claim."
+    },
+    {
+      "id": "CASE-CATALOG-104",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_release_disclosure.py::test_omitting_member_cannot_upgrade_release_completeness"
+      ],
+      "evidence": "Omitting a release member from public disclosure changes complete membership to partial and never upgrades an already partial or unknown scope. Independently specified membership and adversarial source changes; no native execution or publication claim."
+    },
+    {
+      "id": "CASE-CATALOG-105",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_release_disclosure.py::test_pair_refuses_changed_release_or_selection_meaning"
+      ],
+      "evidence": "A paired consumer refuses altered release identity, membership, completeness, native reference, selection authority, purpose, release, observation time or current selection. Independently specified membership and adversarial source changes; no native execution or publication claim."
+    },
+    {
+      "id": "CASE-CATALOG-106",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-NATIVE-REFERENCE",
+      "tests": [
+        "tests/catalog/test_release_disclosure.py::test_withheld_native_reference_is_public_only"
+      ],
+      "evidence": "Local version and release observations with withheld native references refuse before public disclosure; only public output can replace an admitted exact reference with a withheld marker. Independently specified membership and adversarial source changes; no native execution or publication claim."
     }
   ],
   "additionalReceiptTests": [

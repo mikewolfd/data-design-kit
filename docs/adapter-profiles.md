@@ -121,6 +121,12 @@ Default loose-mode acceptance does not prove full validity. DDK must preserve un
 
 Fixtures use the [fixture schema](../schemas/0.1/fixture.schema.json), with explicit input rows, expected rows, and comparison settings. The default comparison is an unordered multiset, not a set: duplicate rows matter. Optional numeric tolerances are zero unless explicitly configured. Time zones and date semantics must be stated in type mappings.
 
+The opt-in [Arrow declaration profile](arrow-declaration-profile.md) supplies exact
+integer widths, explicit float and temporal formats, and recursive object/list
+fixture mappings. Its coverage keeps actual-data constraints pending. Existing
+scalar preparation remains a separate profile; fixture materialization alone
+does not qualify native execution or whole-data validation.
+
 DuckDB's Substrait community extension is the first second-engine candidate. Its GitHub head `eb7ad41970245f06be9d4ee9a4a7c8d32a3f0a34` includes a dialect declaration and recent window-frame work. Its extension generator references 0.102.0 definitions. This is useful capability evidence to investigate, not proof that arbitrary DataFusion plans run unchanged.
 
 The portability suite must execute the same plan bytes through both consumers and check each output against expected business rows. If extensions or semantics differ, record the unsupported operation and keep the claim scoped. Compiling the SQL separately for each engine is a different test and cannot satisfy saved-plan portability.

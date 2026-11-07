@@ -9,7 +9,8 @@ from copy import deepcopy
 from hashlib import sha256
 from pathlib import Path
 
-from .catalog_access import CatalogError, field_at
+from .catalog_access import CatalogError, field_at, row_identity_paths
+from .arrow_observation import MANAGED_SCHEMA_PROFILES
 from .docspec_job_evidence import (
     CANDIDATE_SCHEME, COUNTER_EVALUATOR, JobEvidenceError, interpret_output_schema,
     native_export_uniqueness, verify_completed_job, verify_completed_outputs,
@@ -25,7 +26,7 @@ INTERPRETER = {"id": "urn:ddk:metadata:arrow-odcs", "version": "1"}
 INTERPRETATION_RULE = "urn:ddk:check:managed-output-interpretation:1"
 
 
-def _definition_identity(production, datasets, schemas, sources, entry):
+def _definition_identity(production, datasets, schemas, sources, entry, schema_profiles=None):
     aliases = set((*entry["inputs"].values(), *entry["outputs"].values()))
     binding = {
         "profile": "urn:ddk:managed-production-definition:1", "production": production,
@@ -36,6 +37,11 @@ def _definition_identity(production, datasets, schemas, sources, entry):
         "inputs": entry["inputs"], "outputs": entry["outputs"], "outOfCatalog": {
             section: sorted(entry["outOfCatalog"][section], key=json_dumps) for section in ("inputs", "outputs")},
     }
+    selected = {alias: schema_profiles[alias] for alias in sorted(set(entry["outputs"].values()))
+                if alias in (schema_profiles or {})}
+    if selected:
+        binding["profile"] = "urn:ddk:managed-production-definition:2"
+        binding["schemaProfiles"] = selected
     return f"{DEFINITION_SCHEME}:{sha256(json_dumps(binding).encode()).hexdigest()}"
 
 
@@ -61,12 +67,13 @@ def managed_job_definition(catalog_result, *, production, inputs, outputs, out_o
         _mapping(entry, section, None, productions[production][section])
     sources = [{"uri": row["uri"], "sha256": row["sha256"]} for row in catalog["sourceInventory"]
                if row["role"] in {"project", "definition"}]
-    base = _definition_identity(productions[production], datasets, schemas, sources, entry)
+    schema_profiles = catalog["extensions"]["urn:ddk:catalog:assembly"].get("managedSchemaProfiles")
+    base = _definition_identity(productions[production], datasets, schemas, sources, entry, schema_profiles)
     if native_rules is None:
         return base
     document = read_native_rule_pin(native_rules)
     selected = select_native_rule_profile(native_rule_profile)
-    context = rule_context(productions[production], schemas, catalog["identities"], entry)
+    context = rule_context(productions[production], schemas, catalog["identities"], entry, schema_profiles)
     verify_native_rule_artifact(document.value, definition=base, context=context, profile=selected)
     return _rules_definition(base, document.sha256, document.value["profile"])
 
@@ -92,7 +99,7 @@ def _current_definition(metadata, production, entry):
     if any(alias not in schemas or schemas[alias] is None for alias in aliases):
         raise CatalogError("CATALOG-DEFINITION-CAPTURE", "A managed dataset definition has unresolved source interpretation.", status="unknown")
     identity = _definition_identity(production, metadata.datasets, schemas,
-                                    [owner_record(document) for document in documents.values()], entry)
+                                    [owner_record(document) for document in documents.values()], entry, metadata.schema_profiles)
     return identity, schemas
 
 
@@ -191,7 +198,7 @@ def managed_execution(metadata, entry):
         try:
             original_job, native_bindings = verify_native_rule_artifact(
                 rules_document.value, definition=base,
-                context=rule_context(production, schemas, metadata.identities, entry), profile=metadata.native_rule_profile,
+                context=rule_context(production, schemas, metadata.identities, entry, metadata.schema_profiles), profile=metadata.native_rule_profile,
                 expected_sha256=evidence.manifest["job"]["sha256"], expected_size=evidence.manifest["job"]["size"],
             )
         except CatalogError as exc:
@@ -206,9 +213,13 @@ def managed_execution(metadata, entry):
             dataset = output_mapping[output["name"]]
             version = metadata._file_version(dataset, {**output, "attributes": {"rows": output["rows"]}}, record, output=True)
             outputs.append(version)
-            interpreted = interpret_output_schema(base64.b64decode(evidence.manifest["schemas"][output["schema_sha256"]]), schemas[dataset])
-            identity = {"subject": version, "rule": {"id": INTERPRETATION_RULE, "version": definition_identity},
-                        "evaluator": INTERPRETER,
+            selected_profile = metadata.schema_profiles.get(dataset)
+            interpreted = interpret_output_schema(base64.b64decode(evidence.manifest["schemas"][output["schema_sha256"]]),
+                                                  schemas[dataset], profile=selected_profile)
+            interpreter = INTERPRETER if selected_profile is None else {"id": INTERPRETER["id"], "version": selected_profile.rsplit(":", 1)[-1]}
+            rule = INTERPRETATION_RULE if selected_profile is None else "urn:ddk:check:managed-output-interpretation:" + interpreter["version"]
+            identity = {"subject": version, "rule": {"id": rule, "version": definition_identity},
+                        "evaluator": interpreter,
                         "scope": "Retained output Arrow schema interpreted against the exact authored ODCS field definitions; no row-value checks."}
             metadata.observations["checks"].append({**identity, "status": interpreted.status, "record": record,
                                                    **({"reason": " ".join(interpreted.reasons)} if interpreted.reasons else {})})
@@ -240,7 +251,7 @@ def managed_execution(metadata, entry):
                     nonnull = _composed_nonnull(obligation["paths"], interpreted.fields, row_observations, output["schema_sha256"])
                     if nonnull is not None:
                         proof = {"composedNonnull": nonnull}
-                        value_identity["evaluator"] = INTERPRETER
+                        value_identity["evaluator"] = interpreter
                         value_identity["scope"] = "Same-output composite key nonnull requirement from exact schema facts and individually qualified required-field evidence; no uniqueness claim."
                 metadata.observations["checks"].append({**value_identity, "status": "passed" if proof is not None else "unknown", "record": record,
                                                        **({"reason": obligation["reason"]} if proof is None else {})})
@@ -255,7 +266,8 @@ def managed_execution(metadata, entry):
                                                       if not definition_matches else {})})
             metadata.qualification.append(binding)
             interpretations.append({"output": output["name"], "dataset": dataset, "schemaSha256": output["schema_sha256"],
-                                    "profile": INTERPRETER, "status": interpreted.status, "fields": list(interpreted.fields),
+                                    "profile": interpreter, "status": interpreted.status, "fields": list(interpreted.fields),
+                                    **({"declarationProfile": MANAGED_SCHEMA_PROFILES[selected_profile]} if selected_profile is not None else {}),
                                     "rowObligations": row_observations})
     inputs, registered_inputs = _input_versions(metadata, evidence, input_mapping, record)
     run_id = stable_id("docspec-managed-job-run", context["workspace"], evidence.candidate)
@@ -329,6 +341,13 @@ def _key_obligations(schema, identities, dataset, observed_fields):
 
     def needs_null_evidence(paths):
         return any(nullable.get(json_dumps(path), True) for path in paths)
+
+    row_paths = row_identity_paths(schema)
+    if row_paths is not None:
+        result.append({"facet": "key_unique", "paths": row_paths, "reason": reason})
+        if (all(field_at(schema, path).get("required") is True for path in row_paths)
+                and needs_null_evidence(row_paths)):
+            result.append({"facet": "key_not_null", "paths": row_paths, "reason": reason})
 
     def nested_primary(node, path):
         if len(path) > 1 and node.get("primaryKey") is True:

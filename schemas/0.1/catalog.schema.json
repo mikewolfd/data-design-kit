@@ -216,6 +216,15 @@
             "uniqueItems": true
           }
         },
+        "definitionLogicalTypeOptions": {
+          "type": "object",
+          "propertyNames": {"$ref": "common.schema.json#/$defs/identifier"},
+          "additionalProperties": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/fieldPath"},
+            "uniqueItems": true
+          }
+        },
         "projectExtensions": {
           "type": "array",
           "items": {
@@ -990,7 +999,14 @@
     },
     "release": {
       "type": "object",
+      "oneOf": [
+        {"required": ["reference"]},
+        {"required": ["referenceDisclosure"]}
+      ],
       "properties": {
+        "referenceDisclosure": {
+          "const": "withheld"
+        },
         "id": {
           "$ref": "common.schema.json#/$defs/identifier"
         },
@@ -1017,7 +1033,6 @@
       },
       "required": [
         "id",
-        "reference",
         "members",
         "membership",
         "record"
