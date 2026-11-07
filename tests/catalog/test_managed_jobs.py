@@ -561,6 +561,233 @@ def test_exact_empty_snapshot_is_metadata_only_and_reuse_keeps_original_operatio
     assert checked.view_set["inputs"][0]["snapshot_custody"]["objects"][0]["origin_operation"] == "earlier_original"
 
 
+def _input_custody_reference(*, operation="original", input_name="source", request_digest="a" * 64):
+    """Authored opaque native identity; no native canonical digest is reproduced."""
+    return {"scheme": "urn:docspec:whole-job-input-custody", "scheme_version": "1", "dataset": "archive",
+            "operation": operation, "request_digest": request_digest, "input": input_name,
+            "native_record": {"table": "native-lifecycle", "table_uuid": "d780a544-780b-4abb-9e1e-f7beef0aec62",
+                              "key": f"job-input/{operation}/0", "revision": 17},
+            "admission_digest": {"algorithm": "blake3", "value": "e" * 64}}
+
+
+def _with_input_custody(row, *, reuse=False):
+    row = deepcopy(row)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    reference = _input_custody_reference(request_digest=manifest["request_digest"])
+    view = views["inputs"][0]
+    view["custody_reference"] = reference
+    if reuse:
+        original = _input_custody_reference(operation="prior_consumer", input_name="original_source", request_digest="b" * 64)
+        view["custody_grant"] = {"profile": "urn:docspec:whole-job-input-custody-grant:1", "source": original}
+        request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+        request["snapshot_inputs"][0]["reuse_from"] = deepcopy(original)
+        manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+        for member in view["snapshot_custody"]["objects"]:
+            member["origin_operation"] = "earliest_copy"
+    manifest["inputs"][0] = deepcopy(view)
+    row["input_custody"] = [deepcopy(reference)]
+    return _reseal_completion(row, manifest, views)
+
+
+@pytest.mark.parametrize("reuse", [False, True])
+def test_bound_input_custody_preserves_opaque_identity_and_rebound_name_without_reads(native_snapshot_job, monkeypatch, reuse):
+    row = _with_input_custody(native_snapshot_job, reuse=reuse)
+    monkeypatch.setattr(Path, "open", lambda *_args, **_kwargs: pytest.fail("Custody metadata cannot open native payloads"))
+    checked = verify_completed_job(row, require_accepted=True)
+    view = checked.view_set["inputs"][0]
+    assert view["custody_reference"] == row["input_custody"][0]
+    assert view["custody_reference"]["admission_digest"]["value"] == "e" * 64
+    assert view["custody_reference"]["admission_digest"]["value"] != view["admission"]["digest"]
+    if reuse:
+        source = checked.admitted_request["snapshot_inputs"][0]["reuse_from"]
+        assert view["custody_grant"]["source"] == source
+        assert source["input"] == "original_source" and view["name"] == "source"
+        assert source["operation"] == "prior_consumer"
+        assert {member["origin_operation"] for member in view["snapshot_custody"]["objects"]} == {"earliest_copy"}
+
+
+@pytest.mark.parametrize("change", [
+    "scheme", "foreign_owner", "operation", "request", "input", "table_uuid", "ordinal",
+    "revision_zero", "revision_bool", "revision_float", "revision_large", "digest_algorithm", "digest", "extra_field",
+])
+def test_resealed_input_custody_reference_requires_exact_current_native_identity(native_snapshot_job, change):
+    row = _with_input_custody(native_snapshot_job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    reference = views["inputs"][0]["custody_reference"]
+    if change == "scheme":
+        reference["scheme"] = "urn:docspec:version-ref"
+    elif change == "foreign_owner":
+        reference["dataset"] = "elsewhere"
+    elif change == "operation":
+        reference["operation"] = "different"
+        reference["native_record"]["key"] = "job-input/different/0"
+    elif change == "request":
+        reference["request_digest"] = "c" * 64
+    elif change == "input":
+        reference["input"] = "other_input"
+    elif change == "table_uuid":
+        reference["native_record"]["table_uuid"] = "table-name-is-not-its-incarnation"
+    elif change == "ordinal":
+        reference["native_record"]["key"] = "job-input/original/1"
+    elif change.startswith("revision_"):
+        reference["native_record"]["revision"] = {"revision_zero": 0, "revision_bool": True,
+                                                  "revision_float": 17.0, "revision_large": 2**63}[change]
+    elif change == "digest_algorithm":
+        reference["admission_digest"]["algorithm"] = "sha256"
+    elif change == "digest":
+        reference["admission_digest"]["value"] = "invalid"
+    else:
+        reference["caller_accepted"] = True
+    manifest["inputs"][0] = deepcopy(views["inputs"][0])
+    row["input_custody"] = [deepcopy(reference)]
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_completion(row, manifest, views), require_accepted=True)
+
+
+@pytest.mark.parametrize("change", [
+    "missing_completed", "missing_view", "missing_receipt", "unbound_receipt", "duplicate_receipt",
+    "changed_receipt", "decimal_completed", "decimal_receipt", "null_receipt",
+])
+def test_input_custody_copies_and_receipt_membership_cannot_disagree(native_snapshot_job, change):
+    row = _with_input_custody(native_snapshot_job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    if change == "missing_completed":
+        manifest["inputs"][0].pop("custody_reference")
+    elif change == "missing_view":
+        views["inputs"][0].pop("custody_reference")
+    elif change == "missing_receipt":
+        row.pop("input_custody")
+    elif change == "unbound_receipt":
+        manifest["inputs"][0].pop("custody_reference")
+        views["inputs"][0].pop("custody_reference")
+    elif change == "duplicate_receipt":
+        row["input_custody"] *= 2
+    elif change == "changed_receipt":
+        row["input_custody"][0]["native_record"]["revision"] += 1
+    elif change == "decimal_completed":
+        manifest["inputs"][0]["custody_reference"]["native_record"]["revision"] = 17.0
+    elif change == "decimal_receipt":
+        row["input_custody"][0]["native_record"]["revision"] = 17.0
+    else:
+        row["input_custody"] = None
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_completion(row, manifest, views), require_accepted=True)
+
+
+@pytest.mark.parametrize("change", ["missing_reference", "missing_grant", "one_grant_copy", "changed_source", "extra_grant_field", "foreign_source", "different_source_table", "different_source_table_uuid"])
+def test_requested_input_custody_reuse_needs_exact_bound_grant(native_snapshot_job, change):
+    row = _with_input_custody(native_snapshot_job, reuse=True)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    view = views["inputs"][0]
+    if change == "missing_reference":
+        view.pop("custody_reference")
+        row.pop("input_custody")
+    elif change == "missing_grant":
+        view.pop("custody_grant")
+    elif change == "one_grant_copy":
+        manifest["inputs"][0].pop("custody_grant")
+    elif change == "changed_source":
+        view["custody_grant"]["source"]["native_record"]["revision"] += 1
+    elif change == "extra_grant_field":
+        view["custody_grant"]["passed"] = True
+    else:
+        if change == "foreign_source":
+            view["custody_grant"]["source"]["dataset"] = "another"
+        else:
+            field = "table_uuid" if change.endswith("uuid") else "table"
+            view["custody_grant"]["source"]["native_record"][field] = (
+                "2ac396e5-a58d-4004-80a5-3833f039c4b2" if field == "table_uuid" else "another-table"
+            )
+        request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+        request["snapshot_inputs"][0]["reuse_from"] = deepcopy(view["custody_grant"]["source"])
+        manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+    if change != "one_grant_copy":
+        manifest["inputs"][0] = deepcopy(view)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_completion(row, manifest, views), require_accepted=True)
+
+
+def test_unrequested_input_custody_grant_and_file_profile_handles_refuse(native_snapshot_job, native_job):
+    row = _with_input_custody(native_snapshot_job, reuse=True)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    request["snapshot_inputs"][0].pop("reuse_from")
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_reseal_completion(row, manifest, views), require_accepted=True)
+    with pytest.raises(JobEvidenceError):
+        verify_completed_job(_with_input_custody(native_job), require_accepted=True)
+
+
+@pytest.mark.parametrize("change", [None, "receipt_order", "mixed_legacy", "duplicate_ordinal", "different_table", "different_table_uuid"])
+def test_input_custody_requires_all_native_inputs_in_exact_order(native_snapshot_job, tmp_path, change):
+    row = _with_input_custody(native_snapshot_job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    extra = deepcopy(views["inputs"][0])
+    extra["name"] = extra["selector"]["name"] = "source_alias"
+    job = _original_job(tmp_path)
+    job["inputs"] = [deepcopy(views["inputs"][0]["selector"]), deepcopy(extra["selector"])]
+    row = _retarget_original_job(row, job)
+    manifest = json.loads(base64.b64decode(row["completion_manifest"]["bytes_base64"]))
+    views = json.loads(base64.b64decode(manifest["view_set"]["bytes_base64"]))
+    extra["custody_reference"] = _input_custody_reference(input_name="source_alias", request_digest=manifest["request_digest"])
+    extra["custody_reference"]["native_record"]["key"] = "job-input/original/1"
+    extra["custody_reference"]["admission_digest"]["value"] = "f" * 64
+    views["inputs"].append(extra)
+    manifest["inputs"].append(deepcopy(extra))
+    row["input_custody"].append(deepcopy(extra["custody_reference"]))
+    policy = json.loads(base64.b64decode(row["policy"]["bytes_base64"]))
+    policy["view_names"]["inputs"].append("source_alias")
+    row["policy"] = _witness(Path(row["policy"]["reference"]["path"]), policy)
+    request = json.loads(base64.b64decode(manifest["admitted_request"]["bytes_base64"]))
+    request["snapshot_inputs"].append({**request["snapshot_inputs"][0], "name": "source_alias"})
+    request["policy"]["sha256"] = row["policy"]["sha256"]
+    manifest["admitted_request"] = _witness(Path(manifest["admitted_request"]["reference"]["path"]), request)
+    body = {key: deepcopy(row["accepted_qualification"][key]) for key in ACCEPTANCE_FIELDS}
+    body["policy_sha256"] = row["policy"]["sha256"]
+    row["accepted_qualification"] = _acceptance(body, row["policy"])
+    if change == "receipt_order":
+        row["input_custody"].reverse()
+    elif change == "mixed_legacy":
+        views["inputs"][1].pop("custody_reference")
+        manifest["inputs"][1].pop("custody_reference")
+        row["input_custody"].pop()
+    elif change == "duplicate_ordinal":
+        for reference in (views["inputs"][1]["custody_reference"], manifest["inputs"][1]["custody_reference"], row["input_custody"][1]):
+            reference["native_record"]["key"] = "job-input/original/0"
+    elif change in {"different_table", "different_table_uuid"}:
+        field = "table_uuid" if change.endswith("uuid") else "table"
+        for reference in (views["inputs"][1]["custody_reference"], manifest["inputs"][1]["custody_reference"], row["input_custody"][1]):
+            reference["native_record"][field] = "2ac396e5-a58d-4004-80a5-3833f039c4b2" if field == "table_uuid" else "another-table"
+    row = _reseal_completion(row, manifest, views)
+    if change is None:
+        checked = verify_completed_job(row, require_accepted=True)
+        assert [item["custody_reference"]["input"] for item in checked.view_set["inputs"]] == ["source", "source_alias"]
+    else:
+        with pytest.raises(JobEvidenceError):
+            verify_completed_job(row, require_accepted=True)
+
+
+@pytest.mark.parametrize("status", ["pending", "unknown", "failed"])
+def test_partial_input_custody_handles_do_not_create_catalog_input_bindings(native_snapshot_job, tmp_path, status):
+    row = deepcopy(native_snapshot_job)
+    row.update(status=status, candidate=None, completion_manifest=None, accepted_qualification=None,
+               input_custody=[_input_custody_reference()])
+    metadata, _entry, _receipt = _metadata(tmp_path, row)
+    result = assemble_catalog(_authored_project(tmp_path), metadata=metadata.document.path,
+                              metadata_adapter="local", permitted_roots=(tmp_path,))
+    assert result.report["decision"] == "incomplete", result.report
+    run = result.catalog["runs"][0]
+    assert run["inputs"] == [] and run["inputCoverage"]["status"] == "unknown"
+    assert not result.artifacts
+
+
 @pytest.mark.parametrize("mutation", [
     lambda row: row["candidate"].update(operation="different"),
     lambda row: row["completion_manifest"].update(bytes_base64=base64.b64encode(b"{}").decode()),

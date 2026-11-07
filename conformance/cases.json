@@ -3227,6 +3227,86 @@
         "exitCode": 1,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-CATALOG-085",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Complete native input references preserve opaque admission digests, lifecycle record identities, logical name rebinding and original-copy operation provenance. Both witnesses and the receipt bind the same current inputs; no payload is opened and metadata does not establish fresh native custody.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-086",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Coherently resealed current input references refuse another scheme, owner, operation, request, input ordinal or lifecycle table incarnation, invalid native integers and changed digest algorithms. All current references must identify one lifecycle table and UUID.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-087",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Current input references require complete matching witnesses and exact receipt membership/order. Refuse mixed legacy/new inputs, unbound or duplicate handles, mismatched copies and decimal substitutions. Historical completed candidates cannot acquire unbound references.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-088",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-ADAPTER-012"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A requested reuse_from requires an exact source grant in both complete witnesses and a current input reference. Refuse missing, unrequested, changed, foreign-owner or conflicting lifecycle-table grants. File-only version 1 evidence cannot gain snapshot custody handles.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-089",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Native handles on pending, unknown or failed operations remain unresolved metadata. They create no catalog input-version binding, accepted qualification or published artifacts; input coverage stays explicitly unknown.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": null
+      }
     }
   ]
 }

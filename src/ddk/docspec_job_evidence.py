@@ -28,6 +28,8 @@ VIEW_SECTIONS = ("inputs", "steps", "outputs", "reports")
 VIEW_PROFILE = "urn:docspec:whole-job-view-set:1"
 SNAPSHOT_VIEW_PROFILE = "urn:docspec:whole-job-view-set:2"
 SNAPSHOT_CUSTODY_PROFILE = "urn:docspec:whole-job-snapshot-custody:2"
+INPUT_CUSTODY_SCHEME = "urn:docspec:whole-job-input-custody"
+INPUT_CUSTODY_GRANT_PROFILE = "urn:docspec:whole-job-input-custody-grant:1"
 _VIEW_PROFILES = {COMPLETION_PROFILE: VIEW_PROFILE, SNAPSHOT_COMPLETION_PROFILE: SNAPSHOT_VIEW_PROFILE}
 _SNAPSHOT_ROLES = {"metadata", "manifest_list", "manifest", "data", "position_deletes", "equality_deletes"}
 ACCEPTANCE_FIELDS = ("profile", "dataset", "operation", "request_digest", "candidate", "view_set_digest", "policy_id",
@@ -59,6 +61,34 @@ def _digest(value):
 
 def _integer(value, minimum=0):
     return type(value) is int and value >= minimum
+
+
+def _uuid(value):
+    try:
+        return isinstance(value, str) and str(UUID(value)) == value
+    except ValueError:
+        return False
+
+
+def _input_custody_reference(value, owner):
+    """Validate an opaque native handle without resolving or rehashing its body."""
+    fields = {"scheme", "scheme_version", "dataset", "operation", "request_digest", "input", "native_record", "admission_digest"}
+    _object(value, fields, "native input-custody reference")
+    _require(set(value) == fields and value["scheme"] == INPUT_CUSTODY_SCHEME and value["scheme_version"] == "1"
+             and all(isinstance(value[key], str) and _ID.fullmatch(value[key]) for key in ("dataset", "operation"))
+             and value["dataset"] == owner and _digest(value["request_digest"])
+             and isinstance(value["input"], str) and bool(value["input"]), "Invalid native input-custody identity or owner.")
+    record = _object(value["native_record"], ("table", "table_uuid", "key", "revision"), "input-custody record")
+    _require(set(record) == {"table", "table_uuid", "key", "revision"}
+             and isinstance(record["table"], str) and bool(record["table"]) and _uuid(record["table_uuid"])
+             and isinstance(record["key"], str)
+             and re.fullmatch(r"job-input/" + re.escape(value["operation"]) + r"/(?:0|[1-9][0-9]*)", record["key"])
+             and _integer(record["revision"], 1) and record["revision"] < 2**63,
+             "Input custody requires an exact native table incarnation and input generation.")
+    digest = _object(value["admission_digest"], ("algorithm", "value"), "input-admission digest")
+    _require(set(digest) == {"algorithm", "value"} and digest["algorithm"] == "blake3" and _digest(digest["value"]),
+             "Input custody requires its original opaque native BLAKE3 digest.")
+    return value
 
 
 def _blake3(data):
@@ -229,6 +259,7 @@ def verify_completed_job(result, *, require_accepted=False):
     admitted_request = verify_admitted_request(result)
     _require(manifest["admitted_request"] == result["admitted_request"], "Completion changes its original admitted request witness.")
     _verify_admitted_inputs(admitted_request, manifest, view_set)
+    _verify_input_custody(result, admitted_request, manifest, view_set)
     policy = _verify_policy(result["policy"], result, manifest)
     accepted = result["accepted_qualification"]
     if accepted is not None:
@@ -285,9 +316,12 @@ def verify_admitted_request(result):
     _require(not snapshots.keys() & {item["name"] for item in request["file_inputs"]},
              "Original snapshot and file input names overlap.")
     for item in snapshots.values():
-        _require(set(item) == {"name", "metadata_sha256", "metadata_size"}
+        fields = {"name", "metadata_sha256", "metadata_size"}
+        _require(set(item) in (fields, fields | {"reuse_from"})
                  and _digest(item["metadata_sha256"]) and _integer(item["metadata_size"], 1)
                  and item["metadata_size"] < 2**64, "Invalid original snapshot metadata pin.")
+        if "reuse_from" in item:
+            _input_custody_reference(item["reuse_from"], request["dataset"])
     return freeze_json(request)
 
 
@@ -304,12 +338,62 @@ def _verify_admitted_inputs(request, manifest, views):
                                   "metadata_sha256": view["snapshot_custody"]["metadata_sha256"],
                                   "metadata_size": view["snapshot_custody"]["metadata_size"]}
                     for view in views["inputs"] if view["kind"] == "native_table"}
-        _require(bool(snapshots) and snapshots == expected,
+        pins = {name: {key: value for key, value in item.items() if key != "reuse_from"} for name, item in snapshots.items()}
+        _require(bool(snapshots) and pins == expected,
                  "Snapshot custody differs from the complete original native-table pins.")
         _require(request.get("prerequisites", []) == [],
                  "Snapshot custody alone cannot verify original producer prerequisites.")
     else:
         _require(not snapshots, "Version 1 completion cannot establish snapshot custody.")
+
+
+def _verify_input_custody(result, request, manifest, views):
+    """Check bound complete observations; native grants own actual availability."""
+    pins = {item["name"]: item for item in request.get("snapshot_inputs", [])}
+    references = []
+    native_count = 0
+    for index, (view, completed) in enumerate(zip(views["inputs"], manifest["inputs"])):
+        native = manifest["profile"] == SNAPSHOT_COMPLETION_PROFILE and view["kind"] == "native_table"
+        native_count += int(native)
+        for key in ("custody_reference", "custody_grant"):
+            _require((key in view) == (key in completed), "Input custody must be bound in both complete witnesses.")
+            if key in view:
+                _require(native and json_equal(view[key], completed[key]),
+                         "Input custody differs between witnesses or uses an unsupported input profile.")
+        if "custody_reference" in view:
+            for item in (view, completed):
+                reference = _input_custody_reference(item["custody_reference"], manifest["dataset"])
+                _require(reference["operation"] == manifest["operation"] and reference["request_digest"] == manifest["request_digest"]
+                         and reference["input"] == view["name"]
+                         and reference["native_record"]["key"] == f"job-input/{manifest['operation']}/{index}",
+                         "A bound custody reference must identify the current operation's exact input row.")
+            references.append(view["custody_reference"])
+        pin = pins.get(view["name"], {})
+        _require(("reuse_from" in pin) == ("custody_grant" in view),
+                 "Custody reuse requires exactly the grant requested in the original admission.")
+        if "custody_grant" in view:
+            _require("custody_reference" in view, "A custody grant requires its current completed input reference.")
+            for item in (view, completed):
+                grant = _object(item["custody_grant"], ("profile", "source"), "bound input-custody grant")
+                _require(set(grant) == {"profile", "source"} and grant["profile"] == INPUT_CUSTODY_GRANT_PROFILE,
+                         "Unsupported native input-custody grant.")
+                source = _input_custody_reference(grant["source"], manifest["dataset"])
+                current = item["custody_reference"]
+                _require(all(source["native_record"][key] == current["native_record"][key] for key in ("table", "table_uuid")),
+                         "Same-owner custody reuse must retain the native lifecycle table incarnation.")
+                _require(json_equal(grant["source"], pin["reuse_from"]),
+                         "The complete custody grant differs from the original requested native handle.")
+    if references:
+        _require(len(references) == native_count, "New custody references must cover every native input.")
+        _require(len({(item["native_record"]["table"], item["native_record"]["table_uuid"]) for item in references}) == 1,
+                 "Current input references identify conflicting native lifecycle tables.")
+        receipt = result.get("input_custody")
+        _require(isinstance(receipt, list) and json_equal(receipt, references),
+                 "Receipt custody references differ from the complete bound input membership or order.")
+        for reference in receipt:
+            _input_custody_reference(reference, manifest["dataset"])
+    else:
+        _require("input_custody" not in result, "A historical candidate cannot gain unbound custody handles.")
 
 
 def _verify_policy(witness, result, manifest):
@@ -451,11 +535,7 @@ def _verify_snapshot_custody(view, owner):
     selector = view["selector"]
     _require(set(selector) == {"kind", "name", "metadata_location", "table_uuid", "snapshot", "schema_id"},
              "Snapshot custody requires an exact native-table selector.")
-    try:
-        valid_uuid = isinstance(selector["table_uuid"], str) and str(UUID(selector["table_uuid"])) == selector["table_uuid"]
-    except ValueError:
-        valid_uuid = False
-    _require(valid_uuid and _absolute_native_uri(selector["metadata_location"])
+    _require(_uuid(selector["table_uuid"]) and _absolute_native_uri(selector["metadata_location"])
              and (selector["snapshot"] is None or (_integer(selector["snapshot"]) and selector["snapshot"] < 2**63))
              and _integer(selector["schema_id"]) and selector["schema_id"] < 2**31,
              "Invalid native table UUID, snapshot, schema or metadata location.")
