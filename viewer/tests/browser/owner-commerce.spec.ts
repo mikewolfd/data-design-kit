@@ -22,15 +22,16 @@ async function enabled(request: any) {
   return response.json();
 }
 
-const replayPath =
-  process.env.DDK_VIEWER_RUN_NATIVE_ACCEPTANCE === '1'
-    ? undefined
-    : process.env.DDK_VIEWER_REPLAY_COMMERCE || 'outputs/publisher-commerce-journey.json';
+const runNative = process.env.DDK_VIEWER_RUN_NATIVE_ACCEPTANCE === '1';
+const replayPath = runNative ? undefined : process.env.DDK_VIEWER_REPLAY_COMMERCE;
+const noJourney =
+  'The retained Commerce journey is evidence kept outside the repository; set DDK_VIEWER_REPLAY_COMMERCE to it (see README, Evidence archive).';
 const captures = process.env.DDK_VIEWER_CAPTURE_DIR || 'work/browser-captures';
-test(`${replayPath ? 'retained DocSpec responses' : 'real DocSpec execution'}: read, query, exact export and quality evidence form one consumer journey`, async ({
+test(`${runNative ? 'real DocSpec execution' : 'retained DocSpec responses'}: read, query, exact export and quality evidence form one consumer journey`, async ({
   page,
   request,
 }) => {
+  test.skip(!runNative && !replayPath, noJourney);
   const snapshot = await enabled(request);
   await mkdir(captures, { recursive: true });
   if (replayPath) {
@@ -176,6 +177,7 @@ test('connected commerce preserves unsupported controls and all-view accessibili
   request,
 }) => {
   test.setTimeout(60_000);
+  test.skip(!runNative && !replayPath, noJourney);
   const snapshot = await enabled(request);
   const customerVersion = snapshot.catalog.versions.find((v: any) => v.dataset === 'customers').id;
   // Reuse the actual owner response proven by the consumer journey for visual checks.

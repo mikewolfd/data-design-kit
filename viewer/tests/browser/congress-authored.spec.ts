@@ -3,8 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 
 const catalogId = 'congress-authored';
 const nativeRelease = '0ed378bde1c3dfbf218d1b3be9b067551dbc522f3b00bc854fe8b9f9a664b311';
-const captureDirectory =
-  process.env.DDK_VIEWER_CAPTURE_DIR || 'outputs/viewer-congress-integration-20261106';
+const captureDirectory = process.env.DDK_VIEWER_CAPTURE_DIR || 'work/browser-captures';
 
 // These checks use actual retained Congress inputs through /api/read. No read or
 // query response is intercepted and no native producer is invoked.

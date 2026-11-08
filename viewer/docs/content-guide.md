@@ -1,6 +1,6 @@
 # Catalog content guide
 
-Write descriptions in the maintained standard metadata, then regenerate the catalog. The portal uses those artifacts; publisher proposals in `outputs/` are review material and must never become a runtime metadata source. Captured application catalogs remain immutable evidence.
+Write descriptions in the maintained standard metadata, then regenerate the catalog. The portal uses those artifacts; publisher proposals in the evidence archive's `outputs/` are review material and must never become a runtime metadata source. Captured application catalogs remain immutable evidence.
 
 Answer four questions for each dataset: What is it about? What does one record represent? What can a visitor do here? What should they know before using it? Publishers own the first two answers and the data limits. The portal derives actions from the current reader/query capabilities, recorded versions and file availability.
 
@@ -36,7 +36,7 @@ Before delivering a regenerated catalog, compare the new artifact with its sourc
 
 ## Publisher guides and prepared views
 
-Additional guidance uses the versioned `urn:ddk:publisher:discovery` extension in the publisher's project metadata, copied through the standard DDK assembly and disclosure route. The viewer validates its exact dataset definitions, versions, resource and recipe targets. It refuses unsupported or malformed guidance visibly while preserving the base catalog. See [the profile](../outputs/implementation-20261107/metadata/publisher-extension.md) for the supported shape and bounds.
+Additional guidance uses the versioned `urn:ddk:publisher:discovery` extension in the publisher's project metadata, copied through the standard DDK assembly and disclosure route. The viewer validates its exact dataset definitions, versions, resource and recipe targets. It refuses unsupported or malformed guidance visibly while preserving the base catalog. See [the profile](publisher-extension.md) for the supported shape and bounds.
 
 Every maintained guide should name an author, review date, evidence and a `reviewTrigger`. Review it when a referenced definition, relationship, version, resource, or access capability changes. Regenerate the publisher artifacts and verify every destination after review. A valid link does not establish that guidance still answers a visitor's question; participant evidence is a separate acceptance step.
 

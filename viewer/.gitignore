@@ -8,7 +8,6 @@ playwright-report/
 .env.*
 !.env.example
 .DS_Store
-outputs/*.png
-outputs/*.zip
+outputs/
 
 .playwright-mcp/

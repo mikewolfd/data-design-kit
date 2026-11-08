@@ -52,4 +52,4 @@ Run the normal unit, type and build checks. The configured integration test in `
 
 `tests/browser/congress-authored.spec.ts` requires the configured local preview. It exercises actual retained reads, explicit version selection, exact identifiers, nested occurrences and downloads. Routine Commerce tests remain replay-only unless fresh native acceptance is explicitly enabled.
 
-The current integration report and separate review evidence are in `outputs/viewer-congress-integration-20261106/`. Each report identifies the precise module configuration used; a changed owner source pin requires renewed acceptance.
+The current integration report and separate review evidence are in the evidence archive's `outputs/viewer-congress-integration-20261106/` (see the README). Each report identifies the precise module configuration used; a changed owner source pin requires renewed acceptance.
