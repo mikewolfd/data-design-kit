@@ -19,7 +19,7 @@ export const applicationRegistrations: readonly CatalogRegistration[] = [
       'Find descriptions of data about U.S. rules, legislation, courts, campaign finance and public spending. Records are not connected to this portal.',
     mode: 'application',
     directory: resolve(process.cwd(), 'fixtures/applications/spicy-regs'),
-    lockSha256: '49cc1c23983e122e61ca0815c89fa527d38f411b050b6c035d5c81652d57ac86',
+    lockSha256: '7d9073510323146c61a87d77d0caf4b47cf498538b0eb6da0832063756713d83',
   },
   {
     id: 'congress',
