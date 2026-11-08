@@ -144,7 +144,11 @@
           "properties": {},
           "additionalProperties": false
         },
-        "resultDataset": "daily-revenue"
+        "resultDataset": "daily-revenue",
+        "title": "Calculate daily revenue by date and region",
+        "notes": [
+          "Group example orders by order date and customer region, excluding cancelled orders and orders without a matching customer. This query recalculates totals from its inputs."
+        ]
       },
       {
         "id": "urn:example:commerce:recipe:checked-revenue",
@@ -159,7 +163,11 @@
           "properties": {},
           "additionalProperties": false
         },
-        "resultDataset": "daily-revenue"
+        "resultDataset": "daily-revenue",
+        "title": "Read the saved daily revenue result",
+        "notes": [
+          "Read the existing daily revenue result. This query does not recalculate totals or rerun checks. It does not specify record order."
+        ]
       }
     ]
   }

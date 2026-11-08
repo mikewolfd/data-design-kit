@@ -21,12 +21,12 @@
     },
     {
       "uri": "urn:example:commerce:definition:amount-cents",
-      "sha256": "3b3bb80ec245c78d4a44ac8c6b3584584df3016ab7d6c7532a0b08f44c41c021",
+      "sha256": "67ae87c970365824657103de409cc8e4df7687767e579be64e45ddb90437737a",
       "role": "definition"
     },
     {
       "uri": "urn:example:commerce:definition:contract",
-      "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08",
+      "sha256": "8303a29f9aeda8d30c2a5619f51f62fba43ca5024ad3d3305244b40961cfe73a",
       "role": "definition"
     },
     {
@@ -36,7 +36,7 @@
     },
     {
       "uri": "urn:example:commerce:definition:project",
-      "sha256": "aead2f6e05861f4b5a11ea2e7aaaa7d58c1001c973d1ba225cf08fa9204e637b",
+      "sha256": "96f7626c616da919e19fdcc5a560a11b0612ba6f09636eefa5079c7540b962be",
       "role": "project"
     },
     {
@@ -126,7 +126,7 @@
         "object": "orders",
         "source": {
           "uri": "urn:example:commerce:definition:contract",
-          "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08"
+          "sha256": "8303a29f9aeda8d30c2a5619f51f62fba43ca5024ad3d3305244b40961cfe73a"
         }
       },
       "rowMeaning": "One order with its order date, amount, and recorded status."
@@ -141,7 +141,7 @@
         "object": "customers",
         "source": {
           "uri": "urn:example:commerce:definition:contract",
-          "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08"
+          "sha256": "8303a29f9aeda8d30c2a5619f51f62fba43ca5024ad3d3305244b40961cfe73a"
         }
       },
       "rowMeaning": "One customer identifier and its region."
@@ -156,7 +156,7 @@
         "object": "daily_revenue",
         "source": {
           "uri": "urn:example:commerce:definition:contract",
-          "sha256": "f56c038580d11dc8e56ce8fed972e73ff13e17d865f16598a43307b23f387d08"
+          "sha256": "8303a29f9aeda8d30c2a5619f51f62fba43ca5024ad3d3305244b40961cfe73a"
         }
       },
       "rowMeaning": "One row per order date and customer region with matched, non-cancelled orders."

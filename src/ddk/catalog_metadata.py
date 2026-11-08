@@ -28,6 +28,23 @@ def owner_record(document):
     return {"uri": document.path.as_uri(), "sha256": document.sha256}
 
 
+def _quality_reason(check, declared):
+    """Explain the native outcome without guessing among repeated rule IDs."""
+    label = check.get("name")
+    if check.get("qualityId"):
+        pending = list(declared.get("schema", []))
+        descriptions = set()
+        while pending:
+            node = pending.pop()
+            descriptions.update(rule["description"] for rule in node.get("quality", [])
+                                if rule.get("id") == check["qualityId"] and rule.get("description"))
+            pending.extend(node.get("properties", []))
+        if len(descriptions) == 1:
+            label = descriptions.pop()
+    reason = check.get("reason") or check["result"]
+    return f"{label} — {reason}" if label else reason
+
+
 def _need(value, keys, context):
     if not isinstance(value, dict) or not keys <= value.keys():
         raise CatalogError("CATALOG-METADATA-SHAPE", f"The {context} record lacks required fields.")
@@ -348,7 +365,9 @@ class LocalMetadata:
                 "id": occurrence, "reference": {"scheme": "urn:ddk:dlt:source-occurrence",
                                                  "authority": "urn:ddk:dlt", "value": occurrence},
                 "content": {"scheme": "urn:ddk:content:sha256", "authority": "urn:ddk:local-file", "value": digest},
-                "outcome": "retained", "scope": "Exact source file recorded for this dlt load.", "record": record,
+                "outcome": "retained",
+                "scope": f"{staged.effective.get('businessName') or table}: {Path(source['path']).name}. Source file recorded for this data load.",
+                "record": record,
             })
             sources.append(occurrence)
         versions = []
@@ -515,7 +534,7 @@ class LocalMetadata:
                     raise CatalogError("CATALOG-QUALITY-CONTRADICTION",
                                        "A normalized outcome disagrees with its native quality check.")
                 verified.append({**check, "status": expected_status,
-                                 "reason": native_check.get("reason") or native_result})
+                                 "reason": _quality_reason(native_check, declared)})
             elif check_id == EXACT_FIELD_CHECK and check["nativeCheckIds"] == []:
                 verified.append(self._verify_exact_fields(document, receipt, declared, check))
             elif check["nativeCheckIds"] == [] and status == "not_run" and check.get("reason"):
