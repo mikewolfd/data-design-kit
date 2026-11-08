@@ -8,10 +8,12 @@ import traceback
 
 from ddk.documents import json_dumps, read_json
 from ddk.arrow_mapping import MappingUnavailable
+from ddk.quality import QualityOperationalError
+from .docspec_stream import NativeStreamError
 
 
 def main():
-    action, path, directory = sys.argv[1:]
+    action, path, directory, *allocation = sys.argv[1:]
     folder = Path(directory)
     try:
         request = deepcopy(read_json(path).value)
@@ -23,12 +25,18 @@ def main():
                 elif action == "odcs-versions":
                     result = native_quality.versions(request, folder)
                 else:
-                    result = native_quality.evaluate(request, folder, plan_only=action == "quality-plan")
+                    if len(allocation) > 1 or allocation and action != "quality":
+                        raise ValueError("Unexpected native worker allocation arguments")
+                    result = native_quality.evaluate(request, folder, plan_only=action == "quality-plan",
+                                                     scratch=allocation[0] if allocation else None)
             elif action in ("files", "stage", "fixture-files"):
                 from . import native_intake
                 result = getattr(native_intake, action.replace("-", "_"))(request, folder)
             else:
                 raise ValueError("Unknown native action: " + action)
+    except (QualityOperationalError, NativeStreamError) as exc:
+        result = {"status": "unknown", "reason": str(exc),
+                  "operationalError": {"type": type(exc).__name__, "code": exc.code, "message": str(exc)}}
     except MappingUnavailable as exc:
         result = {"status": "unknown", "reason": str(exc)}
     except ValueError as exc:

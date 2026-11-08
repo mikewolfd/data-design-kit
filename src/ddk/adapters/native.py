@@ -7,7 +7,9 @@ import os
 import math
 from pathlib import Path
 import selectors
+import shutil
 import signal
+import stat
 import subprocess
 import tempfile
 from time import monotonic
@@ -225,6 +227,38 @@ def run_bounded(arguments, *, timeout, limit, env=None, stop_on_stdout_limit=Fal
             "cancelled": cancelled, "cleanupDiagnostics": list(getattr(primary_error, "__notes__", ()))}
 
 
+def _cleanup_quality_scratch(folder, scratch, ownership, terminated):
+    """Clean only this completed invocation's explicit, unchanged allocation.
+
+    The invocation directory is private to the outer owner. FD-relative rmtree
+    avoids following replacement/inner symlinks. Uncertain termination or an
+    unexpected inode retains the allocation for explicit reconciliation.
+    """
+    result = {"path": str(scratch), "status": "incomplete"}
+    if not terminated:
+        return {**result, "reason": "Worker termination and complete pipe drain are not both established"}
+    folder_fd = None
+    try:
+        if scratch.parent != folder or not shutil.rmtree.avoids_symlink_attacks:
+            raise OSError("Owned scratch path or safe directory cleanup is unavailable")
+        folder_fd = os.open(folder, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        observed_folder = os.fstat(folder_fd)
+        expected_folder, expected_scratch = ownership
+        if (observed_folder.st_dev, observed_folder.st_ino) != (expected_folder.st_dev, expected_folder.st_ino):
+            raise OSError("Invocation directory ownership changed")
+        observed = os.stat(scratch.name, dir_fd=folder_fd, follow_symlinks=False)
+        if (not stat.S_ISDIR(observed.st_mode) or
+            (observed.st_dev, observed.st_ino) != (expected_scratch.st_dev, expected_scratch.st_ino)):
+            raise OSError("Spill directory ownership changed; no cleanup attempted")
+        shutil.rmtree(scratch.name, dir_fd=folder_fd)
+        return {**result, "status": "removed"}
+    except OSError as exc:
+        return {**result, "reason": str(exc)[:2048]}
+    finally:
+        if folder_fd is not None:
+            os.close(folder_fd)
+
+
 class NativeTools:
     """Select a tool environment explicitly; never discover it during core checks."""
 
@@ -248,11 +282,17 @@ class NativeTools:
         environment.update(PYTHONDONTWRITEBYTECODE="1", DLT_TELEMETRY_ENABLED="false", RUNTIME__DLTHUB_TELEMETRY="false")
         # Locate this exact adapter from either an installed tree or checkout.
         environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
+        scratch = Path(tempfile.mkdtemp(prefix=".quality-spill-", dir=folder)) if action == "quality" else None
+        ownership = (folder.stat(), scratch.stat()) if scratch is not None else None
+        result = None
         try:
             with request_transport(folder, request, request_path, self.redaction) as transport_path:
+                arguments = [self.python, "-m", "ddk.adapters.native_worker", action,
+                             str(transport_path), str(folder)]
+                if scratch is not None:
+                    arguments.append(str(scratch))
                 result = run_bounded(
-                    [self.python, "-m", "ddk.adapters.native_worker", action,
-                     str(transport_path), str(folder)],
+                    arguments,
                     timeout=self.timeout, limit=self.capture_bytes, env=environment,
                 )
             (folder / "stderr.log").write_bytes(self.redaction.captured(result.pop("stderr")))
@@ -278,6 +318,19 @@ class NativeTools:
             response = {"status": "error", "reason": str(exc)}
             if notes := getattr(exc, "__notes__", None):
                 response["cleanupDiagnostics"] = list(notes)
+        finally:
+            if scratch is not None:
+                terminated = (result is not None and type(result.get("exitCode")) is int
+                              and not result.get("drainIncomplete", True))
+                cleanup = _cleanup_quality_scratch(folder, scratch, ownership, terminated)
+        if scratch is not None:
+            response["scratchCleanup"] = cleanup
+            if cleanup["status"] == "incomplete":
+                response.setdefault("nativeOutcome", response.get("status"))
+                response["cleanupError"] = {"code": "QUALITY-SCRATCH-CLEANUP", "message": cleanup["reason"]}
+                response.setdefault("operationalError", response["cleanupError"])
+                response.update(status="unknown", reason=response.get("reason", "Quality evaluation returned")
+                                + "; quality spill cleanup is incomplete")
         if self.redaction:
             changed = _sanitize_artifacts(folder, self.redaction)
             response = _public_response(response, self.redaction, changed)
