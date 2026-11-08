@@ -1,0 +1,106 @@
+{
+  "observations": {
+    "name": "observations",
+    "businessName": "Watershed observations",
+    "description": "Explore example water-quality measurements and readings at monitoring stations. These synthetic values do not describe real water conditions.",
+    "properties": [
+      {
+        "name": "id",
+        "businessName": "Record identifier",
+        "logicalType": "integer",
+        "description": "Identifier for this observation. Large identifiers are preserved exactly.",
+        "physicalType": "int64"
+      },
+      {
+        "name": "station_code",
+        "businessName": "Station code",
+        "logicalType": "string",
+        "description": "Station code, scoped through the release"
+      },
+      {
+        "name": "concentration",
+        "businessName": "Concentration",
+        "logicalType": "number",
+        "description": "Exact decimal concentration in milligrams per litre",
+        "physicalType": "decimal128(28,18)"
+      },
+      {
+        "name": "readings",
+        "businessName": "Nested readings",
+        "logicalType": "array",
+        "description": "Null, empty and populated lists differ",
+        "items": {
+          "name": "reading",
+          "businessName": "Reading",
+          "logicalType": "object",
+          "description": "Nested measurement",
+          "properties": [
+            {
+              "name": "depth",
+              "businessName": "Reading depth",
+              "logicalType": "number",
+              "description": "Depth recorded for the nested reading. A measurement unit is not specified in this example."
+            },
+            {
+              "name": "flags",
+              "businessName": "Reading labels",
+              "logicalType": "array",
+              "description": "Recorded labels for a reading. Repeated labels remain separate.",
+              "items": {
+                "name": "flag",
+                "businessName": "Reading label",
+                "logicalType": "string",
+                "description": "A recorded label; value codes are not defined in this example."
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "note",
+        "businessName": "Record note",
+        "logicalType": "string",
+        "description": "May be missing, null or empty"
+      },
+      {
+        "name": "$number",
+        "businessName": "Literal number-tag field",
+        "logicalType": "string",
+        "description": "Literal source key preserved by escaped transport"
+      },
+      {
+        "name": "metadata",
+        "businessName": "Source metadata",
+        "logicalType": "object",
+        "description": "Literal tag-shaped source object",
+        "properties": [
+          {
+            "name": "$number",
+            "businessName": "Literal number-tag field",
+            "logicalType": "string",
+            "description": "Source text, not a number transport tag"
+          }
+        ]
+      }
+    ]
+  },
+  "stations": {
+    "name": "stations",
+    "businessName": "Synthetic station register",
+    "description": "Find the station names used in the example water-quality measurements. These stations are synthetic.",
+    "properties": [
+      {
+        "name": "code",
+        "businessName": "Reference code",
+        "logicalType": "string",
+        "description": "Station code"
+      },
+      {
+        "name": "name",
+        "businessName": "Display name",
+        "logicalType": "string",
+        "description": "Station label"
+      }
+    ]
+  }
+}

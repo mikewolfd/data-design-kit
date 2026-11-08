@@ -1,0 +1,16 @@
+{
+  "fixture": true,
+  "scope": "Independently authored synthetic rows and illustrative owner records; no native DocSpec operation or candidate acceptance.",
+  "observedAt": "2026-11-06T17:00:00Z",
+  "captures": [
+    "batch-1 retained",
+    "batch-2 retained",
+    "batch-empty contains zero records",
+    "batch-failed has no retained content"
+  ],
+  "checks": {
+    "sample_shape": "passed only for these authored rows",
+    "native_candidate": "unknown",
+    "remote_existence": "not_run"
+  }
+}

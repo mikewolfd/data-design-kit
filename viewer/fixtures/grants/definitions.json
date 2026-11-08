@@ -1,0 +1,86 @@
+{
+  "awards": {
+    "name": "awards",
+    "businessName": "Public-service grants",
+    "description": "Explore example grant awards and their listed payment records. These synthetic records do not describe real grants.",
+    "properties": [
+      {
+        "name": "id",
+        "businessName": "Record identifier",
+        "logicalType": "integer",
+        "description": "Exact grant identifier",
+        "physicalType": "uint64"
+      },
+      {
+        "name": "program_code",
+        "businessName": "Program code",
+        "logicalType": "string",
+        "description": "Program code scoped through the release"
+      },
+      {
+        "name": "amount",
+        "businessName": "Amount",
+        "logicalType": "number",
+        "description": "Example awarded amount. Currency is not specified; keep this separate from payment amounts.",
+        "physicalType": "decimal128(30,8)"
+      },
+      {
+        "name": "payments",
+        "businessName": "Listed payments",
+        "logicalType": "array",
+        "description": "Listed payment records for the award. Payment timing and reconciliation to the award amount are not defined in this example.",
+        "items": {
+          "name": "payment",
+          "businessName": "Payment record",
+          "logicalType": "object",
+          "description": "Payment record",
+          "properties": [
+            {
+              "name": "amount",
+              "businessName": "Amount",
+              "logicalType": "number",
+              "description": "Amount listed for this payment record. Currency is not specified."
+            },
+            {
+              "name": "tags",
+              "businessName": "Payment labels",
+              "logicalType": "array",
+              "description": "Labels attached to a payment record. Repeated labels remain separate.",
+              "items": {
+                "name": "tag",
+                "businessName": "Payment label",
+                "logicalType": "string",
+                "description": "A recorded payment label; value codes are not defined in this example."
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "note",
+        "businessName": "Record note",
+        "logicalType": "string",
+        "description": "May be absent, null or empty"
+      }
+    ]
+  },
+  "programs": {
+    "name": "programs",
+    "businessName": "Synthetic grant programs",
+    "description": "Find the program names used in the example grant awards. These programs are synthetic.",
+    "properties": [
+      {
+        "name": "code",
+        "businessName": "Reference code",
+        "logicalType": "string",
+        "description": "Program key"
+      },
+      {
+        "name": "name",
+        "businessName": "Display name",
+        "logicalType": "string",
+        "description": "Program name"
+      }
+    ]
+  }
+}

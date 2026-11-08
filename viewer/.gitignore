@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.astro/
+work/
+test-results/
+playwright-report/
+.env
+.env.*
+!.env.example
+.DS_Store
+outputs/*.png
+outputs/*.zip
+
+.playwright-mcp/

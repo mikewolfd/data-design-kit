@@ -1,0 +1,153 @@
+{
+  "scope": "Regenerated local Commerce catalog with revised publisher copy. The original revenue Parquet and execution receipt are retained. Fresh small CSV staging and quality receipts bind revised definitions; the original calculation was not rerun. Input consumption remains unknown. Bounded file checks do not establish managed acceptance.",
+  "sourceRoot": "/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0",
+  "sourceDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog",
+  "sourceLockSha256": "efd61cc7f5de0fec81fec7f4750805030e21dbfa6d6ffeb7393dc56bc4504f82",
+  "sourceLockUnchangedDuringCapture": true,
+  "priorCapture": {
+    "directory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-original-captures/commerce-native",
+    "sha256": "884cf9dc7676187c17f7bd668151672a4c3d9d98edf5409c7fab18af287a0f72"
+  },
+  "files": [
+    {
+      "path": "catalog.ddk.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/catalog.ddk.json",
+      "sha256": "932e5d622d142f36d25d00f3b2ed8597fc10056a7818d8ab5e6c56c7283d0cfe",
+      "bytes": 63163,
+      "scope": "regenerated-catalog-control"
+    },
+    {
+      "path": "catalog.lock.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/catalog.lock.json",
+      "sha256": "efd61cc7f5de0fec81fec7f4750805030e21dbfa6d6ffeb7393dc56bc4504f82",
+      "bytes": 11857,
+      "scope": "regenerated-catalog-control"
+    },
+    {
+      "path": "catalog.report.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/catalog.report.json",
+      "sha256": "e0bf65880c2c3a5602f7c264c401b185decbbcfb116a848849544afea2a7ff45",
+      "bytes": 43757,
+      "scope": "regenerated-catalog-control"
+    },
+    {
+      "path": "discovery.dcat.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/discovery.dcat.json",
+      "sha256": "47500bf3fc100825821f6358839299092668aef094d0891610d12227c4939478",
+      "bytes": 9747,
+      "scope": "regenerated-catalog-control"
+    },
+    {
+      "path": "lineage/0000.openlineage.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/lineage/0000.openlineage.json",
+      "sha256": "f4acfad40a4e8e702d0728504e58d4c70a0d78c91cc3404f011a2f25510abe3f",
+      "bytes": 572,
+      "scope": "regenerated-catalog-control"
+    },
+    {
+      "path": "lineage/0001.openlineage.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/lineage/0001.openlineage.json",
+      "sha256": "0041cc30539b10d1ee993ef882e3c55ffdbdbf273cf9b329172d352d4ff1a03a",
+      "bytes": 847,
+      "scope": "regenerated-catalog-control"
+    },
+    {
+      "path": "queries/c963862f563e4b7b342bb5589001eace8a96f3ed1a8300184249d5fd0742243e.sql",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/queries/c963862f563e4b7b342bb5589001eace8a96f3ed1a8300184249d5fd0742243e.sql",
+      "sha256": "133ded229a138b27600c1f0b0af0db0f930179c0e9ea9c20adac2f42f8c09c7a",
+      "bytes": 382,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "queries/f0a27c490ea8831876315ddaf0d550c0e2d369fe76b17eb56f89bd5106452d65.sql",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-catalog/queries/f0a27c490ea8831876315ddaf0d550c0e2d369fe76b17eb56f89bd5106452d65.sql",
+      "sha256": "ca01fbd8506181c0f7a4766c61712613a32f8882007b2a941247b13703183670",
+      "bytes": 122,
+      "scope": "catalog-companion"
+    },
+    {
+      "path": "evidence/execution.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/runtime/job-wchstlnl/receipt.json",
+      "sha256": "1a5155c320c343f34aec230f4258a9f8c977ffad9cc8a833a7390bab91672f99",
+      "bytes": 4210,
+      "scope": "original-execution"
+    },
+    {
+      "path": "evidence/quality.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/native/quality-rpjw4bnl/receipt.json",
+      "sha256": "06b1c688e93d6c5c19abe02f8dff26fa06c9e6ee0b4e4c3f6d47b709151d9bab",
+      "bytes": 7316,
+      "scope": "original-quality"
+    },
+    {
+      "path": "evidence/consumer-read.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/runtime/job-lb4c5xqv/receipt.json",
+      "sha256": "54bd3a055385113aa5c23a5f847ee90e734b6bc1a6e368e5f3db48471b3f26d7",
+      "bytes": 1876,
+      "scope": "original-consumer-read"
+    },
+    {
+      "path": "evidence/consumer-result.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/consumer-result.json",
+      "sha256": "375b730c30e421deaa83c4b48d62a4f7e20f4ec9a843bb628183bd0b446239ef",
+      "bytes": 2942,
+      "scope": "original-consumer-result"
+    },
+    {
+      "path": "evidence/fixture-report.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/run/report.ddk.json",
+      "sha256": "3af4ad8c99c481173b86361cd6c61a594f6692ef50d3cdf4879bf3e2dac3e973",
+      "bytes": 86022,
+      "scope": "original-fixture-report"
+    },
+    {
+      "path": "evidence/reference-workflow.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/reference-workflow.json",
+      "sha256": "d37592f350006d87e98d406af2c84b7dbb39b441adda5ce28c586ed305746841",
+      "bytes": 1412,
+      "scope": "original-reference-workflow"
+    },
+    {
+      "path": "evidence/workflow-verification.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/workflow-verification.json",
+      "sha256": "140f4c4f55234890485f7613f57b249765f348194a60443ec762cab7dd062429",
+      "bytes": 825,
+      "scope": "original-workflow-verification"
+    },
+    {
+      "path": "evidence/metadata.json",
+      "uri": "file:///Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/test-artifacts/test_connected_staged_saved_pl0/metadata.json",
+      "sha256": "ce879f6e0417b335eb988b336cd97bea898a0dc61387547b66c2975f6a0337a5",
+      "bytes": 1627,
+      "scope": "original-metadata"
+    },
+    {
+      "path": "evidence/refreshed-quality.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-evidence/native/quality-3l9f6lwv/receipt.json",
+      "sha256": "be9652b1676abef804ebef83d2ce5cca8ebefbccecab5c9a00a626233569aea7",
+      "bytes": 6881,
+      "scope": "refreshed-quality"
+    },
+    {
+      "path": "evidence/refreshed-metadata.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-evidence/metadata.json",
+      "sha256": "97a60dee95f879602a4dcf671742053c32a73561503df8130fed07bd5ff2b2d4",
+      "bytes": 1574,
+      "scope": "refreshed-metadata"
+    },
+    {
+      "path": "evidence/refreshed-orders-source.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-evidence/native/stage-r63mpo1d/receipt.json",
+      "sha256": "cbc2e575c76a6f6cc33e91a975ceb3441b1a1ba1241a45cfa589ef53787b51a3",
+      "bytes": 4473,
+      "scope": "refreshed-source-capture"
+    },
+    {
+      "path": "evidence/refreshed-customers-source.json",
+      "uri": "file:///Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-commerce-evidence/native/stage-8qfj7947/receipt.json",
+      "sha256": "910a3c1262db2f1228ab84a66cc28b099901ba9f2785524f2618cb2715b2fc0f",
+      "bytes": 3232,
+      "scope": "refreshed-source-capture"
+    }
+  ]
+}

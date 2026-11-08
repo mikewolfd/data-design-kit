@@ -1,0 +1,90 @@
+{
+  "specVersion": "0.1",
+  "kind": "lock",
+  "id": "urn:ddk-viewer:fixture:watershed:lock",
+  "version": "1.0.0",
+  "project": "urn:ddk-viewer:fixture:watershed:project",
+  "files": [
+    {
+      "path": "definitions.json",
+      "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7",
+      "role": "definition"
+    },
+    {
+      "path": "evidence.json",
+      "sha256": "0dcb550c187f7febf799a242b09854afb90744f781bb20312e6c08ef00979465",
+      "role": "metadata"
+    },
+    {
+      "path": "disclosure.json",
+      "sha256": "5c77ae1e739ece024873b04290c6efa49ebe2005037ad1010447a29d068c0af7",
+      "role": "disclosure-policy"
+    },
+    {
+      "path": "data/observations-v1.json",
+      "sha256": "db531822f69641b052aaa9daa9a25fcb5241e49d31febcd58f417e264a868145",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:watershed:observations:v1:json"
+    },
+    {
+      "path": "data/observations-v2.json",
+      "sha256": "1a675d36910b71515eb0861ba0bb0d335403a796f3ae8153195619dbf707f085",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:watershed:observations:v2:json"
+    },
+    {
+      "path": "data/stations-v1.json",
+      "sha256": "e785ec508e4dbe80ddb4006e43489f5452b9e7502abcd3e8c90e9d78a7280ac2",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:watershed:stations:v1:json"
+    },
+    {
+      "path": "data/stations-v2.json",
+      "sha256": "95ef3346c0f76fbf88c746521cb8f1f274717025ade38ce1b03a02371bd13563",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:watershed:stations:v2:json"
+    },
+    {
+      "path": "recipes/observations-minimum.sql",
+      "sha256": "707011624caa04c32a0c4291dcea7ae9ced427867630702009715f0f9d81bbdc",
+      "role": "recipe"
+    },
+    {
+      "path": "publisher-discovery.json",
+      "sha256": "fd10db8dc51869313988f8cf9fb445d8aa629352a2d6d0a49101362af141d258",
+      "role": "metadata"
+    }
+  ],
+  "tools": {
+    "fixture-author": {
+      "version": "1.0.0"
+    }
+  },
+  "standards": {
+    "ddk": "0.1",
+    "fixture": "independently-authored"
+  },
+  "catalogOptions": {
+    "audience": "public",
+    "exports": []
+  },
+  "extensions": {
+    "urn:ddk:catalog:output-set": [
+      {
+        "path": "catalog.ddk.json",
+        "sha256": "c6bd7d9446973e67a602e505ec792600c20f90e9921483f0ff2d490a86c2e304",
+        "role": "catalog"
+      },
+      {
+        "path": "catalog.report.json",
+        "sha256": "2380fca74b597704f38277a4872d3ff9230c2af1d6a2f06d6173547fc6b82ee4",
+        "role": "report"
+      },
+      {
+        "path": "recipes/observations-minimum.sql",
+        "sha256": "707011624caa04c32a0c4291dcea7ae9ced427867630702009715f0f9d81bbdc",
+        "role": "recipe"
+      }
+    ]
+  }
+}

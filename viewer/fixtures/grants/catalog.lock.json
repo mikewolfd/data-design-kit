@@ -1,0 +1,84 @@
+{
+  "specVersion": "0.1",
+  "kind": "lock",
+  "id": "urn:ddk-viewer:fixture:grants:lock",
+  "version": "1.0.0",
+  "project": "urn:ddk-viewer:fixture:grants:project",
+  "files": [
+    {
+      "path": "definitions.json",
+      "sha256": "f75674356dcc2f6e2981426aaf12997d314d99a5685bfa4cc407a8af7f830d05",
+      "role": "definition"
+    },
+    {
+      "path": "evidence.json",
+      "sha256": "0dcb550c187f7febf799a242b09854afb90744f781bb20312e6c08ef00979465",
+      "role": "metadata"
+    },
+    {
+      "path": "disclosure.json",
+      "sha256": "5c77ae1e739ece024873b04290c6efa49ebe2005037ad1010447a29d068c0af7",
+      "role": "disclosure-policy"
+    },
+    {
+      "path": "data/awards-v1.json",
+      "sha256": "8401f0d3ce35aebccdf2fa5d0192c92a76105f8620759693a75f52e6d08f7019",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:grants:awards:v1:json"
+    },
+    {
+      "path": "data/awards-v2.json",
+      "sha256": "8a54c1b5c345a38b929f08d577cb4ee8a1be266e62a355017d3bac8e02d16d9a",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:grants:awards:v2:json"
+    },
+    {
+      "path": "data/programs-v1.json",
+      "sha256": "eb48a0c1c88337ee447c72f68c567420dd67a4b7b05dcf02ec898fbfe0aa0616",
+      "role": "data",
+      "identity": "urn:ddk-viewer:fixture:grants:programs:v1:json"
+    },
+    {
+      "path": "recipes/awards-minimum.sql",
+      "sha256": "6839657ee4a11b0776ab7c4faaad747d30457dffa43143ef5b63ecc562b4973e",
+      "role": "recipe"
+    },
+    {
+      "path": "publisher-discovery.json",
+      "sha256": "3adf62f49b5afbb9c97cd02e52e8ca06bc87dd14ed16b653ec8fd77f5cc0d658",
+      "role": "metadata"
+    }
+  ],
+  "tools": {
+    "fixture-author": {
+      "version": "1.0.0"
+    }
+  },
+  "standards": {
+    "ddk": "0.1",
+    "fixture": "independently-authored"
+  },
+  "catalogOptions": {
+    "audience": "public",
+    "exports": []
+  },
+  "extensions": {
+    "urn:ddk:catalog:output-set": [
+      {
+        "path": "catalog.ddk.json",
+        "sha256": "4e5ef050c03c327fdff974e377c7a5c17ca7e9a6c0f5dc5082832dddf743ab53",
+        "role": "catalog"
+      },
+      {
+        "path": "catalog.report.json",
+        "sha256": "36a2b6ce5702876b8dcdd2f6e14f7a10496441cae92b9bbdb4a93a76dbd59745",
+        "role": "report"
+      },
+      {
+        "path": "recipes/awards-minimum.sql",
+        "sha256": "6839657ee4a11b0776ab7c4faaad747d30457dffa43143ef5b63ecc562b4973e",
+        "role": "recipe"
+      }
+    ]
+  }
+}
