@@ -140,7 +140,7 @@ test('Spicy unknown publisher facet and scoped publisher code/field limits remai
   await openWithKeyboard(
     dictionary.locator('.field-row summary').filter({ hasText: 'file_formats' }),
   );
-  await expect(dictionary.getByText(/does not specify the unit in its API schema/)).toBeVisible();
+  await expect(dictionary.getByText(/Size in bytes reported by Regulations.gov/)).toBeVisible();
   await openWithKeyboard(
     dictionary.getByLabel('Technical field details for ["file_formats"][each]["size"]', {
       exact: true,
