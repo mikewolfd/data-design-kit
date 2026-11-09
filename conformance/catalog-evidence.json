@@ -1378,6 +1378,15 @@
       ]
     },
     {
+      "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
+      "coverage": "exercised",
+      "expectedDecision": "error",
+      "expectedDiagnostic": "CLI-USAGE",
+      "tests": [
+        "tests/test_cli.py::test_catalog_refuses_lock_verification_options"
+      ]
+    },
+    {
       "id": "CASE-LAYERED-PUBLIC-FACTS",
       "profile": "catalog",
       "status": "verified",

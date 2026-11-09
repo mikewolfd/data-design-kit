@@ -94,6 +94,67 @@
       }
     },
     {
+      "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The catalog command is given --locked, or --lock with a path. It verifies no earlier lock, so it refuses the option as invalid usage and writes no output.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 64,
+        "diagnostic": "CLI-USAGE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-JOB-PRODUCTION",
+      "requirements": [
+        "DDK-CATALOG-012",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A project without components or designs declares a DocSpec job whose steps each name their recipe. A bounded run of that job names it as its production, and its output versions carry the run's inputs, time and outcome.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-STEP-SQL-DIFFERS",
+      "requirements": [
+        "DDK-CATALOG-012"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A job step's SQL differs by one byte from the recipe its step mapping names.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-JOB-STEP-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-RUN-REQUEST-DIFFERS",
+      "requirements": [
+        "DDK-CATALOG-012"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A run names the job, but its pinned request reorders two steps. Only the input locations may differ, so the run stays unbound.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-NATIVE-RECEIPT"
+      }
+    },
+    {
       "id": "CASE-MODEL-001",
       "requirements": [
         "DDK-MODEL-001"
@@ -2524,7 +2585,7 @@
       "id": "CASE-CATALOG-047",
       "requirements": [
         "DDK-CATALOG-001",
-        "DDK-LOCK-001"
+        "DDK-CATALOG-007"
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",

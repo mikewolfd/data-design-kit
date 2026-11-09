@@ -46,8 +46,9 @@ def _parser():
         command.add_argument("--permit-root", action="append", default=[])
         command.add_argument("--select", action="append")
         command.add_argument("--output")
-        command.add_argument("--lock")
-        command.add_argument("--locked", action="store_true")
+        if name != "catalog":  # catalog writes catalog.lock.json every build but verifies no prior lock (DDK-CATALOG-007)
+            command.add_argument("--lock")
+            command.add_argument("--locked", action="store_true")
         if name in ("check", "lock"):
             command.add_argument("--adapter-manifest", action="append", default=[])
         if name in ("check", "build", "test", "files", "stage", "quality", "managed", "catalog"):

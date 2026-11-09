@@ -586,5 +586,11 @@
     "title": "Recipe SQL binding",
     "specification": "docs/specification.md#DDK-CATALOG-011",
     "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-012",
+    "title": "DocSpec job productions",
+    "specification": "docs/specification.md#DDK-CATALOG-012",
+    "owner": "WP-15"
   }
 ]
