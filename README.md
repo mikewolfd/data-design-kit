@@ -43,6 +43,8 @@ This repository contains specifications, format schemas, independently authored 
 
 The integrated architecture separates domain rules, application use cases, and adapters. Native references preserve their original identity schemes. Check outcomes remain separate from uncertain runtime outcomes. The local demonstrations execute saved Substrait and exercise one typed managed quality gate; each claim remains bound to its tested dependency tuple. DocSpec is team-owned and unreleased; its API may change to support the design.
 
+[`viewer/`](viewer/README.md) holds a React/Astro catalog viewer that reads any DDK catalog. It is a separate application with its own pinned Node toolchain, not part of the Python package.
+
 The repository pins the ODCS schema correction and retains its published comparison snapshot. It also vendors the released ODPS and OpenLineage schemas used by the examples. Exact revisions, licenses, and digests are recorded in [PROVENANCE.md](PROVENANCE.md).
 
 ## Verification

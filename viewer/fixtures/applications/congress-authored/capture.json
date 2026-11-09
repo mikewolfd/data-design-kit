@@ -1,0 +1,137 @@
+{
+  "scope": "Source20 same-runtime recovery; authored synthetic reader fixture, LOCAL metadata only. No source22/fresh-runtime claim, no native execution, no standard releases or publisher selections. Original native release is owner provenance only. Payload Parquet files remain at original paths.",
+  "sourceDirectory": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog",
+  "lockSha256": "efed16b4e287e1eb585e01c0512c0109d638fba4fea5225b2365793f29bf7ba8",
+  "sourceLockUnchangedDuringCapture": true,
+  "datasetCount": 23,
+  "files": [
+    {
+      "path": "queries/8eb1c32daaeaf3e3a1d243fdb5b00327deb540b5db89ed821cb70f5c65017d55.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/8eb1c32daaeaf3e3a1d243fdb5b00327deb540b5db89ed821cb70f5c65017d55.sql",
+      "sha256": "7b64e73a167ccc62e91fe0a749283e1f484055178b24331c67d949ceb8b665c5",
+      "bytes": 100
+    },
+    {
+      "path": "queries/59b875bf7a8ff0b2d3046f6b55bcd60388206ca5fd1bee327b68b13d46c1c1a0.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/59b875bf7a8ff0b2d3046f6b55bcd60388206ca5fd1bee327b68b13d46c1c1a0.sql",
+      "sha256": "9eb14405082b19acbd051fc3c7dee8c430c2b091ab6ec503d705c423b549ddc6",
+      "bytes": 217
+    },
+    {
+      "path": "queries/95aeb8298ed0ae96038ad38206c5e3b487e88242df46dfd42222d53487a913ed.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/95aeb8298ed0ae96038ad38206c5e3b487e88242df46dfd42222d53487a913ed.sql",
+      "sha256": "00bd57544ac9d19cb38fa310cb18dea4c7920e32ba4bbe38b720d2519a0bef36",
+      "bytes": 445
+    },
+    {
+      "path": "queries/0fe45f9c6945781bbc025aad3a12691e268af9ee09829ccaa25d4d62f507c155.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/0fe45f9c6945781bbc025aad3a12691e268af9ee09829ccaa25d4d62f507c155.sql",
+      "sha256": "e8819e1a745f5ff61553b0d79bd0a80a5868d2c687db0b5121983b67b64187fc",
+      "bytes": 440
+    },
+    {
+      "path": "queries/3216c2f3547e91bd4ef8290465c4e67a4bdf616bd9ab18d55a5738c7555967d6.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/3216c2f3547e91bd4ef8290465c4e67a4bdf616bd9ab18d55a5738c7555967d6.sql",
+      "sha256": "2e8962df8e90efca07f03e672f5a680d170e78aec9870d0d70a90f822dadba03",
+      "bytes": 230
+    },
+    {
+      "path": "queries/9553ace9c8618b7b2b904d0ba5ef1ac813c7438a7820b7d20e63a151900196d6.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/9553ace9c8618b7b2b904d0ba5ef1ac813c7438a7820b7d20e63a151900196d6.sql",
+      "sha256": "504bdc85dc5713d2adc909230e01c2a52c1af92a76666a84db07bf6b6b3c9eef",
+      "bytes": 184
+    },
+    {
+      "path": "queries/fa68dcc870641755026ce558a3c029f32e5cc72d17ed4f9ef66f1ede6eb66573.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/fa68dcc870641755026ce558a3c029f32e5cc72d17ed4f9ef66f1ede6eb66573.sql",
+      "sha256": "9c7a0b37e531749271210b10ef9ee9c634add3893860e984f8fba0111451831c",
+      "bytes": 203
+    },
+    {
+      "path": "queries/d902f70dd585497aaddfd78c2dd8bdc198001a651ce377ea3193703316fd35bd.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/d902f70dd585497aaddfd78c2dd8bdc198001a651ce377ea3193703316fd35bd.sql",
+      "sha256": "7341e9763e3141b76de28ebea5743ef6a6e27178ab3f934466325fe907694873",
+      "bytes": 272
+    },
+    {
+      "path": "queries/82b3a5eef4860c5db8f7ca13fd47e6e315c2233514fc584d73c68d892f108be6.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/82b3a5eef4860c5db8f7ca13fd47e6e315c2233514fc584d73c68d892f108be6.sql",
+      "sha256": "571b53f193f598c4fa8888a9fd8ed07eb5a75ea91eaaeccf367b7e3000b16ca2",
+      "bytes": 260
+    },
+    {
+      "path": "queries/b2a1ce808cbc04abe13d75f646818c526be7542c8c9098ef369b5f13d5158913.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/b2a1ce808cbc04abe13d75f646818c526be7542c8c9098ef369b5f13d5158913.sql",
+      "sha256": "9bdaf105d4a056b5f2e99e0b9ee48063038017351fc4759fcfb9ebe668628023",
+      "bytes": 305
+    },
+    {
+      "path": "queries/eeccd93fa3e5161c98a099ee9a7bcaffb630c5e419b1a42082274948aa684d12.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/eeccd93fa3e5161c98a099ee9a7bcaffb630c5e419b1a42082274948aa684d12.sql",
+      "sha256": "d74fac322475f6fb6a865a892f3c8579a8cc36d4daec77cd5c57bb699e85f2af",
+      "bytes": 1247
+    },
+    {
+      "path": "queries/0b3d7e967d4a2d652d7f77308de79007b5385dbceb8bc1f4c201c299cca0238d.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/0b3d7e967d4a2d652d7f77308de79007b5385dbceb8bc1f4c201c299cca0238d.sql",
+      "sha256": "3763481ea648e263be18d45e0995716922d74146669d0ba108eb2708d0ae5729",
+      "bytes": 296
+    },
+    {
+      "path": "queries/69ed33fd6f0267d06991feb98e1c3bd9d68e223138d12ff9488fbed559656dd2.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/69ed33fd6f0267d06991feb98e1c3bd9d68e223138d12ff9488fbed559656dd2.sql",
+      "sha256": "d32283a51982833eedf537bbac7fa37a77fc0fa66ab9fdd602d0680ea2e32751",
+      "bytes": 184
+    },
+    {
+      "path": "queries/793466162170cc78b9ba0d37267054327b5efddc7fce4815db61d27bc3b245c7.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/793466162170cc78b9ba0d37267054327b5efddc7fce4815db61d27bc3b245c7.sql",
+      "sha256": "74ae59736fafd210ec618080f90f6f1bcd4b3a4bfc12545271f25802967045f8",
+      "bytes": 219
+    },
+    {
+      "path": "queries/cb10e12c55223ca10d29f6a6b2feccd0adc23a6eb4b0908749d3e7bd44f959c5.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/cb10e12c55223ca10d29f6a6b2feccd0adc23a6eb4b0908749d3e7bd44f959c5.sql",
+      "sha256": "0eaed03bc3a81e19faf980cf3af835f357b6eb773388c4336b787e7f3e5bd3fa",
+      "bytes": 286
+    },
+    {
+      "path": "queries/21ae23a18f7dd7c721a65e08d71cd63cde9338508567cceb5fa7415cda31a863.sql",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/queries/21ae23a18f7dd7c721a65e08d71cd63cde9338508567cceb5fa7415cda31a863.sql",
+      "sha256": "6302f2c34ba6a1a0323c70944a7f93a6acd3be0d6c0e7c55304c900cdb20dfb9",
+      "bytes": 498
+    },
+    {
+      "path": "discovery.dcat.json",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/discovery.dcat.json",
+      "sha256": "bd3a419cb891febe48ca751b9eaf085cd0870beba7c0d2410b7ef9dcc69d04b5",
+      "bytes": 38896
+    },
+    {
+      "path": "catalog.report.json",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/catalog.report.json",
+      "sha256": "0891f9b24b3203136523ff7f78ef874ffab0d593973e19ad528f9218e411b947",
+      "bytes": 173708
+    },
+    {
+      "path": "catalog.ddk.json",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/catalog.ddk.json",
+      "sha256": "e45c819098623a7edc352230ce839691e3d954d28bd0abac56bd12afd8d2a834",
+      "bytes": 630127
+    },
+    {
+      "path": "catalog.lock.json",
+      "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/catalog.lock.json",
+      "sha256": "efed16b4e287e1eb585e01c0512c0109d638fba4fea5225b2365793f29bf7ba8",
+      "bytes": 18789
+    }
+  ],
+  "handoffRecord": {
+    "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/handoff.json",
+    "sha256": "b59c3cc000613cbc202906300d93f0619f5e9a948223de84462015145ba71e62"
+  },
+  "originalManifestRecord": {
+    "uri": "file:///Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/controls/manifest.json",
+    "sha256": "fb9160296d1fbd8d23e1e4e806fd71f486aa63d2034aacf7e1aa92ba134a54c5"
+  }
+}

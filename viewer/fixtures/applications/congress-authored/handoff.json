@@ -1,0 +1,99 @@
+{
+  "status": "passed",
+  "audience": "local",
+  "ddkVersion": "0.1.0.dev6",
+  "method": "ddk.catalog.assemble_catalog with original captured definitions and accepted metadata",
+  "catalog": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/catalog.ddk.json",
+    "sha256": "e45c819098623a7edc352230ce839691e3d954d28bd0abac56bd12afd8d2a834",
+    "size": 630127
+  },
+  "report": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/catalog.report.json",
+    "sha256": "0891f9b24b3203136523ff7f78ef874ffab0d593973e19ad528f9218e411b947",
+    "size": 173708
+  },
+  "lock": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog/catalog.lock.json",
+    "sha256": "efed16b4e287e1eb585e01c0512c0109d638fba4fea5225b2365793f29bf7ba8",
+    "size": 18789
+  },
+  "catalogInventory": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/catalog-files.json",
+    "sha256": "9e621b0aab4e62b3e4329711caaa49ce60280a6655d3e16e78606542ad27f162",
+    "size": 7828
+  },
+  "pathInventory": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/files.json",
+    "sha256": "e3d25ac01fc40b96d114c07b32af97728ca88f666888e8fab868a1c5dbbc9990",
+    "size": 5477
+  },
+  "dataInventory": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/viewer-handoff/source20-rich-local-01/data-files.json",
+    "sha256": "435767beba7866cc75de6f55b66afd5ebf3546d9820233044aad736d28f08da9",
+    "size": 10781
+  },
+  "originalReleaseId": "0ed378bde1c3dfbf218d1b3be9b067551dbc522f3b00bc854fe8b9f9a664b311",
+  "originalInputs": {
+    "prepared": {
+      "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/request/release-request.json",
+      "sha256": "637e5926643f5ad25bf9b0e422b24ffd04d3284968f9cde286df44c633f0b2a8",
+      "size": 6109
+    },
+    "accepted": {
+      "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/request/native-accepted.json",
+      "sha256": "074a84702a16bac4af09127f312c649a2c7e18fa074b0978622c1e31616917ac",
+      "size": 518321
+    },
+    "selected": {
+      "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/retry-01/adapter/managed-job-qg9cx1hz/receipt.json",
+      "sha256": "6d012be3e6ac9a1618f4ae2d92191b8762953a7da526d98485d5566365b7d5a6",
+      "size": 518323
+    },
+    "inventory": {
+      "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/retry-01/files.json",
+      "sha256": "3b32838e187333b7965c100299d49d2e1b5855e619aa48e8c4296cf4c0148b5d",
+      "size": 10397
+    }
+  },
+  "candidate": {
+    "dataset": "archive-fixture",
+    "manifest": {
+      "bytes": 291575,
+      "digest": "6ada49d80bc825c9c97e0f55ccc6317299dbe29961b2c8e320242ffbd8d874dc",
+      "owner": "archive-fixture",
+      "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/completion.json"
+    },
+    "operation": "source20-rich-01",
+    "scheme": "urn:docspec:whole-job-candidate",
+    "scheme_version": "1"
+  },
+  "acceptedQualification": "64b389a672b6fe49c4d4406bf7a98ff76b42db2e71a69370b4a28c54cc996289",
+  "counts": {
+    "datasets": 23,
+    "versions": 17,
+    "representations": 17,
+    "releases": 0,
+    "selections": 0,
+    "runs": 1,
+    "checks": 160,
+    "sources": 0,
+    "sourceInventory": 27
+  },
+  "outputFiles": 20,
+  "unchangedSource20Files": 1089,
+  "unchangedOriginalReleaseFiles": 40,
+  "nativeExecutions": 0,
+  "sourceInventoryVerified": 27,
+  "standardSchemas": "passed",
+  "catalogAndLockInventories": "passed",
+  "exactCandidateAndFileBindings": "passed",
+  "limits": [
+    "Local metadata snapshot only; no new native execution or archive release.",
+    "Original public disclosure and selected source20 inventory remain unchanged.",
+    "Accepted receipt records no later selection or publication; no such claims added.",
+    "Original mapping keeps thirteen native input views outside this public dataset catalog.",
+    "Synthetic fixture; no production source custody or producer prerequisite qualification."
+  ],
+  "elapsedSeconds": 2.024
+}

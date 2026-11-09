@@ -1,0 +1,250 @@
+{
+  "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
+  "sourceDirectory": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-publisher-copy-20261106/congress-01/artifacts",
+  "lockSha256": "26967938b6e9e5bb067f8be52f798deb38ef2288449498b6cdde1373eddc7801",
+  "sourceLockUnchangedDuringCapture": true,
+  "datasetCount": 24,
+  "files": [
+    {
+      "path": "catalog.lock.json",
+      "sha256": "26967938b6e9e5bb067f8be52f798deb38ef2288449498b6cdde1373eddc7801",
+      "bytes": 8763
+    },
+    {
+      "path": "catalog.ddk.json",
+      "role": "catalog",
+      "sha256": "d1a4f9a4e7281822d9d616f6a7685f1d69b42bdb8dea1c5c61fc28ab2d1163de",
+      "bytes": 189991
+    },
+    {
+      "path": "catalog.report.json",
+      "role": "report",
+      "sha256": "70b7a73e5fd2beef9a7d206e3cfc2e9f29a19e20f23c9f863486cca410ce5e98",
+      "bytes": 26006
+    },
+    {
+      "path": "queries/0b3d7e967d4a2d652d7f77308de79007b5385dbceb8bc1f4c201c299cca0238d.sql",
+      "role": "recipe",
+      "sha256": "3763481ea648e263be18d45e0995716922d74146669d0ba108eb2708d0ae5729",
+      "bytes": 296
+    },
+    {
+      "path": "queries/0fe45f9c6945781bbc025aad3a12691e268af9ee09829ccaa25d4d62f507c155.sql",
+      "role": "recipe",
+      "sha256": "e8819e1a745f5ff61553b0d79bd0a80a5868d2c687db0b5121983b67b64187fc",
+      "bytes": 440
+    },
+    {
+      "path": "queries/21ae23a18f7dd7c721a65e08d71cd63cde9338508567cceb5fa7415cda31a863.sql",
+      "role": "recipe",
+      "sha256": "6302f2c34ba6a1a0323c70944a7f93a6acd3be0d6c0e7c55304c900cdb20dfb9",
+      "bytes": 498
+    },
+    {
+      "path": "queries/3216c2f3547e91bd4ef8290465c4e67a4bdf616bd9ab18d55a5738c7555967d6.sql",
+      "role": "recipe",
+      "sha256": "2e8962df8e90efca07f03e672f5a680d170e78aec9870d0d70a90f822dadba03",
+      "bytes": 230
+    },
+    {
+      "path": "queries/59b875bf7a8ff0b2d3046f6b55bcd60388206ca5fd1bee327b68b13d46c1c1a0.sql",
+      "role": "recipe",
+      "sha256": "9eb14405082b19acbd051fc3c7dee8c430c2b091ab6ec503d705c423b549ddc6",
+      "bytes": 217
+    },
+    {
+      "path": "queries/69ed33fd6f0267d06991feb98e1c3bd9d68e223138d12ff9488fbed559656dd2.sql",
+      "role": "recipe",
+      "sha256": "d32283a51982833eedf537bbac7fa37a77fc0fa66ab9fdd602d0680ea2e32751",
+      "bytes": 184
+    },
+    {
+      "path": "queries/793466162170cc78b9ba0d37267054327b5efddc7fce4815db61d27bc3b245c7.sql",
+      "role": "recipe",
+      "sha256": "74ae59736fafd210ec618080f90f6f1bcd4b3a4bfc12545271f25802967045f8",
+      "bytes": 219
+    },
+    {
+      "path": "queries/82b3a5eef4860c5db8f7ca13fd47e6e315c2233514fc584d73c68d892f108be6.sql",
+      "role": "recipe",
+      "sha256": "571b53f193f598c4fa8888a9fd8ed07eb5a75ea91eaaeccf367b7e3000b16ca2",
+      "bytes": 260
+    },
+    {
+      "path": "queries/8eb1c32daaeaf3e3a1d243fdb5b00327deb540b5db89ed821cb70f5c65017d55.sql",
+      "role": "recipe",
+      "sha256": "7b64e73a167ccc62e91fe0a749283e1f484055178b24331c67d949ceb8b665c5",
+      "bytes": 100
+    },
+    {
+      "path": "queries/9553ace9c8618b7b2b904d0ba5ef1ac813c7438a7820b7d20e63a151900196d6.sql",
+      "role": "recipe",
+      "sha256": "504bdc85dc5713d2adc909230e01c2a52c1af92a76666a84db07bf6b6b3c9eef",
+      "bytes": 184
+    },
+    {
+      "path": "queries/95aeb8298ed0ae96038ad38206c5e3b487e88242df46dfd42222d53487a913ed.sql",
+      "role": "recipe",
+      "sha256": "00bd57544ac9d19cb38fa310cb18dea4c7920e32ba4bbe38b720d2519a0bef36",
+      "bytes": 445
+    },
+    {
+      "path": "queries/b2a1ce808cbc04abe13d75f646818c526be7542c8c9098ef369b5f13d5158913.sql",
+      "role": "recipe",
+      "sha256": "9bdaf105d4a056b5f2e99e0b9ee48063038017351fc4759fcfb9ebe668628023",
+      "bytes": 305
+    },
+    {
+      "path": "queries/cb10e12c55223ca10d29f6a6b2feccd0adc23a6eb4b0908749d3e7bd44f959c5.sql",
+      "role": "recipe",
+      "sha256": "0eaed03bc3a81e19faf980cf3af835f357b6eb773388c4336b787e7f3e5bd3fa",
+      "bytes": 286
+    },
+    {
+      "path": "queries/d902f70dd585497aaddfd78c2dd8bdc198001a651ce377ea3193703316fd35bd.sql",
+      "role": "recipe",
+      "sha256": "7341e9763e3141b76de28ebea5743ef6a6e27178ab3f934466325fe907694873",
+      "bytes": 272
+    },
+    {
+      "path": "queries/eeccd93fa3e5161c98a099ee9a7bcaffb630c5e419b1a42082274948aa684d12.sql",
+      "role": "recipe",
+      "sha256": "d74fac322475f6fb6a865a892f3c8579a8cc36d4daec77cd5c57bb699e85f2af",
+      "bytes": 1247
+    },
+    {
+      "path": "queries/fa68dcc870641755026ce558a3c029f32e5cc72d17ed4f9ef66f1ede6eb66573.sql",
+      "role": "recipe",
+      "sha256": "9c7a0b37e531749271210b10ef9ee9c634add3893860e984f8fba0111451831c",
+      "bytes": 203
+    }
+  ],
+  "priorCapture": {
+    "scope": "Retained public catalog metadata and admitted companions only. No native data files, runtime stores, application controllers or source corpora copied.",
+    "sourceDirectory": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/checks-mcp-full-catalog-04/pytest/current-public0/release",
+    "lockSha256": "f34c92d4e2f4460ca043aa73fdd11fd6b9b04cee127c5f872cee7829807686f2",
+    "sourceLockUnchangedDuringCapture": true,
+    "datasetCount": 24,
+    "files": [
+      {
+        "path": "catalog.lock.json",
+        "sha256": "f34c92d4e2f4460ca043aa73fdd11fd6b9b04cee127c5f872cee7829807686f2",
+        "bytes": 8853
+      },
+      {
+        "path": "catalog.ddk.json",
+        "role": "catalog",
+        "sha256": "475d8abc36fa5e2eef6a4e4918d9cefb71dbf5718144f899b9d0ac2d8138b9da",
+        "bytes": 179792
+      },
+      {
+        "path": "catalog.report.json",
+        "role": "report",
+        "sha256": "7975f13f8d88917dd65e62d1c26f8053da601a396a1e6b6be8ac65736b378e53",
+        "bytes": 26096
+      },
+      {
+        "path": "queries/0b3d7e967d4a2d652d7f77308de79007b5385dbceb8bc1f4c201c299cca0238d.sql",
+        "role": "recipe",
+        "sha256": "3763481ea648e263be18d45e0995716922d74146669d0ba108eb2708d0ae5729",
+        "bytes": 296
+      },
+      {
+        "path": "queries/0fe45f9c6945781bbc025aad3a12691e268af9ee09829ccaa25d4d62f507c155.sql",
+        "role": "recipe",
+        "sha256": "e8819e1a745f5ff61553b0d79bd0a80a5868d2c687db0b5121983b67b64187fc",
+        "bytes": 440
+      },
+      {
+        "path": "queries/21ae23a18f7dd7c721a65e08d71cd63cde9338508567cceb5fa7415cda31a863.sql",
+        "role": "recipe",
+        "sha256": "6302f2c34ba6a1a0323c70944a7f93a6acd3be0d6c0e7c55304c900cdb20dfb9",
+        "bytes": 498
+      },
+      {
+        "path": "queries/3216c2f3547e91bd4ef8290465c4e67a4bdf616bd9ab18d55a5738c7555967d6.sql",
+        "role": "recipe",
+        "sha256": "2e8962df8e90efca07f03e672f5a680d170e78aec9870d0d70a90f822dadba03",
+        "bytes": 230
+      },
+      {
+        "path": "queries/59b875bf7a8ff0b2d3046f6b55bcd60388206ca5fd1bee327b68b13d46c1c1a0.sql",
+        "role": "recipe",
+        "sha256": "9eb14405082b19acbd051fc3c7dee8c430c2b091ab6ec503d705c423b549ddc6",
+        "bytes": 217
+      },
+      {
+        "path": "queries/69ed33fd6f0267d06991feb98e1c3bd9d68e223138d12ff9488fbed559656dd2.sql",
+        "role": "recipe",
+        "sha256": "d32283a51982833eedf537bbac7fa37a77fc0fa66ab9fdd602d0680ea2e32751",
+        "bytes": 184
+      },
+      {
+        "path": "queries/793466162170cc78b9ba0d37267054327b5efddc7fce4815db61d27bc3b245c7.sql",
+        "role": "recipe",
+        "sha256": "74ae59736fafd210ec618080f90f6f1bcd4b3a4bfc12545271f25802967045f8",
+        "bytes": 219
+      },
+      {
+        "path": "queries/82b3a5eef4860c5db8f7ca13fd47e6e315c2233514fc584d73c68d892f108be6.sql",
+        "role": "recipe",
+        "sha256": "571b53f193f598c4fa8888a9fd8ed07eb5a75ea91eaaeccf367b7e3000b16ca2",
+        "bytes": 260
+      },
+      {
+        "path": "queries/8eb1c32daaeaf3e3a1d243fdb5b00327deb540b5db89ed821cb70f5c65017d55.sql",
+        "role": "recipe",
+        "sha256": "7b64e73a167ccc62e91fe0a749283e1f484055178b24331c67d949ceb8b665c5",
+        "bytes": 100
+      },
+      {
+        "path": "queries/9553ace9c8618b7b2b904d0ba5ef1ac813c7438a7820b7d20e63a151900196d6.sql",
+        "role": "recipe",
+        "sha256": "504bdc85dc5713d2adc909230e01c2a52c1af92a76666a84db07bf6b6b3c9eef",
+        "bytes": 184
+      },
+      {
+        "path": "queries/95aeb8298ed0ae96038ad38206c5e3b487e88242df46dfd42222d53487a913ed.sql",
+        "role": "recipe",
+        "sha256": "00bd57544ac9d19cb38fa310cb18dea4c7920e32ba4bbe38b720d2519a0bef36",
+        "bytes": 445
+      },
+      {
+        "path": "queries/b2a1ce808cbc04abe13d75f646818c526be7542c8c9098ef369b5f13d5158913.sql",
+        "role": "recipe",
+        "sha256": "9bdaf105d4a056b5f2e99e0b9ee48063038017351fc4759fcfb9ebe668628023",
+        "bytes": 305
+      },
+      {
+        "path": "queries/cb10e12c55223ca10d29f6a6b2feccd0adc23a6eb4b0908749d3e7bd44f959c5.sql",
+        "role": "recipe",
+        "sha256": "0eaed03bc3a81e19faf980cf3af835f357b6eb773388c4336b787e7f3e5bd3fa",
+        "bytes": 286
+      },
+      {
+        "path": "queries/d902f70dd585497aaddfd78c2dd8bdc198001a651ce377ea3193703316fd35bd.sql",
+        "role": "recipe",
+        "sha256": "7341e9763e3141b76de28ebea5743ef6a6e27178ab3f934466325fe907694873",
+        "bytes": 272
+      },
+      {
+        "path": "queries/eeccd93fa3e5161c98a099ee9a7bcaffb630c5e419b1a42082274948aa684d12.sql",
+        "role": "recipe",
+        "sha256": "d74fac322475f6fb6a865a892f3c8579a8cc36d4daec77cd5c57bb699e85f2af",
+        "bytes": 1247
+      },
+      {
+        "path": "queries/fa68dcc870641755026ce558a3c029f32e5cc72d17ed4f9ef66f1ede6eb66573.sql",
+        "role": "recipe",
+        "sha256": "9c7a0b37e531749271210b10ef9ee9c634add3893860e984f8fba0111451831c",
+        "bytes": 203
+      }
+    ]
+  },
+  "publisherUpdate": {
+    "date": "2026-11-06",
+    "kind": "Regenerated standard metadata from maintained publisher definitions. Discovery-only capture; no native rows or native acceptance claimed.",
+    "originalCaptureDirectory": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-original-captures/congress",
+    "publisherReceipt": "/Users/mikewolfd/Documents/Codex/2026-11-06/ddk-viewer/outputs/publisher-congress-result.json"
+  }
+}

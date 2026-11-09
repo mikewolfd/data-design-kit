@@ -1,0 +1,11 @@
+{
+  "format": "ddk-viewer-impact-binding/1",
+  "mode": "fixture",
+  "scope": "Definition metadata changes between an explicitly authored prior snapshot and the current watershed fixture. No native data execution.",
+  "owner": "ddk.catalog_impact.compare_catalogs",
+  "ddkSource": "fb70ab825243235b4ecf77c5ebb8c636d0d06e2d",
+  "ddkWheelSha256": "7c4c6bb481316c95e13c5518089f90c71664ca7387c09eb1ae0f94219fe267b8",
+  "baseCatalogSha256": "d3970e82c46c979936ac8037409258afff60bfffea1a4fa018514e9deaa61482",
+  "candidateCatalogSha256": "c6bd7d9446973e67a602e505ec792600c20f90e9921483f0ff2d490a86c2e304",
+  "reportSha256": "4fbd42917edb2bb93f26c4b4fd63ccaefe4abdd212b34b60812593cf4603523c"
+}

@@ -1,0 +1,155 @@
+{
+  "list.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/0-cc95e7052e504b37a507e39044961bc5.parquet",
+    "sha256": "5c7f962f65e2edbe892d235a6e0c3a6f92a4f24f0957281f7921c444a164d8d1",
+    "size": 5706,
+    "version": "urn:ddk:file-version:0c363ab10575bda9228f898f4384f8f0e79d8c7a2a7df2d88b87a0cd6637a77d",
+    "dataset": "list",
+    "representation": "urn:ddk:representation:6316956d55400c0063ff7958a8d7ea0fffa83552488551f6fcc0a92db5c07f69",
+    "rows": 7
+  },
+  "detail.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/1-ffab4f7cece74fc988c111d8b776a0a2.parquet",
+    "sha256": "dc29067a35c95d9202e344696f4199dd2eeefeec532acec7bfb326927ffed189",
+    "size": 17976,
+    "version": "urn:ddk:file-version:b60e4b89fb6a48e484945556dddbdba0a9918a0548366ec40905c4c608ddcda8",
+    "dataset": "detail",
+    "representation": "urn:ddk:representation:f7d085b698323e2c5c2cb555964add72f8eb482a98b7ea0ddbc338c226bdc61c",
+    "rows": 7
+  },
+  "links.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/2-6d76f3f8f4264e0e9ea50432b70e2035.parquet",
+    "sha256": "8093963af7d25df582a0c615b1a93630114d2bff5d4d37b97881c1e3a49a5270",
+    "size": 769,
+    "version": "urn:ddk:file-version:647f2c6b2bfa45ba58798fbc50e846bc7747778f65b99c3bc3d136aa7c07adc5",
+    "dataset": "links",
+    "representation": "urn:ddk:representation:871e0262db163a8d0a30ad69846f69f167ba79897a5474190abb760044f77168",
+    "rows": 8
+  },
+  "urls.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/3-1e06d5238f7a4651ae0e0dcc31c35db7.parquet",
+    "sha256": "2512fa818235bcae2d3789e9c5cb8b8356b67c2dc9fdc2749996e3e8b63120bd",
+    "size": 812,
+    "version": "urn:ddk:file-version:b581149c828aa722f7e006add42b8325c8fcb45b30c2e3f8d8fd590890b7e8b9",
+    "dataset": "urls",
+    "representation": "urn:ddk:representation:59aaefa58c0667e1caf77dc02289481c5b4a9107af2ce3804c4e9a47a5a1805d",
+    "rows": 7
+  },
+  "sources.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/4-5f72522edcfb4f86a2238d9d2bb589be.parquet",
+    "sha256": "8aed9fb839e7e01cab05af2c31609f879695d96893c0f7161c9f8fe931afd926",
+    "size": 2628,
+    "version": "urn:ddk:file-version:d5b8aa6995d42302843ed838c7f30f1ee6eaeaec0b06dd041261d6f6b9e7e39a",
+    "dataset": "sources",
+    "representation": "urn:ddk:representation:dc0f2f17d68c2a06d54a2b2c210f92203dd8626ec4d3e05ca1e673073a2db34d",
+    "rows": 7
+  },
+  "recoveries.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/5-a449430d57d146f7a4623b6e0770f076.parquet",
+    "sha256": "b4b593cdd603a5793361cf976ad567de7b1a323d32bd8d87d00b7e31e55b8d75",
+    "size": 2813,
+    "version": "urn:ddk:file-version:569e8efaa72bd254a633dbbcc21650f7c7b05ca7f018557ecddc70bba81f224c",
+    "dataset": "recoveries",
+    "representation": "urn:ddk:representation:b965e3dd502657ca208a4c244202daf0d66ed965a17927738c4f061cf4c8e7b0",
+    "rows": 3
+  },
+  "witness_key_map.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/6-d04fb531b38e4389a09f71ea9e354dba.parquet",
+    "sha256": "b1e600e1e2a66d5b99e82ea5852c5d60226ce94e36d32a824418a5c7b7a30f0a",
+    "size": 877,
+    "version": "urn:ddk:file-version:cd5f00588d139af2c376fd3b3d528fa66623a297408c5a2258340f5704d46614",
+    "dataset": "witness-key-map",
+    "representation": "urn:ddk:representation:f32f1557299d3e40d7a4e9f10df3a74d9ac3118cdd59ec9c2879d1cac87d4136",
+    "rows": 0
+  },
+  "url_state.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/7-0795bb82bc2e4acaa654deddb6c331e0.parquet",
+    "sha256": "8c2dc683e9ff5127e3b8ee1ec2e92ec01285432b7a648e18b0748008df9f7e9e",
+    "size": 1299,
+    "version": "urn:ddk:file-version:f6185fde42d43b6e39f5b8289c7e3ea7615f702fbb0a4090578ad88318c72f2c",
+    "dataset": "url-state",
+    "representation": "urn:ddk:representation:23e6b20b9634abbdc7f077aaec1b9e4d566604a5e35a1c75a709956eee8a3129",
+    "rows": 0
+  },
+  "meetings.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/8-79704a2b65824535bb2c71cdfcc87581.parquet",
+    "sha256": "d73cb7824e434e980694fe6b63e06763e03f2c3a878c4db1bf1f290e3fb24910",
+    "size": 11373,
+    "version": "urn:ddk:file-version:cb60364bf35315c4a0e53c9854db6b4f4255b33054b65d55964730e9730a7663",
+    "dataset": "meetings",
+    "representation": "urn:ddk:representation:efa6eb85b83552eb46062272bb876c59a8442cf7c1c510202bcf9172d0dc09b8",
+    "rows": 1
+  },
+  "committees.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/9-9ce3c5f87a4d4f2ea73d0746c08c6bc7.parquet",
+    "sha256": "521cf2815e303c982c99cdfa6e94ab46a063add269669cc2a2d935871917901c",
+    "size": 2941,
+    "version": "urn:ddk:file-version:ab6de2d1d9748c5548d945a6e227b90b42f75710f37850f595bbec75d7ce8890",
+    "dataset": "committees",
+    "representation": "urn:ddk:representation:1d5a686381eb6bb8e0f2730b36f600ff2de4c6f31d7a9bbbdeb363d09ee33450",
+    "rows": 2
+  },
+  "witnesses.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/10-0ec3b852956140e181555ad28b20ecae.parquet",
+    "sha256": "25f84922b956b5c10db5cef2dcbd0353f47d62cb187fadefbfadd55306a9306b",
+    "size": 4957,
+    "version": "urn:ddk:file-version:b81727d8f388ed03020854075b742ea024f83101ea0fc707e97e835c828217d9",
+    "dataset": "witnesses",
+    "representation": "urn:ddk:representation:764a5dfc9c3e8444b890a3e2a4c1a1b771ebdb8e56510cb6fd93c2a7e99065a7",
+    "rows": 2
+  },
+  "members.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/11-e901f701a20c42d4bf887cca122d9f14.parquet",
+    "sha256": "45deafae6b9f1d31975c4ad9abc2a9d6346f7903779a4244c6755afbc626c1af",
+    "size": 3496,
+    "version": "urn:ddk:file-version:e536ad0e674f4a937458aba472e91cea26522159810f36909173112a0ca21ff4",
+    "dataset": "members",
+    "representation": "urn:ddk:representation:868e1cd56d47bb8cb3f557e46f49850ad52c4ea5245884e26576b5e09cd30a47",
+    "rows": 2
+  },
+  "rosters.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/12-04c375f3335945dc86b190e9dc29dea7.parquet",
+    "sha256": "9b10fc6356ce4e1e90b198aae48a869d972fd5222387d6e831885dcab320202a",
+    "size": 1472,
+    "version": "urn:ddk:file-version:803c42bfc70e65235a3d87a30a751cb8bfaf572de9043c5b69d3bd77c8dab6f3",
+    "dataset": "rosters",
+    "representation": "urn:ddk:representation:0398e78b31f3bf69a90fd22da5e65b5bfefddbb448d72fd2ed3d4ff9523373b1",
+    "rows": 2
+  },
+  "bills.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/13-21cc6d665cf84763a516d6c249e0b0c4.parquet",
+    "sha256": "ae79c187c910b8b4a2ba948aa8b69ce19624ed662be7228fe4a4c5eb735ff234",
+    "size": 9523,
+    "version": "urn:ddk:file-version:0f921e7d2f9aedad56a6f9fcd4ef9d2d2d7e61459db039da71a20743d14e195d",
+    "dataset": "bills",
+    "representation": "urn:ddk:representation:b016dc3ae1f69098d5fc811e79becb38a3324139c3a52680bf286e592271c700",
+    "rows": 1
+  },
+  "nominations.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/14-045bad556a5546fc9dc513d082c4d2e8.parquet",
+    "sha256": "f44535e32a454944a7eb472ebe10a20e237f49943d0b92042bc7ae1b32b4ef00",
+    "size": 5000,
+    "version": "urn:ddk:file-version:3d447bb9d38708d53554d10d491bc4f6ddeffbcdf62396e1e54b2c89b5520102",
+    "dataset": "nominations",
+    "representation": "urn:ddk:representation:0595e60d21587c6dc1ffb228c410a56570901c912a84abccbabf3b7573ff7e93",
+    "rows": 1
+  },
+  "recordings.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/15-0d7ee3b548e044e6ac7761c3a6182515.parquet",
+    "sha256": "bd2cc4f491ed8ad63091fb29cee57ed97b5717a15e1bed83025fd2e21867bf80",
+    "size": 2119,
+    "version": "urn:ddk:file-version:00c0819f71600d20dee1aeffcf66ab2a6104d0deaa37d5cab65c184d3ea40044",
+    "dataset": "recordings",
+    "representation": "urn:ddk:representation:80ad8166056f4f64aa172048747ee92006ea5118eb082b83b0bac7b1b631673e",
+    "rows": 1
+  },
+  "videos.parquet": {
+    "path": "/Users/mikewolfd/Work/congressional-tech/.cache/archive-release/ddk-replacement-20261106/rich-native-source20-01/rich-fixture/workspace/objects/archive-fixture/job-source20-rich-01/outputs/16-80d7e4bd06e1486685282a605909b9b2.parquet",
+    "sha256": "7e1f74d5d8aae8c960ccd4d3487b7231e180bc5284b3aa57492954efc2467897",
+    "size": 3852,
+    "version": "urn:ddk:file-version:02f219194548c57246147e873dd872a7d3ca1e121f26deef84cb15a418b66ac0",
+    "dataset": "videos",
+    "representation": "urn:ddk:representation:1c02818516e79f2b804db34d21026d7f13a3c815051a122a7908ad9b033d0c5c",
+    "rows": 1
+  }
+}

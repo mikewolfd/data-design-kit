@@ -1,0 +1,52 @@
+.prepared-views {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+.prepared-counts {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--line, #c5cfc4);
+  border-radius: 0.5rem;
+}
+
+.prepared-counts h3 {
+  margin-block-start: 0;
+}
+
+.prepared-counts-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.prepared-counts-table caption {
+  text-align: start;
+  margin-block-end: 0.4rem;
+}
+
+.prepared-counts-table th,
+.prepared-counts dd {
+  overflow-wrap: anywhere;
+}
+
+.prepared-counts-number {
+  display: inline-block;
+  margin-inline-end: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.prepared-counts meter {
+  width: min(8rem, 100%);
+  vertical-align: middle;
+}
+
+.prepared-counts dl {
+  margin-block-end: 0;
+}
+
+.prepared-counts details,
+.prepared-counts button {
+  margin-block-start: 0.75rem;
+}

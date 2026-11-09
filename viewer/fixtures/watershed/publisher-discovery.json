@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "target": {
+        "kind": "dataset",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "definition": {
+          "contractId": "urn:ddk-viewer:fixture:watershed:definition",
+          "version": "1.0.0",
+          "object": "observations",
+          "sourceSha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+        }
+      },
+      "alternateNames": [
+        {
+          "name": "Example water measurements",
+          "kind": "alternate"
+        }
+      ],
+      "variantDescription": "Instrument observations with their nested readings",
+      "topics": [
+        {
+          "id": "urn:ddk-viewer:topic:watershed",
+          "label": "Water-quality examples"
+        }
+      ],
+      "coverage": {
+        "geography": "Synthetic station labels; no real geographic coverage is claimed.",
+        "population": "Authored example records only.",
+        "inclusion": "Listed example records, preserving missing, null, empty and repeated values.",
+        "exclusions": "Real-world records and source-population completeness are outside this example."
+      },
+      "dates": [
+        {
+          "kind": "metadataUpdated",
+          "value": "2026-11-07"
+        }
+      ],
+      "updateFrequency": "No scheduled updates; these are authored examples.",
+      "publishers": [
+        {
+          "name": "DDK viewer example publisher"
+        }
+      ],
+      "citation": {
+        "text": "DDK viewer example publisher. Watershed observations. Synthetic demonstration data.",
+        "originalIdentifier": "urn:ddk-viewer:fixture:watershed:dataset:observations"
+      },
+      "history": [
+        {
+          "kind": "note",
+          "date": "2026-11-07",
+          "description": "Added human-readable field labels and example guidance. Native field names and stored record values are unchanged.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+                "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+              }
+            }
+          ]
+        }
+      ],
+      "unknowns": [
+        {
+          "fact": "Observation period",
+          "reason": "The authored records contain no observation date."
+        },
+        {
+          "fact": "Reuse terms",
+          "reason": "No resource licence or reuse terms are supplied with this example."
+        },
+        {
+          "fact": "Data support contact",
+          "reason": "No data support route is supplied with this example."
+        }
+      ],
+      "cautions": [
+        {
+          "summary": "Nested readings are separate occurrences.",
+          "details": "Do not treat the number of readings as the number of observations. Repeated nested readings and flags remain separate; no depth unit or flag vocabulary is supplied.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+                "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+              }
+            }
+          ]
+        }
+      ],
+      "preparedViews": [
+        {
+          "id": "urn:ddk-viewer:fixture:watershed:view:observations-by-station",
+          "question": "How many returned observations refer to each station code?",
+          "kind": "valueCounts",
+          "field": [
+            {
+              "field": "station_code"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "dataset",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+        "definition": {
+          "contractId": "urn:ddk-viewer:fixture:watershed:definition",
+          "version": "1.0.0",
+          "object": "stations",
+          "sourceSha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+        }
+      },
+      "alternateNames": [
+        {
+          "name": "Example monitoring stations",
+          "kind": "alternate"
+        }
+      ],
+      "variantDescription": "Station names keyed by station code",
+      "topics": [
+        {
+          "id": "urn:ddk-viewer:topic:watershed",
+          "label": "Water-quality examples"
+        }
+      ],
+      "coverage": {
+        "geography": "Synthetic station labels; no real geographic coverage is claimed.",
+        "population": "Authored example records only.",
+        "inclusion": "Listed example records, preserving missing, null, empty and repeated values.",
+        "exclusions": "Real-world records and source-population completeness are outside this example."
+      },
+      "dates": [
+        {
+          "kind": "metadataUpdated",
+          "value": "2026-11-07"
+        }
+      ],
+      "updateFrequency": "No scheduled updates; these are authored examples.",
+      "publishers": [
+        {
+          "name": "DDK viewer example publisher"
+        }
+      ],
+      "citation": {
+        "text": "DDK viewer example publisher. Synthetic station register. Synthetic demonstration data.",
+        "originalIdentifier": "urn:ddk-viewer:fixture:watershed:dataset:stations"
+      },
+      "history": [
+        {
+          "kind": "note",
+          "date": "2026-11-07",
+          "description": "Added human-readable field labels and example guidance. Native field names and stored record values are unchanged.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+                "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+              }
+            }
+          ]
+        }
+      ],
+      "unknowns": [
+        {
+          "fact": "Observation period",
+          "reason": "The authored records contain no observation date."
+        },
+        {
+          "fact": "Reuse terms",
+          "reason": "No resource licence or reuse terms are supplied with this example."
+        },
+        {
+          "fact": "Data support contact",
+          "reason": "No data support route is supplied with this example."
+        }
+      ],
+      "cautions": [
+        {
+          "summary": "Choose the matching release before looking up names.",
+          "details": "The declared relationship uses codes within the same release. A declared link does not establish that every record has a match.",
+          "evidence": [
+            {
+              "label": "Definitions of these synthetic examples",
+              "record": {
+                "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+                "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "versionId": "urn:ddk-viewer:fixture:watershed:observations:v1",
+        "representationId": "urn:ddk-viewer:fixture:watershed:observations:v1:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 369
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "versionId": "urn:ddk-viewer:fixture:watershed:observations:v2",
+        "representationId": "urn:ddk-viewer:fixture:watershed:observations:v2:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 1671
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+        "versionId": "urn:ddk-viewer:fixture:watershed:stations:v1",
+        "representationId": "urn:ddk-viewer:fixture:watershed:stations:v1:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 122
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+        "versionId": "urn:ddk-viewer:fixture:watershed:stations:v2",
+        "representationId": "urn:ddk-viewer:fixture:watershed:stations:v2:json"
+      },
+      "resource": {
+        "purpose": "Original JSON records for this exact synthetic data version.",
+        "accessRequirements": "This local viewer reads registered example records. No account or remote service is required for these examples.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records.",
+        "byteSize": 116
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "versionId": "urn:ddk-viewer:fixture:watershed:observations:withheld",
+        "representationId": "urn:ddk-viewer:fixture:watershed:observations:withheld:json"
+      },
+      "resource": {
+        "purpose": "Illustrative unavailable or unresolved resource; no example records are supplied for this reference.",
+        "accessRequirements": "No records can be read here without an available retained resource.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records."
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    },
+    {
+      "target": {
+        "kind": "representation",
+        "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+        "versionId": "urn:ddk-viewer:fixture:watershed:observations:unresolved",
+        "representationId": "urn:ddk-viewer:fixture:watershed:observations:unresolved:service"
+      },
+      "resource": {
+        "purpose": "Illustrative unavailable or unresolved resource; no example records are supplied for this reference.",
+        "accessRequirements": "No records can be read here without an available retained resource.",
+        "requestLimits": "Read one bounded page at a time. The request limit is shown in View data; a page download contains only the returned records."
+      },
+      "unknowns": [
+        {
+          "fact": "Resource-specific reuse terms",
+          "reason": "Not supplied."
+        }
+      ]
+    }
+  ],
+  "guides": [
+    {
+      "id": "urn:ddk-viewer:fixture:watershed:guide:lookup",
+      "title": "Connect measurements to stations",
+      "question": "How can I connect example measurements to station names?",
+      "summary": "Start with the records, then use Related data to inspect the declared code relationship. Choose versions in the same release. This guide demonstrates the process with synthetic examples and makes no real-world coverage claim.",
+      "author": {
+        "name": "DDK viewer example publisher"
+      },
+      "reviewedOn": "2026-11-07",
+      "coverage": {
+        "geography": "Synthetic station labels; no real geographic coverage is claimed.",
+        "population": "Authored example records only.",
+        "inclusion": "Listed example records, preserving missing, null, empty and repeated values.",
+        "exclusions": "Real-world records and source-population completeness are outside this example."
+      },
+      "reviewTrigger": "Review this guide when a linked definition, matching rule, data version, resource or access capability changes. Recheck the question with a participant before treating the guide as validated.",
+      "links": [
+        {
+          "label": "Start with measurements",
+          "purpose": "Open the record description, fields and available versions.",
+          "target": {
+            "kind": "dataset",
+            "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:observations",
+            "definition": {
+              "contractId": "urn:ddk-viewer:fixture:watershed:definition",
+              "version": "1.0.0",
+              "object": "observations",
+              "sourceSha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+            }
+          }
+        },
+        {
+          "label": "Understand station names",
+          "purpose": "Open the lookup dataset and its code definition; this does not perform a join.",
+          "target": {
+            "kind": "dataset",
+            "datasetId": "urn:ddk-viewer:fixture:watershed:dataset:stations",
+            "definition": {
+              "contractId": "urn:ddk-viewer:fixture:watershed:definition",
+              "version": "1.0.0",
+              "object": "stations",
+              "sourceSha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+            }
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Definitions of these synthetic examples",
+          "record": {
+            "uri": "urn:ddk-viewer:fixture:watershed:definitions",
+            "sha256": "00b561db423c1a509da9dd48c66bd316cdd3a6d1d1f97cc0219ef57d02c52cf7"
+          }
+        }
+      ]
+    }
+  ]
+}
