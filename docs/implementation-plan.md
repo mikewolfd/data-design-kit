@@ -345,6 +345,7 @@ The [layered example](../examples/layered/README.md) exercises the implemented p
 2. **Edition series.** Periodic editions of one logical dataset, such as two-year cycles or annual files, export as DCAT 3 `dcat:DatasetSeries` members with `dcat:inSeries` and `dcat:prev`/`dcat:previousVersion`, ordered by declared edition metadata rather than observation time. *Rationale:* consumers need the latest edition and its predecessors through standard terms.
 3. **DocSpec recipe gate.** Decided under ADR-015: each recipe must pass both the sqlglot binder (DDK-CATALOG-011) and this check.
    - Given `--docspec` and `--limits`, `ddk catalog` plans each recipe with `job-plan`. Inputs are typed from their effective ODCS declarations and parameters from the parameter schema. The planned schema is compared with the `resultDataset`, and the recipe then runs once on empty typed inputs.
+   - The binder half is in place: its DataFusion signature table (DDK-CATALOG-011) types the map's view SQL, so both checks can pass.
    - Each result records the DocSpec binary identity. Without the executable the check is `not_run`; an input DDK cannot map to Arrow makes it `unknown`. Either keeps a required `catalog.recipes` from passing.
    - `datafusion` recipes number their parameters (`$n`), because DocSpec cannot bind `?`.
    - Job productions (item 8) also get `prepare-job` and one empty-input run of the whole job.

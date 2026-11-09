@@ -1523,6 +1523,39 @@
       "evidence": "Each stays unknown rather than passing or failing."
     },
     {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-FUNCTIONS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Typed calls bind, and the recorded parser profile names the signature table."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-ARGUMENTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-TYPE",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Each refused or cross-family argument fails; the same SQL under the postgres profile stays unknown."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-REPEATED-NAME",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-SQL-SHAPE",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "A repeated alias and a repeated unaliased expression in a UNION ALL branch both fail."
+    },
+    {
       "id": "CASE-RECIPE-SQL-NO-TOOL",
       "profile": "catalog",
       "status": "verified",

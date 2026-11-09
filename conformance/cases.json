@@ -4739,12 +4739,57 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A recipe calls a DataFusion-only function, extracts JSON, or names a dialect without a parser profile.",
+      "scenario": "A recipe calls a function outside the parser profile and its signature table, extracts JSON with an operator, or names a dialect without a parser profile.",
       "expected": {
         "decision": "incomplete",
         "checkStatus": "unknown",
         "exitCode": 2,
         "diagnostic": "CATALOG-RECIPE-SQL-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-FUNCTIONS",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A datafusion recipe calls regexp_match, regexp_like, the json_get family, make_array, unnest, array_length and to_date with argument types DataFusion 53.1 accepts. Each call is typed from the pinned signature table, and the output matches the declared result dataset.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-ARGUMENTS",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A datafusion recipe passes a number to regexp_like, a string to array_has or unnest, a fractional JSON path, or the wrong number of arguments to regexp_match, or mixes number and string elements in make_array or array_has.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-TYPE"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-REPEATED-NAME",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "One projection of a datafusion recipe repeats an alias, or an identical unaliased expression in a UNION ALL branch. DataFusion refuses both.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-SQL-SHAPE"
       }
     },
     {
