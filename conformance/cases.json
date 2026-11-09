@@ -63,6 +63,21 @@
       }
     },
     {
+      "id": "CASE-CONF-005-CATALOG-ONLY",
+      "requirements": [
+        "DDK-CONF-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A layered map declares datasets, products, policies and a recipe but no component or design; `check` and `catalog` with a DCAT export run without any component, design, binding or fixture.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
       "id": "CASE-MODEL-001",
       "requirements": [
         "DDK-MODEL-001"

@@ -161,3 +161,42 @@
 **Reason.** SpicyRegs can consolidate repeated schema and relationship declarations. Congressional-tech already generates metadata from a maintained release registry. Both need exact identities, scoped keys, and separately observable access and confidence. A shared checker and generated catalog allow each project to preserve these semantics and replace duplicate authoring.
 
 **Consequence.** Build the independent local reference workflow through the catalog, standards exporters, and exact-output reader. Prove a separately managed candidate through DocSpec's native quality gate. Keep pilot replacement and maintenance-removal demonstrations in [deferred adoption notes](pilot-adoption-notes.md). The first product release includes the required standards and tested execution profiles in [DDK-VERSION-003](specification.md#DDK-VERSION-003).
+
+## ADR-015 — Keep DDK to the evidence-bound catalog
+
+**Status:** proposed November 8, 2026. Three items below stay open.
+
+**Problem.** The first real map, SpicyRegs (194 datasets, 14 products, one policy document), uses DDK's catalog, policies, results, references and versioning. It declares no components or designs and runs only `ddk check` and `ddk catalog`. DDK's components, designs, saved plans and fixtures duplicate what dbt and SQLMesh do for SQL, while DocSpec already runs SQL as job steps. Developing both halves splits maintenance between the catalog people use and a transformation layer nobody uses.
+
+**Decision.** DDK is the evidence-bound catalog: ODCS and ODPS definitions resolved to exact versions, with origin, disclosure and explicit `unknown` and `not_run` outcomes. Transformations are SQL files that run as DocSpec job steps. DDK reads their declarations, job definitions and run records; it does not author transformations. [DDK-CONF-005](specification.md#DDK-CONF-005) makes the ownership sentence in §1.2 normative.
+
+- **Keep and extend:** §3, §5, §13 and §17; the policies in use, DDK-POLICY-001, 002, 004, 006 and 007; and DDK-CATALOG-001 to 010.
+- **Freeze:** §6, §8 and §11, DDK-ADAPTER-004 to 007, and the profiles they define. They keep their text, cases and the commerce qualification and gain no requirements. Each becomes a removal candidate once its replacement is live:
+
+| Frozen | Named replacement | Live now |
+| --- | --- | --- |
+| §6 components and §8 designs | DocSpec job definitions as catalog production declarations | No. Catalog productions and their OpenLineage job events come only from components and designs. DocSpec run records already enter through the managed-job mapper. |
+| §11 change impact | DDK-CATALOG-010, plus Data Contract CLI version classification (`odcs.versions`) | Partly. DDK-CATALOG-010 runs inside `ddk impact`, alongside the frozen checks. |
+| DDK-ADAPTER-005 and 006; `plan.datafusion` and `plan.substrait-validator` | DocSpec's own plan qualification, read as run records | No |
+| DDK-ADAPTER-007; `test.fixtures` and `test.portability` | Fixtures kept beside the SQL in project code | No |
+| DDK-ADAPTER-004; `files.frictionless` and `ingest.dlt` | Acquisition records read as catalog metadata | No |
+
+Everything not listed is unchanged.
+
+**Alternatives:** keep developing both halves; remove the frozen parts now; move transformations into dbt or SQLMesh models that DDK reads.
+
+**Reason.** Freezing stops new investment without discarding qualified work that the commerce release and DDK-VERSION-003 still cite. Removal waits for a named, live replacement, so no capability disappears without a successor. DocSpec already owns execution, so reading its job records avoids a third transformation format.
+
+**Consequence.** DDK-VERSION-003 still lists `plan.datafusion` and `test.fixtures`, and the existing qualification still satisfies them. Removing a frozen part also changes DDK-CHECK-001's stages, the mandatory groups in DDK-CHECK-002, and DDK-POLICY-006's component and design edges. The `layered` example keeps one component, which exercises that edge.
+
+**Open: decided by the DocSpec `job-plan` experiment.**
+
+1. *Recipe check mechanism ([DDK-CATALOG-011](specification.md#DDK-CATALOG-011)).* (a) Keep the sqlglot binder: it is offline and tested, but it reads DataFusion SQL with the PostgreSQL grammar, so DataFusion-only functions stay `unknown` and functions DataFusion lacks pass. (b) Plan each recipe with DocSpec `job-plan`: the engine checks its own functions, but the check needs the DocSpec executable. Whichever wins is specified under DDK-CATALOG-011 ([WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) item 3).
+2. *Nested compatibility (DDK-DATA-001 to 005).* (a) Extend the tabular rules to ODCS objects and arrays (WP-15 item 4). (b) Use the engine's planned output schema for shape agreement. This follows item 1.
+
+**Open: user decision on §12 locks (DDK-LOCK-001 to 005).**
+
+- *A. Freeze (the independent review's choice).* The map never runs `ddk lock`. Future catalog lock fields would then be specified under DDK-CATALOG-007.
+- *B. Keep, scoped to catalog evidence (recommended by the requesting session).* Pinning exact bytes is part of an exact version with evidence. Every `ddk catalog` build writes `catalog.lock.json` with the shared lock builder, and `load_catalog_artifacts` verifies each output against it, so DDK-CATALOG-007's integrity record depends on DDK-LOCK-001. `--locked` (DDK-LOCK-002) applies to `catalog`. DDK-LOCK-005 preserves the DocSpec identities that run records carry. Only DDK-LOCK-003, which records inputs for DDK-run executions, would follow the frozen execution profiles.
+
+**Requirement links:** [DDK-CONF-005](specification.md#DDK-CONF-005), [DDK-CATALOG-005](specification.md#DDK-CATALOG-005), [DDK-CATALOG-011](specification.md#DDK-CATALOG-011), [DDK-LOCK-001](specification.md#DDK-LOCK-001), [DDK-VERSION-003](specification.md#DDK-VERSION-003).

@@ -516,6 +516,13 @@
       "coverage": "exercised"
     },
     {
+      "id": "CASE-CONF-005-CATALOG-ONLY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_catalog_only_map_needs_no_component_or_design"
+      ]
+    },
+    {
       "id": "CASE-LAYERED-AGGREGATOR",
       "coverage": "exercised",
       "tests": [

@@ -8,6 +8,7 @@ import pytest
 from rdflib import Graph, Namespace, RDF
 
 from ddk.catalog import assemble_catalog
+from ddk.core import check_project
 from ddk.documents import validate_document
 
 LAYERED = Path(__file__).resolve().parents[2] / "examples" / "layered"
@@ -225,3 +226,17 @@ def test_public_extension_values_are_checked_by_their_path_like_parts(layered, t
                      identifiers=["urn:example:layered:catalog", "urn:example:layered:map", *PRODUCTS, *DATASETS,
                                   *DATASETS.values(), "urn:example:layered:capture"])
     assert result.report["decision"] == decision, result.local_report
+
+
+def test_catalog_only_map_needs_no_component_or_design(layered):
+    """DDK-CONF-005: catalog, policy, reference and result checks run without the frozen artifact kinds."""
+    _edit(layered / "resolved" / "project.ddk.json", lambda value: value["artifacts"].pop("resolve-stations"))
+    (layered / "resolved" / "resolve-stations.ddk.json").unlink()
+    report = check_project(layered / "project.ddk.json")
+    assert report["decision"] == "passed"
+    frozen = {"core.calls", "core.graph"}
+    assert frozen <= set(report["coverage"]["requestedGroups"])
+    assert not [item for item in report["checks"] if item["group"] in frozen]
+    assert {"core.documents", "core.policies"} <= {item["group"] for item in report["checks"]}
+    result = assemble_catalog(layered / "project.ddk.json", exports=("dcat",), required_groups=("catalog.dcat",))
+    assert result.report["decision"] == "passed" and not result.catalog["productions"]

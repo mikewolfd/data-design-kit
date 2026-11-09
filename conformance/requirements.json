@@ -24,6 +24,12 @@
     "owner": "WP-02"
   },
   {
+    "id": "DDK-CONF-005",
+    "title": "Product boundary",
+    "specification": "docs/specification.md#DDK-CONF-005",
+    "owner": "WP-02"
+  },
+  {
     "id": "DDK-MODEL-001",
     "title": "Identity and aliases",
     "specification": "docs/specification.md#DDK-MODEL-001",
