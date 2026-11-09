@@ -1406,7 +1406,9 @@
             "openlineage",
             "consumer",
             "report",
-            "recipe"
+            "recipe",
+            "graph",
+            "mapping"
           ]
         }
       },

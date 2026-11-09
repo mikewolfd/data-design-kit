@@ -1,0 +1,73 @@
+# DDK vocabulary for the knowledge-graph export (DDK-CATALOG-013) and RML mappings (DDK-CATALOG-014).
+# Two schemes are DDK's own: check outcomes and evidence strengths. The others restate enums the DDK
+# schemas already define, so graph readers can resolve them. noMatch records a negative match decision.
+
+@prefix ddkv: <https://github.com/mikewolfd/data-design-kit/blob/main/vocab/ddk.ttl#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://github.com/mikewolfd/data-design-kit/blob/main/vocab/ddk.ttl> dcterms:title "Data Design Kit vocabulary"@en ;
+    dcterms:source <https://github.com/mikewolfd/data-design-kit/blob/main/docs/specification.md> .
+
+ddkv:CheckOutcome a skos:ConceptScheme ; skos:prefLabel "Check outcomes"@en ;
+    skos:definition "The four check outcomes of DDK-RESULT-001. Unknown and not run stay distinct."@en .
+ddkv:outcome-passed a skos:Concept ; skos:inScheme ddkv:CheckOutcome ; skos:prefLabel "passed"@en ;
+    skos:definition "Evidence establishes the checked property."@en .
+ddkv:outcome-failed a skos:Concept ; skos:inScheme ddkv:CheckOutcome ; skos:prefLabel "failed"@en ;
+    skos:definition "Evidence disproves the checked property."@en .
+ddkv:outcome-unknown a skos:Concept ; skos:inScheme ddkv:CheckOutcome ; skos:prefLabel "unknown"@en ;
+    skos:definition "The check ran but could not decide."@en .
+ddkv:outcome-not_run a skos:Concept ; skos:inScheme ddkv:CheckOutcome ; skos:prefLabel "not run"@en ;
+    skos:definition "The check did not run, so no evidence was gathered."@en .
+
+ddkv:EvidenceStrength a skos:ConceptScheme ; skos:prefLabel "Evidence strengths"@en ;
+    skos:definition "How strongly a result is supported, weakest first (DDK-RESULT-004)."@en .
+ddkv:evidence-declared a skos:Concept ; skos:inScheme ddkv:EvidenceStrength ; skos:prefLabel "declared"@en ;
+    skos:definition "Stated by an author or publisher; an assumption until stronger evidence exists."@en .
+ddkv:evidence-inferred a skos:Concept ; skos:inScheme ddkv:EvidenceStrength ; skos:prefLabel "inferred"@en ;
+    skos:definition "Derived from definitions or plans without reading data."@en .
+ddkv:evidence-executed a skos:Concept ; skos:inScheme ddkv:EvidenceStrength ; skos:prefLabel "executed"@en ;
+    skos:definition "Observed by running a check against the exact version, with a retained report."@en .
+
+ddkv:DatasetRole a skos:ConceptScheme ; skos:prefLabel "Dataset roles"@en .
+ddkv:role-original a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "original"@en .
+ddkv:role-source_record a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "source record"@en .
+ddkv:role-derived a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "derived"@en .
+ddkv:role-application a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "application"@en .
+ddkv:role-evidence a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "evidence"@en .
+
+ddkv:DatasetOrigin a skos:ConceptScheme ; skos:prefLabel "Dataset origins"@en ;
+    skos:definition "Who asserts a dataset's content (DDK-CATALOG-003): the publisher, a third party, a project derivation or a model."@en .
+ddkv:origin-publisher a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "publisher"@en .
+ddkv:origin-third_party a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "third party"@en .
+ddkv:origin-derived a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "project derivation"@en .
+ddkv:origin-model a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "model"@en .
+
+ddkv:LinkCardinality a skos:ConceptScheme ; skos:prefLabel "Relationship cardinalities"@en .
+ddkv:cardinality-one_to_one a skos:Concept ; skos:inScheme ddkv:LinkCardinality ; skos:prefLabel "one to one"@en .
+ddkv:cardinality-one_to_many a skos:Concept ; skos:inScheme ddkv:LinkCardinality ; skos:prefLabel "one to many"@en .
+ddkv:cardinality-many_to_one a skos:Concept ; skos:inScheme ddkv:LinkCardinality ; skos:prefLabel "many to one"@en .
+ddkv:cardinality-many_to_many a skos:Concept ; skos:inScheme ddkv:LinkCardinality ; skos:prefLabel "many to many"@en .
+ddkv:cardinality-unknown a skos:Concept ; skos:inScheme ddkv:LinkCardinality ; skos:prefLabel "unknown"@en .
+
+ddkv:LinkScope a skos:ConceptScheme ; skos:prefLabel "Relationship scopes"@en .
+ddkv:scope-same_release a skos:Concept ; skos:inScheme ddkv:LinkScope ; skos:prefLabel "same release"@en .
+ddkv:scope-version_pair a skos:Concept ; skos:inScheme ddkv:LinkScope ; skos:prefLabel "version pair"@en .
+ddkv:scope-external a skos:Concept ; skos:inScheme ddkv:LinkScope ; skos:prefLabel "external"@en .
+ddkv:scope-declared a skos:Concept ; skos:inScheme ddkv:LinkScope ; skos:prefLabel "declared"@en .
+
+ddkv:LinkNulls a skos:ConceptScheme ; skos:prefLabel "Relationship null handling"@en .
+ddkv:nulls-skip a skos:Concept ; skos:inScheme ddkv:LinkNulls ; skos:prefLabel "skip"@en .
+ddkv:nulls-reject a skos:Concept ; skos:inScheme ddkv:LinkNulls ; skos:prefLabel "reject"@en .
+ddkv:nulls-match a skos:Concept ; skos:inScheme ddkv:LinkNulls ; skos:prefLabel "match"@en .
+ddkv:nulls-unknown a skos:Concept ; skos:inScheme ddkv:LinkNulls ; skos:prefLabel "unknown"@en .
+
+ddkv:LinkMatch a skos:ConceptScheme ; skos:prefLabel "Relationship match rules"@en .
+ddkv:match-equal a skos:Concept ; skos:inScheme ddkv:LinkMatch ; skos:prefLabel "equal"@en .
+ddkv:match-project_rule a skos:Concept ; skos:inScheme ddkv:LinkMatch ; skos:prefLabel "project rule"@en .
+
+ddkv:noMatch a rdf:Property ; rdfs:label "no match"@en ;
+    rdfs:comment "A recorded decision that two resources do not denote the same thing. It is a judgement from a match-decision table, not a logical axiom such as owl:differentFrom."@en ;
+    rdfs:seeAlso skos:exactMatch, skos:closeMatch .

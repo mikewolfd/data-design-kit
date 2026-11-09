@@ -24,6 +24,15 @@ def stable_id(kind, *parts):
     return f"urn:ddk:{kind}:{sha256(json_dumps(parts).encode()).hexdigest()}"
 
 
+def check_report(check):
+    """The retained native report behind a passed or failed check, or None. Executed evidence needs one."""
+    record = check.get("record", {})
+    if check["status"] in {"passed", "failed"} and record.get("sha256"):
+        return {"kind": "native-report", "path": record["uri"], "sha256": record["sha256"],
+                "tool": check["evaluator"]["id"]}
+    return None
+
+
 def owner_record(document):
     return {"uri": document.path.as_uri(), "sha256": document.sha256}
 

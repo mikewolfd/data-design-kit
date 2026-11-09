@@ -13,9 +13,10 @@ from .catalog_access import (
     resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
+from .catalog_graph import GRAPH_ADAPTER, RML_ADAPTER, graph_document, rml_documents, turtle_bytes
 from .catalog_delivery import PAIRED_VIEW, paired_view_record
 from .catalog_descriptions import dataset_facts, product_facts
-from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, owner_record, stable_id
+from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, check_report, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
 from .catalog_semantics import admit_profile, resolved_key, resolved_relationship
 from .core import check_inventory, load_project
@@ -29,6 +30,8 @@ from .results import VERSION, diagnostic, location
 EXPORTS = {
     "dcat": "catalog.dcat", "catalog.dcat": "catalog.dcat",
     "openlineage": "lineage.openlineage", "lineage.openlineage": "lineage.openlineage",
+    "graph": "catalog.graph", "graph.ttl": "catalog.graph", "catalog.graph": "catalog.graph",
+    "rml": "catalog.rml", "catalog.rml": "catalog.rml",
 }
 METADATA_ADAPTERS = {"local": LOCAL_ADAPTER, "example": EXAMPLE_ADAPTER,
                      "example-commerce-metadata": EXAMPLE_ADAPTER}
@@ -37,6 +40,7 @@ RECIPE_GROUP = "catalog.recipes"
 CHECK_IDS = {name: f"DDK-CATALOG-{number:03d}" for name, number in {
     "assembly": 7, "exports": 7, "metadata": 1, "products": 2, "datasets": 3,
     "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9, "recipes": 11,
+    "catalog.graph": 13, "catalog.rml": 14,
 }.items()}
 DETAILS = "urn:ddk:catalog:assembly"
 
@@ -88,6 +92,7 @@ class Assembly:
         self.inventory = inventory
         self.report = inventory.report
         self.exports = exports
+        self.graph_turtle = False
         self.records = {}
         self.datasets = {}
         self.dataset_schemas = {}
@@ -126,7 +131,8 @@ class Assembly:
     def check(self, step, subject, error=None, *, path=None, required=None, evidence="inferred",
               related=(), evidence_records=()):
         group = {"relationships": "catalog.relationships", "qualification": "catalog.qualification", "recipes": RECIPE_GROUP,
-                 "catalog.dcat": "catalog.dcat", "lineage.openlineage": "lineage.openlineage"}.get(step, "catalog.assembly")
+                 "catalog.dcat": "catalog.dcat", "lineage.openlineage": "lineage.openlineage",
+                 "catalog.graph": "catalog.graph", "catalog.rml": "catalog.rml"}.get(step, "catalog.assembly")
         status = error.status if error is not None else "passed"
         description = str(error) if error is not None else None
         if required is None:
@@ -477,6 +483,10 @@ class Assembly:
             yield self.metadata.adapter
         if "catalog.dcat" in self.exports:
             yield DCAT_ADAPTER
+        if "catalog.graph" in self.exports:
+            yield GRAPH_ADAPTER
+        if "catalog.rml" in self.exports:
+            yield RML_ADAPTER
         if "lineage.openlineage" in self.exports:
             yield LINEAGE_ADAPTER
 
@@ -581,10 +591,7 @@ class Assembly:
                     "CATALOG-EVIDENCE-MISSING" if status in {"unknown", "not_run"} else "CATALOG-QUALITY-FAILED",
                     check.get("reason", "The native quality check reported failure."), status=status,
                 )
-                evidence = ()
-                if status in {"passed", "failed"} and check["record"].get("sha256"):
-                    evidence = ({"kind": "native-report", "path": check["record"]["uri"],
-                                 "sha256": check["record"]["sha256"], "tool": check["evaluator"]["id"]},)
+                evidence = (report,) if (report := check_report(check)) else ()
                 self.check("qualification", identifier, error, required=True,
                            evidence="executed" if evidence else "declared", evidence_records=evidence)
 
@@ -603,6 +610,24 @@ class Assembly:
                 self.report.completed_profiles.add("catalog.dcat")
             except CatalogError as error:
                 self.check("catalog.dcat", "export", error)
+        if "catalog.graph" in self.exports:
+            try:
+                document, parsed = graph_document(self.catalog)
+                self.add_file("discovery.graph.jsonld", "graph", _bytes(document))
+                if self.graph_turtle:
+                    self.add_file("discovery.graph.ttl", "graph", turtle_bytes(parsed))
+                self.check("catalog.graph", "export")
+                self.report.completed_profiles.add("catalog.graph")
+            except CatalogError as error:
+                self.check("catalog.graph", "export", error)
+        if "catalog.rml" in self.exports:
+            try:
+                for path, data in rml_documents(self.catalog).items():
+                    self.add_file(path, "mapping", data)
+                self.check("catalog.rml", "export")
+                self.report.completed_profiles.add("catalog.rml")
+            except CatalogError as error:
+                self.check("catalog.rml", "export", error)
         if "lineage.openlineage" in self.exports:
             try:
                 if self.policy is not None:
@@ -642,6 +667,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         raise ValueError("Private access artifacts require an explicitly requested public assembly")
     inventory = load_project(project_path, permitted_roots, limits)
     assembly = Assembly(inventory, profiles)
+    assembly.graph_turtle = "graph.ttl" in exports  # the JSON-LD graph, also written as Turtle on request
     report = inventory.report
     report.available_capabilities.update((*GROUPS, *EXPORTS.values(), *((RECIPE_GROUP,) if recipe_tools else ())))
     core = check_inventory(inventory, (*required_groups, "catalog.assembly", *profiles),

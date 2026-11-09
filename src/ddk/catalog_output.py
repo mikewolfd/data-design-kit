@@ -467,7 +467,7 @@ def _lock(inventory, catalog, exports, metadata_adapter, generated):
         options["currentSelection"] = catalog["currentSelection"]
     tools = {item["id"]: {key: value for key, value in item.items() if key != "id"}
              for item in catalog["adapters"]}
-    if "catalog.dcat" in exports:
+    if {"catalog.dcat", "catalog.graph"} & set(exports):
         tools["rdflib"] = {"version": version("rdflib")}
     roles = {"metadata": "metadata", "policy": "disclosure-policy", "recipe": "recipe", "implementation": "implementation"}
     extra = [{"path": item["uri"], "role": roles[item["role"]], "sha256": item["sha256"]}
