@@ -368,6 +368,7 @@ def test_stage_requires_exact_completed_native_file_inventory(tmp_path):
     version, = report["metadata"]["catalog"]["versions"]
     source, = report["metadata"]["catalog"]["sources"]
     assert source["content"]["value"] == "1" * 64
+    assert source["scope"] == "Daily revenue by date and region: source.csv. Source file recorded for this data load."
     assert version["reference"]["value"]["sha256"] == "2" * 64
     assert version["sources"] == [source["id"]]
     assert not (tmp_path / "source.csv").exists()
@@ -392,6 +393,9 @@ def test_quality_requires_raw_run_check_and_exact_schema_evidence(tmp_path):
     stage, _ = _stage_receipt(tmp_path)
     stage_ref = write(tmp_path / "staging.json", stage)
     receipt = _quality_receipt(tmp_path, stage["files"][0])
+    native = deepcopy(read_json(receipt["nativeReport"]["path"]).value)
+    native["checks"][0]["name"] = "The customer region field is present"
+    receipt["nativeReport"] = write(Path(receipt["nativeReport"]["path"]), native)
     wrapper = tmp_path / "quality.json"
     manifest = tmp_path / "metadata.json"
     write(manifest, {"staging": [{**stage_ref, "dataset": "daily-revenue"}],
@@ -402,6 +406,7 @@ def test_quality_requires_raw_run_check_and_exact_schema_evidence(tmp_path):
     assert report["decision"] == "passed", report
     catalog = report["metadata"]["catalog"]
     assert len(catalog["checks"]) == 2
+    assert any(check.get("reason") == "The customer region field is present — passed" for check in catalog["checks"])
     assert len(catalog["extensions"][ASSEMBLY]["requiredQualityChecks"]) == 2
 
     wrong_id = deepcopy(receipt)
@@ -428,6 +433,21 @@ def test_quality_requires_raw_run_check_and_exact_schema_evidence(tmp_path):
     assert incomplete["decision"] == "incomplete"
     assert "CATALOG-EVIDENCE-MISSING" in diagnostics(incomplete)
     assert {item["status"] for item in incomplete["metadata"]["catalog"]["checks"]} == {"passed", "not_run"}
+
+
+def test_quality_explanation_preserves_failure_and_refuses_ambiguous_rule_meaning():
+    from ddk.catalog_metadata import _quality_reason
+
+    check = {"name": "Native amount check", "qualityId": "amount", "result": "failed",
+             "reason": "Two negative values"}
+    document = {"schema": [{"properties": [{"quality": [
+        {"id": "amount", "description": "Amounts are zero or greater."},
+    ]}]}]}
+    assert _quality_reason(check, document) == "Amounts are zero or greater. — Two negative values"
+    document["schema"].append({"quality": [{"id": "amount", "description": "Amounts are below the ceiling."}]})
+    assert _quality_reason(check, document) == "Native amount check — Two negative values"
+    assert _quality_reason(check, {"schema": []}) == "Native amount check — Two negative values"
+    assert _quality_reason({"result": "unknown", "reason": "Evaluator stopped"}, {}) == "Evaluator stopped"
 
 
 def test_docspec_capture_error_preserves_native_execution_without_observed_consumption(tmp_path):

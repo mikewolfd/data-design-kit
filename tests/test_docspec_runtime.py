@@ -617,9 +617,20 @@ def test_managed_build_uses_exact_external_quality_and_recovers_lost_selection(r
         "read": {"workspace": str(inaccessible), "executable": str(runtime.executable),
                  "executableSha256": runtime.tool["distributionSha256"], "limits": LIMITS},
     }})
-    assert unavailable["status"] == "error"
-    assert "DOCSPEC-NATIVE-UNAVAILABLE" in unavailable["reason"]
-    assert "nativeRead" not in unavailable
+    assert unavailable["status"] == "unknown"
+    assert unavailable["operationalError"] == {
+        "type": "NativeStreamError", "code": "DOCSPEC-STREAM-TRUNCATED", "message": unavailable["reason"],
+    }
+    assert not unavailable.get("checks")
+    assert "nativeRead" not in unavailable and "nativeReport" not in unavailable
+    requested = json.loads(Path(unavailable["request"]["path"]).read_bytes())["target"]
+    assert requested["nativeVersion"] == candidate and requested["read"]["workspace"] == str(inaccessible)
+    failed_read = Path(unavailable["receipt"]["path"]).parent / "docspec-read"
+    requests = list(failed_read.glob("stream-version-*/request.json"))
+    assert len(requests) == 1 and json.loads(requests[0].read_bytes())["version"] == candidate
+    assert not list(failed_read.glob("stream-version-*/native-read.json"))
+    diagnostics = list(failed_read.glob("stream-version-*/stderr.log"))
+    assert len(diagnostics) == 1 and 0 < diagnostics[0].stat().st_size <= 64 << 10
     file_pass = tools.invoke("quality", {
         **rules, "target": {"kind": "files", "files": [{"path": str(data), "sha256": file_sha256(data)}]},
     })

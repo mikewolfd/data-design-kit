@@ -1,7 +1,7 @@
 {
   "logicalType": "integer",
   "required": true,
-  "description": "An amount in integer minor currency units.",
+  "description": "An amount in integer minor currency units. The example does not specify the currency, scale, tax treatment or gross or net basis.",
   "quality": [
     {
       "id": "nonnegative-amount",
@@ -16,7 +16,8 @@
             "amount_cents"
           ]
         }
-      ]
+      ],
+      "description": "Amounts are zero or greater."
     }
   ]
 }

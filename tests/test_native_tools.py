@@ -138,7 +138,8 @@ def test_quality_cannot_use_unbound_file_or_environment(native, monkeypatch):
     path = other["files"][0]["path"].replace("'", "''")
     bad = document([{"id": "outside", "type": "sql", "query": f"SELECT count(*) FROM read_parquet('{path}')", "mustBe": 1}])
     result = native.invoke("quality", {"document": bad, "target": target})
-    assert result["status"] == "failed", result
+    assert result["status"] == "not_run", result
+    assert result["operational"]["queryIssues"][0]["code"] == "QUALITY-SQL-UNSUPPORTED"
     monkeypatch.setenv("DDK_IMPLICIT_LIMIT", "0")
     implicit = document([{"id": "environment", "type": "sql", "query": "SELECT ${DDK_IMPLICIT_LIMIT}", "mustBe": 0}])
     result = native.invoke("quality", {"document": implicit, "target": target})

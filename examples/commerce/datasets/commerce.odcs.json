@@ -15,17 +15,23 @@
         {
           "name": "order_id",
           "logicalType": "string",
-          "required": true
+          "required": true,
+          "businessName": "Order identifier",
+          "description": "Identifier for one order in the authored example."
         },
         {
           "name": "customer_id",
           "logicalType": "string",
-          "required": true
+          "required": true,
+          "businessName": "Customer identifier",
+          "description": "Customer identifier used to match orders to customer records."
         },
         {
           "name": "order_day",
           "logicalType": "date",
-          "required": true
+          "required": true,
+          "businessName": "Order date",
+          "description": "Calendar date recorded for the order. No time of day or timezone is supplied."
         },
         {
           "name": "amount_cents",
@@ -36,12 +42,15 @@
               "type": "definition",
               "url": "../definitions/amount-cents.json"
             }
-          ]
+          ],
+          "businessName": "Amount in minor currency units"
         },
         {
           "name": "status",
           "logicalType": "string",
-          "required": true
+          "required": true,
+          "businessName": "Order status",
+          "description": "Recorded order status. The revenue calculation excludes the exact value 'cancelled'; the example also contains 'completed'. These examples do not define every allowed status."
         }
       ],
       "customProperties": [
@@ -53,7 +62,9 @@
           ]
         }
       ],
-      "dataGranularityDescription": "One order with its order date, amount, and recorded status."
+      "dataGranularityDescription": "One order with its order date, amount, and recorded status.",
+      "businessName": "Example orders",
+      "description": "Independently authored example orders with order dates, integer amounts, customer identifiers and recorded status. Includes a cancelled order and an order without a matching customer."
     },
     {
       "id": "customers",
@@ -64,12 +75,16 @@
         {
           "name": "customer_id",
           "logicalType": "string",
-          "required": true
+          "required": true,
+          "businessName": "Customer identifier",
+          "description": "Customer identifier used to match orders to customer records."
         },
         {
           "name": "region",
           "logicalType": "string",
-          "required": true
+          "required": true,
+          "businessName": "Customer region",
+          "description": "Region label assigned to the customer in the authored example. Geographic boundaries are not specified."
         }
       ],
       "customProperties": [
@@ -81,7 +96,9 @@
           ]
         }
       ],
-      "dataGranularityDescription": "One customer identifier and its region."
+      "dataGranularityDescription": "One customer identifier and its region.",
+      "businessName": "Example customers and regions",
+      "description": "Independently authored customer identifiers and region labels used to group the example orders. Region labels do not identify a documented geographic boundary."
     },
     {
       "id": "daily_revenue",
@@ -92,12 +109,16 @@
         {
           "name": "order_day",
           "logicalType": "date",
-          "required": true
+          "required": true,
+          "businessName": "Order date",
+          "description": "Order date used to group the included example orders. No time of day or timezone is supplied."
         },
         {
           "name": "region",
           "logicalType": "string",
-          "required": true
+          "required": true,
+          "businessName": "Customer region",
+          "description": "Region label assigned to the customer in the authored example. Geographic boundaries are not specified."
         },
         {
           "name": "amount_cents",
@@ -108,7 +129,9 @@
               "type": "definition",
               "url": "../definitions/amount-cents.json"
             }
-          ]
+          ],
+          "businessName": "Amount in minor currency units",
+          "description": "Sum of the included order amounts for this date and customer region, in integer minor currency units. Currency, scale, tax treatment and gross or net basis are not specified."
         }
       ],
       "customProperties": [
@@ -136,10 +159,13 @@
                 "region"
               ]
             }
-          ]
+          ],
+          "description": "Each order date and customer region occurs at most once."
         }
       ],
-      "dataGranularityDescription": "One row per order date and customer region with matched, non-cancelled orders."
+      "dataGranularityDescription": "One row per order date and customer region with matched, non-cancelled orders.",
+      "businessName": "Daily revenue by date and region",
+      "description": "Totals from the authored commerce example, grouped by order date and customer region. The calculation excludes cancelled orders and orders without a matching customer. Amounts use integer minor currency units; the currency, scale, tax treatment and gross or net basis are not specified."
     }
   ]
 }

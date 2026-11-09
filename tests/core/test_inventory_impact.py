@@ -21,6 +21,8 @@ DEFINITION = "definitions/amount-cents.json"
 def _inherit_definition(path, reference, field=None):
     def change(document):
         prop = document["schema"][0]["properties"][0]
+        for inline in ("businessName", "description"):  # inline values would win over the inherited ones under test
+            prop.pop(inline, None)
         prop["authoritativeDefinitions"] = [{"type": "definition", "url": reference}]
         if field:
             prop.update(field)
