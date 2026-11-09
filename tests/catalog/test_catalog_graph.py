@@ -104,3 +104,40 @@ def test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_u
     for result in (_commerce("dcat", "graph"), assemble_catalog(LAYERED / "project.ddk.json", exports=("dcat", "graph"))):
         used = {term for triple in _graph(result) for term in triple if str(term).startswith(VOCAB)}
         assert used and used <= defined
+
+
+def test_executed_evidence_needs_a_retained_report_and_missing_edges_fail_the_export(monkeypatch):
+    from ddk import catalog_graph
+    from ddk.documents import json_dumps
+
+    catalog = json.loads(json_dumps(_commerce("dcat").catalog))
+    check = catalog["checks"][0]
+    check.update(status="passed", record={"uri": "https://data.example.org/report.json", "sha256": "0" * 64})
+    catalog["checks"].append({**check, "rule": {**check["rule"], "id": "urn:example:commerce:rule:declared-only"},
+                              "record": {"uri": "https://data.example.org/claim.json"}})
+    _, graph = catalog_graph.graph_document(catalog)
+    strengths = {str(graph.value(m, rdflib.URIRef("http://www.w3.org/ns/dqv#isMeasurementOf"))): graph.value(m, rdflib.DCTERMS.type)
+                 for m in graph.subjects(rdflib.RDF.type, rdflib.URIRef("http://www.w3.org/ns/dqv#QualityMeasurement"))}
+    assert strengths == {"urn:example:commerce:rule:fixture-expected-revenue": DDKV["evidence-executed"],
+                         "urn:example:commerce:rule:declared-only": DDKV["evidence-declared"]}
+    real = catalog_graph.graph_edges
+    monkeypatch.setattr(catalog_graph, "graph_edges", lambda item: [*real(item), ("urn:ex:a", "prov:used", "urn:ex:b")])
+    with pytest.raises(Exception) as error:
+        catalog_graph.graph_document(catalog)
+    assert getattr(error.value, "code", "") == "CATALOG-GRAPH-VALIDATION"
+
+
+def test_fields_keep_dataset_predicates_and_point_to_canonical_urls():
+    from ddk import catalog_graph
+    from ddk.documents import json_dumps
+
+    catalog = json.loads(json_dumps(_commerce("dcat").catalog))
+    definitions = catalog["extensions"]["urn:ddk:catalog:assembly"]["datasetDefinitions"]
+    for alias in ("orders", "customers"):
+        next(p for p in definitions[alias]["properties"] if p["name"] == "customer_id").setdefault(
+            "authoritativeDefinitions", []).append({"type": "canonicalUrl", "url": "https://example.org/customer-id"})
+    _, graph = catalog_graph.graph_document(catalog)
+    canonical = rdflib.URIRef("https://example.org/customer-id")
+    assert set(graph.subjects(rdflib.RDFS.seeAlso, canonical)) == {
+        rdflib.URIRef(f"urn:example:commerce:dataset:{alias}:field:customer_id") for alias in ("orders", "customers")}
+    assert not set(graph.predicate_objects(canonical))  # nothing is said about someone else's IRI

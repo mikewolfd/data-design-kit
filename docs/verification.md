@@ -4,9 +4,14 @@
 
 Commits on `codex/ddk-knowledge-graph-20261109` add `--export graph` (DDK-CATALOG-013) and `--export rml` (DDK-CATALOG-014). These are source-checkout results only. [Records](/Users/mikewolfd/Work/artifacts/ddk-knowledge-graph-20261109/acceptance/).
 
-- **Graph.** rdflib 7.2.1 re-parsed the written JSON-LD and Turtle graphs, and SPARQL counts matched each catalog. Commerce: 181 triples, 3 datasets, 3 versions, 1 relationship, 1 check, 1 product. SpicyRegs map at spicy-stack `9db1f0c`: 18,209 triples, 194 datasets, 158 relationships, 14 products, and no versions or checks yet. The SpicyRegs export took 6.2 s at 184 MiB peak; the parse that checks the counts dominates and grows linearly.
-- **Mappings.** Morph-KGC 2.10.0 (Apache-2.0, scratch environment outside the repository) lifted the commerce fixture versions from the generated mappings into 42 quads, one named graph per version. A SPARQL join through `urn:example:commerce:relationship:customer` returned exactly the order-region pairs computed from the CSV files. On a synthetic match-decision table it produced `skos:exactMatch`, `skos:closeMatch` and `ddkv:noMatch`, and no `owl:sameAs`.
-- **Not mapped on SpicyRegs.** 157 of 158 relationships map; the other joins array elements. 208 nested object or array properties are not mapped, and 15 datasets without a top-level key map rows to blank nodes.
+- **Graph.** rdflib 7.2.1 re-parsed the written JSON-LD and Turtle graphs, and SPARQL counts matched each catalog. Commerce: 181 triples, 3 datasets, 3 versions, 1 relationship, 1 check, 1 product. SpicyRegs map at spicy-stack `fcb8e3b`: 194 datasets, 158 relationships, 14 products, and no versions or checks yet. The export took 5.5 s at 185 MiB peak; the verifying parse dominates and grows linearly. The export itself now also checks every run, check, linkset and product edge.
+- **Mappings, Morph-KGC 2.10.0** (Apache-2.0, a scratch environment outside the repository, with `na_values = ,nan,None,NaT,<NA>`):
+  - *Commerce:* the fixture versions became 42 quads, one named graph per version. A SPARQL join through `urn:example:commerce:relationship:customer` returned exactly the order-region pairs computed from the CSV files.
+  - *Synthetic nested Parquet:* every one of 20 expected statements, computed with pyarrow, was present. The run covered object leaves, scalar and object arrays, an array-of-keys join, a two-column non-key join, and keyless rows kept as one blank node each.
+  - *Match decisions:* a declared table produced `skos:exactMatch`, `skos:closeMatch` and `ddkv:noMatch`, and no `owl:sameAs`.
+  - *Real data:* 11 SpicyRegs datasets over the SQL trial's real OCC Parquet slices became 920,798 quads in 4.9 s. Per-field counts for 342 fields equal the distinct row-value pairs DuckDB counts directly from the files. Two object-array fields stored as text in the slices were read as string arrays.
+- **SpicyRegs coverage.** All 158 relationships and all nested properties map: 194 main, 209 array and 27 item mappings. Each document notes only that the catalog knows no exact-version file yet.
+- **Morph-KGC null handling.** Under its default `na_values`, Morph-KGC writes Parquet nulls as the text `None`, `NaT` or `<NA>`, so each document states the setting it needs.
 
 ## November 8, 2026 product boundary (ADR-015) checks
 

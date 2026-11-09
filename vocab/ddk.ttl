@@ -2,14 +2,16 @@
 # Two schemes are DDK's own: check outcomes and evidence strengths. The others restate enums the DDK
 # schemas already define, so graph readers can resolve them. noMatch records a negative match decision.
 
-@prefix ddkv: <https://github.com/mikewolfd/data-design-kit/blob/main/vocab/ddk.ttl#> .
+@prefix ddkv: <urn:ddk:vocab:> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
-<https://github.com/mikewolfd/data-design-kit/blob/main/vocab/ddk.ttl> dcterms:title "Data Design Kit vocabulary"@en ;
-    dcterms:source <https://github.com/mikewolfd/data-design-kit/blob/main/docs/specification.md> .
+# Terms are URNs so they stay stable if the repository moves; this file, published with the repository at
+# https://github.com/mikewolfd/data-design-kit, is where they are defined.
+<urn:ddk:vocab> dcterms:title "Data Design Kit vocabulary"@en ;
+    dcterms:source <https://github.com/mikewolfd/data-design-kit/blob/main/vocab/ddk.ttl> .
 
 ddkv:CheckOutcome a skos:ConceptScheme ; skos:prefLabel "Check outcomes"@en ;
     skos:definition "The four check outcomes of DDK-RESULT-001. Unknown and not run stay distinct."@en .

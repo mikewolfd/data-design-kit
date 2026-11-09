@@ -17,8 +17,8 @@ Congress's [original eight-table source proof](docs/verification.md#november-7-2
 **Knowledge graph, November 9, 2026.** The `codex/ddk-knowledge-graph-20261109` source implements two exports with source-checkout tests only.
 
 - `--export graph` (DDK-CATALOG-013) writes the catalog as one JSON-LD graph, or Turtle with `graph.ttl`: DCAT 3 plus PROV-O, DQV, VoID and SKOS, using the small vocabulary in [vocab/ddk.ttl](vocab/ddk.ttl).
-- `--export rml` (DDK-CATALOG-014) writes YARRRML mappings that Morph-KGC 2.10.0 runs on the commerce example.
-- Not yet mapped: nested ODCS objects and arrays, and composite or repeated-value joins.
+- `--export rml` (DDK-CATALOG-014) writes YARRRML mappings that Morph-KGC 2.10.0 runs on the commerce example and on real SpicyRegs slices. DuckDB views cover nested fields, array items, rows without a key, composite and non-key joins, and declared match-decision tables.
+- Not yet mapped: arrays of arrays, arrays inside array items, and `project_rule` relationships.
 - Specified but not implemented: the DocSpec recipe gate (WP-15 item 3) and job-based build records (DDK-CATALOG-012).
 
 Data Design Kit (DDK) generates an evidence-bound catalog from maintained ODCS and ODPS definitions: exact versions, access methods, relationships, origin and check evidence, with `unknown` and `not_run` kept explicit. Transformations are SQL files that run as DocSpec job steps; DDK reads their declarations and run records ([ADR-015](docs/architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog)). Its earlier design, transformation-test and change-impact checks remain available but frozen. The adopted [build strategy](docs/build-strategy-without-pilots.md) connects local commerce inputs, real execution and quality receipts, and a generated catalog reader. Nested/scoped identities and one typed managed operation have separate acceptance cases. Full DDK stack replacements for SpicyRegs and congressional-tech remain separate, incomplete delivery work.

@@ -1386,7 +1386,9 @@
         "tests/catalog/test_catalog_graph.py::test_graph_holds_every_catalog_fact_once",
         "tests/catalog/test_catalog_graph.py::test_graph_keeps_dcat_unchanged_turtle_equal_and_bytes_stable",
         "tests/catalog/test_catalog_graph.py::test_graph_states_runs_checks_links_and_origins_with_standard_terms",
-        "tests/catalog/test_catalog_graph.py::test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_uses"
+        "tests/catalog/test_catalog_graph.py::test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_uses",
+        "tests/catalog/test_catalog_graph.py::test_executed_evidence_needs_a_retained_report_and_missing_edges_fail_the_export",
+        "tests/catalog/test_catalog_graph.py::test_fields_keep_dataset_predicates_and_point_to_canonical_urls"
       ]
     },
     {
@@ -1406,6 +1408,15 @@
       "expectedDiagnostic": null,
       "tests": [
         "tests/catalog/test_catalog_rml.py::test_match_decisions_map_to_skos_matches_and_never_to_same_as"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-014-VIEWS",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_views_map_nested_fields_array_items_keyless_rows_and_non_key_joins"
       ]
     },
     {

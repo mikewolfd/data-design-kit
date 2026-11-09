@@ -901,26 +901,31 @@ A bounded or managed DocSpec run MAY name a job production. It binds only when i
 - **Origin.** A dataset's `origin` becomes `prov:wasAttributedTo` an agent typed with a concept from the DDK origin scheme.
 - **DQV.** Each check is a `dqv:QualityMeasurement` `dqv:computedOn` the version it binds to, `dqv:isMeasurementOf` its rule as a `dqv:Metric`, and attributed to its evaluator. Its `dqv:value` is a concept from the DDK check-outcome scheme, and its `dcterms:type` is a concept from the evidence-strength scheme: `executed` only with a retained native report. `unknown` and `not_run` MUST stay distinct.
 - **VoID.** Each relationship is a `void:Linkset` between its two datasets, with the relationship identifier as `void:linkPredicate`, its meaning as `dcterms:description`, and its cardinality, scope, null handling and match rule as SKOS concepts under `dcterms:type`.
-- **SKOS and descriptions.** Roles, statuses and layer names are `dcat:theme` concepts; statuses and layers form schemes under the catalog identifier. A dataset's description is `dcterms:description` and its row meaning `skos:definition`. Each field is described under the predicate DDK-CATALOG-014 maps it to, with its description as `skos:definition`.
+- **SKOS and descriptions.** Roles, statuses and layer names are `dcat:theme` concepts; statuses and layers form schemes under the catalog identifier. A dataset's description is `dcterms:description` and its row meaning `skos:definition`. Each field, nested and array-item fields included, is described under the dataset-scoped predicate DDK-CATALOG-014 maps it to. Its description is `skos:definition`, and a `canonicalUrl` it names is only `rdfs:seeAlso`; the graph says nothing about that IRI itself.
 - **Products.** Each product is a `dcat:Resource` that conforms to ODPS, with its output datasets as `dcterms:hasPart` and its inputs as `dcterms:requires`.
 
-Identifiers are the catalog's own; new nodes take stable identifiers derived from them, with no blank nodes, so identical inputs give identical bytes. The DDK vocabulary is [vocab/ddk.ttl](../vocab/ddk.ttl). Its check-outcome and evidence-strength schemes are DDK's own; its other schemes restate enums defined in DDK schemas, and `ddkv:noMatch` records a negative match decision.
+Identifiers are the catalog's own; new nodes take stable identifiers derived from them, with no blank nodes, so identical inputs give identical bytes. DDK terms are `urn:ddk:vocab:` IRIs defined in [vocab/ddk.ttl](../vocab/ddk.ttl). Its check-outcome and evidence-strength schemes are DDK's own; its other schemes restate enums defined in DDK schemas, and `ddkv:noMatch` records a negative match decision.
 
-*Acceptance.* An independent JSON-LD reader MUST parse the graph and count as many datasets, versions, relationships, checks and products as the catalog holds; otherwise the export fails with `CATALOG-GRAPH-VALIDATION`.
+*Acceptance.* An independent JSON-LD reader MUST parse the graph. It MUST count as many datasets, versions, relationships, checks and products as the catalog holds, and find every run, check, linkset and product edge read from the catalog records; otherwise the export fails with `CATALOG-GRAPH-VALIDATION`.
 
 <a id="DDK-CATALOG-014"></a>
 ### DDK-CATALOG-014 — RML mappings
 
-`--export rml` writes one YARRRML document per dataset, `rml/<alias>.yarrrml.yml`, derived from the effective ODCS definition, row identity and relationships. DDK writes mappings; it does not run them. An RML engine lifts the rows of one exact version, named by the document's `external.source`, into the named graph `external.version`. When the catalog knows an available Parquet or CSV file for a version, the export fills both in.
+`--export rml` writes one YARRRML document per dataset, `rml/<alias>.yarrrml.yml`, derived from the effective ODCS definition, row identity and relationships. DDK writes mappings; it does not run them. Each document reads one exact version's Parquet or CSV file into the named graph of that version, choosing the first version the catalog holds a file for, or a placeholder path named in a comment. Where plain tabular sources fall short, the document uses DuckDB `query` views over the same file.
 
-- **Rows.** The subject is an IRI template under the dataset identifier built from its first top-level key. A dataset without one maps rows to blank nodes.
-- **Values.** Each top-level property maps to its ODCS `authoritativeDefinitions` entry of type `canonicalUrl`, when present, or else to a predicate scoped to the dataset. Integer, boolean, date, time and timestamp values carry XSD datatypes; `number` stays untyped, following DDK-DATA-003.
-- **Links.** A relationship whose target fields are the target's key maps to the target row's IRI. A relationship on one other column maps to a join condition.
+- **Rows.** The subject is an IRI template under the dataset identifier built from its first top-level key. A dataset without one reads through a view that numbers its rows, and each row is one blank node across every mapping of that document.
+- **Values.** Each property maps to a predicate scoped to its dataset and path. Integer, boolean, date, time and timestamp values carry XSD datatypes; `number` stays untyped, following DDK-DATA-003.
+- **Nested values.** Object fields map through a view that selects each leaf. Arrays of scalars unnest into repeated values. Arrays of objects become item nodes named by position under their row.
+- **Links.** A relationship whose source fields are the target's key maps to the target row's IRI. So does one whose source is an array of the target's key, through the array's view. Any other equal-value relationship, including composite and non-key joins, maps through a view that joins the two files in DuckDB. A `project_rule` relationship is not mapped, because DDK does not know the rule.
 - **Explicit IRIs.** Predicates and graphs are written as explicit IRI term maps, because readers that guess IRIs from the scheme read `urn:` constants as literals.
-- **Match decisions.** A dataset with role `evidence`, a string `decision` column and two relationships to the rows it matches also maps each row to a link between those rows. `same` maps to `skos:exactMatch`, `undecided` to `skos:closeMatch`, and `not_same` to `ddkv:noMatch`; it MUST NOT map to `owl:sameAs`. The relationship with the lower identifier gives the subject. Each decision value reads the file through a DuckDB view.
-- **Not mapped.** Nested objects and arrays, composite or repeated-value joins and links to targets without a key stay unmapped, and a comment in the document names each one.
+- **Match decisions.** An ODCS object MAY declare a match-decision column with the custom property `vendor: ddk`, `property: matchDecisions`. Its value names the column, and its two relationships to keyed rows name what each decision links. `same` maps to `skos:exactMatch`, `undecided` to `skos:closeMatch`, and `not_same` to `ddkv:noMatch`; it MUST NOT map to `owl:sameAs`. The relationship with the lower identifier gives the subject. DDK MUST NOT infer a decision table from a dataset's shape.
+- **Not mapped.** These stay unmapped, each named in a comment in the document:
+  - arrays of arrays and arrays inside array items;
+  - a source path with more than one array;
+  - links to targets without a top-level key;
+  - `project_rule` relationships.
 
-*Acceptance.* Morph-KGC MUST materialize the commerce example's exact versions from the generated mappings, each in its own named graph, and a SPARQL query MUST join orders to customers through the generated relationship predicate.
+*Acceptance.* Morph-KGC MUST materialize the commerce example's exact versions from the generated mappings, each in its own named graph, and a SPARQL query MUST join orders to customers through the generated relationship predicate. Morph-KGC 2.10.0 needs `na_values = ,nan,None,NaT,<NA>`, which each document states; otherwise it writes Parquet nulls as text.
 
 ### 19.1 Layered maps (informative)
 

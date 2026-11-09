@@ -130,7 +130,22 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "An evidence dataset with a decision column and two relationships maps same to skos:exactMatch, undecided to skos:closeMatch and not_same to ddkv:noMatch, never to owl:sameAs. The same table with another role maps only its own rows.",
+      "scenario": "An ODCS object that declares matchDecisions (vendor ddk) on its decision column, with two relationships to keyed rows, maps same to skos:exactMatch, undecided to skos:closeMatch and not_same to ddkv:noMatch, never to owl:sameAs. Without the declaration, the same table maps only its own rows.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-VIEWS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Stations with nested object fields, scalar and object arrays and an array of tag keys; visits that join stations on two non-key columns; keyless logs; and a project-rule link. DuckDB views map the leaves, unnested values, positioned item nodes, the array and composite joins and one blank node per log row; the project-rule link is named as unmapped.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
