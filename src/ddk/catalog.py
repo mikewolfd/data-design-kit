@@ -8,6 +8,7 @@ from dataclasses import dataclass, field as dataclass_field
 from hashlib import sha256
 from pathlib import Path
 from types import MappingProxyType
+from urllib.parse import unquote, urlsplit
 
 from .catalog_access import (
     CatalogError, compare_equal, field_at, field_type, relationship_keys, row_identity_names,
@@ -116,6 +117,7 @@ class Assembly:
         self.relationship_assessments = []
         self.unknown_sla = set()
         self.concept_fields = {}
+        self.registered_definitions = None
         self.concept_rules = None
         self.recipe_sources = {}
         self.recipe_parser = None
@@ -137,7 +139,7 @@ class Assembly:
         )
 
     def check(self, step, subject, error=None, *, path=None, required=None, evidence="inferred",
-              related=(), evidence_records=()):
+              related=(), evidence_records=(), severity=None):
         group = {"relationships": "catalog.relationships", "qualification": "catalog.qualification", "recipes": RECIPE_GROUP,
                  "catalog.dcat": "catalog.dcat", "lineage.openlineage": "lineage.openlineage",
                  "catalog.graph": "catalog.graph", "catalog.rml": "catalog.rml"}.get(step, "catalog.assembly")
@@ -149,8 +151,8 @@ class Assembly:
         self.report.add(CHECK_IDS[step], group, subject, status, required=required, evidence=evidence,
                         reason=description if status in {"unknown", "not_run"} else None,
                         evidence_records=evidence_records, diagnostics=[
-                            diagnostic(error.code, description, path=source, pointer=error.pointer,
-                                       related=related, severity="error" if status == "failed" else "warning")
+                            diagnostic(error.code, description, path=source, pointer=error.pointer, related=related,
+                                       severity=severity or ("error" if status == "failed" else "warning"))
                         ] if error is not None else [])
 
     def project_records(self):
@@ -246,17 +248,20 @@ class Assembly:
     def field_definitions(self, alias):
         """Fields of one dataset that reference a registered shared definition: {path as JSON: definition alias}."""
         if alias not in self.concept_fields:
-            artifact, registered, found = self.inventory.artifacts[alias], {}, {}
-            for item in self.inventory.artifacts.values():
-                if item.kind == "definition":
-                    registered.setdefault(item.path, item.alias)
+            if self.registered_definitions is None:
+                self.registered_definitions = {}
+                for item in self.inventory.artifacts.values():
+                    if item.kind == "definition":
+                        self.registered_definitions.setdefault(item.path, item.alias)
+            artifact, registered, found = self.inventory.artifacts[alias], self.registered_definitions, {}
 
             def walk(prop, path):
                 for link in prop.get("authoritativeDefinitions", ()):
                     if link.get("type") != "definition" or not link.get("url") or "#" in link["url"]:
                         continue
-                    try:
-                        target = resolve_path(artifact.path, link["url"], self.inventory.permitted_roots)
+                    try:  # properties and items are never inherited, so links resolve from the dataset file
+                        target = resolve_path(artifact.path, unquote(urlsplit(link["url"]).path),
+                                              self.inventory.permitted_roots)
                     except DocumentError:
                         continue
                     if target in registered:
@@ -341,9 +346,10 @@ class Assembly:
         mismatched = [f"{left} to {right}" for left, right in pairs if not same(left, right)]
         error = CatalogError("CATALOG-RELATIONSHIP-CONCEPT", f"{row['id']} joins fields of different shared definitions "
                              f"({'; '.join(mismatched)}). A concept-joins policy rule can declare the pair compatible.",
-                             status="failed" if severity == "error" else "unknown") if mismatched else None
+                             status="failed") if mismatched else None
+        # A mismatch is definite; by default it is a non-blocking failure with a warning, and a policy can require it.
         self.check("relationships", f"{row['id']}/concepts", error, path=path, required=severity == "error",
-                   evidence="declared")
+                   evidence="declared", severity=severity)
 
     def alias(self, reference, namespace):
         artifact = self.inventory.resolve(reference, namespace, "dataset")

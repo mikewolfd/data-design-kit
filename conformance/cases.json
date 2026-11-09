@@ -240,10 +240,10 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "The commerce customer relationship joins fields of two different shared definitions. That is a non-required unknown warning, a required failure under a concept-joins rule of severity error, and a pass once the rule declares the pair compatible.",
+      "scenario": "The commerce customer relationship joins fields of two different shared definitions. That is a non-required failure with a warning, a required failure under a concept-joins rule of severity error, and a pass once the rule declares the pair compatible.",
       "expected": {
         "decision": "passed",
-        "checkStatus": "unknown",
+        "checkStatus": "failed",
         "exitCode": 0,
         "diagnostic": "CATALOG-RELATIONSHIP-CONCEPT"
       }
@@ -255,7 +255,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "Datasets carrying a committee concept that another dataset keys its rows by become candidate links to it; a pair already joined by a declared relationship does not.",
+      "scenario": "Datasets carrying a committee concept that another dataset keys its rows by become candidate links to it, because a declared relationship joins on that concept elsewhere. A pair that relationship already joins is left out. Once no relationship joins on the concept, there are no candidates.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",

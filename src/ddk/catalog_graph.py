@@ -6,7 +6,7 @@ version's rows into RDF; DDK writes the mappings and never runs them.
 """
 
 import json
-import re
+from hashlib import sha256
 from urllib.parse import quote, unquote, urlsplit
 
 from .catalog_access import CatalogError
@@ -33,6 +33,9 @@ MATCH_PREDICATES = {"same": "http://www.w3.org/2004/02/skos/core#exactMatch",
 FILE_TYPES = {"text/csv": "csv", "application/vnd.apache.parquet": "parquet"}
 ATTRIBUTED = "http://www.w3.org/ns/prov#wasAttributedTo"
 ROW = "__ddk_row"  # row position, the identity of rows in a dataset without a top-level key
+# DuckDB renders these as text itself: through pandas, a nullable integer column becomes floats, and a key of 5
+# would name row "5.0" in one mapping and "5" in another.
+AS_TEXT = {"integer", "number", "boolean"}
 # Morph-KGC 2.10.0 turns Parquet nulls into these strings before it drops missing values, so its configuration
 # must list them; a text value that is exactly one of them is then dropped as well.
 NULL_MARKERS = ",nan,None,NaT,<NA>"
@@ -81,9 +84,9 @@ def _row_keys(catalog):
     return keys
 
 
-def _blank(prefix, columns):
-    """A blank-node template; N-Triples labels allow only letters, digits and a few marks, so others become '_'."""
-    label = re.sub(r"[^A-Za-z0-9]", "_", prefix)
+def _blank(scope, columns):
+    """A blank-node template whose label is scoped by a hash, so rows of two datasets or versions never merge."""
+    label = "b" + sha256(scope.encode()).hexdigest()[:20]
     return {"value": label + "".join(f"_$({column})" for column in columns), "type": "blanknode"}
 
 
@@ -250,10 +253,10 @@ def graph_document(catalog):
         linkset = nodes.node(stable_id("candidate-linkset", subject, target, concept), "void:Linkset")
         nodes.add(linkset, "void:subjectsTarget", _ref(aliases[subject]))
         nodes.add(linkset, "void:objectsTarget", _ref(aliases[target]))
-        nodes.add(linkset, "void:linkPredicate", _ref(concept))
+        nodes.add(linkset, "dcterms:subject", _ref(concept))
         nodes.add(linkset, "dcterms:type", _concept("evidence", "inferred"))
-        nodes.add(linkset, "dcterms:description", "Both datasets carry this concept and the second keys its rows by it; "
-                  "no relationship between them is declared, so this is a candidate join, not a declared one.")
+        nodes.add(linkset, "dcterms:description", "Both datasets carry this concept, the second keys its rows by it, and "
+                  "other declared relationships join on it. No relationship joins these two: a candidate, not a link.")
     for product in catalog["products"]:
         item = nodes.node(product["id"], "dcat:Resource")
         nodes.add(item, "dcterms:conformsTo", _ref(ODPS))
@@ -313,17 +316,22 @@ def _origin_agent(nodes, dataset):
 
 
 def candidate_links(catalog):
-    """(carrier, keyed dataset, concept) for datasets that share a concept where the second keys its rows by it.
+    """(carrier, keyed dataset, concept) where a dataset carries a concept that another keys its rows by.
 
-    Inferred, never declared: pairs already joined by a declared relationship are left out. Anchoring on keys
-    keeps the count linear in carriers; every carrier pair would be quadratic and mostly not joins at all.
+    Only concepts some declared relationship already joins on count, so identifiers qualify and shared value
+    types such as dates do not. Inferred, never declared: pairs a relationship already joins are left out. The
+    count grows with carriers times keyed datasets per concept, not with every pair of carriers.
     """
-    keys = {identity["dataset"]: identity["fields"] for identity in catalog["identities"] if identity["kind"] == "key"}
+    keys = _row_keys(catalog)
     declared = {frozenset((row["source"]["dataset"], row["target"].get("dataset"))) for row in catalog["relationships"]}
+    joined = {(row[side]["dataset"], json_dumps(path)) for row in catalog["relationships"]
+              for side in ("source", "target") if "dataset" in row[side] for path in row[side]["paths"]}
     found = set()
     for row in catalog.get("concepts", ()):
+        if not any((field["dataset"], json_dumps(field["path"])) in joined for field in row["fields"]):
+            continue
         anchors = {field["dataset"] for field in row["fields"]
-                   if [item["path"] for item in keys.get(field["dataset"], ())] == [field["path"]]}
+                   if keys.get(field["dataset"]) and [[{"field": name}] for name in keys[field["dataset"]]] == [field["path"]]}
         for field in row["fields"]:
             for anchor in sorted(anchors - {field["dataset"]}):
                 pair = tuple(sorted((field["dataset"], anchor))) if field["dataset"] in anchors else (field["dataset"], anchor)
@@ -376,6 +384,10 @@ def _sql_field(path, table=None):
     return expression + "".join(f"[{_sql_text(part)}]" for part in path[1:])
 
 
+def _text(expression, prop):
+    return f"CAST({expression} AS VARCHAR)" if prop.get("logicalType") in AS_TEXT else expression
+
+
 def _column(path):
     return ".".join(path)
 
@@ -414,20 +426,33 @@ def _custom(definition, name):
                  if item.get("vendor") == "ddk" and item.get("property") == name), None)
 
 
+def _reader(path, numbered=False):
+    """DuckDB reads every file, so values render the same in every mapping; CSV stays text, as written."""
+    if path.lower().endswith((".csv", ".tsv")):
+        reader = f"read_csv({_sql_text(path)}, all_varchar = true, header = true)"
+        return f"(SELECT row_number() OVER () AS {_sql_name(ROW)}, * FROM {reader})" if numbered else reader
+    if numbered:  # the position DuckDB reads from the file, not an order the query happens to keep
+        return (f"(SELECT file_row_number AS {_sql_name(ROW)}, * EXCLUDE (file_row_number) "
+                f"FROM read_parquet({_sql_text(path)}, file_row_number = true))")
+    return f"read_parquet({_sql_text(path)})"
+
+
 class _Rows:
     """How one dataset's rows are read and named: by key, or by position in the file when it has none."""
 
-    def __init__(self, dataset, key, path):
-        self.dataset, self.key, self.path = dataset, key, path
+    def __init__(self, dataset, key, path, version, properties):
+        self.dataset, self.key, self.path, self.version = dataset, key, path, version
         self.columns = key or [ROW]
-        self.table = (_sql_text(path) if key else
-                      f"(SELECT row_number() OVER () AS {_sql_name(ROW)}, * FROM {_sql_text(path)})")
+        reader = _reader(path, numbered=not key)
+        casts = [f"{_text(_sql_name(prop['name']), prop)} AS {_sql_name(prop['name'])}"
+                 for prop in properties if prop.get("logicalType") in AS_TEXT]
+        self.table = f"(SELECT * REPLACE ({', '.join(casts)}) FROM {reader})" if casts else reader
 
     def subject(self, prefix=""):
         columns = [prefix + column for column in self.columns]
         if self.key:
             return _template(child_iri(self.dataset["id"], "row"), columns)
-        return _blank(self.dataset["alias"], columns)
+        return _blank(f"{self.dataset['id']}\n{self.version}", columns)
 
     def select(self, *expressions, table=None):
         return ", ".join([_sql_field((column,), table) for column in self.columns] + list(expressions))
@@ -458,7 +483,8 @@ def rml_mappings(catalog):
             notes[alias].append("No exact version with a Parquet or CSV file is known; point the paths at one.")
         elif len(found) > 1:
             notes[alias].append("Other exact versions with files: " + ", ".join(item for item, _ in found[1:]) + ".")
-    rows = {alias: _Rows(dataset, keys.get(alias), chosen[alias][1]) for alias, dataset in datasets.items()}
+    rows = {alias: _Rows(dataset, keys.get(alias), chosen[alias][1], chosen[alias][0],
+                         definitions.get(alias, {}).get("properties", ())) for alias, dataset in datasets.items()}
     outgoing = {}
     for relationship in catalog["relationships"]:
         outgoing.setdefault(relationship["source"]["dataset"], []).append(relationship)
@@ -485,7 +511,14 @@ def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, no
         (arrays if kind == "array" else nested if len(path) > 1 else flat).append((path, prop))
         if kind == "object":
             notes.append(f"{_column(path)} is an object without declared fields, so it is not mapped.")
-    main = {"sources": [[rows.path]] if rows.key else [{"query": f"SELECT * FROM {rows.table}"}], "s": rows.subject(),
+    # Morph-KGC reads a mapping's source once per predicate. A plain file lets it read only the columns each one
+    # needs; a view over the whole row would be re-read for every predicate. So the row mapping reads the file,
+    # except where pandas would render a key differently from DuckDB: rows without a key, or a numeric key that
+    # may be null and would come back as floats.
+    by_name = {prop["name"]: prop for prop in definition.get("properties", ())}
+    plain = rows.key and not any(by_name.get(column, {}).get("logicalType") in AS_TEXT
+                                 and not by_name.get(column, {}).get("required") for column in rows.key)
+    main = {"sources": [[rows.path]] if plain else [{"query": f"SELECT * FROM {rows.table}"}], "s": rows.subject(),
             "po": [entry for path, prop in flat if prop.get("logicalType") != "object"
                    for entry in values(path, prop, path[0])]}
     if dataset.get("methodColumn"):  # the documented row-level convention: each row is attributed by its method
@@ -493,11 +526,11 @@ def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, no
                                                                      [dataset["methodColumn"]]))})
     mappings = {alias: main}
     if nested:
-        expressions = [f"{_sql_field(path)} AS {_sql_name(_column(path))}" for path, _ in nested]
+        expressions = [f"{_text(_sql_field(path), prop)} AS {_sql_name(_column(path))}" for path, prop in nested]
         mappings[f"{alias}#fields"] = {
             "sources": [{"query": f"SELECT {rows.select(*expressions)} FROM {rows.table}"}], "s": rows.subject(),
             "po": [entry for path, prop in nested for entry in values(path, prop, _column(path))]}
-    each_links = {}
+    each_links, row_links = {}, []
     for relationship in relationships:
         if relationship.get("match") == "project_rule":
             notes.append(f"{relationship['id']} is not mapped: a project rule, not equal values, decides its matches.")
@@ -507,11 +540,15 @@ def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, no
             continue
         kind, value = link
         if kind == "row":
-            main["po"].append(value)
+            row_links.append(value)
         elif kind == "each":
             each_links.setdefault(value[0], []).append(value[1])
         else:
             mappings[f"{alias}#{relationship['id']}"] = value
+    if row_links:  # links become IRIs, so DuckDB renders their columns; the view reads only those columns
+        columns = sorted({column for link_columns, _ in row_links for column in link_columns} - set(rows.columns))
+        mappings[f"{alias}#links"] = {"sources": [{"query": f"SELECT {rows.select(*map(_sql_name, columns))} FROM {rows.table}"}],
+                                      "s": rows.subject(), "po": [po for _, po in row_links]}
     for path, prop in arrays:
         mappings.update(_array_mappings(dataset_id, alias, path, prop, rows, each_links.pop(path, []), notes, values))
     for path in each_links:
@@ -539,7 +576,8 @@ def _array_mappings(dataset_id, alias, path, prop, rows, links, notes, values):
         if items.get("logicalType") == "array":
             notes.append(f"{column} is not mapped: arrays of arrays need a view of their own.")
             return {}
-        query = f"SELECT {rows.select(f'UNNEST({_sql_field(path)}) AS {_sql_name(column)}')} FROM {rows.table}"
+        listed = f"CAST({_sql_field(path)} AS VARCHAR[])" if items.get("logicalType") in AS_TEXT else _sql_field(path)
+        query = f"SELECT {rows.select(f'UNNEST({listed}) AS {_sql_name(column)}')} FROM {rows.table}"
         return {f"{alias}#{column}": {"sources": [{"query": query}], "s": rows.subject(),
                                       "po": [*values(path, items, column), *links]}}
     index, leaves = f"{column}.__index", []
@@ -551,15 +589,15 @@ def _array_mappings(dataset_id, alias, path, prop, rows, links, notes, values):
     inner = (f"SELECT {rows.select('UNNEST(' + _sql_field(path) + ') AS __ddk_item', 'UNNEST(range(1, len(' + _sql_field(path) + ') + 1)) AS __ddk_index')} "
              f"FROM {rows.table}")
     outer = rows.select(f"__ddk_index AS {_sql_name(index)}",
-                        *(f"{_sql_field(('__ddk_item', *leaf))} AS {_sql_name(column + '.' + _column(leaf))}"
-                          for leaf, _ in leaves))
+                        *(f"{_text(_sql_field(('__ddk_item', *leaf)), child)} AS {_sql_name(column + '.' + _column(leaf))}"
+                          for leaf, child in leaves))
     query = f"SELECT {outer} FROM ({inner})"
     if rows.key:  # an item is named under its row: <row>:<array>:<position>
         separator = ":" if dataset_id.startswith("urn:") else "/"
         element = _template(child_iri(dataset_id, "row"), rows.columns) + separator + quote(column, safe="")
         element = _template(element, [index])
     else:
-        element = _blank(f"{alias}_{column}", [*rows.columns, index])
+        element = _blank(f"{dataset_id}\n{rows.version}\n{column}", [*rows.columns, index])
     if links:
         notes.append(f"Links through {column} are not mapped: its items are objects.")
     return {f"{alias}#{column}": {"sources": [{"query": query}], "s": rows.subject(),
@@ -571,7 +609,7 @@ def _array_mappings(dataset_id, alias, path, prop, rows, links, notes, values):
 
 
 def _link(relationship, rows, catalog_rows, notes):
-    """A relationship as ('row', po) on the main mapping, ('each', (array path, po)) on an array mapping,
+    """A relationship as ('row', (columns, po)) for the links view, ('each', (array path, po)) on an array mapping,
     or ('view', mapping) that joins the two exact versions in DuckDB."""
     fields, target = _target(relationship, catalog_rows)
     if target is None:
@@ -582,7 +620,8 @@ def _link(relationship, rows, catalog_rows, notes):
     pairs = dict(zip(fields, source_paths))
     if flat and set(fields) == set(target.key):
         columns = [pairs[field][0]["field"] for field in target.key]
-        return "row", {"p": _iri(relationship["id"]), "o": _iri(_template(child_iri(target.dataset["id"], "row"), columns))}
+        return "row", (columns, {"p": _iri(relationship["id"]),
+                                 "o": _iri(_template(child_iri(target.dataset["id"], "row"), columns))})
     eaches = [path for path in source_paths if path[-1].get("each")]
     if (len(source_paths) == 1 and len(eaches) == 1 and fields == target.key
             and all("field" in step for step in eaches[0][:-1])):

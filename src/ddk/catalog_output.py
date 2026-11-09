@@ -141,16 +141,26 @@ def _withheld_name(value, withheld, policy):
     return None
 
 
-def _public_concepts(concepts, aliases, disclosed_paths, policy):
-    """Concepts keep only fields whose exact path is granted; descriptions and canonical URLs need their grants."""
+def _public_concepts(concepts, aliases, disclosed_paths, policy, catalog_id):
+    """Concepts keep only fields whose exact path is granted, and every other value needs its own grant.
+
+    A concept IRI the policy does not list among its identifiers, including one DDK minted from a private
+    definition alias, is minted again from the public alias.
+    """
+    from .catalog_graph import child_iri
+
     view = []
     for row in concepts:
         fields = [{"dataset": aliases[field["dataset"]], "path": deepcopy(field["path"])} for field in row["fields"]
                   if field["dataset"] in aliases and field["path"] in disclosed_paths.get(aliases[field["dataset"]], ())]
         if not fields:
             continue
-        item = {"concept": row["concept"], "definition": _alias(row["definition"], policy["aliases"]), "fields": fields}
-        item.update({key: deepcopy(row[key]) for key in ("exactMatch", "closeMatch") if key in row})
+        definition = _alias(row["definition"], policy["aliases"])
+        concept = row["concept"] if row["concept"] in policy["identifiers"] else child_iri(catalog_id, "concept", definition)
+        item = {"concept": concept, "definition": definition, "fields": fields}
+        for key in ("exactMatch", "closeMatch"):
+            if matches := [iri for iri in row.get(key, ()) if iri in policy["identifiers"]]:
+                item[key] = matches
         if policy["descriptions"] and "description" in row:
             item["description"] = row["description"]
         urls = [url for url in row.get("canonicalUrls", ()) if url in policy["locations"]]
@@ -259,7 +269,7 @@ def public_view(catalog, policy, details_key):
     if disclosed_definitions:
         details["datasetDefinitions"] = disclosed_definitions
         details["disclosedDefinitionPaths"] = disclosed_paths
-    view["concepts"] = _public_concepts(catalog.get("concepts", ()), aliases, disclosed_paths, policy)
+    view["concepts"] = _public_concepts(catalog.get("concepts", ()), aliases, disclosed_paths, policy, catalog["id"])
     extension_grants = {json_dumps(row["project"]): set(row["extensions"]) for row in policy["projectExtensions"]}
     known_extensions = defaultdict(set)
     disclosed_extensions = []

@@ -102,6 +102,9 @@ def test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_u
                     ("LinkMatch", "match"))}}
     for scheme, (prefix, values) in expected.items():
         assert set(vocabulary.subjects(SKOS.inScheme, DDKV[scheme])) == {DDKV[f"{prefix}-{value}"] for value in values}
+    from ddk.catalog import METHOD_VALUES
+    assert {str(item).rpartition("origin-")[2] for item in vocabulary.subjects(SKOS.inScheme, DDKV["DatasetOrigin"])} == (
+        METHOD_VALUES | {"derived"})  # the method vocabulary has one owner: this scheme
     defined = set(vocabulary.subjects())
     for result in (_commerce("dcat", "graph"), assemble_catalog(LAYERED / "project.ddk.json", exports=("dcat", "graph"))):
         used = {term for triple in _graph(result) for term in triple if str(term).startswith(VOCAB)}

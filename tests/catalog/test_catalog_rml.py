@@ -23,7 +23,10 @@ def test_rml_maps_rows_values_and_links_from_the_declarations():
     orders = mappings["orders"]
     assert orders["s"] == "urn:example:commerce:dataset:orders:row:$(order_id)"
     assert orders["graphs"] == {"value": "urn:example:commerce:dataset:orders", "type": "iri"}  # no file is known
-    by_predicate = {entry["p"]["value"]: entry["o"] for entry in orders["po"]}
+    links = {alias: document["mappings"][f"{alias}#links"] for alias, (document, _) in rml_mappings(result.catalog).items()
+             if f"{alias}#links" in document["mappings"]}
+    by_predicate = {entry["p"]["value"]: entry["o"] for entry in orders["po"] + links["orders"]["po"]}
+    assert "CAST" not in json.dumps(orders["sources"]) and orders["sources"] == [["orders.parquet"]]  # plain file
     assert by_predicate["urn:example:commerce:dataset:orders:field:amount_cents"] == {
         "value": "$(amount_cents)", "datatype": "xsd:integer"}
     assert by_predicate["urn:example:commerce:relationship:customer"] == {
@@ -68,7 +71,8 @@ def _decision_catalog(declared=True):
 
 def test_match_decisions_map_to_skos_matches_and_never_to_same_as():
     document, notes = rml_mappings(_decision_catalog())["matches"]
-    decisions = {name.rpartition("#")[2]: mapping for name, mapping in document["mappings"].items() if "#" in name}
+    decisions = {name.rpartition("#")[2]: mapping for name, mapping in document["mappings"].items()
+                 if name.rpartition("#")[2] in {"same", "undecided", "not_same"}}
     assert {name: mapping["po"][0]["p"]["value"] for name, mapping in decisions.items()} == {
         "same": "http://www.w3.org/2004/02/skos/core#exactMatch",
         "undecided": "http://www.w3.org/2004/02/skos/core#closeMatch", "not_same": VOCAB + "noMatch"}
@@ -78,7 +82,8 @@ def test_match_decisions_map_to_skos_matches_and_never_to_same_as():
     assert "owl#sameAs" not in json.dumps(document)
     assert any("tags is not mapped: arrays of arrays" in note for note in notes)
     # Undeclared, the same table is an ordinary dataset: no decision is guessed from its shape.
-    assert not [name for name in rml_mappings(_decision_catalog(declared=False))["matches"][0]["mappings"] if "#" in name]
+    assert not [name for name in rml_mappings(_decision_catalog(declared=False))["matches"][0]["mappings"]
+                if name.rpartition("#")[2] in {"same", "undecided", "not_same"}]
 
 
 def test_rml_without_dataset_definitions_is_not_run():
@@ -140,7 +145,12 @@ def test_views_map_nested_fields_array_items_keyless_rows_and_non_key_joins():
     assert 'c."station_name" = p."name"' in join and 'c."region" = p."region"' in join
     assert any("ruled is not mapped: a project rule" in note for note in visit_notes)
     logs, _ = documents["logs"]
-    assert logs["mappings"]["logs"]["sources"][0]["query"].startswith('SELECT * FROM (SELECT row_number() OVER ()')
-    assert logs["mappings"]["logs"]["s"] == {"value": "logs_$(__ddk_row)", "type": "blanknode"}
-    assert logs["mappings"]["logs#levels"]["s"] == logs["mappings"]["logs"]["s"]
-    assert logs["mappings"]["logs"]["po"][-1]["p"]["value"] == "urn:ex:relationship:log-station"
+    assert "file_row_number = true" in logs["mappings"]["logs"]["sources"][0]["query"]
+    subject = logs["mappings"]["logs"]["s"]
+    assert subject["type"] == "blanknode" and subject["value"].endswith("_$(__ddk_row)")
+    assert logs["mappings"]["logs#levels"]["s"] == subject  # one blank node per row across the document
+    assert subject != documents["visits"][0]["mappings"]["visits"]["s"]
+    # Numbers are rendered as text by DuckDB, so a nullable integer key never becomes "5.0" in a template.
+    assert 'CAST("site"[\'latitude\'] AS VARCHAR)' in fields["sources"][0]["query"]
+    assert logs["mappings"]["logs#links"]["po"][0]["p"]["value"] == "urn:ex:relationship:log-station"
+    assert logs["mappings"]["logs#links"]["s"] == subject

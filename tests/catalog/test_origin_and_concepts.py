@@ -134,8 +134,8 @@ def test_a_join_between_different_definitions_warns_and_a_policy_can_make_it_an_
     _definitions_on_customer_ids(commerce)
     warned = assemble_catalog(commerce / "project.ddk.json")
     check, = _checks(warned, "urn:example:commerce:relationship:customer/concepts")
-    assert (warned.report["decision"], check["status"], check["required"]) == ("passed", "unknown", False)
-    assert check["diagnostics"][0]["code"] == "CATALOG-RELATIONSHIP-CONCEPT"
+    assert (warned.report["decision"], check["status"], check["required"]) == ("passed", "failed", False)
+    assert [(item["code"], item["severity"]) for item in check["diagnostics"]] == [("CATALOG-RELATIONSHIP-CONCEPT", "warning")]
 
     policy = commerce / "policies"
     policy.mkdir(exist_ok=True)
@@ -161,13 +161,16 @@ def test_public_concepts_keep_only_granted_fields():
     catalog = json.loads(json.dumps(result.catalog))
     from ddk.catalog_output import _public_concepts
 
+    policy = {"aliases": [], "descriptions": False, "locations": [], "identifiers": []}
     public = _public_concepts(catalog["concepts"], {"orders": "orders"}, {"orders": [[{"field": "amount_cents"}]]},
-                              {"aliases": [], "descriptions": False, "locations": []})
-    assert public == [{"concept": "urn:example:commerce:catalog:concept:amount-cents",
-                       "definition": public[0]["definition"], "fields": [{"dataset": "orders", "path": [{"field": "amount_cents"}]}]}]
-    assert public[0]["definition"].startswith("public-")
+                              policy, catalog["id"])
+    definition = public[0]["definition"]
+    assert definition.startswith("public-")
+    # The minted IRI named the private definition alias; the public view mints it again from the public alias.
+    assert public == [{"concept": f"urn:example:commerce:catalog:concept:{definition}", "definition": definition,
+                       "fields": [{"dataset": "orders", "path": [{"field": "amount_cents"}]}]}]
     assert not _public_concepts(catalog["concepts"], {"orders": "orders"}, {"orders": [[{"field": "order_id"}]]},
-                                {"aliases": [], "descriptions": False, "locations": []})
+                                policy, catalog["id"])
 
 
 def test_candidate_links_anchor_on_keys_and_skip_declared_joins():
@@ -175,8 +178,12 @@ def test_candidate_links_anchor_on_keys_and_skip_declared_joins():
     catalog = {
         "concepts": [{"concept": concept, "definition": "committee", "fields": [
             {"dataset": alias, "path": [{"field": "committee_id"}]} for alias in ("committees", "filings", "loans", "joined")]}],
-        "identities": [{"dataset": "committees", "kind": "key", "fields": [{"path": [{"field": "committee_id"}]}]},
-                       {"dataset": "filings", "kind": "key", "fields": [{"path": [{"field": "filing_id"}]}]}],
-        "relationships": [{"source": {"dataset": "joined"}, "target": {"dataset": "committees"}}],
+        "identities": [{"dataset": "committees", "kind": "key", "fields": [{"path": [{"field": "committee_id"}], "virtual": False}]},
+                       {"dataset": "filings", "kind": "key", "fields": [{"path": [{"field": "filing_id"}], "virtual": False}]}],
+        "relationships": [{"source": {"dataset": "joined", "paths": [[{"field": "committee_id"}]]},
+                           "target": {"dataset": "committees", "paths": [[{"field": "committee_id"}]]}}],
     }
     assert candidate_links(catalog) == [("filings", "committees", concept), ("loans", "committees", concept)]
+    # A concept no declared relationship joins on, such as a shared date format, offers no candidates.
+    catalog["relationships"] = []
+    assert candidate_links(catalog) == []
