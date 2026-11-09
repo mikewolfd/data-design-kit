@@ -63,6 +63,98 @@
       }
     },
     {
+      "id": "CASE-CONF-005-CATALOG-ONLY",
+      "requirements": [
+        "DDK-CONF-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A layered map declares datasets, products, policies and a recipe but no component or design; `check` and `catalog` with a DCAT export complete without any component, design, binding or fixture.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CONF-005-RUN-NEEDS-PRODUCTION",
+      "requirements": [
+        "DDK-CONF-005",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Known gap: a run record names its DocSpec job instead of a declared component or design. Until DocSpec job definitions are accepted as production declarations, the run cannot attach and assembly fails.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-PRODUCTION-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The catalog command is given --locked, or --lock with a path. It verifies no earlier lock, so it refuses the option as invalid usage and writes no output.",
+      "expected": {
+        "decision": "error",
+        "checkStatus": "not_run",
+        "exitCode": 64,
+        "diagnostic": "CLI-USAGE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-JOB-PRODUCTION",
+      "requirements": [
+        "DDK-CATALOG-012",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A project without components or designs declares a DocSpec job whose steps each name their recipe. A bounded run of that job names it as its production, and its output versions carry the run's inputs, time and outcome.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-STEP-SQL-DIFFERS",
+      "requirements": [
+        "DDK-CATALOG-012"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A job step's SQL differs by one byte from the recipe its step mapping names.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-JOB-STEP-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-RUN-REQUEST-DIFFERS",
+      "requirements": [
+        "DDK-CATALOG-012"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A run names the job, but its pinned request reorders two steps. Only input bindings and scratch paths may differ, so the run stays unbound.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-NATIVE-RECEIPT"
+      }
+    },
+    {
       "id": "CASE-MODEL-001",
       "requirements": [
         "DDK-MODEL-001"
@@ -550,6 +642,21 @@
       "profile": "core",
       "runtimeStatus": "planned",
       "scenario": "Select one design and require core.calls; include all its prerequisites and report excluded sibling consumers.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CHECK-002-CATALOG-ONLY-GROUPS",
+      "requirements": [
+        "DDK-CHECK-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A layered map without components or designs lists only core.documents, core.references, core.datasets and core.policies. It passes, and its report requests neither core.graph nor core.calls. With a component declared, the same omission still runs both groups as required.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
@@ -2493,7 +2600,7 @@
       "id": "CASE-CATALOG-047",
       "requirements": [
         "DDK-CATALOG-001",
-        "DDK-LOCK-001"
+        "DDK-CATALOG-007"
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
@@ -4647,12 +4754,57 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A recipe calls a DataFusion-only function, extracts JSON, or names a dialect without a parser profile.",
+      "scenario": "A recipe calls a function outside the parser profile and its signature table, extracts JSON with an operator, or names a dialect without a parser profile.",
       "expected": {
         "decision": "incomplete",
         "checkStatus": "unknown",
         "exitCode": 2,
         "diagnostic": "CATALOG-RECIPE-SQL-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-FUNCTIONS",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A datafusion recipe calls regexp_match, regexp_like, the json_get family, make_array, unnest, array_length and to_date with argument types DataFusion 53.1 accepts. Each call is typed from the pinned signature table, and the output matches the declared result dataset.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-ARGUMENTS",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A datafusion recipe passes a number to regexp_like, a string to array_has or unnest, a fractional JSON path, or the wrong number of arguments to regexp_match, or mixes number and string elements in make_array or array_has.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-TYPE"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-REPEATED-NAME",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "One projection of a datafusion recipe repeats an alias, or an identical unaliased expression in a UNION ALL branch. DataFusion refuses both.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-SQL-SHAPE"
       }
     },
     {

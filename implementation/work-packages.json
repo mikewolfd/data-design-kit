@@ -66,6 +66,7 @@
         "DDK-CONF-002",
         "DDK-CONF-003",
         "DDK-CONF-004",
+        "DDK-CONF-005",
         "DDK-CHECK-001",
         "DDK-CHECK-002",
         "DDK-CHECK-003",
@@ -361,7 +362,9 @@
         "WP-13",
         "WP-14"
       ],
-      "requirements": [],
+      "requirements": [
+        "DDK-CATALOG-012"
+      ],
       "planSection": "WP-15 \u2014 Layered data-map extensions (specified, not implemented)",
       "owners": [
         "DDK"

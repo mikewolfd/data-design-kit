@@ -1362,6 +1362,31 @@
       "evidence": "An optional unknown check cites the entry pointer; no dataset carries the entry."
     },
     {
+      "id": "CASE-CONF-005-CATALOG-ONLY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_catalog_only_map_needs_no_component_or_design"
+      ]
+    },
+    {
+      "id": "CASE-CONF-005-RUN-NEEDS-PRODUCTION",
+      "coverage": "exercised",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-PRODUCTION-MISSING",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_run_naming_its_docspec_job_has_no_production_yet"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
+      "coverage": "exercised",
+      "expectedDecision": "error",
+      "expectedDiagnostic": "CLI-USAGE",
+      "tests": [
+        "tests/test_cli.py::test_catalog_refuses_lock_verification_options"
+      ]
+    },
+    {
       "id": "CASE-LAYERED-PUBLIC-FACTS",
       "profile": "catalog",
       "status": "verified",
@@ -1496,6 +1521,39 @@
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
       "evidence": "Each stays unknown rather than passing or failing."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-FUNCTIONS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Typed calls bind, and the recorded parser profile names the signature table."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-DATAFUSION-ARGUMENTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-TYPE",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Each refused or cross-family argument fails; the same SQL under the postgres profile stays unknown."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-REPEATED-NAME",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-SQL-SHAPE",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "A repeated alias and a repeated unaliased expression in a UNION ALL branch both fail."
     },
     {
       "id": "CASE-RECIPE-SQL-NO-TOOL",

@@ -136,7 +136,7 @@
       "items": {
         "$ref": "common.schema.json#/$defs/group"
       },
-      "minItems": 6,
+      "minItems": 4,
       "uniqueItems": true,
       "allOf": [
         {
@@ -147,16 +147,6 @@
         {
           "contains": {
             "const": "core.references"
-          }
-        },
-        {
-          "contains": {
-            "const": "core.graph"
-          }
-        },
-        {
-          "contains": {
-            "const": "core.calls"
           }
         },
         {

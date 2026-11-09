@@ -24,6 +24,12 @@
     "owner": "WP-02"
   },
   {
+    "id": "DDK-CONF-005",
+    "title": "Product boundary",
+    "specification": "docs/specification.md#DDK-CONF-005",
+    "owner": "WP-02"
+  },
+  {
     "id": "DDK-MODEL-001",
     "title": "Identity and aliases",
     "specification": "docs/specification.md#DDK-MODEL-001",
@@ -580,5 +586,11 @@
     "title": "Recipe SQL binding",
     "specification": "docs/specification.md#DDK-CATALOG-011",
     "owner": "WP-13"
+  },
+  {
+    "id": "DDK-CATALOG-012",
+    "title": "DocSpec job productions",
+    "specification": "docs/specification.md#DDK-CATALOG-012",
+    "owner": "WP-15"
   }
 ]

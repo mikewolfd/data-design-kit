@@ -94,6 +94,32 @@ CASES = {
         {"name": "site", "logicalType": "object", "properties": [{"name": "latitude", "logicalType": "string"},
                                                                  {"name": "longitude", "logicalType": "number"}]}]}},
         "failed", "CATALOG-RECIPE-RESULT"),
+    # DataFusion and datafusion-functions-json signatures (DataFusion 53.1), typed from their documented returns.
+    "datafusion-regexp-and-json": ("SELECT (regexp_match(raw, 'v=([0-9]+)'))[1] AS station_code, "
+                                   "json_get_int(json_get(raw, 'counts'), 0) AS readings FROM stations "
+                                   "WHERE regexp_like(raw, '^v') AND json_get_str(raw, 'kind') = 'wind'",
+                                   {"result": SUMMARY}, "passed", None),
+    "datafusion-arrays-and-dates": ("SELECT unnest(make_array(station_code, raw)) AS code, to_date(raw, '%Y-%m-%d') AS day "
+                                    "FROM stations WHERE array_length(sensors) > 0", {}, "passed", None),
+    "regexp-on-number": ("SELECT station_code FROM stations WHERE regexp_like(elevation_m, '^1')", {}, "failed",
+                         "CATALOG-RECIPE-TYPE"),
+    "json-path-not-key-or-index": ("SELECT json_get_str(raw, 1.5) AS kind FROM stations", {}, "failed",
+                                   "CATALOG-RECIPE-TYPE"),
+    "json-document-not-text": ("SELECT json_get_str(site, 'latitude') AS kind FROM stations", {}, "failed",
+                               "CATALOG-RECIPE-TYPE"),
+    "array-has-on-string": ("SELECT station_code FROM stations WHERE array_has(raw, 'x')", {}, "failed",
+                            "CATALOG-RECIPE-TYPE"),
+    "array-has-element-type": ("SELECT station_code FROM stations WHERE array_has(make_array(station_code), 1)", {},
+                               "failed", "CATALOG-RECIPE-TYPE"),
+    "make-array-mixed-types": ("SELECT make_array(station_code, elevation_m) AS v FROM stations", {}, "failed",
+                               "CATALOG-RECIPE-TYPE"),
+    "unnest-a-string": ("SELECT unnest(raw) AS v FROM stations", {}, "failed", "CATALOG-RECIPE-TYPE"),
+    "regexp-match-arity": ("SELECT regexp_match(raw) AS v FROM stations", {}, "failed", "CATALOG-RECIPE-TYPE"),
+    "repeated-output-name": ("SELECT station_code, raw FROM stations UNION ALL SELECT raw, raw FROM stations", {}, "failed",
+                             "CATALOG-RECIPE-SQL-SHAPE"),
+    "repeated-output-alias": ("SELECT station_code AS v, raw AS v FROM stations", {}, "failed", "CATALOG-RECIPE-SQL-SHAPE"),
+    "postgres-has-no-datafusion-signatures": ("SELECT json_get_str(raw, 'kind') AS kind FROM stations",
+                                              {"dialect": "postgres"}, "unknown", "CATALOG-RECIPE-SQL-UNSUPPORTED"),
 }
 
 
@@ -127,6 +153,9 @@ def test_binder_cases_follow_their_declarations(tools):
         assert code is None or code in {item["code"] for item in result["diagnostics"]}, (name, result)
     assert response["results"]["join-and-parameters"]["output"] == [
         {"name": "station_code", "logicalType": "string"}, {"name": "readings", "logicalType": "integer"}]
+    assert response["results"]["datafusion-regexp-and-json"]["parser"]["signatures"] == (
+        "datafusion-53.1+datafusion-functions-json-0.53.1")
+    assert "signatures" not in response["results"]["postgres-has-no-datafusion-signatures"]["parser"]
 
 
 @pytest.mark.parametrize("example", [LAYERED, COMMERCE])

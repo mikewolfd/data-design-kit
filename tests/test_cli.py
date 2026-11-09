@@ -32,6 +32,17 @@ def test_cli_has_one_json_report_and_distinct_exit_codes(tmp_path):
     assert usage.returncode == 64 and json.loads(usage.stdout)["decision"] == "error"
 
 
+@pytest.mark.parametrize("option", [("--locked",), ("--lock", "catalog.lock.json")])
+def test_catalog_refuses_lock_verification_options(tmp_path, option):
+    """DDK-CATALOG-007: every build writes catalog.lock.json but verifies no prior lock, so the options refuse."""
+    refused = invoke("catalog", PROJECT, "--output", tmp_path / "out", *option)
+    report = json.loads(refused.stdout)
+    assert refused.returncode == 64 and report["decision"] == "error"
+    assert [(item["code"], item["message"]) for item in report["operationalErrors"]] == [
+        ("CLI-USAGE", f"unrecognized arguments: {' '.join(option)}")]
+    assert not (tmp_path / "out").exists()
+
+
 def test_offline_core_does_not_import_native_adapters():
     code = '''
 import importlib.abc, sys

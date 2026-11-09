@@ -16,7 +16,7 @@
 
 Data Design Kit (DDK) connects maintained data product and dataset definitions to native records of what projects captured, ran, checked, and made available. It generates a catalog that helps people and agents discover datasets, choose exact versions, use the correct keys and access methods, and understand what the available evidence supports.
 
-DDK checks reusable reader and transformation interfaces, declared compatibility, and downstream effects before execution. Its first product release combines ODPS product definitions, ODCS dataset definitions, JSON Schema parameters, DCAT 3 discovery, OpenLineage design and run events, and a tested Substrait execution path. Executed fixtures and data checks link results to exact inputs, outputs, and rules.
+DDK reads transformations rather than authoring them: project SQL runs as DocSpec job steps, and DDK binds their declared inputs, run records and checks to exact versions ([DDK-CONF-005](#DDK-CONF-005)). The earlier interface, design-graph and change-impact checks remain available but frozen. Its first product release combines ODPS product definitions, ODCS dataset definitions, JSON Schema parameters, DCAT 3 discovery, OpenLineage design and run events, and a tested Substrait execution path. Data checks link results to exact inputs, outputs, and rules.
 
 ## Status of this document
 
@@ -66,7 +66,7 @@ ODPS describes the product and its ports. ODCS describes dataset meaning, schema
 
 The initial execution path uses DocSpec for SQL and saved Substrait plans through its DataFusion context. The integration plan retains Data Contract CLI for ODCS checks, Frictionless for structured files, dlt for ingestion, and pytest for independently authored fixtures. Each adapter qualifies its supported operations and version combination separately.
 
-Project code owns acquisition, parsing, domain rules, and transformations. The execution system owns computation, recovery, and native protection. Publication owners supply release membership and selection. DDK links their records and evaluates the requirements for a stated purpose. DocSpec is team-owned and unreleased. The plan identifies the API and runtime capabilities it needs to add.
+Project code owns acquisition, parsing, domain rules, and transformations; [DDK-CONF-005](#DDK-CONF-005) makes this boundary normative. The execution system owns computation, recovery, and native protection. Publication owners supply release membership and selection. DDK links their records and evaluates the requirements for a stated purpose. DocSpec is team-owned and unreleased. The plan identifies the API and runtime capabilities it needs to add.
 
 ### 1.3 Deployment boundary (informative)
 
@@ -100,6 +100,13 @@ A checker MUST enumerate the checks requested by the project and command. An uns
 ### DDK-CONF-004 — Normative artifacts and conflicts
 
 The schemas in `schemas/0.1/` define DDK document shapes. This specification defines semantics and algorithms. The pinned ODCS, ODPS, and OpenLineage schemas define the upstream document and event shapes used by their profiles. An unresolved contradiction between these artifacts MUST block a conformance claim for the affected requirement. Implementers MUST report the contradiction rather than selecting a permissive interpretation silently.
+
+<a id="DDK-CONF-005"></a>
+### DDK-CONF-005 — Product boundary
+
+DDK is an evidence-bound catalog: it resolves ODCS and ODPS definitions to exact versions and reports their origin, disclosure and check evidence, keeping `unknown` and `not_run` explicit. Project code owns transformations as SQL files that run as DocSpec job steps. DDK reads their declarations, job definitions and run records; it does not author transformations. Definition, policy, reference and result checks MUST NOT require a component, design, binding or fixture. Run evidence is the current exception: until [DDK-CATALOG-012](#DDK-CATALOG-012) makes DocSpec jobs production declarations, DDK-CATALOG-005 binds each run to a component or design.
+
+Sections 6, 8, 11 and 12, DDK-DATA-001 through DDK-DATA-005, DDK-ADAPTER-004 through DDK-ADAPTER-007, DDK-ADAPTER-009 and DDK-ADAPTER-010, and the `build` and `test` commands are frozen, with the profiles they define: `files.frictionless`, `ingest.dlt`, `plan.datafusion`, `plan.substrait-validator`, `test.fixtures` and `test.portability`. A frozen requirement keeps its text, cases and existing qualification and gains no new requirements. It is removed only after the replacement that [ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog) names for it is live and qualified.
 
 <a id="model"></a>
 ## 3. Terms and data model
@@ -209,6 +216,8 @@ A root project imports `shared/project.ddk.json` as `shared`. A design in the ro
 <a id="interfaces"></a>
 ## 6. Component interfaces and arguments
 
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).*
+
 ### 6.1 Component document
 
 The component schema is [component.schema.json](../schemas/0.1/component.schema.json). `role` is `reader` or `transform`. `parameters` contains a JSON Schema object. `inputs` and `outputs` map named ports to dataset references. Inputs may be optional and may accept additional fields. Outputs describe promised datasets. `implementation` is optional and is interpreted only by explicitly invoked adapter profiles.
@@ -251,6 +260,8 @@ An optional `implementation` MUST identify its artifact using `path` or `entrypo
 <a id="datasets"></a>
 ## 7. Dataset compatibility
 
+*DDK-DATA-001 through DDK-DATA-005 are frozen under [DDK-CONF-005](#DDK-CONF-005): they serve design steps and exports and change impact. Recipe outputs are compared by DDK-CATALOG-011.*
+
 ### 7.1 Initial tabular profile
 
 DDK 0.1 interprets flat ODCS objects with named scalar properties. ODCS remains capable of richer structures. Nested objects, arrays, maps, vectors, omitted logical types, and unsupported type options can be valid ODCS while requiring an `unknown` DDK compatibility result.
@@ -283,7 +294,7 @@ A dataset comparison MUST fail when any field relation is disproved or forbidden
 <a id="graphs"></a>
 ## 8. Design graphs and outputs
 
-The design schema is [design.schema.json](../schemas/0.1/design.schema.json). A design declares its parameters, external `sources`, component `steps`, and named `exports`. A source is a dataset declaration, not evidence that actual rows exist. A step refers to a component and supplies named inputs and tagged arguments.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* The design schema is [design.schema.json](../schemas/0.1/design.schema.json). A design declares its parameters, external `sources`, component `steps`, and named `exports`. A source is a dataset declaration, not evidence that actual rows exist. A step refers to a component and supplies named inputs and tagged arguments.
 
 <a id="DDK-GRAPH-001"></a>
 ### DDK-GRAPH-001 — Reference and cycle checks
@@ -375,7 +386,7 @@ A stage MUST NOT consume an invalid prerequisite as if it were a valid empty obj
 <a id="DDK-CHECK-002"></a>
 ### DDK-CHECK-002 — Check inventory and selection
 
-The mandatory core groups are `core.documents`, `core.references`, `core.graph`, `core.calls`, `core.datasets`, and `core.policies`. A root project's `requiredChecks` MUST include these groups. Optional groups are listed in Section 15. A selection filter MUST include transitive prerequisites, MUST report excluded consumers, and MUST NOT be used to claim full-project coverage. An artifact with no applicable policy rules has a completed zero-rule inventory, not fabricated policy successes.
+The core groups are `core.documents`, `core.references`, `core.graph`, `core.calls`, `core.datasets`, and `core.policies`. A root project's `requiredChecks` MUST include `core.documents`, `core.references`, `core.datasets`, and `core.policies`. `core.graph` and `core.calls` are required whenever the loaded scope declares a component or design, whether or not a project lists them; a scope without either need not list them, and its report does not request them. Optional groups are listed in Section 15. A selection filter MUST include transitive prerequisites, MUST report excluded consumers, and MUST NOT be used to claim full-project coverage. An artifact with no applicable policy rules has a completed zero-rule inventory, not fabricated policy successes.
 
 <a id="DDK-CHECK-003"></a>
 ### DDK-CHECK-003 — Bounded repeated work
@@ -388,6 +399,8 @@ Index construction and graph traversal can be linear in the input size and relat
 
 <a id="impact"></a>
 ## 11. Change impact
+
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).*
 
 <a id="DDK-IMPACT-001"></a>
 ### DDK-IMPACT-001 — Explicit snapshots
@@ -412,12 +425,12 @@ When non-weakening is requested for a shared definition or override, the analyze
 <a id="locks"></a>
 ## 12. Locks and reproducibility
 
-The lock schema is [lock.schema.json](../schemas/0.1/lock.schema.json). Locks describe exact inputs; they are not a package registry or a secret store.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* The catalog lock is specified by [DDK-CATALOG-007](#DDK-CATALOG-007). The lock schema is [lock.schema.json](../schemas/0.1/lock.schema.json). Locks describe exact inputs; they are not a package registry or a secret store.
 
 <a id="DDK-LOCK-001"></a>
 ### DDK-LOCK-001 — Byte inventory
 
-A lock MUST record SHA-256 hashes of the original bytes for the project closure, followed shared definitions, parameter schemas, implementation sources used by requested profiles, and adapter capability manifests. It MUST record schema versions and revisions, resolver identity and version, selected ODCS objects, and tool versions. Development builds MUST also record the source commit and built-distribution digest, even when their version string matches a release. A catalog lock MUST record the metadata input and disclosure policy bytes, any followed recipe, the requested outputs and audience, the current selection selector when supplied, and the selected metadata adapter when used. Hashing MUST NOT depend on a reserialized YAML or JSON representation. Different objects selected from the same file MUST retain their individual selections and share the byte digest.
+A lock MUST record the byte inventory that [DDK-CATALOG-007](#DDK-CATALOG-007) requires of the catalog lock, without its catalog-only inputs, plus the implementation sources used by requested profiles.
 
 <a id="DDK-LOCK-002"></a>
 ### DDK-LOCK-002 — Locked operation
@@ -559,15 +572,15 @@ The detailed profile boundaries in [adapter-profiles.md](adapter-profiles.md) im
 | `catalog.dcat` | `catalog.dcat` | Generated DCAT 3 discovery and checked access links |
 | `lineage.openlineage` | `lineage.openlineage` | Declared job events and observed run events |
 | `odcs-cli` | `odcs.lint`, `odcs.versions`, `data.odcs` | Declared or executed, depending on command |
-| `files.frictionless` | `files.structure`, `files.constraints` | Executed |
-| `ingest.dlt` | `ingest.schema-policy`, `ingest.receipt` | Declared/executed |
+| `files.frictionless` (frozen) | `files.structure`, `files.constraints` | Executed |
+| `ingest.dlt` (frozen) | `ingest.schema-policy`, `ingest.receipt` | Declared/executed |
 | `plan.docspec-sql` | `plan.compile`, `plan.output` | Inferred from SQL through DocSpec |
 | `execute.docspec-job` | `runtime.job` | Executed; bounded job, no implied durable recovery |
 | `runtime.docspec-managed` | `runtime.managed`, `runtime.qualification` | Executed; qualified operation/backend pairs only |
-| `plan.datafusion` | `plan.compile`, `plan.consumer`, `plan.output` | Inferred from saved Substrait through DocSpec |
-| `plan.substrait-validator` | `plan.standard` | Inferred, bounded by validator coverage |
-| `test.fixtures` | `test.fixtures` | Executed |
-| `test.portability` | `test.portability` | Executed on identified engines |
+| `plan.datafusion` (frozen) | `plan.compile`, `plan.consumer`, `plan.output` | Inferred from saved Substrait through DocSpec |
+| `plan.substrait-validator` (frozen) | `plan.standard` | Inferred, bounded by validator coverage |
+| `test.fixtures` (frozen) | `test.fixtures` | Executed |
+| `test.portability` (frozen) | `test.portability` | Executed on identified engines |
 
 <a id="DDK-ADAPTER-001"></a>
 ### DDK-ADAPTER-001 — Capability manifests
@@ -587,22 +600,22 @@ The initial ODCS adapter MUST use the public ODCS 3.2.0 schema and preserve Data
 <a id="DDK-ADAPTER-004"></a>
 ### DDK-ADAPTER-004 — Files and ingestion
 
-The Frictionless adapter MUST keep structural file checks separate from transformations and preserve its missing-value and constraint semantics. The dlt adapter MUST distinguish column declarations from schema-evolution policies and MUST identify the dataset stage to which each applies. A discard policy MUST record discarded counts when available and MUST NOT claim to have quarantined rows unless an explicit implementation saved them. Staged outputs MUST be associated with the load identifier and exact snapshot used by subsequent checks.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* The Frictionless adapter MUST keep structural file checks separate from transformations and preserve its missing-value and constraint semantics. The dlt adapter MUST distinguish column declarations from schema-evolution policies and MUST identify the dataset stage to which each applies. A discard policy MUST record discarded counts when available and MUST NOT claim to have quarantined rows unless an explicit implementation saved them. Staged outputs MUST be associated with the load identifier and exact snapshot used by subsequent checks.
 
 <a id="DDK-ADAPTER-005"></a>
 ### DDK-ADAPTER-005 — Substrait production and consumption
 
-An adapter claiming Substrait support MUST identify its authoring input, producer version, encoded Substrait version, function-extension identifiers and algorithm-tagged digests, consumer version, and supported operations. DataFusion through DocSpec is the initial proposed producer and consumer. Tests claiming Substrait execution MUST consume the saved plan bytes rather than rerun original SQL. Ordinary SQL preparation and execution MUST NOT require a Substrait intermediate or imply Substrait support. Logical input bindings MUST resolve before consumer planning. Field order, names, nullability, and physical-type mappings MUST be explicit.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* An adapter claiming Substrait support MUST identify its authoring input, producer version, encoded Substrait version, function-extension identifiers and algorithm-tagged digests, consumer version, and supported operations. DataFusion through DocSpec is the initial proposed producer and consumer. Tests claiming Substrait execution MUST consume the saved plan bytes rather than rerun original SQL. Ordinary SQL preparation and execution MUST NOT require a Substrait intermediate or imply Substrait support. Logical input bindings MUST resolve before consumer planning. Field order, names, nullability, and physical-type mappings MUST be explicit.
 
 <a id="DDK-ADAPTER-006"></a>
 ### DDK-ADAPTER-006 — Independent plan checks
 
-`plan.compile`, `plan.consumer`, `plan.standard`, and `plan.output` MUST be separate check groups. Successful consumer planning MUST NOT be reported as successful standalone Substrait validation. A validator's loose mode MUST NOT convert indeterminate validity into a passed DDK standard check; unresolved validity MUST remain `unknown`. Unsupported format versions MUST NOT trigger silent conversion or downgrade. A required unavailable compatible validator MUST yield an incomplete result.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* `plan.compile`, `plan.consumer`, `plan.standard`, and `plan.output` MUST be separate check groups. Successful consumer planning MUST NOT be reported as successful standalone Substrait validation. A validator's loose mode MUST NOT convert indeterminate validity into a passed DDK standard check; unresolved validity MUST remain `unknown`. Unsupported format versions MUST NOT trigger silent conversion or downgrade. A required unavailable compatible validator MUST yield an incomplete result.
 
 <a id="DDK-ADAPTER-007"></a>
 ### DDK-ADAPTER-007 — Fixture and portability testing
 
-Fixture tests MUST specify independently authored input rows, expected outputs, dataset bindings, implementation format, and comparison rules. SQL fixtures MAY execute the identified SQL artifact directly; Substrait fixtures MUST consume the identified saved bytes. Unless specified otherwise, rows are compared as an unordered multiset, preserving duplicates; column names and values are compared exactly. Numeric tolerances, sort keys, and null behavior MUST be explicit. Portability tests MUST consume the same saved plan on at least two identified engines, compare each result with independent expectations, and name the tested operation subset. Agreement between two engines alone MUST NOT establish correct business results.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* Fixture tests MUST specify independently authored input rows, expected outputs, dataset bindings, implementation format, and comparison rules. SQL fixtures MAY execute the identified SQL artifact directly; Substrait fixtures MUST consume the identified saved bytes. Unless specified otherwise, rows are compared as an unordered multiset, preserving duplicates; column names and values are compared exactly. Numeric tolerances, sort keys, and null behavior MUST be explicit. Portability tests MUST consume the same saved plan on at least two identified engines, compare each result with independent expectations, and name the tested operation subset. Agreement between two engines alone MUST NOT establish correct business results.
 
 <a id="DDK-ADAPTER-008"></a>
 ### DDK-ADAPTER-008 — Execution boundary
@@ -612,12 +625,12 @@ Execution adapters MUST run only after explicit invocation of an execution profi
 <a id="DDK-ADAPTER-009"></a>
 ### DDK-ADAPTER-009 — Generated bundles
 
-A successful build MUST produce a manifest conforming to [bundle.schema.json](../schemas/0.1/bundle.schema.json), identifying source document digests, requested exports and their implementation artifacts/formats, generated job or plan and configuration digests where applicable, logical input schemas, native inputs where used, mapping coverage, adapter versions, and missing obligations. An SQL export MUST NOT require a fictitious saved plan. Generated ODCS views MUST retain source provenance and distinguish inherited content from derived runtime configuration. They MUST NOT masquerade as independently published versions of the original dataset definition. A consumer MUST be able to verify the bundle before using cached results.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* A successful build MUST produce a manifest conforming to [bundle.schema.json](../schemas/0.1/bundle.schema.json), identifying source document digests, requested exports and their implementation artifacts/formats, generated job or plan and configuration digests where applicable, logical input schemas, native inputs where used, mapping coverage, adapter versions, and missing obligations. An SQL export MUST NOT require a fictitious saved plan. Generated ODCS views MUST retain source provenance and distinguish inherited content from derived runtime configuration. They MUST NOT masquerade as independently published versions of the original dataset definition. A consumer MUST be able to verify the bundle before using cached results.
 
 <a id="DDK-ADAPTER-010"></a>
 ### DDK-ADAPTER-010 — Bindings and fixture values
 
-Bindings MUST follow [bindings.schema.json](../schemas/0.1/bindings.schema.json), resolve their design and origins, and choose exactly one data kind: `files` or `native`. File bindings MUST verify every supplied file digest before execution; native bindings MUST follow DDK-ADAPTER-012. Duplicate bindings for one origin MUST fail. A supplied binding for a reader's output is an injected dataset and MUST NOT be reported as execution of that reader. Fixture rows MUST follow [fixture.schema.json](../schemas/0.1/fixture.schema.json) and be converted using explicit input mappings; scalar dates use ISO calendar-date strings, numeric tolerances default to zero, and unsupported temporal or decimal conversions MUST remain unknown. Each expected output MUST name an existing output port. Fixture data and binding paths resolve from their declaring files. Binding `execution` settings are operational configuration, not component meaning; adapter-owned connection and limit shapes MUST be checked by the explicitly selected profile. Managed execution settings MUST identify `operationId`, `requestKind`, and `qualificationRequired`; required qualification MUST also identify the resolved `rules` artifact. Equivalent caller configuration MUST preserve the same information before submission. These settings do not authorize an unsupported request kind or production selection.
+*Frozen under [DDK-CONF-005](#DDK-CONF-005).* Bindings MUST follow [bindings.schema.json](../schemas/0.1/bindings.schema.json), resolve their design and origins, and choose exactly one data kind: `files` or `native`. File bindings MUST verify every supplied file digest before execution; native bindings MUST follow DDK-ADAPTER-012. Duplicate bindings for one origin MUST fail. A supplied binding for a reader's output is an injected dataset and MUST NOT be reported as execution of that reader. Fixture rows MUST follow [fixture.schema.json](../schemas/0.1/fixture.schema.json) and be converted using explicit input mappings; scalar dates use ISO calendar-date strings, numeric tolerances default to zero, and unsupported temporal or decimal conversions MUST remain unknown. Each expected output MUST name an existing output port. Fixture data and binding paths resolve from their declaring files. Binding `execution` settings are operational configuration, not component meaning; adapter-owned connection and limit shapes MUST be checked by the explicitly selected profile. Managed execution settings MUST identify `operationId`, `requestKind`, and `qualificationRequired`; required qualification MUST also identify the resolved `rules` artifact. Equivalent caller configuration MUST preserve the same information before submission. These settings do not authorize an unsupported request kind or production selection.
 
 <a id="DDK-ADAPTER-011"></a>
 ### DDK-ADAPTER-011 — Execution responsibilities and modes
@@ -763,7 +776,7 @@ The selected profile MUST identify its exact tool revision and either captured l
 <a id="DDK-CATALOG-005"></a>
 ### DDK-CATALOG-005 — Observed runs and version-bound evidence
 
-The catalog MUST identify each included production definition and its declared input and output dataset definitions. The production reference MUST resolve to the selected component or design. The catalog MUST distinguish those declarations from the exact sources and versions observed in a run. An observed run MUST preserve its native operation reference, outcome, source record, and observed inputs and outputs. Record `inputCoverage` separately from execution outcome. `complete` requires native evidence that the recorded inputs exhaust the stated run scope. `partial` identifies a known incomplete set, and `unknown` records an unresolved claim of coverage. An empty input list with unknown coverage leaves consumption unresolved. Capture, retention, and availability observations establish only their own facts.
+The catalog MUST identify each included production definition and its declared input and output dataset definitions. The production reference MUST resolve to the selected component or design, or to a DocSpec job under [DDK-CATALOG-012](#DDK-CATALOG-012). The catalog MUST distinguish those declarations from the exact sources and versions observed in a run. An observed run MUST preserve its native operation reference, outcome, source record, and observed inputs and outputs. Record `inputCoverage` separately from execution outcome. `complete` requires native evidence that the recorded inputs exhaust the stated run scope. `partial` identifies a known incomplete set, and `unknown` records an unresolved claim of coverage. An empty input list with unknown coverage leaves consumption unresolved. Capture, retention, and availability observations establish only their own facts.
 
 A check summary MUST identify the exact version, versioned rule, evaluator, checked scope, status, and underlying evidence or reason for its absence. Qualification MUST use the check reducer and requested coverage of Section 13. Required missing evidence MUST remain `unknown` or `not_run`. Catalog assembly MUST distinguish success at describing the supplied observations from qualification of the data for a requested purpose. A queryable dataset MAY remain visible with unresolved qualification. Reuse evidence only when target, rule, evaluator, scope, and original custody assumptions still apply. Preserve the assurance level of a presence check. Coverage observations MUST retain their units and scope. A complete or partial coverage count MUST identify its comparable expected population. Unknown coverage MAY report a known observed count.
 
@@ -820,7 +833,12 @@ An assembler MAY expose its full admitted metadata as explicitly private `local_
 
 An explicitly requested paired private output MUST reuse that same admitted snapshot and original companion bytes. It MUST remain absent unless all required checks and both standard output preparations pass. Its private lock extension `urn:ddk:catalog:paired-public-view:1` MUST contain exactly `catalog` (the unchanged catalog identifier), `publicLockSha256` (the exact public lock digest), and `datasets` (one `{id, publicAlias, localAlias}` entry per disclosed dataset, in public dataset order). This association MUST NOT enter public artifacts or imply data qualification. A paired reader MUST require external pins for both complete artifact sets and MUST verify the exact association and preserved version, representation, release membership/completeness, selection, named recipe-input and SQL identities. Private metadata MUST NOT authorize private fields through a public request. A data provider MUST enforce the public field scope independently of the paired catalog association.
 
-The inventory MUST identify source definition bytes, native metadata inputs, audience policy, and mapping adapter identities. Identical inputs and mappings MUST produce reproducible catalog content and artifact digests. A successful build MUST inventory generated files and their digests and atomically replace the complete output set. Missing required formats MUST preserve the prior complete output set and follow DDK-CLI-004.
+Every build MUST write the catalog lock, `catalog.lock.json`, as its inventory.
+- **Hashes.** It records SHA-256 hashes of the original bytes for the project closure, followed shared definitions, parameter schemas, followed recipes, the metadata input, the disclosure policy and adapter capability manifests.
+- **Versions and identities.** It records schema versions and revisions, resolver identity and version, selected ODCS objects and tool versions. Development builds also record their source commit and built-distribution digest, even when their version string matches a release.
+- **The request.** It records the requested outputs and audience, the current selection selector when supplied, and the selected metadata adapter when used.
+
+Hashing MUST NOT depend on a reserialized YAML or JSON representation. Different objects selected from the same file MUST retain their individual selections and share the byte digest. A catalog reader MUST verify each output against this lock. The `catalog` command verifies no earlier lock and MUST refuse `--lock` and `--locked` as invalid usage. Identical inputs and mappings MUST produce reproducible catalog content and artifact digests. A successful build MUST inventory generated files and their digests and atomically replace the complete output set. Missing required formats MUST preserve the prior complete output set and follow DDK-CLI-004.
 
 <a id="DDK-CATALOG-008"></a>
 ### DDK-CATALOG-008 — DCAT 3 discovery
@@ -850,9 +868,27 @@ Public filtering MUST retain permitted profile identity and redacted source prov
 <a id="DDK-CATALOG-011"></a>
 ### DDK-CATALOG-011 — Recipe SQL binding
 
-When `catalog.recipes` is requested, the catalog producer MUST bind each recipe's SQL against its declared inputs without running it or reading data, and report one `inferred` result per recipe. A recipe MUST be exactly one query. Every table a query scope reads MUST be a recipe input or a common table expression visible in that scope, and every column, object field, and array-element field MUST resolve to that input's effective ODCS declaration; field access on a value that is not an object, and indexing or unnesting a value that is not an array, MUST fail. `?` parameters bind to `parameterOrder` by their position in the SQL text, `$n` by number, and `:name` by name, each typed from the parameter schema. Values that must agree MUST share a type family (text, number, boolean, temporal, object, array): both sides of a comparison, including `IN`, `BETWEEN`, and `IS DISTINCT FROM`; the branches of `CASE`, `IF`, and `COALESCE`; and each column of a set operation. A string literal may stand for a temporal value only when it is an ISO date, time, or timestamp. Pattern matching requires text and arithmetic requires numbers. When the recipe names a `resultDataset`, its output columns MUST match that dataset's top-level properties by name, once each, and their logical types MUST match recursively through object fields and array items; `integer` satisfies `number`. A construct the selected parser profile cannot bind or type, such as an engine-specific or JSON function, unparseable SQL, keyed access, or an untyped declared output, MUST leave the result `unknown`. Without an explicitly selected tool environment, the group is `not_run`. The parser identity, version, and dialect MUST be recorded with each result and in the catalog adapters. Success establishes declared name and type consistency under that parser profile; it does not establish that an engine accepts the SQL or that its results are correct.
+When `catalog.recipes` is requested, the catalog producer MUST bind each recipe's SQL against its declared inputs without running it or reading data, and report one `inferred` result per recipe. A recipe MUST be exactly one query. Every table a query scope reads MUST be a recipe input or a common table expression visible in that scope, and every column, object field, and array-element field MUST resolve to that input's effective ODCS declaration; field access on a value that is not an object, and indexing or unnesting a value that is not an array, MUST fail. `?` parameters bind to `parameterOrder` by their position in the SQL text, `$n` by number, and `:name` by name, each typed from the parameter schema. Values that must agree MUST share a type family (text, number, boolean, temporal, object, array): both sides of a comparison, including `IN`, `BETWEEN`, and `IS DISTINCT FROM`; the branches of `CASE`, `IF`, and `COALESCE`; the elements of `make_array` and the needle and elements of `array_has`; and each column of a set operation. A string literal may stand for a temporal value only when it is an ISO date, time, or timestamp. Pattern matching requires text and arithmetic requires numbers. When the recipe names a `resultDataset`, its output columns MUST match that dataset's top-level properties by name, once each, and their logical types MUST match recursively through object fields and array items; `integer` satisfies `number`. A construct the selected parser profile cannot bind or type, such as an engine-specific or JSON function, unparseable SQL, keyed access, or an untyped declared output, MUST leave the result `unknown`. Without an explicitly selected tool environment, the group is `not_run`. The parser identity, version, and dialect MUST be recorded with each result and in the catalog adapters. Success establishes declared name and type consistency under that parser profile; it does not establish that an engine accepts the SQL or that its results are correct.
 
-The initial profile runs sqlglot in the explicitly selected tool environment. It reads `datafusion` recipes with sqlglot's PostgreSQL dialect, the closest available grammar; sqlglot has no DataFusion dialect. DataFusion-only functions therefore remain `unknown`, while a function the parser types but DataFusion lacks is not detected. Planning recipes through DocSpec's DataFusion context is a separate, later profile.
+The initial profile runs sqlglot in the explicitly selected tool environment. It reads `datafusion` recipes with sqlglot's PostgreSQL dialect, the closest available grammar; sqlglot has no DataFusion dialect. For `datafusion` recipes the profile adds a pinned signature table for DataFusion 53.1 and datafusion-functions-json 0.53.1, the versions DocSpec registers:
+
+- **Typed from their signatures:** `regexp_match`, `make_array` and the `json_get` family.
+- **Typed by the grammar, with arguments checked by the table:** `regexp_like`, `regexp_replace`, `unnest`, `array_length`, `to_date` and `array_has`.
+- **Arguments.** Each call MUST pass the argument count and logical types DataFusion accepts. JSON documents are text or a `json_get` value; JSON paths are text keys or integer indexes.
+- **Output names.** One projection MUST NOT repeat an alias or an identical unaliased expression, because DataFusion refuses repeated output names.
+- **Recorded identity.** The table's identity is recorded with each result.
+- **Limits.** Other DataFusion-only functions remain `unknown`, and a function the grammar types but DataFusion lacks is not detected.
+
+[ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog) makes this binder one of two required recipe checks. The other plans and runs each recipe through DocSpec; it is specified in [WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) item 3 and not yet implemented.
+
+<a id="DDK-CATALOG-012"></a>
+### DDK-CATALOG-012 — DocSpec job productions
+
+*Specified, not implemented ([WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) item 8).* A project MAY declare an artifact of kind `job`. It names a DocSpec JobSpec file, its own `id`, and three mappings: `inputs` maps each JobSpec input that reads a catalog dataset to that dataset; `outputs` maps each JobSpec output that writes one; `steps` maps each step to the recipe that holds its SQL. DDK reads only these names and each step's SQL, parameters, materialization and order; DocSpec owns the JobSpec's validation and meaning.
+
+Each job is one production. Its identity is the declared `id`, versioned by the JobSpec's SHA-256. Its definition record is the JobSpec bytes, and its inputs and outputs are the mapped datasets. The catalog MUST keep the steps in JobSpec order with their recipes. A step's SQL MUST equal its recipe's SQL bytes; otherwise the step fails with `CATALOG-JOB-STEP-MISMATCH`. A step without a recipe leaves the job's recipe checks `unknown`, since DDK-CATALOG-011 applies to every step through its recipe.
+
+A bounded or managed DocSpec run MAY name a job production. It binds only when its pinned request keeps the job's input names, its steps in order with their SQL, parameters and materialization, and its outputs. Input bindings, whether file paths or exact native versions, and scratch paths MAY differ. Any other difference MUST leave the run unbound with `CATALOG-NATIVE-RECEIPT`. A bound run uses the job's declared mappings unless the metadata entry narrows them. It then follows DDK-CATALOG-005: the run records the exact input and output versions observed, its time and outcome come from the native receipt, and check summaries attach to those versions.
 
 ### 19.1 Layered maps (informative)
 

@@ -5,11 +5,14 @@ inputs' effective ODCS definitions, and annotates types. DDK adds the checks
 sqlglot leaves open: table references outside the declared inputs (per scope),
 field and index access the declarations do not support, parameter binding,
 type-family conflicts between values that must agree, and the declared result
-dataset's shape. Constructs the parser cannot type, such as engine-specific or
-JSON functions, stay unknown. The recipe is never executed and no data is read.
+dataset's shape. For `datafusion` recipes, a pinned table types the DataFusion
+and JSON functions the PostgreSQL grammar leaves untyped and checks the argument
+types DataFusion accepts. Other constructs the parser cannot type stay unknown.
+The recipe is never executed and no data is read.
 """
 
 from datetime import date, datetime, time
+from typing import NamedTuple
 
 from sqlglot import exp, parse
 from sqlglot import __version__ as SQLGLOT_VERSION
@@ -34,6 +37,57 @@ JSON_NODES = tuple(getattr(exp, name) for name in ("JSONExtract", "JSONExtractSc
                                                     "JSONBExtractScalar", "JSONExtractArray") if hasattr(exp, name))
 COLUMN_ERRORS = ("Unknown column", "could not be resolved", "Ambiguous column", "Cannot automatically join",
                  "Unknown output column")
+
+
+class Signature(NamedTuple):
+    arguments: tuple  # accepted logical types for each leading argument
+    minimum: int
+    more: frozenset | None  # accepted types for any further arguments; None admits none
+    returns: str | None  # sqlglot type name; None returns an array of the first typed argument
+
+
+# DataFusion 53.1 with datafusion-functions-json 0.53.1, as DocSpec registers them. "json" is the value json_get
+# returns; DataFusion's union type has no ODCS logical type, so a json result stays untyped in the output.
+SIGNATURE_PROFILE = "datafusion-53.1+datafusion-functions-json-0.53.1"
+TEXT, ARRAY = frozenset({"string"}), frozenset({"array"})
+ANY = frozenset({"string", "integer", "number", "boolean", "date", "time", "timestamp", "object", "array", "json"})
+JSON_DOCUMENT, JSON_PATH = frozenset({"string", "json"}), frozenset({"string", "integer"})
+
+
+def _json(returns):
+    return Signature((JSON_DOCUMENT,), 1, JSON_PATH, returns)
+
+
+FUNCTIONS = {
+    "regexp_match": Signature((TEXT, TEXT, TEXT), 2, None, "ARRAY<TEXT>"),
+    "make_array": Signature((), 0, ANY, None),
+    "json_get": _json("JSON"), "json_get_str": _json("TEXT"), "json_get_json": _json("TEXT"),
+    "json_as_text": _json("TEXT"), "json_get_int": _json("BIGINT"), "json_get_float": _json("DOUBLE"),
+    "json_get_bool": _json("BOOLEAN"), "json_length": _json("BIGINT"), "json_contains": _json("BOOLEAN"),
+    "json_get_array": _json("ARRAY<TEXT>"), "json_object_keys": _json("ARRAY<TEXT>"),
+}
+# Functions the parser already types under their DataFusion names; DataFusion constrains their arguments.
+ARGUMENTS = {
+    exp.RegexpLike: ("regexp_like", {"this": TEXT, "expression": TEXT, "flag": TEXT}),
+    exp.RegexpReplace: ("regexp_replace", {"this": TEXT, "expression": TEXT, "replacement": TEXT, "modifiers": TEXT}),
+    exp.StrToDate: ("to_date", {"this": frozenset({"string", "integer", "number", "date", "timestamp"}), "format": TEXT}),
+    exp.ArraySize: ("array_length", {"this": ARRAY, "expression": frozenset({"integer"})}),
+    exp.Explode: ("unnest", {"this": frozenset({"array", "object"})}),
+    exp.ArrayContains: ("array_has", {"this": ARRAY}),
+}
+
+
+class _DataFusionSchema(MappingSchema):
+    """Return types for FUNCTIONS; sqlglot annotates a call's arguments before asking for its type."""
+
+    def get_udf_type(self, udf, dialect=None, normalize=None):
+        signature = FUNCTIONS.get(udf.name.lower()) if isinstance(udf, exp.Anonymous) else None
+        if signature is None:
+            return super().get_udf_type(udf, dialect, normalize)
+        if signature.returns is not None:
+            return exp.DataType.build(signature.returns)
+        element = next((arg.type for arg in udf.expressions if _known(arg.type)), exp.DataType(this=T.UNKNOWN))
+        return exp.DataType(this=T.ARRAY, nested=True, expressions=[element.copy()])
 
 
 def _type(prop):
@@ -69,6 +123,13 @@ def _family(node):
 
 def _known(data_type):
     return data_type is not None and data_type.this not in {T.UNKNOWN, T.NULL}
+
+
+def _kind(node):
+    """The logical type an argument supplies, "json" for json_get's value, or None when it is untyped."""
+    if node is None or not _known(node.type):
+        return None
+    return "json" if node.type.this == T.JSON else _logical(node.type)
 
 
 def _iso_time(text):
@@ -200,6 +261,9 @@ def _agreeing_groups(tree):
     for node in tree.find_all(exp.SetOperation):
         for left, right in zip(node.left.selects, node.right.selects):
             yield node, [left, right]
+    for node in tree.find_all(exp.Anonymous):
+        if node.name.lower() == "make_array":
+            yield node, list(node.expressions)
 
 
 def _check_types(tree, result):
@@ -222,6 +286,47 @@ def _check_types(tree, result):
     for node in tree.find_all(exp.Add, exp.Sub, exp.Mul, exp.Div, exp.Mod):
         if {_family(node.this), _family(node.expression)} & NOT_ARITHMETIC:
             result.fail("CATALOG-RECIPE-TYPE", f"{node.sql()!r} applies arithmetic to a value that is not numeric.")
+
+
+def _check_unique_names(tree, result):
+    """DataFusion refuses a projection that repeats an output name. Before qualification adds aliases, a repeated
+    alias or an identical unaliased expression always repeats one; other repeats are left to the engine."""
+    for select in tree.find_all(exp.Select):
+        seen = set()
+        for column in select.expressions:
+            if column.is_star:
+                continue
+            key = ("alias", column.alias) if isinstance(column, exp.Alias) else ("expression", column.sql())
+            if key in seen:
+                result.fail("CATALOG-RECIPE-SQL-SHAPE", f"A projection repeats the output name of {column.sql()!r}; "
+                            "DataFusion requires distinct names, so alias one of them.")
+            seen.add(key)
+
+
+def _check_functions(tree, result):
+    """Argument counts and types DataFusion accepts for FUNCTIONS and ARGUMENTS."""
+    for node in tree.find_all(exp.Anonymous, *ARGUMENTS):
+        if isinstance(node, exp.Anonymous):
+            name, signature = node.name.lower(), FUNCTIONS.get(node.name.lower())
+            if signature is None:
+                continue
+            values, leading = list(node.expressions), len(signature.arguments)
+            if len(values) < signature.minimum or (signature.more is None and len(values) > leading):
+                result.fail("CATALOG-RECIPE-TYPE", f"{name} does not take {len(values)} arguments: {node.sql()!r}.")
+                continue
+            pairs = [(value, signature.arguments[index] if index < leading else signature.more)
+                     for index, value in enumerate(values)]
+        else:
+            name, accepted = next(rule for kind, rule in ARGUMENTS.items() if isinstance(node, kind))
+            pairs = [(node.args.get(key), allowed) for key, allowed in accepted.items()]
+        for value, allowed in pairs:
+            if (kind := _kind(value)) is not None and kind not in allowed:
+                result.fail("CATALOG-RECIPE-TYPE", f"{name} does not accept the {kind} value {value.sql()!r}.")
+    for node in tree.find_all(exp.ArrayContains):
+        array, needle = node.this.type, _kind(node.expression)
+        element = _logical(array.expressions[0]) if _known(array) and array.this == T.ARRAY and array.expressions else None
+        if needle is not None and element is not None and FAMILIES.get(needle, needle) != FAMILIES.get(element, element):
+            result.fail("CATALOG-RECIPE-TYPE", f"array_has looks for a {needle} value in an array of {element} values.")
 
 
 def _shape(declared, produced, path, result):
@@ -268,7 +373,8 @@ def bind_one(recipe):
     if dialect is None:
         result.defer("CATALOG-RECIPE-SQL-UNSUPPORTED", f"No parser profile supports dialect {recipe['dialect']!r}.")
         return result.record()
-    parser = {"dialect": dialect}
+    datafusion = recipe["dialect"] == "datafusion"
+    parser = {"dialect": dialect, **({"signatures": SIGNATURE_PROFILE} if datafusion else {})}
     try:
         sql, positional = _number_positional(recipe["sql"], dialect)
         statements = [statement for statement in parse(sql, read=dialect) if statement is not None]
@@ -279,6 +385,8 @@ def bind_one(recipe):
         result.fail("CATALOG-RECIPE-SQL-SHAPE", "A recipe must be exactly one query.")
         return result.record(parser=parser)
     tree, inputs = statements[0], recipe["inputs"]
+    if datafusion:
+        _check_unique_names(tree, result)
     try:
         _check_tables(tree, inputs, result)
     except SqlglotError as exc:
@@ -286,8 +394,9 @@ def bind_one(recipe):
     if result.failed:
         return result.record(parser=parser)
     _bind_parameters(tree, recipe, positional, result)
-    schema = MappingSchema({name: {prop["name"]: _type(prop) for prop in definition.get("properties", ())}
-                            for name, definition in inputs.items()}, dialect=dialect, normalize=False)
+    schema = (_DataFusionSchema if datafusion else MappingSchema)(
+        {name: {prop["name"]: _type(prop) for prop in definition.get("properties", ())}
+         for name, definition in inputs.items()}, dialect=dialect, normalize=False)
     try:
         tree = annotate_types(qualify(tree, schema=schema, dialect=dialect, validate_qualify_columns=True),
                               schema=schema, dialect=dialect)
@@ -300,7 +409,10 @@ def bind_one(recipe):
         return result.record(parser=parser)
     _check_access(tree, result)
     _check_types(tree, result)
-    if functions := sorted({node.name for node in tree.find_all(exp.Anonymous)}):
+    if datafusion:
+        _check_functions(tree, result)
+    if functions := sorted({node.name for node in tree.find_all(exp.Anonymous)
+                            if not (datafusion and node.name.lower() in FUNCTIONS)}):
         result.defer("CATALOG-RECIPE-SQL-UNSUPPORTED", f"Functions without a parser signature: {', '.join(functions)}.")
     if JSON_NODES and next(tree.find_all(*JSON_NODES), None) is not None:
         result.defer("CATALOG-RECIPE-SQL-UNSUPPORTED", "JSON extraction semantics are engine-specific.")

@@ -8,6 +8,7 @@ import pytest
 from rdflib import Graph, Namespace, RDF
 
 from ddk.catalog import assemble_catalog
+from ddk.core import check_project
 from ddk.documents import validate_document
 
 LAYERED = Path(__file__).resolve().parents[2] / "examples" / "layered"
@@ -225,3 +226,48 @@ def test_public_extension_values_are_checked_by_their_path_like_parts(layered, t
                      identifiers=["urn:example:layered:catalog", "urn:example:layered:map", *PRODUCTS, *DATASETS,
                                   *DATASETS.values(), "urn:example:layered:capture"])
     assert result.report["decision"] == decision, result.local_report
+
+
+DESIGN_GROUPS = {"core.graph", "core.calls"}
+
+
+def _drop_design_groups(layered):
+    for path in layered.glob("**/project.ddk.json"):
+        _edit(path, lambda value: value.update(requiredChecks=[
+            group for group in value["requiredChecks"] if group not in DESIGN_GROUPS]))
+
+
+def test_catalog_only_map_needs_no_component_or_design(layered):
+    """DDK-CONF-005 and DDK-CHECK-002: without components or designs, a map lists only the groups it uses."""
+    _edit(layered / "resolved" / "project.ddk.json", lambda value: value["artifacts"].pop("resolve-stations"))
+    (layered / "resolved" / "resolve-stations.ddk.json").unlink()
+    _drop_design_groups(layered)
+    report = check_project(layered / "project.ddk.json")
+    assert report["decision"] == "passed"
+    assert {"core.documents", "core.policies"} <= {item["group"] for item in report["checks"]}
+    assert not DESIGN_GROUPS & {item["group"] for item in report["checks"]}
+    assert not DESIGN_GROUPS & set(report["coverage"]["requestedGroups"])
+    result = assemble_catalog(layered / "project.ddk.json", exports=("dcat",), required_groups=("catalog.dcat",))
+    assert result.report["decision"] == "passed"
+
+
+def test_design_groups_stay_required_while_a_component_is_declared(layered):
+    """DDK-CHECK-002: omitting core.graph and core.calls does not skip them while the scope declares a component."""
+    _drop_design_groups(layered)
+    report = check_project(layered / "project.ddk.json")
+    assert report["decision"] == "passed"
+    assert DESIGN_GROUPS <= set(report["coverage"]["requestedGroups"])
+    assert any(item["group"] == "core.calls" and item["required"] for item in report["checks"])
+
+
+def test_run_naming_its_docspec_job_has_no_production_yet(tmp_path):
+    """Known gap under DDK-CONF-005: DDK-CATALOG-005 runs bind only to a component or design production."""
+    commerce = Path(__file__).resolve().parents[2] / "examples" / "commerce"
+    metadata = json.loads((commerce / "catalog" / "metadata.example.json").read_bytes())
+    metadata["runs"][0]["production"] = "daily-revenue-job"
+    (tmp_path / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    result = assemble_catalog(commerce / "project.ddk.json", metadata=tmp_path / "metadata.json",
+                              metadata_adapter="example")
+    assert result.report["decision"] == "failed"
+    assert [item["code"] for check in result.report["checks"] for item in check["diagnostics"]] == [
+        "CATALOG-PRODUCTION-MISSING"]

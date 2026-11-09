@@ -9,7 +9,7 @@ from .documents import DocumentError, RegistryError, ResourceLimit, json_pointer
 from .interfaces import check_arguments, check_interface
 from .inventory import ProjectInventory
 from .policies import check_policy, record_definition_uses
-from .results import CORE_GROUPS, diagnostic, location
+from .results import CORE_GROUPS, DESIGN_GROUPS, diagnostic, location
 
 PLAN_GROUPS = {"plan.compile", "plan.output", "plan.consumer", "plan.standard"}
 
@@ -361,7 +361,9 @@ def check_inventory(inventory, required_groups=(), *, selection=None, handled_gr
     report.scope["excludedConsumers"] = sorted(excluded)
     requested = [group for namespace, doc in inventory.projects.items() if namespace in namespaces
                  for group in doc.value["requiredChecks"]]
-    report.required_groups = list(dict.fromkeys([*CORE_GROUPS, *requested, *required_groups]))
+    designs = any(artifact.kind in {"component", "design"} for artifact in inventory.artifacts.values())
+    core = [group for group in CORE_GROUPS if designs or group not in DESIGN_GROUPS]
+    report.required_groups = list(dict.fromkeys([*core, *requested, *required_groups]))
     validators = {}
     try:
         # These references are additional lock inputs. Build their inventory

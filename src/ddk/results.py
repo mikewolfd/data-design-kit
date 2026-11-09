@@ -9,6 +9,8 @@ CORE_GROUPS = (
     "core.documents", "core.references", "core.graph",
     "core.calls", "core.datasets", "core.policies",
 )
+# Required only when the loaded scope declares a component or design (DDK-CHECK-002).
+DESIGN_GROUPS = ("core.graph", "core.calls")
 VERSION = __version__
 
 
