@@ -270,6 +270,14 @@
       "coverage": "exercised"
     },
     {
+      "id": "CASE-CHECK-002-CATALOG-ONLY-GROUPS",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_catalog_only_map_needs_no_component_or_design",
+        "tests/catalog/test_layered_catalog.py::test_design_groups_stay_required_while_a_component_is_declared"
+      ],
+      "coverage": "exercised"
+    },
+    {
       "id": "CASE-CHECK-003",
       "tests": [
         "tests/core/test_case_coverage.py::test_real_path_documents_parsed_once_per_run"

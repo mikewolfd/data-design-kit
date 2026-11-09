@@ -650,6 +650,21 @@
       }
     },
     {
+      "id": "CASE-CHECK-002-CATALOG-ONLY-GROUPS",
+      "requirements": [
+        "DDK-CHECK-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A layered map without components or designs lists only core.documents, core.references, core.datasets and core.policies. It passes, and its report requests neither core.graph nor core.calls. With a component declared, the same omission still runs both groups as required.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
       "id": "CASE-CHECK-003",
       "requirements": [
         "DDK-CHECK-003"
