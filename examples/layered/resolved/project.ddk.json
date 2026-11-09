@@ -1,0 +1,77 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:layered:resolved",
+  "version": "1.0.0",
+  "artifacts": {
+    "stations": {
+      "kind": "dataset",
+      "path": "stations.odcs.json",
+      "object": "stations",
+      "catalogId": "urn:example:layered:dataset:stations",
+      "role": "derived",
+      "attribution": {
+        "assertedBy": "project",
+        "derivation": [
+          "deterministic",
+          "model"
+        ]
+      }
+    },
+    "resolve-stations": {
+      "kind": "component",
+      "path": "resolve-stations.ddk.json"
+    },
+    "stations-product": {
+      "kind": "product",
+      "path": "stations.odps.json"
+    }
+  },
+  "imports": {
+    "source": {
+      "path": "../source/project.ddk.json"
+    }
+  },
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ],
+  "catalog": {
+    "id": "urn:example:layered:resolved:catalog",
+    "relationships": [
+      {
+        "id": "urn:example:layered:relationship:station-readings",
+        "source": {
+          "dataset": "stations",
+          "paths": [
+            [
+              {
+                "field": "station_code"
+              }
+            ]
+          ]
+        },
+        "target": {
+          "dataset": "source/readings",
+          "paths": [
+            [
+              {
+                "field": "station_code"
+              }
+            ]
+          ]
+        },
+        "match": "equal",
+        "cardinality": "one_to_many",
+        "scope": "version_pair",
+        "resolution": "unresolved_allowed",
+        "nulls": "skip",
+        "meaning": "Readings reported under a resolved station code."
+      }
+    ]
+  }
+}

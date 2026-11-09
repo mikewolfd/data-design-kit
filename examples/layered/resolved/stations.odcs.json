@@ -1,0 +1,36 @@
+{
+  "apiVersion": "v3.2.0",
+  "kind": "DataContract",
+  "id": "urn:example:layered:contract:stations",
+  "version": "1.0.0",
+  "name": "Resolved stations",
+  "status": "draft",
+  "description": {
+    "purpose": "One station per physical site across networks.",
+    "limitations": "Site matching uses a model; review low-confidence matches."
+  },
+  "schema": [
+    {
+      "id": "stations",
+      "name": "stations",
+      "logicalType": "object",
+      "physicalType": "table",
+      "dataGranularityDescription": "One physical station site.",
+      "properties": [
+        {
+          "name": "station_code",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true,
+          "primaryKey": true,
+          "primaryKeyPosition": 1
+        },
+        {
+          "name": "site_name",
+          "logicalType": "string",
+          "physicalType": "VARCHAR"
+        }
+      ]
+    }
+  ]
+}

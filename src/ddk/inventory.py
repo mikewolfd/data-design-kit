@@ -1,6 +1,6 @@
 """Project, artifact and followed-input inventory."""
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
@@ -93,6 +93,8 @@ class ProjectInventory:
         self.report.limits.update(self.limits)
         self._total_bytes = 0
         self._identities = {}
+        self._project_paths = {}
+        self.import_aliases = {}
         self._definition_resolver = DefinitionResolver(
             self.read, self.permitted_roots, self.limits["maxReferenceDepth"]
         )
@@ -150,7 +152,7 @@ class ProjectInventory:
             self.dependency_locations[(owner, prerequisite)] = location(self.display_path(path), pointer)
 
     def resolve(self, reference, namespace="", kind=None):
-        alias = scoped_alias(reference, namespace)
+        alias = self.scoped(reference, namespace)
         artifact = self.artifacts.get(alias)
         if artifact is None:
             if alias in self.invalid_aliases:
@@ -204,46 +206,102 @@ class ProjectInventory:
             return False
         return True
 
-    def visit(self, path, namespace="", ancestors=()):
-        subject = f"project:{namespace or '/'}"
-        if path in ancestors:
-            chain = " -> ".join(self.display_path(p) for p in (*ancestors, path))
-            self._issue("DDK-REF-002", "core.references", subject, "failed",
-                        "REF-IMPORT-CYCLE", f"Import cycle: {chain}.", path)
-            return
-        if len(ancestors) > self.limits["maxReferenceDepth"]:
-            raise ResourceLimit(f"Project import depth exceeds {self.limits['maxReferenceDepth']}.")
-        doc = self._document(path, "project", subject)
-        if doc is None:
-            return
-        value = doc.value
-        if not self._identity(doc, subject, value["id"], value["version"]):
-            return
-        self.projects[namespace] = doc
-        if not namespace:
-            self.root = doc
-            self.report.project = value["id"]
-        self.required_groups.extend(group for group in value["requiredChecks"] if group not in self.required_groups)
-        self.add_file(doc, "project", identity=value["id"], owner=subject)
-        for alias, entry in sorted(value["artifacts"].items()):
-            full_alias = scoped_alias(alias, namespace)
-            if len(self.registrations) >= self.limits["maxArtifacts"]:
-                raise ResourceLimit(f"Artifact count exceeds {self.limits['maxArtifacts']}.")
-            if full_alias in self.registrations:
-                self._issue("DDK-REF-002", "core.references", full_alias, "failed",
-                            "REF-ALIAS-DUPLICATE", "The fully qualified artifact alias is already registered.", path)
+    def canonical(self, alias):
+        """Replace the longest aliased import-namespace prefix until none remains."""
+        for _ in range(self.limits["maxReferenceDepth"] + 1):
+            parts = alias.split("/")
+            prefix = next((end for end in range(len(parts), 0, -1)
+                           if "/".join(parts[:end]) in self.import_aliases), None)
+            if prefix is None:
+                return alias
+            alias = "/".join(filter(None, (self.import_aliases["/".join(parts[:prefix])], *parts[prefix:])))
+        raise ResourceLimit(f"Import namespace aliases exceed depth {self.limits['maxReferenceDepth']}.")
+
+    def scoped(self, reference, namespace=""):
+        return self.canonical(scoped_alias(reference, namespace))
+
+    def visit(self, root):
+        """Load each project file once, at its shortest import path from the root.
+
+        Breadth-first order over sorted aliases makes the first occurrence the
+        shortest path, with ties broken by namespace segments. Later occurrences
+        of the same file become namespace aliases; cycles are found afterwards
+        on the project-file graph so an alias cannot hide one.
+        """
+        queue = deque([(root, "", 0)])
+        canonical = {}
+        imports = defaultdict(list)
+        while queue:
+            path, namespace, depth = queue.popleft()
+            subject = f"project:{namespace or '/'}"
+            if depth > self.limits["maxReferenceDepth"]:
+                raise ResourceLimit(f"Project import depth exceeds {self.limits['maxReferenceDepth']}.")
+            if path in canonical:
+                self.import_aliases[namespace] = canonical[path]
                 continue
-            self.registrations[full_alias] = (namespace, doc, entry)
-        for alias, reference in sorted(value.get("imports", {}).items()):
-            namespace_path = scoped_alias(alias, namespace)
-            pointer = json_pointer(("imports", alias, "path"))
-            try:
-                target = resolve_path(path, reference["path"], self.permitted_roots)
+            # A file is attempted once; later paths alias it even when it failed, so the failure is reported once.
+            canonical[path] = namespace
+            doc = self._document(path, "project", subject)
+            if doc is None:
+                continue
+            value = doc.value
+            if not self._identity(doc, subject, value["id"], value["version"]):
+                continue
+            earlier = self._project_paths.setdefault((value["id"], value["version"]), path)
+            if earlier != path:
+                self._issue("DDK-REF-002", "core.references", subject, "failed", "REF-IMPORT-LOCATION-CONFLICT",
+                            f"{value['id']} at version {value['version']} is also loaded from "
+                            f"{self.display_path(earlier)}; its relative paths could resolve differently.", path)
+                continue
+            self.projects[namespace] = doc
+            if not namespace:
+                self.root = doc
+                self.report.project = value["id"]
+            self.required_groups.extend(group for group in value["requiredChecks"] if group not in self.required_groups)
+            self.add_file(doc, "project", identity=value["id"], owner=subject)
+            for alias, entry in sorted(value["artifacts"].items()):
+                full_alias = scoped_alias(alias, namespace)
+                if len(self.registrations) >= self.limits["maxArtifacts"]:
+                    raise ResourceLimit(f"Artifact count exceeds {self.limits['maxArtifacts']}.")
+                if full_alias in self.registrations:
+                    self._issue("DDK-REF-002", "core.references", full_alias, "failed",
+                                "REF-ALIAS-DUPLICATE", "The fully qualified artifact alias is already registered.", path)
+                    continue
+                self.registrations[full_alias] = (namespace, doc, entry)
+            for alias, reference in sorted(value.get("imports", {}).items()):
+                namespace_path = scoped_alias(alias, namespace)
+                pointer = json_pointer(("imports", alias, "path"))
+                try:
+                    target = resolve_path(path, reference["path"], self.permitted_roots)
+                except DocumentError as exc:
+                    self._issue("DDK-REF-001", "core.references", f"project:{namespace_path}", "failed",
+                                exc.code, str(exc), path, pointer)
+                    continue
                 self.dependency(subject, f"project:{namespace_path}", path, pointer)
-                self.visit(target, namespace_path, (*ancestors, path))
-            except DocumentError as exc:
-                self._issue("DDK-REF-001", "core.references", f"project:{namespace_path}", "failed",
-                            exc.code, str(exc), path, pointer)
+                imports[path].append((target, namespace_path))
+                queue.append((target, namespace_path, depth + 1))
+        # Preserve the earlier depth-first project order: segment tuples sort parents before children.
+        self.projects = dict(sorted(self.projects.items(), key=lambda item: item[0].split("/") if item[0] else []))
+        self._report_cycles(root, imports)
+
+    def _report_cycles(self, root, imports):
+        """Report each back edge of a depth-first walk over loaded project files once."""
+        chain, done = [root], set()
+        stack = [iter(imports.get(root, ()))]
+        while stack:
+            step = next(stack[-1], None)
+            if step is None:
+                stack.pop()
+                done.add(chain.pop())
+                continue
+            target, namespace = step
+            if target in chain:
+                cycle = " -> ".join(self.display_path(p) for p in (*chain[chain.index(target):], target))
+                self._issue("DDK-REF-002", "core.references", f"project:{namespace}", "failed",
+                            "REF-IMPORT-CYCLE", f"Import cycle: {cycle}.", chain[-1])
+            elif target not in done:
+                chain.append(target)
+                stack.append(iter(imports.get(target, ())))
 
     def index(self, alias, namespace, project, entry):
         kind = entry["kind"]

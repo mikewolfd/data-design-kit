@@ -514,6 +514,114 @@
         "tests/core/test_catalog_impact.py::test_complete_scope_request_preserves_excluded_consumers"
       ],
       "coverage": "exercised"
+    },
+    {
+      "id": "CASE-LAYERED-AGGREGATOR",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_aggregator_root_loads_each_layer_once_at_its_shortest_import_path",
+        "tests/core/test_layered_imports.py::test_equal_length_paths_choose_the_first_namespace_in_segment_order"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-EMPTY-PROJECT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_project_needs_an_artifact_or_an_import"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-IMPORT-CONFLICT",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_same_project_identity_from_another_file_still_fails"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-IMPORT-LOCATION",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_same_project_identity_from_another_file_still_fails"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ALIASED-CYCLE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_cycle_between_aliased_imports_is_still_reported"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ORDER",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_layer_order_checks_every_declared_dependency"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ORDER-UPWARD",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_layer_order_fails_each_dependency_kind_that_points_upward"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ORDER-UNASSIGNED",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_layer_order_keeps_unassigned_dependencies_unknown"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ORDER-INVALID",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_layer_order_rejects_unknown_or_repeated_namespaces"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-VIEW",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_view_property_reads_a_stored_property_of_the_same_object",
+        "tests/core/test_layered_imports.py::test_storage_annotations_of_other_vendors_are_not_interpreted"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-SOURCE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_view_property_without_a_stored_source_fails"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-STORAGE-INVALID",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_view_property_without_a_stored_source_fails"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ATTRIBUTION",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_attribution_names_derivation_for_derived_data_and_none_for_originals"
+      ]
+    },
+    {
+      "id": "CASE-REF-004-REMOTE-REFERENCE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_remote_definition_link_is_a_reference_unless_the_contract_opts_in"
+      ]
+    },
+    {
+      "id": "CASE-REF-004-REMOTE-INLINE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_inventory_impact.py::test_remote_definition_link_is_a_reference_unless_the_contract_opts_in",
+        "tests/core/test_inventory_impact.py::test_definition_failures_keep_dependent_comparison_not_run"
+      ]
     }
   ]
 }

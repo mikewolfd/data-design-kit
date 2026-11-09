@@ -135,6 +135,48 @@
                 "$ref": "common.schema.json#/$defs/alias"
               },
               "check": {
+                "const": "layer-order"
+              },
+              "layers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "$ref": "common.schema.json#/$defs/alias"
+                    },
+                    "namespaces": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "common.schema.json#/$defs/artifactRef"
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "namespaces"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 2
+              }
+            },
+            "required": [
+              "id",
+              "check",
+              "layers"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/alias"
+              },
+              "check": {
                 "type": "string",
                 "format": "uri",
                 "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*:"

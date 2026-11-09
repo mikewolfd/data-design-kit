@@ -168,6 +168,12 @@
     "owner": "WP-04"
   },
   {
+    "id": "DDK-DATA-006",
+    "title": "Stored and view properties",
+    "specification": "docs/specification.md#DDK-DATA-006",
+    "owner": "WP-04"
+  },
+  {
     "id": "DDK-GRAPH-001",
     "title": "Reference and cycle checks",
     "specification": "docs/specification.md#DDK-GRAPH-001",
@@ -219,6 +225,12 @@
     "id": "DDK-POLICY-005",
     "title": "Shared-definition use and overrides",
     "specification": "docs/specification.md#DDK-POLICY-005",
+    "owner": "WP-05"
+  },
+  {
+    "id": "DDK-POLICY-006",
+    "title": "Layer order",
+    "specification": "docs/specification.md#DDK-POLICY-006",
     "owner": "WP-05"
   },
   {

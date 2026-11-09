@@ -1,0 +1,72 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:layered:source",
+  "version": "1.0.0",
+  "artifacts": {
+    "readings": {
+      "kind": "dataset",
+      "path": "readings.odcs.json",
+      "object": "readings",
+      "catalogId": "urn:example:layered:dataset:readings",
+      "role": "source_record",
+      "attribution": {
+        "assertedBy": "publisher",
+        "derivation": [
+          "deterministic"
+        ]
+      }
+    },
+    "readings-product": {
+      "kind": "product",
+      "path": "readings.odps.json"
+    }
+  },
+  "imports": {
+    "capture": {
+      "path": "../capture/project.ddk.json"
+    }
+  },
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ],
+  "catalog": {
+    "id": "urn:example:layered:source:catalog",
+    "relationships": [
+      {
+        "id": "urn:example:layered:relationship:reading-file",
+        "source": {
+          "dataset": "readings",
+          "paths": [
+            [
+              {
+                "field": "file_sha256"
+              }
+            ]
+          ]
+        },
+        "target": {
+          "dataset": "capture/station-files",
+          "paths": [
+            [
+              {
+                "field": "file_sha256"
+              }
+            ]
+          ]
+        },
+        "match": "equal",
+        "cardinality": "many_to_one",
+        "scope": "version_pair",
+        "resolution": "required",
+        "nulls": "reject",
+        "meaning": "Each reading was parsed from one retained file."
+      }
+    ]
+  }
+}

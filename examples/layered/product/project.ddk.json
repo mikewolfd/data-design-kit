@@ -1,0 +1,61 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:layered:product",
+  "version": "1.0.0",
+  "artifacts": {
+    "station-summary": {
+      "kind": "dataset",
+      "path": "summary.odcs.json",
+      "object": "station-summary",
+      "catalogId": "urn:example:layered:dataset:station-summary",
+      "role": "application",
+      "attribution": {
+        "assertedBy": "project",
+        "derivation": [
+          "deterministic"
+        ]
+      }
+    },
+    "summary-product": {
+      "kind": "product",
+      "path": "summary.odps.json"
+    }
+  },
+  "imports": {
+    "resolved": {
+      "path": "../resolved/project.ddk.json"
+    }
+  },
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ],
+  "catalog": {
+    "id": "urn:example:layered:product:catalog",
+    "recipes": [
+      {
+        "id": "urn:example:layered:recipe:readings-per-station",
+        "sql": "readings-per-station.sql",
+        "dialect": "datafusion",
+        "inputs": {
+          "stations": "resolved/stations",
+          "readings": "resolved/source/readings"
+        },
+        "relationships": [
+          "urn:example:layered:relationship:station-readings"
+        ],
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "resultDataset": "station-summary"
+      }
+    ]
+  }
+}

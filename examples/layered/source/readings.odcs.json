@@ -1,0 +1,135 @@
+{
+  "apiVersion": "v3.2.0",
+  "kind": "DataContract",
+  "id": "urn:example:layered:contract:readings",
+  "version": "1.0.0",
+  "name": "Station readings",
+  "status": "active",
+  "tags": [
+    "network:example"
+  ],
+  "description": {
+    "purpose": "Readings as each station reported them.",
+    "usage": "Join to retained files by file_sha256.",
+    "limitations": "Stations report in local units; values are not corrected."
+  },
+  "context": {
+    "instructions": "Quote station codes exactly as reported.",
+    "verifiedStatements": [
+      {
+        "question": "Which file holds a reading?",
+        "answer": "The file named by file_sha256."
+      }
+    ]
+  },
+  "slaProperties": [
+    {
+      "property": "frequency",
+      "value": 1,
+      "unit": "d"
+    },
+    {
+      "property": "latency",
+      "value": 6,
+      "unit": "h",
+      "element": "readings"
+    },
+    {
+      "property": "retention",
+      "value": 10,
+      "unit": "y",
+      "element": "calibrations.station_code"
+    }
+  ],
+  "authoritativeDefinitions": [
+    {
+      "type": "canonicalUrl",
+      "url": "https://data.example.org/contracts/readings"
+    }
+  ],
+  "schema": [
+    {
+      "id": "readings",
+      "name": "readings",
+      "logicalType": "object",
+      "physicalType": "table",
+      "description": "Station readings parsed from retained files.",
+      "tags": [
+        "observations"
+      ],
+      "context": "Temperatures are derived from the stored payload.",
+      "dataGranularityDescription": "One reading reported by one station.",
+      "properties": [
+        {
+          "name": "reading_id",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true,
+          "primaryKey": true,
+          "primaryKeyPosition": 1
+        },
+        {
+          "name": "file_sha256",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true
+        },
+        {
+          "name": "station_code",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true,
+          "authoritativeDefinitions": [
+            {
+              "type": "businessDefinition",
+              "url": "https://glossary.example.org/terms/station-code"
+            }
+          ]
+        },
+        {
+          "name": "payload",
+          "logicalType": "string",
+          "physicalType": "JSON",
+          "required": true,
+          "customProperties": [
+            {
+              "vendor": "ddk",
+              "property": "storage",
+              "value": "stored"
+            }
+          ]
+        },
+        {
+          "name": "temperature_c",
+          "logicalType": "number",
+          "physicalType": "DOUBLE",
+          "transformSourceObjects": [
+            "payload"
+          ],
+          "transformLogic": "CAST(payload ->> 'temp_c' AS DOUBLE)",
+          "customProperties": [
+            {
+              "vendor": "ddk",
+              "property": "storage",
+              "value": "view"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "calibrations",
+      "name": "calibrations",
+      "logicalType": "object",
+      "physicalType": "table",
+      "properties": [
+        {
+          "name": "station_code",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

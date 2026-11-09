@@ -4126,6 +4126,324 @@
         "exitCode": 0,
         "diagnostic": null
       }
+    },
+    {
+      "id": "CASE-LAYERED-AGGREGATOR",
+      "requirements": [
+        "DDK-REF-002",
+        "DDK-SYNTAX-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "An aggregator root with no artifacts imports four layers that also import their lower neighbours; each project loads once at its shortest import path and longer paths resolve as recorded aliases.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-EMPTY-PROJECT",
+      "requirements": [
+        "DDK-SYNTAX-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A project declares neither artifacts nor imports.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-SCHEMA"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-IMPORT-CONFLICT",
+      "requirements": [
+        "DDK-REF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "One import path reaches a copy of a layer project with the same identity and version but different bytes.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-IDENTITY-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-IMPORT-LOCATION",
+      "requirements": [
+        "DDK-REF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "One import path reaches an identical copy of a layer project in another directory, whose relative artifact paths could resolve differently.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-IMPORT-LOCATION-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ALIASED-CYCLE",
+      "requirements": [
+        "DDK-REF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Two layers imported directly by the root also import each other, so both cyclic occurrences are aliases; the cycle is still reported with its file chain.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "REF-IMPORT-CYCLE"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ORDER",
+      "requirements": [
+        "DDK-POLICY-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A layer-order rule over a flat aggregator root checks product ports, relationships, recipe inputs and production inputs, all pointing to the same or a lower layer.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ORDER-UPWARD",
+      "requirements": [
+        "DDK-POLICY-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Separately, a capture product port, a source relationship, a source recipe input and a capture component input point to higher layers.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-LAYER-ORDER"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ORDER-UNASSIGNED",
+      "requirements": [
+        "DDK-POLICY-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "The product namespace is left out of every layer while its ports and recipe still depend on lower layers.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "POLICY-LAYER-UNASSIGNED"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ORDER-INVALID",
+      "requirements": [
+        "DDK-POLICY-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A layer names a namespace that is not loaded, or a namespace already assigned to another layer.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-LAYER-INVALID"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-VIEW",
+      "requirements": [
+        "DDK-DATA-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A view property names a stored sibling in transformSourceObjects and gives its transform logic.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-SOURCE",
+      "requirements": [
+        "DDK-DATA-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A view property reads a missing property, another view, or omits its transform logic.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DATA-VIEW-SOURCE-MISSING"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-STORAGE-INVALID",
+      "requirements": [
+        "DDK-DATA-006"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A property's DDK storage annotation is neither stored nor view, or the property repeats it.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DATA-STORAGE-INVALID"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ATTRIBUTION",
+      "requirements": [
+        "DDK-SYNTAX-002",
+        "DDK-CATALOG-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A derived dataset omits its derivation, a retained original declares one, or an attribution names an unknown asserting party.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-SCHEMA"
+      }
+    },
+    {
+      "id": "CASE-REF-004-REMOTE-REFERENCE",
+      "requirements": [
+        "DDK-REF-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A property's definition-type link points to a remote glossary URL or host path while the contract does not opt into inlining; inline values stand and no remote resolution is reported.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-REF-004-REMOTE-INLINE",
+      "requirements": [
+        "DDK-REF-004"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "The contract opts into inlining with the DDK inlineReferences annotation and a property links to a remote definition document.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "REF-DEFINITION-REMOTE"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-CATALOG-SHARED",
+      "requirements": [
+        "DDK-REF-002",
+        "DDK-CATALOG-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Assemble the layered map with DCAT; each dataset, product, relationship and recipe appears once, references through aliases bind canonical datasets, and the details record the import aliases.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-PRODUCT-FACTS",
+      "requirements": [
+        "DDK-CATALOG-002"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Product records carry the ODPS name, type, domain, status, description and context exactly as authored.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-DATASET-FACTS",
+      "requirements": [
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Dataset records carry attribution, contract status, object description, tags and context, and a contract block with description, context, tags, canonical URL and only the SLA entries that apply to the object.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-SLA-UNKNOWN",
+      "requirements": [
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An SLA entry names an element in an external file that DDK cannot interpret.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "unknown",
+        "exitCode": 0,
+        "diagnostic": "CATALOG-SLA-ELEMENT-UNKNOWN"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-PUBLIC-FACTS",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public view keeps product type and status and dataset status and attribution, withholds free text without a descriptions grant, and keeps canonical URLs only when granted as locations.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-EXTENSION-LEAK",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A granted project extension names its own withheld namespace; granting that name as an alias admits the extension unchanged.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-DISCLOSURE"
+      }
     }
   ]
 }

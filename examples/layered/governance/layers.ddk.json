@@ -1,0 +1,38 @@
+{
+  "specVersion": "0.1",
+  "kind": "policy",
+  "id": "urn:example:layered:policy:layers",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "layer-order",
+      "check": "layer-order",
+      "layers": [
+        {
+          "name": "capture",
+          "namespaces": [
+            "/capture"
+          ]
+        },
+        {
+          "name": "source",
+          "namespaces": [
+            "/source"
+          ]
+        },
+        {
+          "name": "resolved",
+          "namespaces": [
+            "/resolved"
+          ]
+        },
+        {
+          "name": "product",
+          "namespaces": [
+            "/product"
+          ]
+        }
+      ]
+    }
+  ]
+}

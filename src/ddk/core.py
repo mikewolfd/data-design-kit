@@ -4,10 +4,10 @@ from collections import defaultdict
 import heapq
 
 from .capabilities import discover_capabilities
-from .datasets import record_comparison
+from .datasets import check_view_properties, record_comparison
 from .documents import DocumentError, RegistryError, ResourceLimit, json_pointer, schema_registry
 from .interfaces import check_arguments, check_interface
-from .inventory import ProjectInventory, scoped_alias
+from .inventory import ProjectInventory
 from .policies import check_policy, record_definition_uses
 from .results import CORE_GROUPS, diagnostic, location
 
@@ -39,8 +39,8 @@ def _catalog_dependencies(inventory):
     for namespace, doc in inventory.projects.items():
         configuration = doc.value.get("catalog", {})
         for binding in configuration.get("ports", []):
-            owner = scoped_alias(binding["product"], namespace)
-            inventory.dependency(owner, scoped_alias(binding["dataset"], namespace))
+            owner = inventory.scoped(binding["product"], namespace)
+            inventory.dependency(owner, inventory.scoped(binding["dataset"], namespace))
         for group, items in (("recipe", configuration.get("recipes", [])),
                              ("relationship", configuration.get("relationships", []))):
             for item in items:
@@ -52,7 +52,7 @@ def _catalog_dependencies(inventory):
                     references = [endpoint["dataset"] for endpoint in (item["source"], item["target"])
                                   if "dataset" in endpoint]
                 for reference in references:
-                    inventory.dependency(item["id"], scoped_alias(reference, namespace))
+                    inventory.dependency(item["id"], inventory.scoped(reference, namespace))
                 for relationship in (*item.get("relationships", ()), *item.get("contextualRelationships", ())):
                     inventory.dependency(item["id"], relationship)
 
@@ -60,10 +60,9 @@ def _catalog_dependencies(inventory):
 def _prepare_references(inventory):
     for alias, artifact in sorted(inventory.artifacts.items()):
         for parts, reference, kind in _reference_sites(artifact):
-            target_alias = scoped_alias(reference, artifact.namespace)
             pointer = json_pointer(parts)
-            inventory.dependency(alias, target_alias, artifact.path, pointer)
             try:
+                inventory.dependency(alias, inventory.scoped(reference, artifact.namespace), artifact.path, pointer)
                 inventory.resolve(reference, artifact.namespace, kind)
             except DocumentError as exc:
                 invalid = exc.code == "DOC-PREREQUISITE-INVALID"
@@ -85,6 +84,8 @@ def load_project(path, permitted_roots=(), limits=None):
     try:
         schema_registry.cache_clear()
         inventory.visit(inventory.path)
+        if inventory.import_aliases:
+            inventory.report.metadata["importAliases"] = dict(sorted(inventory.import_aliases.items()))
         for alias, (namespace, project, entry) in sorted(inventory.registrations.items()):
             inventory.index(alias, namespace, project, entry)
         inventory.resolve_definitions()
@@ -116,7 +117,7 @@ def _select(inventory, selection):
     selected = set()
     for entry in filters:
         try:
-            key = scoped_alias(entry, "")
+            key = inventory.scoped(entry, "")
         except DocumentError:
             key = ""
         matches = {alias for alias in inventory.registrations if key and (alias == key or alias.startswith(f"{key}/"))}
@@ -379,7 +380,9 @@ def check_inventory(inventory, required_groups=(), *, selection=None, handled_gr
                 edge_count = _check_design(inventory, artifact, validators, edge_count)
         for alias in sorted(inventory.selected_aliases):
             artifact = inventory.artifacts.get(alias)
-            if artifact and artifact.kind == "policy":
+            if artifact and artifact.kind == "dataset":
+                check_view_properties(inventory, artifact)
+            elif artifact and artifact.kind == "policy":
                 check_policy(inventory, artifact)
         record_definition_uses(inventory, inventory.selected_aliases)
     except ResourceLimit as exc:

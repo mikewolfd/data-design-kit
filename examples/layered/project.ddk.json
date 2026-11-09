@@ -1,0 +1,35 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:layered:map",
+  "version": "1.0.0",
+  "artifacts": {},
+  "imports": {
+    "capture": {
+      "path": "capture/project.ddk.json"
+    },
+    "governance": {
+      "path": "governance/project.ddk.json"
+    },
+    "product": {
+      "path": "product/project.ddk.json"
+    },
+    "resolved": {
+      "path": "resolved/project.ddk.json"
+    },
+    "source": {
+      "path": "source/project.ddk.json"
+    }
+  },
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ],
+  "catalog": {
+    "id": "urn:example:layered:catalog"
+  }
+}

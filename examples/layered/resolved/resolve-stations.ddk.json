@@ -1,0 +1,22 @@
+{
+  "specVersion": "0.1",
+  "kind": "component",
+  "id": "urn:example:layered:resolve-stations",
+  "version": "1.0.0",
+  "role": "transform",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "inputs": {
+    "readings": {
+      "dataset": "source/readings"
+    }
+  },
+  "outputs": {
+    "stations": {
+      "dataset": "stations"
+    }
+  }
+}

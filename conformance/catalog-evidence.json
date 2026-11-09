@@ -43,6 +43,10 @@
         "scope": "Source core/catalog/type/adapter controls including seventeen release-disclosure cases; optional evaluator/native execution remains separate.",
         "evidence": "/Users/mikewolfd/.codex/worktrees/a8e8/spicy-stack/docs/ddk-replacement/evidence/full-stack/release-disclosure/revision-01/invocation.json",
         "evidenceSha256": "a0f3b43f59476443eedfeffb8d96b2a6b3b661051c2de66e752cc3b73f1e909c"
+      },
+      {
+        "passedTests": 8,
+        "scope": "Source-checkout layered-map catalog cases on branch codex/ddk-datamap-requirements-20261108: shared imports, product and dataset descriptive facts, SLA applicability, public disclosure and extension refusal. No installed qualification."
       }
     ]
   },
@@ -1308,6 +1312,73 @@
         "tests/catalog/test_release_disclosure.py::test_withheld_native_reference_is_public_only"
       ],
       "evidence": "Local version and release observations with withheld native references refuse before public disclosure; only public output can replace an admitted exact reference with a withheld marker. Independently specified membership and adversarial source changes; no native execution or publication claim."
+    },
+    {
+      "id": "CASE-LAYERED-CATALOG-SHARED",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_shared_imports_list_each_dataset_product_and_relationship_once"
+      ],
+      "evidence": "Four datasets, four products and two relationships appear once; RDFLib finds four DCAT datasets."
+    },
+    {
+      "id": "CASE-LAYERED-PRODUCT-FACTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_products_carry_odps_type_status_and_descriptions"
+      ],
+      "evidence": "Compares the summary and capture products with independently written values."
+    },
+    {
+      "id": "CASE-LAYERED-DATASET-FACTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_datasets_carry_their_contract_values_and_only_applicable_sla"
+      ],
+      "evidence": "The retention entry naming another object is excluded; the frequency and readings latency entries remain."
+    },
+    {
+      "id": "CASE-LAYERED-SLA-UNKNOWN",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": "CATALOG-SLA-ELEMENT-UNKNOWN",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_uninterpretable_sla_element_stays_visible_and_attached_to_no_dataset"
+      ],
+      "evidence": "An optional unknown check cites the entry pointer; no dataset carries the entry."
+    },
+    {
+      "id": "CASE-LAYERED-PUBLIC-FACTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_public_view_keeps_vocabulary_and_withholds_text_without_a_grant",
+        "tests/catalog/test_layered_catalog.py::test_public_descriptions_keep_canonical_urls_only_as_granted_locations"
+      ],
+      "evidence": "Checks the public catalog and the complete public artifact bytes."
+    },
+    {
+      "id": "CASE-LAYERED-EXTENSION-LEAK",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-DISCLOSURE",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_public_extension_naming_a_withheld_namespace_is_refused"
+      ],
+      "evidence": "The refused view writes no artifacts; the granted view discloses the extension value exactly."
     }
   ],
   "additionalReceiptTests": [

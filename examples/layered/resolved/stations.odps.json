@@ -1,0 +1,24 @@
+{
+  "apiVersion": "v1.1.0",
+  "kind": "DataProduct",
+  "id": "urn:example:layered:product:stations",
+  "version": "1.0.0",
+  "name": "Resolved stations",
+  "status": "draft",
+  "type": "aggregate",
+  "domain": "weather observations",
+  "inputPorts": [
+    {
+      "name": "readings",
+      "contractId": "urn:example:layered:contract:readings",
+      "version": "1.0.0"
+    }
+  ],
+  "outputPorts": [
+    {
+      "name": "stations",
+      "contractId": "urn:example:layered:contract:stations",
+      "version": "1.0.0"
+    }
+  ]
+}

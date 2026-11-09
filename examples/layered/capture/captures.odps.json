@@ -1,0 +1,17 @@
+{
+  "apiVersion": "v1.1.0",
+  "kind": "DataProduct",
+  "id": "urn:example:layered:product:captures",
+  "version": "1.0.0",
+  "name": "Station file captures",
+  "status": "active",
+  "type": "sourceAligned",
+  "domain": "weather observations",
+  "outputPorts": [
+    {
+      "name": "station-files",
+      "contractId": "urn:example:layered:contract:captures",
+      "version": "1.0.0"
+    }
+  ]
+}

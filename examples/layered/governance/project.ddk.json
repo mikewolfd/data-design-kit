@@ -1,0 +1,21 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:layered:governance",
+  "version": "1.0.0",
+  "artifacts": {
+    "layers": {
+      "kind": "policy",
+      "path": "layers.ddk.json"
+    }
+  },
+  "imports": {},
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ]
+}

@@ -99,6 +99,34 @@
         }
       ]
     },
+    "attribution": {
+      "type": "object",
+      "properties": {
+        "assertedBy": {
+          "enum": [
+            "publisher",
+            "third_party",
+            "project"
+          ]
+        },
+        "derivation": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "deterministic",
+              "model",
+              "human"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "assertedBy"
+      ],
+      "additionalProperties": false
+    },
     "argument": {
       "oneOf": [
         {

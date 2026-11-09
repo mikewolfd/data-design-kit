@@ -748,6 +748,24 @@
         },
         "version": {
           "$ref": "common.schema.json#/$defs/name"
+        },
+        "name": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "type": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "domain": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "description": {
+          "$ref": "#/$defs/purposeDescription"
+        },
+        "context": {
+          "$ref": "#/$defs/agentContext"
         }
       },
       "required": [
@@ -776,6 +794,9 @@
             "application",
             "evidence"
           ]
+        },
+        "attribution": {
+          "$ref": "common.schema.json#/$defs/attribution"
         },
         "definition": {
           "type": "object",
@@ -806,6 +827,56 @@
         },
         "rowMeaning": {
           "$ref": "common.schema.json#/$defs/name"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "context": {
+          "$ref": "#/$defs/agentContext"
+        },
+        "canonicalUrls": {
+          "$ref": "#/$defs/canonicalUrls"
+        },
+        "contract": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "$ref": "#/$defs/purposeDescription"
+            },
+            "context": {
+              "$ref": "#/$defs/agentContext"
+            },
+            "slaProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "property": {
+                    "$ref": "common.schema.json#/$defs/name"
+                  }
+                },
+                "required": [
+                  "property",
+                  "value"
+                ]
+              },
+              "minItems": 1
+            },
+            "tags": {
+              "$ref": "#/$defs/tags"
+            },
+            "canonicalUrls": {
+              "$ref": "#/$defs/canonicalUrls"
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
         }
       },
       "required": [
@@ -814,6 +885,64 @@
         "definition"
       ],
       "additionalProperties": false
+    },
+    "purposeDescription": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "usage": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "limitations": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "agentContext": {
+      "type": "object",
+      "properties": {
+        "instructions": {
+          "type": "string"
+        },
+        "verifiedStatements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "question"
+            ]
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "constraint"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "canonicalUrls": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/name"
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "version": {
       "type": "object",

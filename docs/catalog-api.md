@@ -35,6 +35,8 @@ For a service that must keep native storage references private, request `include
 
 Recipes preserve `title`, ordered `notes`, and explicit `parameterOrder`. The order must name each parameter property once. `contextualRelationships` links explanatory relationships without adding their endpoints to the query's actual inputs. Consumers can show the context without claiming that the query read those datasets.
 
+Products carry their ODPS `name`, `type`, `domain`, `status`, `description` and `context`. Datasets carry `role`, `attribution`, contract `status`, object `description`, `tags`, `context` and `canonicalUrls`, plus a `contract` block with the contract-level description, context, tags, canonical URLs and the SLA entries that apply to that object. A layered map can import the same project through several paths; the assembly details record each later path in `importAliases` and every record loads once.
+
 The assembly details at `extensions["urn:ddk:catalog:assembly"]` retain resolved `datasetDefinitions`. Their `projectExtensions` records keep each source project's identifier, version, import namespace, and extension values separate. DDK preserves these values without interpreting application rules. Applications should read these admitted definitions directly rather than reconstructing a legacy metadata format from them.
 
 ## Application relationship reasoning
@@ -77,7 +79,7 @@ Select a public view with an explicit disclosure policy. Its shape is defined in
 }
 ```
 
-This fragment adds grants to the ordinary policy. A field grant keeps selected fields and necessary structure, with supported types and nullability. Descriptions require `descriptions: true`. `disclosedDefinitionPaths` identifies the partial scope. Public output uses the disclosed object name and withholds unlisted siblings and private native properties. An extension grant permits its complete value, so its owner must decide whether that value belongs in the public view.
+This fragment adds grants to the ordinary policy. A field grant keeps selected fields and necessary structure, with supported types and nullability. Descriptions require `descriptions: true`. `disclosedDefinitionPaths` identifies the partial scope. Public output uses the disclosed object name and withholds unlisted siblings and private native properties. An extension grant permits its complete value. Assembly refuses the view when that value names anything the view withholds, such as an ungranted alias or namespace (`capture`), object name or record identifier; grant those names, or remove them from the extension.
 
 Use `definitionFields: {"urn:example:dataset": [[]]}` to grant root metadata only. With `descriptions: true`, this includes the root description without granting any child field or native/custom property. Empty paths remain invalid for identities and relationships.
 

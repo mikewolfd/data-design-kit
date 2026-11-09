@@ -1,0 +1,31 @@
+{
+  "apiVersion": "v1.1.0",
+  "kind": "DataProduct",
+  "id": "urn:example:layered:product:summary",
+  "version": "1.0.0",
+  "name": "Station summary",
+  "status": "proposed",
+  "type": "consumerAligned",
+  "domain": "weather observations",
+  "description": {
+    "purpose": "Answer how many readings each station has reported.",
+    "usage": "Read one row per station."
+  },
+  "context": {
+    "instructions": "Counts include unresolved stations only after resolution."
+  },
+  "inputPorts": [
+    {
+      "name": "stations",
+      "contractId": "urn:example:layered:contract:stations",
+      "version": "1.0.0"
+    }
+  ],
+  "outputPorts": [
+    {
+      "name": "station-summary",
+      "contractId": "urn:example:layered:contract:summary",
+      "version": "1.0.0"
+    }
+  ]
+}

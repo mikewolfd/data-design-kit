@@ -97,11 +97,35 @@ def test_definition_failures_keep_dependent_comparison_not_run(commerce, mode, e
         reference = "commerce.odcs.json#schema/absent/properties/nonexistent"
     else:
         reference = "https://example.invalid/definition.json"
+        # The contract explicitly asks for remote links to be inlined, as with Data Contract CLI --inline-references.
+        edit(commerce / DATASET, lambda d: d.setdefault("customProperties", []).append(
+            {"vendor": "ddk", "property": "inlineReferences", "value": True}))
     _inherit_definition(commerce, reference)
     report = check(commerce, expected)
     assert code in codes(report)
     assert any(item["subject"] == "order-preview-design/export/orders" and item["status"] == "not_run"
                for item in report["checks"])
+
+
+@pytest.mark.parametrize("reference", [
+    "https://example.invalid/glossary/order-code", "https://example.invalid/definition.json", "glossary/order-code",
+])
+def test_remote_definition_link_is_a_reference_unless_the_contract_opts_in(commerce, reference):
+    local = load_project(commerce / PROJECT).artifacts["orders"].definitions
+    _inherit_definition(commerce, reference, {"description": "Inline meaning wins."})
+    inventory = load_project(commerce / PROJECT)
+    orders = inventory.artifacts["orders"]
+    assert orders.definition_status == "passed" and orders.definitions == local
+    assert orders.effective["properties"][0]["authoritativeDefinitions"] == [{"type": "definition", "url": reference}]
+    report = check(commerce, "passed")
+    assert "REF-DEFINITION-REMOTE" not in codes(report)
+    # Another vendor's annotation does not opt in; only the ddk one does.
+    edit(commerce / DATASET, lambda d: d.setdefault("customProperties", []).append(
+        {"vendor": "other", "property": "inlineReferences", "value": True}))
+    check(commerce, "passed")
+    edit(commerce / DATASET, lambda d: d["customProperties"].append(
+        {"vendor": "ddk", "property": "inlineReferences", "value": True}))
+    assert "REF-DEFINITION-REMOTE" in codes(check(commerce, "incomplete"))
 
 
 def test_unused_quality_definition_warns_without_fake_execution(commerce):

@@ -14,12 +14,14 @@ from .catalog_access import (
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
 from .catalog_delivery import PAIRED_VIEW, paired_view_record
+from .catalog_descriptions import dataset_facts, product_facts
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
 from .catalog_semantics import admit_profile, resolved_key, resolved_relationship
 from .core import check_inventory, load_project
+from .ports import product_ports
 from .documents import (
-    FORMAT_CHECKER, OPENLINEAGE_SCHEMA, OPENLINEAGE_VERSION_FACET, ODCS_SCHEMA, ODPS_SCHEMA, REPOSITORY,
+    OPENLINEAGE_SCHEMA, OPENLINEAGE_VERSION_FACET, ODCS_SCHEMA, ODPS_SCHEMA, REPOSITORY,
     DocumentError, ResourceLimit, json_dumps, resolve_path, schema_registry, validate_document,
 )
 from .results import VERSION, diagnostic, location
@@ -100,6 +102,7 @@ class Assembly:
         self.native_rule_profile = None
         self.managed_schema_profiles = {}
         self.relationship_assessments = []
+        self.unknown_sla = set()
 
     def select_relationship_profile(self, profile):
         if profile is None:
@@ -143,58 +146,16 @@ class Assembly:
         self.records[(record["uri"], role)] = {**record, "role": role}
 
     def definitions(self):
-        index = defaultdict(list)
-        for artifact in self.inventory.artifacts.values():
-            if artifact.kind == "dataset":
-                index[(artifact.identity, artifact.version)].append(artifact)
-        selections = {}
-        for namespace, document in self.inventory.projects.items():
-            for entry in document.value.get("catalog", {}).get("ports", ()):
-                product = self.inventory.resolve(entry["product"], namespace, "product")
-                dataset = self.inventory.resolve(entry["dataset"], namespace, "dataset")
-                key = (product.alias, entry["direction"], entry["port"], entry["version"])
-                if key in selections:
-                    raise CatalogError("CATALOG-PORT-AMBIGUOUS", "A product port has multiple explicit bindings.")
-                selections[key] = dataset
         products = []
-        for artifact in self.inventory.artifacts.values():
-            if artifact.kind != "product":
-                continue
-            value = artifact.value
-            if not value.get("version") or not FORMAT_CHECKER.conforms(artifact.identity, "uri"):
-                raise CatalogError("CATALOG-PRODUCT-IDENTITY", "A catalog product needs an absolute ID and explicit version.")
-            resolved = []
-            seen = set()
-            for direction in ("input", "output"):
-                for port in value.get(f"{direction}Ports", ()):
-                    if not port.get("contractId") and not port.get("version"):
-                        continue
-                    if not port.get("contractId") or not port.get("version"):
-                        raise CatalogError("CATALOG-PORT-VERSION", "A participating port needs a contract ID and version.")
-                    key = (artifact.alias, direction, port["name"], port["version"])
-                    if key in seen:
-                        raise CatalogError("CATALOG-PORT-AMBIGUOUS", "A product declares the same port twice.")
-                    seen.add(key)
-                    exact = (port["contractId"], port["version"])
-                    explicit = selections.pop(key, None)
-                    if explicit is not None and (explicit.identity, explicit.version) != exact:
-                        raise CatalogError("CATALOG-PORT-VERSION", "The selected object has a different contract ID or version.")
-                    if explicit is None:
-                        possible = index[exact]
-                        if len(possible) > 1:
-                            raise CatalogError("CATALOG-PORT-AMBIGUOUS", "Select one registered ODCS object for the port.")
-                        if not possible:
-                            raise CatalogError("CATALOG-PORT-VERSION", "No registered ODCS object matches the exact port version.")
-                        explicit = possible[0]
-                    self.dataset(explicit)
-                    resolved.append({"product": artifact.alias, "direction": direction, "port": port["name"],
-                                     "version": port["version"], "dataset": explicit.alias})
-            if not any(port["direction"] == "output" for port in resolved):
-                raise CatalogError("CATALOG-PORT-MISSING", "The product needs at least one participating output port.")
+        for artifact, ports in product_ports(self.inventory):
+            for *_, dataset in ports:
+                self.dataset(dataset)
             products.append({"alias": artifact.alias, "id": artifact.identity, "version": artifact.version,
-                             "definition": owner_record(artifact.document), "ports": resolved})
-        if selections:
-            raise CatalogError("CATALOG-PORT-VERSION", "An explicit binding has no corresponding versioned product port.")
+                             "definition": owner_record(artifact.document), "ports": [
+                                 {"product": artifact.alias, "direction": direction, "port": port,
+                                  "version": version, "dataset": dataset.alias}
+                                 for direction, port, version, dataset in ports],
+                             **product_facts(artifact.value)})
         if not products:
             raise CatalogError("CATALOG-PRODUCT-MISSING", "The loaded scope contains no registered ODPS product.")
         for artifact in self.inventory.artifacts.values():
@@ -216,11 +177,15 @@ class Assembly:
             "contractId": artifact.identity, "version": artifact.version,
             "object": artifact.selection, "source": owner_record(artifact.document),
         }}
-        for output, source, key in (("role", artifact.registration, "role"), ("title", selected, "businessName"),
-                                    ("rowMeaning", selected, "dataGranularityDescription")):
+        for output, source, key in (("role", artifact.registration, "role"), ("attribution", artifact.registration, "attribution"),
+                                    ("title", selected, "businessName"), ("rowMeaning", selected, "dataGranularityDescription")):
             if source.get(key):
-                result[output] = source[key]
+                result[output] = deepcopy(source[key])
         result.setdefault("title", selected["name"])
+        facts, unknown_sla = dataset_facts(artifact.value, selected)
+        result.update(facts)
+        for index in unknown_sla:
+            self.unknown_sla.add((artifact.identity, artifact.version, index, artifact.path))
         self.datasets[artifact.alias] = result
         self.dataset_schemas[artifact.alias] = selected
 
@@ -423,6 +388,8 @@ class Assembly:
                 for namespace, document in sorted(self.inventory.projects.items()) if document.value.get("extensions")
             ],
         }
+        if self.inventory.import_aliases:
+            details["importAliases"] = dict(sorted(self.inventory.import_aliases.items()))
         if self.relationship_profile is not None:
             details["relationshipProfile"] = deepcopy(self.report.metadata["relationshipProfile"])
             details["relationshipAssessments"] = sorted(self.relationship_assessments, key=json_dumps)
@@ -666,6 +633,10 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 raise CatalogError("CATALOG-SCHEMA-PROFILE", "Select supported managed schema profiles for registered dataset aliases.", status="unknown")
             assembly.managed_schema_profiles = deepcopy(dict(managed_schema_profiles))
         assembly.check("products", "ports")
+        for identity, version, index, path in sorted(assembly.unknown_sla):
+            assembly.check("datasets", f"{identity}@{version}/slaProperties/{index}", CatalogError(
+                "CATALOG-SLA-ELEMENT-UNKNOWN", "The SLA element does not identify a selected object; no dataset carries it.",
+                f"/slaProperties/{index}", status="unknown"), path=path, required=False)
         step = "relationships"
         assembly.select_relationship_profile(relationship_profile)
         assembly.declarations()

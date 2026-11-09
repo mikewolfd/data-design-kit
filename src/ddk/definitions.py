@@ -15,6 +15,22 @@ LOCAL_SUFFIXES = {".json", ".yaml", ".yml"}
 LOCAL_FIELDS = {"id", "name", "authoritativeDefinitions", "properties", "items"}
 
 
+def remote_reference(reference):
+    """True when Data Contract CLI would fetch the link rather than read a local file."""
+    try:
+        url = urlsplit(reference)
+    except ValueError:
+        return False
+    return bool(url.netloc) or (url.scheme not in {"", "file"}) or (
+        not url.fragment and Path(url.path).suffix.lower() not in LOCAL_SUFFIXES)
+
+
+def inline_references(document):
+    """A document opts its remote links into resolution, like Data Contract CLI's --inline-references."""
+    return any(entry.get("vendor") == "ddk" and entry.get("property") == "inlineReferences" and entry.get("value") is True
+               for entry in document.value.get("customProperties", ()))
+
+
 def select_named(values, wanted, code="REF-DATASET"):
     matches = [(index, value) for index, value in enumerate(values) if value.get("id") == wanted]
     if not matches:
@@ -159,9 +175,13 @@ class DefinitionResolver:
             references.extend(resolved.references)
             provenance.update({("items", *key): value for key, value in resolved.provenance.items()})
 
+        # Remote links are documentation unless the declaring document opts in;
+        # an opted-in remote definition stays unresolved offline.
         links = prop.get("authoritativeDefinitions", [])
+        follow_remote = inline_references(document)
         reference = next((link["url"] for kind in REFERENCE_PRECEDENCE for link in links
-                          if link.get("type") == kind and link.get("url")), None)
+                          if link.get("type") == kind and link.get("url")
+                          and (follow_remote or not remote_reference(link["url"]))), None)
         if reference:
             target_doc, target_prop, target_parts, fragment = self._follow(document, reference, parts)
             resolved = self.resolve(target_prop, target_doc, target_parts, (*active, source))
@@ -204,9 +224,7 @@ class DefinitionResolver:
             url = urlsplit(reference)
         except ValueError as exc:
             raise DocumentError("REF-DEFINITION-FRAGMENT", "Invalid shared definition reference.", pointer) from exc
-        if url.scheme in {"http", "https"} or (
-            url.scheme and url.scheme != "file"
-        ) or url.netloc or (not url.fragment and Path(url.path).suffix.lower() not in LOCAL_SUFFIXES):
+        if remote_reference(reference):
             raise RemoteDefinition("REF-DEFINITION-REMOTE", "Remote shared definition resolution is unavailable offline.", pointer)
         if url.scheme or url.query:
             raise DocumentError("REF-PATH-SCHEME", "Shared definitions must use a local path without a file scheme or query.", pointer)

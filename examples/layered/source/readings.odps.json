@@ -1,0 +1,27 @@
+{
+  "apiVersion": "v1.1.0",
+  "kind": "DataProduct",
+  "id": "urn:example:layered:product:readings",
+  "version": "1.0.0",
+  "name": "Station readings",
+  "status": "active",
+  "type": "sourceAligned",
+  "domain": "weather observations",
+  "description": {
+    "purpose": "Faithful readings for each published station file."
+  },
+  "inputPorts": [
+    {
+      "name": "station-files",
+      "contractId": "urn:example:layered:contract:captures",
+      "version": "1.0.0"
+    }
+  ],
+  "outputPorts": [
+    {
+      "name": "readings",
+      "contractId": "urn:example:layered:contract:readings",
+      "version": "1.0.0"
+    }
+  ]
+}

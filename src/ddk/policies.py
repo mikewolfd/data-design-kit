@@ -7,7 +7,7 @@ from .documents import DocumentError, json_pointer, pointer_get
 from .interfaces import json_contains
 from .results import diagnostic, location
 
-KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary"}
+KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary", "layer-order"}
 
 
 def _annotations(value, key):
@@ -50,6 +50,9 @@ def check_policy(inventory, artifact):
             report.add("DDK-POLICY-001", "core.policies", subject, "unknown", reason=reason, diagnostics=[
                 diagnostic("POLICY-RULE-UNKNOWN", reason, severity="warning", **where)
             ])
+            continue
+        if kind == "layer-order":
+            _layer_order(inventory, artifact, rule, subject, where)
             continue
         requirement = {
             "fields-exist": "DDK-POLICY-002", "row-identity": "DDK-POLICY-002",
@@ -167,3 +170,99 @@ def record_definition_uses(inventory, aliases):
                 diagnostic("POLICY-DEFINITION-UNUSED", "The registered definition has no loaded consumers.",
                            path=path, severity="warning")
             ])
+
+
+def _layer_edges(inventory):
+    """Yield (kind, consumer, consumer namespace, target alias, declaration location) and unresolved reasons."""
+    from .catalog_access import CatalogError
+    from .ports import product_ports
+
+    def site(path, parts=()):
+        return location(inventory.display_path(path), json_pointer(parts))
+
+    try:
+        for product, ports in product_ports(inventory):
+            for direction, port, _, dataset in ports:
+                index = next(i for i, item in enumerate(product.value[f"{direction}Ports"]) if item["name"] == port)
+                yield ("port", f"{product.alias} {direction} port {port}", product.namespace, dataset.alias,
+                       site(product.path, (f"{direction}Ports", index)))
+    except (CatalogError, DocumentError) as exc:
+        yield str(exc)
+    for namespace, document in inventory.projects.items():
+        configuration = document.value.get("catalog", {})
+        for index, item in enumerate(configuration.get("relationships", ())):
+            if any("dataset" not in item[side] for side in ("source", "target")):
+                continue
+            try:
+                source = inventory.resolve(item["source"]["dataset"], namespace, "dataset")
+                target = inventory.resolve(item["target"]["dataset"], namespace, "dataset")
+            except DocumentError as exc:
+                yield f"Relationship {item['id']}: {exc}"
+                continue
+            yield ("relationship", f"relationship {item['id']}", source.namespace, target.alias,
+                   site(document.path, ("catalog", "relationships", index)))
+        for index, item in enumerate(configuration.get("recipes", ())):
+            for name, reference in sorted(item["inputs"].items()):
+                try:
+                    target = inventory.resolve(reference, namespace, "dataset")
+                except DocumentError as exc:
+                    yield f"Recipe {item['id']}: {exc}"
+                    continue
+                yield ("recipe input", f"recipe {item['id']} input {name}", namespace, target.alias,
+                       site(document.path, ("catalog", "recipes", index, "inputs", name)))
+    for alias, artifact in sorted(inventory.artifacts.items()):
+        group = {"component": "inputs", "design": "sources"}.get(artifact.kind)
+        for name, member in sorted(artifact.value.get(group, {}).items()) if group else ():
+            try:
+                target = inventory.resolve(member["dataset"], artifact.namespace, "dataset")
+            except DocumentError as exc:
+                yield f"Production {alias}: {exc}"
+                continue
+            yield ("production input", f"{artifact.kind} {alias} input {name}", artifact.namespace, target.alias,
+                   site(artifact.path, (group, name)))
+
+
+def _layer_order(inventory, artifact, rule, subject, where):
+    """Fail when a declared dependency points from a lower layer to a higher one."""
+    report = inventory.report
+    names = [layer["name"] for layer in rule["layers"]]
+    ranks, invalid = {}, [] if len(set(names)) == len(names) else ["Layer names must be unique."]
+    for rank, layer in enumerate(rule["layers"]):
+        for reference in layer["namespaces"]:
+            namespace = inventory.scoped(reference, artifact.namespace)
+            if namespace not in inventory.projects:
+                invalid.append(f"Namespace {reference!r} is not a loaded project namespace.")
+            elif namespace in ranks:
+                invalid.append(f"Namespace {reference!r} is assigned to more than one layer.")
+            else:
+                ranks[namespace] = rank
+    if invalid:
+        report.add("DDK-POLICY-006", "core.policies", subject, "failed", diagnostics=[
+            diagnostic("POLICY-LAYER-INVALID", message, **where) for message in invalid])
+        return
+
+    def rank_of(namespace):
+        while namespace not in ranks and namespace:
+            namespace = namespace.rpartition("/")[0]
+        return ranks.get(namespace)
+
+    violations, uncertain, checked = [], [], 0
+    for edge in _layer_edges(inventory):
+        if isinstance(edge, str):
+            uncertain.append(edge)
+            continue
+        kind, consumer, namespace, target, declared = edge
+        low, high = rank_of(namespace), rank_of(inventory.artifacts[target].namespace)
+        if low is None or high is None:
+            uncertain.append(f"The {consumer} -> {target} edge has an endpoint outside every layer.")
+            continue
+        checked += 1
+        if high > low:
+            violations.append(diagnostic("POLICY-LAYER-ORDER", f"The {consumer} in layer {names[low]!r} points to "
+                                         f"{target} in higher layer {names[high]!r}.", **where, related=[declared]))
+    report.metadata.setdefault("layerOrder", {})[subject] = {"layers": names, "checkedEdges": checked}
+    details = violations + [diagnostic("POLICY-LAYER-UNASSIGNED", reason, severity="warning", **where)
+                            for reason in uncertain]
+    status = "failed" if violations else "unknown" if uncertain else "passed"
+    report.add("DDK-POLICY-006", "core.policies", subject, status, diagnostics=details,
+               reason="Some declared dependencies could not be placed in a layer." if status == "unknown" else None)

@@ -1,0 +1,36 @@
+{
+  "apiVersion": "v3.2.0",
+  "kind": "DataContract",
+  "id": "urn:example:layered:contract:summary",
+  "version": "1.0.0",
+  "name": "Station summary",
+  "status": "proposed",
+  "description": {
+    "purpose": "How many readings has each station reported?"
+  },
+  "schema": [
+    {
+      "id": "station-summary",
+      "name": "station_summary",
+      "logicalType": "object",
+      "physicalType": "table",
+      "dataGranularityDescription": "One resolved station.",
+      "properties": [
+        {
+          "name": "station_code",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true,
+          "primaryKey": true,
+          "primaryKeyPosition": 1
+        },
+        {
+          "name": "reading_count",
+          "logicalType": "integer",
+          "physicalType": "BIGINT",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

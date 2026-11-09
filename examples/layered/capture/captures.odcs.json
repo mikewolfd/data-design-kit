@@ -1,0 +1,42 @@
+{
+  "apiVersion": "v3.2.0",
+  "kind": "DataContract",
+  "id": "urn:example:layered:contract:captures",
+  "version": "1.0.0",
+  "name": "Retained station files",
+  "status": "active",
+  "description": {
+    "purpose": "Keep every station file exactly as the network published it."
+  },
+  "schema": [
+    {
+      "id": "station-files",
+      "name": "station_files",
+      "logicalType": "object",
+      "physicalType": "table",
+      "dataGranularityDescription": "One retained file.",
+      "properties": [
+        {
+          "name": "file_sha256",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true,
+          "primaryKey": true,
+          "primaryKeyPosition": 1
+        },
+        {
+          "name": "network_code",
+          "logicalType": "string",
+          "physicalType": "VARCHAR",
+          "required": true
+        },
+        {
+          "name": "retrieved_on",
+          "logicalType": "date",
+          "physicalType": "DATE",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

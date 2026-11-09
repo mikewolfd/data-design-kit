@@ -13,6 +13,7 @@ import sys
 from tempfile import mkdtemp
 
 from .catalog_access import CatalogError, field_at
+from .catalog_descriptions import public_dataset, public_product
 from .documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
 from .locks import build_lock
 from .results import VERSION
@@ -90,6 +91,40 @@ def _alias(alias, allowed):
     return "public-" + sha256(alias.encode()).hexdigest()
 
 
+def _strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for key, member in value.items():
+            yield key
+            yield from _strings(member)
+    elif isinstance(value, list):
+        for member in value:
+            yield from _strings(member)
+
+
+def _withheld_names(catalog, policy, details):
+    """Every alias, namespace segment, object or port name and record ID the public view withholds."""
+    names, identifiers = set(), set()
+    scope = details.get("scope", {})
+    for alias in (*scope.get("artifacts", ()), *details.get("importAliases", {})):
+        names.add(alias)
+        names.update(alias.split("/"))
+    for entry in scope.get("projects", ()):
+        namespace, _, identity = entry.rpartition("=")
+        names.update(filter(None, (namespace, *namespace.split("/"))))
+        identifiers.add(identity)
+    for row in catalog["datasets"]:
+        names.add(row["definition"]["object"])
+        identifiers.update((row["id"], row["definition"]["contractId"]))
+    for row in catalog["products"]:
+        identifiers.add(row["id"])
+        names.update(port["port"] for port in row["ports"])
+    for section in ("relationships", "recipes", "versions", "sources", "representations", "releases", "runs"):
+        identifiers.update(row["id"] for row in catalog[section])
+    return (names - set(policy["aliases"])) | (identifiers - policy["identifiers"])
+
+
 def public_view(catalog, policy, details_key):
     """Retain explicitly admitted identifiers, locations and SQL, and close visible references."""
     view = deepcopy(catalog)
@@ -141,6 +176,7 @@ def public_view(catalog, policy, details_key):
         alias = dataset["alias"]
         aliases[alias] = _alias(alias, policy["aliases"])
         dataset["alias"] = aliases[alias]
+        public_dataset(dataset, policy)
         if not policy["descriptions"]:
             for key in ("title", "rowMeaning"):
                 dataset.pop(key, None)
@@ -191,6 +227,7 @@ def public_view(catalog, policy, details_key):
     extension_grants = {json_dumps(row["project"]): set(row["extensions"]) for row in policy["projectExtensions"]}
     known_extensions = defaultdict(set)
     disclosed_extensions = []
+    withheld = _withheld_names(catalog, policy, authored_details) if extension_grants else set()
     for row in authored_details.get("projectExtensions", ()):
         key = json_dumps(row["project"])
         known_extensions[key].update(row["extensions"])
@@ -198,10 +235,14 @@ def public_view(catalog, policy, details_key):
         if permitted:
             if row["project"]["id"] not in ids:
                 raise CatalogError("CATALOG-DISCLOSURE", "A disclosed extension's source project identifier must be permitted.")
+            values = {key: deepcopy(value) for key, value in row["extensions"].items() if key in permitted}
+            # An extension value is opaque: refuse rather than edit it when it names a withheld identity.
+            if any(name in withheld for name in _strings(values)):
+                raise CatalogError("CATALOG-DISCLOSURE", "A granted project extension names a withheld alias, namespace or identifier.")
             disclosed_extensions.append({
                 "project": deepcopy(row["project"]),
                 "namespace": _alias(row["namespace"], policy["aliases"]) if row["namespace"] else "",
-                "extensions": {key: deepcopy(value) for key, value in row["extensions"].items() if key in permitted},
+                "extensions": values,
             })
     if any(key not in known_extensions or names - known_extensions[key] for key, names in extension_grants.items()):
         raise CatalogError("CATALOG-DISCLOSURE", "An extension disclosure grant names an unknown project or namespace.")
@@ -212,6 +253,7 @@ def public_view(catalog, policy, details_key):
         if product["id"] not in ids:
             continue
         product["alias"] = _alias(product["alias"], policy["aliases"])
+        public_product(product, policy)
         product["definition"] = _hide_uri(product["definition"], policy["evidence"])
         product["ports"] = [item for item in product["ports"] if item["dataset"] in aliases]
         for port in product["ports"]:

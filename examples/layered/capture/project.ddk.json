@@ -1,0 +1,40 @@
+{
+  "specVersion": "0.1",
+  "kind": "project",
+  "id": "urn:example:layered:capture",
+  "version": "1.0.0",
+  "extensions": {
+    "urn:example:layered:map-notes": {
+      "layer": "capture",
+      "reviewed": true
+    }
+  },
+  "artifacts": {
+    "station-files": {
+      "kind": "dataset",
+      "path": "captures.odcs.json",
+      "object": "station-files",
+      "catalogId": "urn:example:layered:dataset:station-files",
+      "role": "original",
+      "attribution": {
+        "assertedBy": "publisher"
+      }
+    },
+    "capture-product": {
+      "kind": "product",
+      "path": "captures.odps.json"
+    }
+  },
+  "imports": {},
+  "requiredChecks": [
+    "core.documents",
+    "core.references",
+    "core.graph",
+    "core.calls",
+    "core.datasets",
+    "core.policies"
+  ],
+  "catalog": {
+    "id": "urn:example:layered:capture:catalog"
+  }
+}

@@ -136,9 +136,9 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Implement JSON parsing that rejects duplicate keys, non-finite values, and invalid UTF-8. Preserve exact bytes for digests and JSON Pointers for locations.
 - Register the draft schemas and pinned ODCS revision in an offline `referencing` registry. Separate Draft 2020-12 validation from the ODCS schema's Draft 2019-09 dialect.
 - Validate document shape before constructing typed records. Preserve unknown optional extensions without interpreting them.
-- Implement namespace-scoped paths, imported-project traversal, permitted-root checks, dataset-object selection, and identity conflicts.
+- Implement namespace-scoped paths, imported-project traversal, permitted-root checks, dataset-object selection, and identity conflicts. Load each project file once at its shortest import path so aggregator roots and layers that import their neighbours share one namespace; record later paths as import aliases.
 - Resolve local ODCS definitions before compatibility or catalog interpretation consumes them. Preserve the pinned upstream precedence and qualify inheritance with independent differential cases. The native CLI resolver imports network-capable helpers and lacks DDK root/read-cache controls, so core uses bounded local metadata resolution; WP-07 owns comparison with the maintained CLI. Keep runtime imports outside core.
-- Preserve followed definition bytes, fragments, resolution chains, and key-level inheritance/override provenance. Return effective values alongside original source values; missing or cyclic required definitions fail resolution, and unavailable remote resolution remains unknown.
+- Preserve followed definition bytes, fragments, resolution chains, and key-level inheritance/override provenance. Return effective values alongside original source values; missing or cyclic required definitions fail resolution. Remote links are documentation references unless the document opts into inlining; an opted-in remote definition remains unknown.
 - Make limits configurable and preserve partial diagnostics on limit exhaustion.
 - Optionally add restricted YAML after JSON behavior is stable. Do not use a parser's default YAML 1.1 boolean or date conversions.
 
@@ -181,6 +181,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Build indexed step relationships; use deterministic topological ordering and detect self-cycles and larger cycles.
 - Check every named export, including direct source exports and multiple component outputs.
 - Represent unsupported nested or physical-type requirements as unknown, even when the ODCS document itself is valid.
+- Check `vendor: ddk` storage annotations: each view property names stored properties of its own object and its transform logic.
 
 **Acceptance:** multiple independent exports are all checked. Compatibility uses resolved inherited constraints; a failed required definition makes the dependent comparison not-run. An absent column fails even when ODCS `required` is false. Boolean-to-number is rejected. Extra-field behavior differs explicitly between input ports and exports. Positional execution mappings remain separate from logical name comparison.
 
@@ -189,7 +190,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 **Dependencies:** WP-04. **Output:** cross-document policy checks and definition-use inventory.
 
 - Use the effective definitions and key-level provenance produced by WP-01 for policy checks and the definition-use inventory.
-- Implement fields-exist, row-identity, quality-fields, and vocabulary rules as small typed checks.
+- Implement fields-exist, row-identity, quality-fields, vocabulary, and layer-order rules as small typed checks. Layer order reuses the catalog's product-port resolution rather than a second resolver.
 - Inventory unused registered definitions, including definitions carrying quality arrays.
 - Preserve SQL and custom rules as declarations. Complete quality dependency metadata can be checked; undeclared SQL dependencies remain unknown.
 - Reserve optional CUE integration until actual cross-field policy needs justify another language and runtime dependency.
@@ -320,7 +321,8 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Bind authored field facets to exact accepted native report counters through an explicitly supplied application generator. Preserve original JobSpec bytes, complete authored coverage, generator provenance and distinct evaluator identity. Reuse supported native schema and complete export-key facts without claiming unrelated row properties or rerunning data checks during assembly.
 - Add independent nested/list paths, binary and composite keys, scoped row positions, and wrong-release negatives without project-specific consumers.
 - Allow an explicitly supplied application profile to reason about additional declared relationships after shared structural guards. Retain its exact provenance, preserve unsupported reasoning, and keep data observations and external existence outside this static interface.
-- Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Verify deterministic refresh with zero data-payload opens or repeated data checks.
+- Carry ODPS product descriptions and ODCS contract and object descriptions, contexts, tags, canonical URLs, applicable SLA entries, status and dataset attribution on catalog records. Keep vocabulary values public and free text behind the descriptions grant.
+- Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Refuse a granted project extension that names a withheld identity. Verify deterministic refresh with zero data-payload opens or repeated data checks.
 
 **Acceptance.** A local reader binds an exact checked output through the generated catalog, and definition-only generation leaves availability unresolved. Source, run, quality, and access references identify the same output and retain their separate assurance. One definition change propagates to the affected generated outputs and obligations.
 
