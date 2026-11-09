@@ -37,6 +37,14 @@ Recipes preserve `title`, ordered `notes`, and explicit `parameterOrder`. The or
 
 Products carry their ODPS `name`, `type`, `domain`, `status`, `description` and `context`. Datasets carry `role`, `origin`, contract `status`, object `description`, `tags` and `context`, plus a `contract` block with the contract-level description, context, tags, canonical URLs and the SLA entries that apply to that object. A layered map can import the same project through several paths; the assembly details record each later path in `importAliases` and every record loads once.
 
+Request `catalog.recipes` to bind each recipe's SQL to its declared inputs before anyone runs it. The binder runs sqlglot in a separately selected tool environment and never executes the query:
+
+```sh
+ddk catalog datamap/project.ddk.json --require catalog.recipes --tool-python /path/to/tool-env/bin/python --format json --output build/catalog
+```
+
+Each recipe gets one report check: `group: "catalog.recipes"`, `requirement: "DDK-CATALOG-011"`, `subject` the recipe ID, `evidence: "inferred"`, and `passed`, `failed` or `unknown`. Diagnostics point at the recipe's SQL file with codes `CATALOG-RECIPE-TABLE`, `CATALOG-RECIPE-COLUMN`, `CATALOG-RECIPE-TYPE`, `CATALOG-RECIPE-PARAMETERS`, `CATALOG-RECIPE-RESULT`, `CATALOG-RECIPE-SQL-SHAPE` or, for `unknown`, `CATALOG-RECIPE-SQL-UNSUPPORTED`. Report metadata `recipeBindings[<recipe id>]` records `parser` (`id`, `version`, `dialect`) and `output`, a list of `{name, logicalType}` with `null` where no type was inferred. The catalog's `adapters` list names the parser and version. A view dataset can declare its recipe as `resultDataset`; the check then proves that the recipe's output columns and logical types match the view's declared properties. Without `--tool-python`, a requested check is `not_run` and the command exits 2.
+
 The assembly details at `extensions["urn:ddk:catalog:assembly"]` retain resolved `datasetDefinitions`. Their `projectExtensions` records keep each source project's identifier, version, import namespace, and extension values separate. DDK preserves these values without interpreting application rules. Applications should read these admitted definitions directly rather than reconstructing a legacy metadata format from them.
 
 ## Application relationship reasoning

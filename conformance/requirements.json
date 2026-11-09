@@ -574,5 +574,11 @@
     "title": "Catalog change analysis",
     "specification": "docs/specification.md#DDK-CATALOG-010",
     "owner": "WP-06"
+  },
+  {
+    "id": "DDK-CATALOG-011",
+    "title": "Recipe SQL binding",
+    "specification": "docs/specification.md#DDK-CATALOG-011",
+    "owner": "WP-13"
   }
 ]

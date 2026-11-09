@@ -4549,6 +4549,126 @@
         "exitCode": 1,
         "diagnostic": "CATALOG-DISCLOSURE"
       }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-BIND",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Recipes join declared inputs, read object fields and unnested array elements, bind ?, $n and :name parameters, and produce exactly the columns and types of their declared result dataset.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-TABLE",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A recipe reads a table that is not one of its inputs, or a schema-qualified table.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-TABLE"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-COLUMN",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A recipe reads an undeclared column, object field, or array-element field.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-COLUMN"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-TYPE",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A recipe compares a number with a string column, or with a string-typed parameter.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-TYPE"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-PARAMETERS",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A recipe uses more positional parameters than parameterOrder names.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-PARAMETERS"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-RESULT",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A view's declared properties add a column and change a type that its recipe output does not match.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-RECIPE-RESULT"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-UNSUPPORTED",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A recipe calls a DataFusion-only function, extracts JSON, or names a dialect without a parser profile.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-RECIPE-SQL-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "CASE-RECIPE-SQL-NO-TOOL",
+      "requirements": [
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "catalog.recipes is requested without a tool environment; separately it is not requested.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-CAPABILITY-MISSING"
+      }
     }
   ]
 }

@@ -24,6 +24,9 @@ def main():
                     result = native_quality.versions(request, folder)
                 else:
                     result = native_quality.evaluate(request, folder, plan_only=action == "quality-plan")
+            elif action == "recipe-sql":
+                from . import native_recipes
+                result = native_recipes.bind(request, folder)
             elif action in ("files", "stage", "fixture-files"):
                 from . import native_intake
                 result = getattr(native_intake, action.replace("-", "_"))(request, folder)

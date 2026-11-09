@@ -47,6 +47,10 @@
       {
         "passedTests": 19,
         "scope": "Source-checkout layered-map catalog cases on branch codex/ddk-datamap-requirements-20261108: shared imports, product and dataset descriptive facts and origin, SLA applicability, public SLA/context/extension disclosure. No installed qualification."
+      },
+      {
+        "passedTests": 6,
+        "scope": "Source-checkout recipe SQL binding (DDK-CATALOG-011) through the quality tool environment's sqlglot 30.29.0, on branch codex/ddk-datamap-requirements-20261108. No installed qualification."
       }
     ]
   },
@@ -1413,6 +1417,97 @@
         "tests/catalog/test_layered_catalog.py::test_public_extension_values_are_checked_by_their_path_like_parts"
       ],
       "evidence": "Path-like parts and object names are matched; granted whole identifiers are not split."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-BIND",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations",
+        "tests/test_recipe_sql.py::test_example_recipes_bind_to_their_declared_inputs_and_results"
+      ],
+      "evidence": "Commerce and layered recipes, and the passing binder cases, bind through the tool environment."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-TABLE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-TABLE",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Both table cases fail before column binding."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-COLUMN",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-COLUMN",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Nested fields are checked against the declared object and element."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-TYPE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-TYPE",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "A string literal compared with a date column is permitted."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-PARAMETERS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-PARAMETERS",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Parameter counts are compared before typing."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-RESULT",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-RECIPE-RESULT",
+      "tests": [
+        "tests/test_recipe_sql.py::test_view_dataset_must_match_its_recipe_output",
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Both mismatches are reported at the recipe SQL file."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-UNSUPPORTED",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-RECIPE-SQL-UNSUPPORTED",
+      "tests": [
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+      ],
+      "evidence": "Each stays unknown rather than passing or failing."
+    },
+    {
+      "id": "CASE-RECIPE-SQL-NO-TOOL",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "ADAPTER-CAPABILITY-MISSING",
+      "tests": [
+        "tests/test_recipe_sql.py::test_requested_binding_without_a_tool_environment_is_not_run",
+        "tests/test_recipe_sql.py::test_binding_runs_only_when_requested"
+      ],
+      "evidence": "A requested binding without a tool is not_run; an unrequested one adds no check."
     }
   ],
   "additionalReceiptTests": [

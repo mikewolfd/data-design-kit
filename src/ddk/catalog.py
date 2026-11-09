@@ -33,9 +33,10 @@ EXPORTS = {
 METADATA_ADAPTERS = {"local": LOCAL_ADAPTER, "example": EXAMPLE_ADAPTER,
                      "example-commerce-metadata": EXAMPLE_ADAPTER}
 GROUPS = ("catalog.assembly", "catalog.relationships", "catalog.qualification")
+RECIPE_GROUP = "catalog.recipes"
 CHECK_IDS = {name: f"DDK-CATALOG-{number:03d}" for name, number in {
     "assembly": 7, "exports": 7, "metadata": 1, "products": 2, "datasets": 3,
-    "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9,
+    "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9, "recipes": 11,
 }.items()}
 DETAILS = "urn:ddk:catalog:assembly"
 
@@ -103,6 +104,8 @@ class Assembly:
         self.managed_schema_profiles = {}
         self.relationship_assessments = []
         self.unknown_sla = set()
+        self.recipe_sources = {}
+        self.recipe_parser = None
 
     def select_relationship_profile(self, profile):
         if profile is None:
@@ -122,7 +125,7 @@ class Assembly:
 
     def check(self, step, subject, error=None, *, path=None, required=None, evidence="inferred",
               related=(), evidence_records=()):
-        group = {"relationships": "catalog.relationships", "qualification": "catalog.qualification",
+        group = {"relationships": "catalog.relationships", "qualification": "catalog.qualification", "recipes": RECIPE_GROUP,
                  "catalog.dcat": "catalog.dcat", "lineage.openlineage": "lineage.openlineage"}.get(step, "catalog.assembly")
         status = error.status if error is not None else "passed"
         description = str(error) if error is not None else None
@@ -342,8 +345,54 @@ class Assembly:
             raise CatalogError("CATALOG-RECIPE-UTF8", "Recipe SQL requires UTF-8.") from exc
         record = {"uri": source.as_uri(), "sha256": sha256(data).hexdigest()}
         self.remember(record, "recipe")
+        self.recipe_sources[row["id"]] = source
         row["sql"] = "queries/" + sha256(row["id"].encode()).hexdigest() + ".sql"
         self.queries[row["id"]] = (row, data)
+
+    def bind_recipes(self, tools):
+        """Bind each recipe's SQL to its declared inputs and result through an explicitly selected tool.
+
+        The tool parses and types the SQL offline; it never runs the query or reads data.
+        """
+        report = self.report
+        if not self.queries:
+            report.add(CHECK_IDS["recipes"], RECIPE_GROUP, "recipes", "not_run", applicable=False, evidence="inferred",
+                       reason="The loaded scope declares no recipes.")
+            return
+        if tools is None:
+            report.missing_capabilities.add(RECIPE_GROUP)
+            for identifier in sorted(self.queries):
+                self.check("recipes", identifier, CatalogError(
+                    "ADAPTER-CAPABILITY-MISSING", "Recipe SQL binding needs an explicitly selected tool environment.",
+                    status="not_run"), path=self.recipe_sources[identifier], required=True)
+            return
+        response = tools.invoke("recipe-sql", {"recipes": [{
+            "id": identifier, "sql": data.decode("utf-8"), "dialect": row["dialect"],
+            "inputs": {name: self.dataset_schemas[alias] for name, alias in row["inputs"].items()},
+            "parameters": row["parameters"], **({"parameterOrder": row["parameterOrder"]} if "parameterOrder" in row else {}),
+            "result": self.dataset_schemas.get(row.get("resultDataset")),
+        } for identifier, (row, data) in sorted(self.queries.items())]})
+        receipt = response.get("receipt")
+        evidence = ({"kind": "native-report", "path": receipt["path"], "sha256": receipt["sha256"]},) if receipt else ()
+        results = response.get("results", {}) if response.get("status") == "completed" else {}
+        if response.get("status") == "completed":
+            self.recipe_parser = {"id": response["parser"]["id"], "version": response["parser"]["version"]}
+        bindings = report.metadata.setdefault("recipeBindings", {})
+        for identifier in sorted(self.queries):
+            path = self.inventory.display_path(self.recipe_sources[identifier])
+            result = results.get(identifier)
+            if result is None:
+                reason = response.get("reason") or "The recipe tool returned no result for this recipe."
+                report.add(CHECK_IDS["recipes"], RECIPE_GROUP, identifier, "not_run", required=True, evidence="inferred",
+                           reason=reason, evidence_records=evidence,
+                           diagnostics=[diagnostic("EXEC-NATIVE-UNAVAILABLE", reason, path=path)])
+                continue
+            report.add(CHECK_IDS["recipes"], RECIPE_GROUP, identifier, result["status"], required=True, evidence="inferred",
+                       reason=result.get("reason"), evidence_records=evidence, diagnostics=[
+                           diagnostic(item["code"], item["message"], path=path, severity=item["severity"])
+                           for item in result["diagnostics"]])
+            bindings[identifier] = {"parser": {**self.recipe_parser, **result.get("parser", {})},
+                                    **({"output": result["output"]} if "output" in result else {})}
 
     def production_definitions(self):
         for artifact in self.inventory.artifacts.values():
@@ -420,6 +469,8 @@ class Assembly:
         yield {"id": "ddk.catalog", "version": VERSION}
         if self.relationship_profile is not None:
             yield deepcopy(self.relationship_profile.identity)
+        if self.recipe_parser is not None:
+            yield dict(self.recipe_parser)
         if self.native_rule_profile is not None:
             yield deepcopy(self.native_rule_profile.identity)
         if self.metadata:
@@ -574,8 +625,11 @@ class Assembly:
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
                      permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None,
-                     include_private_artifacts=False, managed_schema_profiles=None):
+                     include_private_artifacts=False, managed_schema_profiles=None, recipe_tools=None):
     """Load once and return admitted metadata with its report and companions.
+
+    ``recipe_tools`` is an explicitly selected native tool environment; it binds
+    recipe SQL only when ``catalog.recipes`` is requested.
 
     An admitted view remains inspectable when qualification is incomplete or
     failed. Only a passed report permits atomic publication to ``output``.
@@ -589,9 +643,9 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     inventory = load_project(project_path, permitted_roots, limits)
     assembly = Assembly(inventory, profiles)
     report = inventory.report
-    report.available_capabilities.update((*GROUPS, *EXPORTS.values()))
+    report.available_capabilities.update((*GROUPS, *EXPORTS.values(), *((RECIPE_GROUP,) if recipe_tools else ())))
     core = check_inventory(inventory, (*required_groups, "catalog.assembly", *profiles),
-                           handled_groups=(*GROUPS, *profiles))
+                           handled_groups=(*GROUPS, RECIPE_GROUP, *profiles))
     if core["decision"] != "passed":
         return _result(core, public=public)
     for profile in profiles:
@@ -627,6 +681,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         step = "relationships"
         assembly.select_relationship_profile(relationship_profile)
         assembly.declarations()
+        if RECIPE_GROUP in report.required_groups:
+            assembly.bind_recipes(recipe_tools)
         from .catalog_native_rules import select_native_rule_profile
 
         selected_native_rules = select_native_rule_profile(native_rule_profile, inventory)
@@ -760,11 +816,11 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
 
 def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                   current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                  permitted_roots=(), limits=None, relationship_profile=None):
+                  permitted_roots=(), limits=None, relationship_profile=None, recipe_tools=None):
     """Build and optionally publish a catalog; return its checking report."""
     return assemble_catalog(
         project_path, metadata=metadata, metadata_adapter=metadata_adapter, exports=exports, output=output,
         current_selection=current_selection, disclosure_policy=disclosure_policy, audience=audience,
         required_groups=required_groups, permitted_roots=permitted_roots, limits=limits,
-        relationship_profile=relationship_profile,
+        relationship_profile=relationship_profile, recipe_tools=recipe_tools,
     ).local_report

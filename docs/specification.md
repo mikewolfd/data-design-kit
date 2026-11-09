@@ -555,7 +555,7 @@ The detailed profile boundaries in [adapter-profiles.md](adapter-profiles.md) im
 | --- | --- | --- |
 | `core` | Six mandatory `core.*` groups | Declared |
 | `impact` | `impact.consumers`, `impact.compatibility`, `impact.non-weakening` | Declared/inferred |
-| `catalog` | `catalog.definitions`, `catalog.relationships`, `catalog.versions`, `catalog.evidence` | Declared definitions and cited native observations |
+| `catalog` | `catalog.definitions`, `catalog.relationships`, `catalog.versions`, `catalog.evidence`; requested `catalog.recipes` | Declared definitions and cited native observations; recipe SQL bound by a selected parser |
 | `catalog.dcat` | `catalog.dcat` | Generated DCAT 3 discovery and checked access links |
 | `lineage.openlineage` | `lineage.openlineage` | Declared job events and observed run events |
 | `odcs-cli` | `odcs.lint`, `odcs.versions`, `data.odcs` | Declared or executed, depending on command |
@@ -846,6 +846,13 @@ Recipe titles, notes, and contextual links affect documentation and applicable r
 Changes to a selected relationship profile's provenance or its declaration assessments MUST remain visible even when the relationship declarations are unchanged. Link those changes to the relationships actually assessed and their known readers. Require metadata regeneration and applicable reader checks, retaining unresolved domain effects without inferring a computation dependency.
 
 Public filtering MUST retain permitted profile identity and redacted source provenance for comparison. Withheld assessments and consumer coverage MUST remain explicitly unknown; they MUST NOT become an empty, completed scope or fabricated reader dependencies.
+
+<a id="DDK-CATALOG-011"></a>
+### DDK-CATALOG-011 — Recipe SQL binding
+
+When `catalog.recipes` is requested, the catalog producer MUST bind each recipe's SQL against its declared inputs without running it or reading data, and report one `inferred` result per recipe. A recipe MUST be exactly one query. Every table reference MUST name a recipe input or a common table expression, and every column, object field, and array-element field MUST resolve to that input's effective ODCS declaration. `?` parameters bind to `parameterOrder` by position, `$n` by number, and `:name` by name, each typed from the parameter schema. A comparison between different type families (text, number, boolean, temporal, object, array) MUST fail, except a string literal compared with a temporal value. When the recipe names a `resultDataset`, its output columns MUST match that dataset's top-level properties by name, once each, with compatible logical types; `integer` satisfies `number`. A construct the selected parser profile cannot bind or type, such as an engine-specific or JSON function, unparseable SQL, keyed access, or an untyped declared output, MUST leave the result `unknown`. Without an explicitly selected tool environment, the group is `not_run`. The parser identity, version, and dialect MUST be recorded with each result and in the catalog adapters. Success establishes declared name and type consistency under that parser profile; it does not establish that an engine accepts the SQL or that its results are correct.
+
+The initial profile runs sqlglot in the explicitly selected tool environment. It reads `datafusion` recipes with sqlglot's PostgreSQL dialect, the closest available grammar; sqlglot has no DataFusion dialect. DataFusion-only functions therefore remain `unknown`. Planning recipes through DocSpec's DataFusion context is a separate, later profile.
 
 ### 19.1 Layered maps (informative)
 

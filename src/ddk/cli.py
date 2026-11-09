@@ -50,11 +50,12 @@ def _parser():
         command.add_argument("--locked", action="store_true")
         if name in ("check", "lock"):
             command.add_argument("--adapter-manifest", action="append", default=[])
-        if name in ("check", "build", "test", "files", "stage", "quality", "managed"):
+        if name in ("check", "build", "test", "files", "stage", "quality", "managed", "catalog"):
             command.add_argument("--tool-python")
+            command.add_argument("--timeout", type=float, default=120)
+        if name in ("check", "build", "test", "files", "stage", "quality", "managed"):
             command.add_argument("--docspec")
             command.add_argument("--limits")
-            command.add_argument("--timeout", type=float, default=120)
         if name == "build":
             command.add_argument("--component", required=True)
             command.add_argument("--export", action="append", default=[])
@@ -125,9 +126,17 @@ def _execute(args, secret_parameters=None):
         from .catalog import build_catalog
         if not args.output:
             raise UsageError("catalog requires --output")
+        tools = None
+        if args.tool_python:
+            from .adapters.native import NativeTools
+            evidence = Path(args.output).resolve()
+            evidence = evidence.with_name(evidence.name + ".evidence")
+            evidence.mkdir(parents=True, exist_ok=True)
+            tools = NativeTools(args.tool_python, output=Path(tempfile.mkdtemp(prefix="evidence-", dir=evidence)),
+                                timeout=args.timeout)
         return build_catalog(args.project, metadata=args.metadata, metadata_adapter=args.metadata_adapter,
                              exports=args.export, output=args.output, current_selection=args.current_selection,
-                             disclosure_policy=args.disclosure_policy, **shared)
+                             disclosure_policy=args.disclosure_policy, recipe_tools=tools, **shared)
     if args.command == "check" and not args.tool_python:
         return check_project(args.project, lock=args.lock, locked=args.locked, selection=args.select,
                              adapter_manifests=args.adapter_manifest, **shared)
