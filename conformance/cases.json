@@ -264,6 +264,37 @@
       }
     },
     {
+      "id": "CASE-CATALOG-003-PUBLIC-METHOD",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public view of the layered example, with identifier grants only, withholds the model method record (model, configuration digest, reviewer) and the method column from the catalog and every written file, the graph included.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-006-RECIPE-FIELDS",
+      "requirements": [
+        "DDK-CATALOG-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A project recipe carrying a title, notes and a parameterOrder that names its one parameter checks and assembles.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "requirements": [
         "DDK-CATALOG-007"

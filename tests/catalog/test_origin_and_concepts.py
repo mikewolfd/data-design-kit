@@ -187,3 +187,35 @@ def test_candidate_links_anchor_on_keys_and_skip_declared_joins():
     # A concept no declared relationship joins on, such as a shared date format, offers no candidates.
     catalog["relationships"] = []
     assert candidate_links(catalog) == []
+
+
+def test_public_view_withholds_model_records_and_method_columns(tmp_path):
+    """The model record names a reviewer and the method column names a field; neither has a disclosure grant."""
+    layered = _copy(LAYERED, tmp_path)
+    _method_column(layered, ["rule", "human"])
+    datasets = {f"urn:example:layered:dataset:{name}": f"urn:example:layered:contract:{contract}" for name, contract in (
+        ("captures", "captures"), ("readings", "readings"), ("stations", "stations"), ("station-summary", "summary"))}
+    products = [f"urn:example:layered:product:{name}" for name in ("captures", "readings", "stations", "summary")]
+    policy = tmp_path / "public.json"
+    policy.write_text(json.dumps({"identifiers": ["urn:example:layered:catalog", "urn:example:layered:map", *products,
+                                                  *datasets, *datasets.values()]}))
+    result = assemble_catalog(layered / "project.ddk.json", disclosure_policy=policy, exports=("graph",),
+                              output=tmp_path / "out")
+    assert result.report["decision"] == "passed"
+    assert not [row for row in result.catalog["datasets"] if "model" in row or "methodColumn" in row]
+    written = b"".join(path.read_bytes() for path in (tmp_path / "out").rglob("*") if path.is_file())
+    assert b"Example reviewer" not in written and b"example-site-matcher" not in written
+
+
+def test_project_recipes_may_carry_a_title_notes_and_parameter_order(tmp_path):
+    """DDK-CATALOG-006 recipe fields, so a map with titled, ordered saved queries checks and assembles."""
+    layered = _copy(LAYERED, tmp_path)
+
+    def describe(project):
+        recipe = project["catalog"]["recipes"][0]
+        recipe["parameters"] = {"type": "object", "properties": {"station": {"type": "string"}},
+                                "additionalProperties": False}
+        recipe.update(title="Readings per station", notes=["One row per station."], parameterOrder=["station"])
+    _edit(layered / "product/project.ddk.json", describe)
+    assert check_project(layered / "project.ddk.json")["decision"] == "passed"
+    assert assemble_catalog(layered / "project.ddk.json").report["decision"] == "passed"

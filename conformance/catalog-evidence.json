@@ -1484,6 +1484,24 @@
       ]
     },
     {
+      "id": "CASE-CATALOG-003-PUBLIC-METHOD",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_public_view_withholds_model_records_and_method_columns"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-006-RECIPE-FIELDS",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_project_recipes_may_carry_a_title_notes_and_parameter_order"
+      ]
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "coverage": "exercised",
       "expectedDecision": "error",

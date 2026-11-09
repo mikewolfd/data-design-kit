@@ -337,11 +337,14 @@ class Assembly:
         if not pairs:
             return
 
-        def same(left, right):
-            exact = {iri for entry in ddk_annotations(self.inventory.artifacts[left].value, "exactMatch")
-                     for iri in (entry if isinstance(entry, list) else [entry])}
+        def exact(definition):
+            return {iri for entry in ddk_annotations(self.inventory.artifacts[definition].value, "exactMatch")
+                    for iri in (entry if isinstance(entry, list) else [entry])}
+
+        def same(left, right):  # skos:exactMatch is symmetric, so either side may declare it
             return (left == right or frozenset((left, right)) in compatible
-                    or self.concept_iri(left) == self.concept_iri(right) or self.concept_iri(right) in exact)
+                    or self.concept_iri(left) == self.concept_iri(right)
+                    or self.concept_iri(right) in exact(left) or self.concept_iri(left) in exact(right))
 
         mismatched = [f"{left} to {right}" for left, right in pairs if not same(left, right)]
         error = CatalogError("CATALOG-RELATIONSHIP-CONCEPT", f"{row['id']} joins fields of different shared definitions "

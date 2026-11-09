@@ -222,6 +222,10 @@ def public_view(catalog, policy, details_key):
         aliases[alias] = _alias(alias, policy["aliases"])
         dataset["alias"] = aliases[alias]
         public_dataset(dataset, policy)
+        # A model method record names models, configurations and reviewers, and a method column names a field:
+        # neither has a disclosure grant, so a public view withholds both.
+        dataset.pop("model", None)
+        dataset.pop("methodColumn", None)
         if not policy["descriptions"]:
             for key in ("title", "rowMeaning"):
                 dataset.pop(key, None)
