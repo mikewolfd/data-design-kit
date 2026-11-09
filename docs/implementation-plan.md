@@ -181,7 +181,6 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Build indexed step relationships; use deterministic topological ordering and detect self-cycles and larger cycles.
 - Check every named export, including direct source exports and multiple component outputs.
 - Represent unsupported nested or physical-type requirements as unknown, even when the ODCS document itself is valid.
-- Check `vendor: ddk` storage annotations: each view property names stored properties of its own object and its transform logic.
 
 **Acceptance:** multiple independent exports are all checked. Compatibility uses resolved inherited constraints; a failed required definition makes the dependent comparison not-run. An absent column fails even when ODCS `required` is false. Boolean-to-number is rejected. Extra-field behavior differs explicitly between input ports and exports. Positional execution mappings remain separate from logical name comparison.
 
@@ -190,7 +189,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 **Dependencies:** WP-04. **Output:** cross-document policy checks and definition-use inventory.
 
 - Use the effective definitions and key-level provenance produced by WP-01 for policy checks and the definition-use inventory.
-- Implement fields-exist, row-identity, quality-fields, vocabulary, and layer-order rules as small typed checks. Layer order reuses the catalog's product-port resolution rather than a second resolver.
+- Implement fields-exist, row-identity, quality-fields, vocabulary, layer-order, and view-sources rules as small typed checks. Row identity and layer order reuse the catalog's key and product-port resolution rather than second resolvers; row identity accepts the ODCS primary key.
 - Inventory unused registered definitions, including definitions carrying quality arrays.
 - Preserve SQL and custom rules as declarations. Complete quality dependency metadata can be checked; undeclared SQL dependencies remain unknown.
 - Reserve optional CUE integration until actual cross-field policy needs justify another language and runtime dependency.
@@ -321,7 +320,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 - Bind authored field facets to exact accepted native report counters through an explicitly supplied application generator. Preserve original JobSpec bytes, complete authored coverage, generator provenance and distinct evaluator identity. Reuse supported native schema and complete export-key facts without claiming unrelated row properties or rerunning data checks during assembly.
 - Add independent nested/list paths, binary and composite keys, scoped row positions, and wrong-release negatives without project-specific consumers.
 - Allow an explicitly supplied application profile to reason about additional declared relationships after shared structural guards. Retain its exact provenance, preserve unsupported reasoning, and keep data observations and external existence outside this static interface.
-- Carry ODPS product descriptions and ODCS contract and object descriptions, contexts, tags, canonical URLs, applicable SLA entries, status and dataset attribution on catalog records. Keep vocabulary values public and free text behind the descriptions grant.
+- Carry ODPS product descriptions and ODCS contract and object descriptions, contexts, tags, canonical URLs, applicable SLA entries, status and dataset origin on catalog records. Keep vocabulary values public and free text behind the descriptions grant.
 - Apply disclosure rules, inventory companion outputs, and atomically preserve prior complete outputs on failure. Refuse a granted project extension that names a withheld identity. Verify deterministic refresh with zero data-payload opens or repeated data checks.
 
 **Acceptance.** A local reader binds an exact checked output through the generated catalog, and definition-only generation leaves availability unresolved. Source, run, quality, and access references identify the same output and retain their separate assurance. One definition change propagates to the affected generated outputs and obligations.
@@ -339,7 +338,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Dependencies:** WP-13 and WP-14. **Owners:** DDK. **Output:** requirements recorded from building a layered capture → source → resolved → product map; none is implemented or claimed.
 
-The [layered example](../examples/layered/README.md) exercises the implemented parts: aggregator roots, shared imports, layer order, stored views, dataset attribution and descriptive catalog facts. These requirements remain open:
+The [layered example](../examples/layered/README.md) exercises the implemented parts: aggregator roots, shared imports, layer order, view sources, dataset origin and descriptive catalog facts. These requirements remain open:
 
 1. **Judgement crosswalks.** A relationship may match through a declared judgement dataset whose rows record `same`, `not_same` or `undecided` decisions between source and target keys. Only `same` establishes a match; `undecided` stays unresolved. *Rationale:* cross-source entity resolution follows the OpenSanctions statement/judgement pattern; `equal` cannot express a decision table and `project_rule` hides it from the catalog.
 2. **Edition series.** Periodic editions of one logical dataset, such as two-year cycles or annual files, export as DCAT 3 `dcat:DatasetSeries` members with `dcat:inSeries` and `dcat:prev`/`dcat:previousVersion`, ordered by declared edition metadata rather than observation time. *Rationale:* consumers need the latest edition and its predecessors through standard terms.
@@ -349,7 +348,7 @@ The [layered example](../examples/layered/README.md) exercises the implemented p
 6. **Definitions-only qualification.** A qualification profile that requires only core and catalog definition checks, so a designed but unbuilt map passes `--require` without version-bound evidence. It must not claim availability or data qualification. *Rationale:* requiring `catalog.qualification` without metadata now yields `not_run`.
 7. **One vendored ODCS 3.2.0 schema.** Replace the `3.2.0-release` copy with a recorded difference: the published tag uses `oneOf` where the pinned revision uses `anyOf` in `DataQualityOperators`. Keep the comparison test. *Rationale:* two 110 KB copies that differ in one keyword invite drift.
 
-Deferred from the implemented set: property-level attribution, DCAT mapping of the new descriptive fields, and output-port `context`.
+Deferred from the implemented set: property-level origin, DCAT mapping of the new descriptive fields, and output-port `context`.
 
 ## 6. Commerce regression fixture
 

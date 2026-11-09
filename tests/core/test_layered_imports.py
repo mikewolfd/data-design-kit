@@ -150,42 +150,79 @@ def test_layer_order_rejects_unknown_or_repeated_namespaces(layered, namespaces)
     assert {item["code"] for item in rule["diagnostics"]} == {"POLICY-LAYER-INVALID"}
 
 
-def test_view_property_reads_a_stored_property_of_the_same_object(layered):
+def test_view_sources_rule_checks_views_in_its_namespaces(layered):
     report = check(layered, "passed")
-    assert _check(report, "source/readings/storage")["requirement"] == "DDK-DATA-006"
+    rule = _check(report, "governance/layers/rule/source-views")
+    assert rule["requirement"] == "DDK-POLICY-007"
+    assert report["metadata"]["viewSources"]["governance/layers/rule/source-views"] == {"datasets": 1, "views": 1}
 
 
-@pytest.mark.parametrize(("change", "code"), [
-    (lambda view, payload: view.update(transformSourceObjects=["missing"]), "DATA-VIEW-SOURCE-MISSING"),
-    (lambda view, payload: payload["customProperties"][0].update(value="view"), "DATA-VIEW-SOURCE-MISSING"),
-    (lambda view, payload: view.pop("transformLogic"), "DATA-VIEW-SOURCE-MISSING"),
-    (lambda view, payload: view["customProperties"][0].update(value="virtual"), "DATA-STORAGE-INVALID"),
-    (lambda view, payload: view["customProperties"].append({"vendor": "ddk", "property": "storage", "value": "view"}),
-     "DATA-STORAGE-INVALID"),
+@pytest.mark.parametrize("change", [
+    lambda view, payload: view.update(transformSourceObjects=["missing"]),
+    lambda view, payload: payload.update(transformSourceObjects=["station_code"]),
+    lambda view, payload: view.pop("transformLogic"),
 ])
-def test_view_property_without_a_stored_source_fails(layered, change, code):
+def test_view_without_a_stored_sibling_or_logic_fails(layered, change):
     def mutate(contract):
         change(_property(contract, "temperature_c"), _property(contract, "payload"))
     edit(layered / READINGS, mutate)
-    report = check(layered, "failed")
-    assert code in {item["code"] for item in _check(report, "source/readings/storage")["diagnostics"]}
+    rule = _check(check(layered, "failed"), "governance/layers/rule/source-views")
+    assert {item["code"] for item in rule["diagnostics"]} == {"POLICY-VIEW-SOURCE"}
+    assert rule["diagnostics"][0]["related"][0]["path"] == READINGS
 
 
-def test_storage_annotations_of_other_vendors_are_not_interpreted(layered):
-    def mutate(contract):
-        for name in ("payload", "temperature_c"):
-            _property(contract, name)["customProperties"] = [{"property": "storage", "value": "view"}]
-        _property(contract, "temperature_c")["transformSourceObjects"] = ["captured_files"]
-    edit(layered / READINGS, mutate)
-    report = check(layered, "passed")
-    assert not any(item["subject"] == "source/readings/storage" for item in report["checks"])
+def test_upstream_source_objects_outside_the_rule_are_ordinary_odcs(layered):
+    # Elsewhere transformSourceObjects keeps its ODCS meaning: upstream objects.
+    edit(layered / "resolved/stations.odcs.json", lambda contract: contract["schema"][0]["properties"][0].update(
+        transformSourceObjects=["readings"], transformLogic="DISTINCT station_code"))
+    check(layered, "passed")
+    edit(layered / "governance/layers.ddk.json", lambda policy: policy["rules"][1].update(datasets=["/resolved/stations"]))
+    rule = _check(check(layered, "failed"), "governance/layers/rule/source-views")
+    assert "'readings'" in rule["diagnostics"][0]["message"]
 
 
-@pytest.mark.parametrize(("project", "alias", "attribution"), [
-    ("resolved/project.ddk.json", "stations", {"assertedBy": "project"}),
-    ("capture/project.ddk.json", "station-files", {"assertedBy": "publisher", "derivation": ["deterministic"]}),
-    ("source/project.ddk.json", "readings", {"assertedBy": "crowd"}),
+def test_view_sources_rule_names_only_loaded_namespaces(layered):
+    edit(layered / "governance/layers.ddk.json", lambda policy: policy["rules"][1].update(namespaces=["/missing"]))
+    rule = _check(check(layered, "failed"), "governance/layers/rule/source-views")
+    assert {item["code"] for item in rule["diagnostics"]} == {"POLICY-VIEW-SCOPE"}
+
+
+@pytest.mark.parametrize(("project", "alias", "origin"), [
+    ("capture/project.ddk.json", "station-files", "derived"),
+    ("capture/project.ddk.json", "station-files", "model"),
+    ("source/project.ddk.json", "readings", "crowd"),
 ])
-def test_attribution_names_derivation_for_derived_data_and_none_for_originals(layered, project, alias, attribution):
-    edit(layered / project, lambda value: value["artifacts"][alias].update(attribution=attribution))
+def test_origin_is_one_known_value_and_originals_are_never_derived(layered, project, alias, origin):
+    edit(layered / project, lambda value: value["artifacts"][alias].update(origin=origin))
     assert "DOC-SCHEMA" in codes(check(layered, "failed"))
+
+
+def test_artifact_named_like_an_aliased_import_still_resolves(layered):
+    copy = json.loads((layered / "product/summary.odcs.json").read_bytes())
+    copy.update(id="urn:test:collision")
+    (layered / "product/collision.odcs.json").write_text(json.dumps(copy))
+    edit(layered / "product/project.ddk.json", lambda project: project["artifacts"].update(
+        resolved={"kind": "dataset", "path": "collision.odcs.json", "object": "station-summary"}))
+    inventory = load_project(layered / "project.ddk.json")
+    assert inventory.import_aliases["product/resolved"] == "resolved"
+    assert inventory.resolve("resolved", "product").alias == "product/resolved"
+    assert inventory.resolve("resolved/stations", "product").alias == "resolved/stations"
+    check(layered, "passed")
+
+
+@pytest.mark.parametrize(("change", "expected"), [
+    (lambda fields: None, "passed"),
+    (lambda fields: fields[0].pop("primaryKey"), "failed"),
+    (lambda fields: fields[1].update(primaryKey=True, primaryKeyPosition=1), "failed"),
+])
+def test_row_identity_accepts_the_odcs_primary_key(layered, change, expected):
+    edit(layered / "governance/layers.ddk.json", lambda policy: policy["rules"].append(
+        {"id": "station-identity", "check": "row-identity", "dataset": "/resolved/stations"}))
+    edit(layered / "resolved/stations.odcs.json", lambda contract: change(contract["schema"][0]["properties"]))
+    report = check(layered, expected)
+    rule = _check(report, "governance/layers/rule/station-identity")
+    assert rule["status"] == expected
+    if expected == "passed":
+        assert report["metadata"]["rowIdentityAssumptions"] == {"resolved/stations": ["station_code"]}
+    else:
+        assert rule["diagnostics"][0]["code"] == "POLICY-ROW-IDENTITY"

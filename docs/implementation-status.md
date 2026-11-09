@@ -4,6 +4,10 @@
 
 The connected workflow passes ODPS/ODCS resolution, file staging, SQL and saved Substrait execution, exact-output quality checks, DCAT/OpenLineage generation and a catalog-bound read. Five generated adapter manifests match the exact captured support declarations. The offline core remains separately installed and checked. The [portable SDK3 package](local-release-integrated-3.md#portable-package) also passes fresh installations, evidence relocation and four fresh workflow cases on macOS arm64. Its copied 703-test qualification remains distinct from these new distribution checks; the dev2 archive retains its earlier scope.
 
+## Layered data-map source work
+
+A November 8 source branch lets a capture → source → resolved → product map live in pure DDK. Aggregator roots, shared imports, `layer-order`, `view-sources`, primary-key row identity, dataset origin, remote definition references and catalog descriptive fields pass source-checkout tests, the [layered example](../examples/layered/README.md) and a copy of the 194-dataset SpicyRegs map. They have no installed qualification. [WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) lists the specified but unimplemented requirements. [Source checks](verification.md#november-8-2026-layered-data-map-source-checks).
+
 ## Successor work
 
 SDK3, from source `cc9c44297fb78a6b061951462cd42541e98182bf`, combines captured catalog queries, recursive native types, public release membership, retained jobs, native input custody, producer proof/model prerequisites and publication-intent recovery. It adds optional host-owned process groups, covered by nine installed POSIX stand-in probes. The unchanged DocSpec implementation `255c18489d224d095d4bd1d1edbdef5f5538bb3e` passed 1,011 Rust and 31 Dagster tests; 17 ignored Rust cases remain explicit. Both installed and native results retain their exact source and dependency identities. [Complete local qualification](verification.md#november-7-2026-sdk3-complete-installed-qualification).

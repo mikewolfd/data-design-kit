@@ -125,8 +125,7 @@
         "DDK-GRAPH-001",
         "DDK-GRAPH-002",
         "DDK-GRAPH-003",
-        "DDK-GRAPH-004",
-        "DDK-DATA-006"
+        "DDK-GRAPH-004"
       ],
       "planSection": "WP-04 \u2014 Dataset compatibility, design graphs, and exports",
       "owners": [
@@ -146,7 +145,8 @@
         "DDK-POLICY-003",
         "DDK-POLICY-004",
         "DDK-POLICY-005",
-        "DDK-POLICY-006"
+        "DDK-POLICY-006",
+        "DDK-POLICY-007"
       ],
       "planSection": "WP-05 \u2014 Shared definitions, project policies, and provenance",
       "owners": [

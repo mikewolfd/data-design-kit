@@ -10,12 +10,7 @@
       "object": "readings",
       "catalogId": "urn:example:layered:dataset:readings",
       "role": "source_record",
-      "attribution": {
-        "assertedBy": "publisher",
-        "derivation": [
-          "deterministic"
-        ]
-      }
+      "origin": "publisher"
     },
     "readings-product": {
       "kind": "product",

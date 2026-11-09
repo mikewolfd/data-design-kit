@@ -10,12 +10,7 @@
       "object": "station-summary",
       "catalogId": "urn:example:layered:dataset:station-summary",
       "role": "application",
-      "attribution": {
-        "assertedBy": "project",
-        "derivation": [
-          "deterministic"
-        ]
-      }
+      "origin": "derived"
     },
     "summary-product": {
       "kind": "product",

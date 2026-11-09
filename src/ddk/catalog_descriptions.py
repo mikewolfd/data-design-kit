@@ -3,14 +3,20 @@
 Values are copied from the admitted definitions without interpretation. The
 only normalization is the one the standards define: a context string is
 shorthand for ``{"instructions": ...}``. Public views keep vocabulary values
-and withhold free text unless descriptions are granted.
+and withhold free text unless descriptions are granted; even then, SLA and
+context entries keep plain values without element names, links, identifiers
+or custom properties.
 """
 
 from copy import deepcopy
 
 PURPOSE_FIELDS = ("purpose", "usage", "limitations")
 PRODUCT_TEXT = ("name", "domain", "description", "context")
-DATASET_TEXT = ("description", "tags", "context", "canonicalUrls", "contract")
+DATASET_TEXT = ("description", "tags", "context", "contract")
+# Public SLA and context entries keep plain values only; identifiers, custom
+# properties and links follow the ordinary withholding rules.
+PUBLIC_SLA = {"property", "value", "valueExt", "unit", "driver", "description"}
+PUBLIC_CONTEXT_ITEM = {"question", "answer", "constraint", "tags"}
 
 
 def _context(value):
@@ -72,7 +78,6 @@ def dataset_facts(contract, selected):
     record = _compact({
         "status": contract.get("status"), "description": selected.get("description"),
         "tags": deepcopy(selected.get("tags")), "context": _context(selected.get("context")),
-        "canonicalUrls": _canonical_urls(selected),
         "contract": _compact({
             "description": _purpose(contract.get("description")), "context": _context(contract.get("context")),
             "slaProperties": sla, "tags": deepcopy(contract.get("tags")), "canonicalUrls": _canonical_urls(contract),
@@ -81,21 +86,50 @@ def dataset_facts(contract, selected):
     return record, unknown
 
 
+def _public_context(context):
+    result = {key: context[key] for key in ("instructions",) if key in context}
+    for key in ("verifiedStatements", "constraints"):
+        items = [{name: deepcopy(value) for name, value in item.items() if name in PUBLIC_CONTEXT_ITEM}
+                 for item in context.get(key, ())]
+        if items:
+            result[key] = items
+    return result or None
+
+
+def _public_sla(entry):
+    """Keep an entry whose element adds nothing beyond this dataset; withhold one naming fields or other objects."""
+    element = entry.get("element")
+    if element is not None and ("," in element or "." in element or element.strip("/").count("/") > 1):
+        return None
+    return {key: deepcopy(value) for key, value in entry.items() if key in PUBLIC_SLA}
+
+
 def public_product(product, policy):
     if not policy["descriptions"]:
         for key in PRODUCT_TEXT:
             product.pop(key, None)
+    else:
+        context = _public_context(product.pop("context", {}))
+        if context:
+            product["context"] = context
 
 
 def public_dataset(dataset, policy):
-    """Withhold free text without a descriptions grant and canonical URLs outside ``locations``."""
+    """Withhold free text without a descriptions grant, and structural names and links within it."""
     if not policy["descriptions"]:
         for key in DATASET_TEXT:
             dataset.pop(key, None)
         return
-    for holder in (dataset, dataset.get("contract", {})):
-        urls = [url for url in holder.pop("canonicalUrls", ()) if url in policy["locations"]]
-        if urls:
-            holder["canonicalUrls"] = urls
+    contract = dataset.get("contract", {})
+    for holder in (dataset, contract):
+        context = _public_context(holder.pop("context", {}))
+        if context:
+            holder["context"] = context
+    urls = [url for url in contract.pop("canonicalUrls", ()) if url in policy["locations"]]
+    if urls:
+        contract["canonicalUrls"] = urls
+    sla = [entry for entry in map(_public_sla, contract.pop("slaProperties", ())) if entry is not None]
+    if sla:
+        contract["slaProperties"] = sla
     if dataset.get("contract") == {}:
         dataset.pop("contract")

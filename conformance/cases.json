@@ -4264,67 +4264,6 @@
       }
     },
     {
-      "id": "CASE-LAYERED-VIEW",
-      "requirements": [
-        "DDK-DATA-006"
-      ],
-      "profile": "core",
-      "runtimeStatus": "planned",
-      "scenario": "A view property names a stored sibling in transformSourceObjects and gives its transform logic.",
-      "expected": {
-        "decision": "passed",
-        "checkStatus": "passed",
-        "exitCode": 0,
-        "diagnostic": null
-      }
-    },
-    {
-      "id": "CASE-LAYERED-VIEW-SOURCE",
-      "requirements": [
-        "DDK-DATA-006"
-      ],
-      "profile": "core",
-      "runtimeStatus": "planned",
-      "scenario": "A view property reads a missing property, another view, or omits its transform logic.",
-      "expected": {
-        "decision": "failed",
-        "checkStatus": "failed",
-        "exitCode": 1,
-        "diagnostic": "DATA-VIEW-SOURCE-MISSING"
-      }
-    },
-    {
-      "id": "CASE-LAYERED-STORAGE-INVALID",
-      "requirements": [
-        "DDK-DATA-006"
-      ],
-      "profile": "core",
-      "runtimeStatus": "planned",
-      "scenario": "A property's DDK storage annotation is neither stored nor view, or the property repeats it.",
-      "expected": {
-        "decision": "failed",
-        "checkStatus": "failed",
-        "exitCode": 1,
-        "diagnostic": "DATA-STORAGE-INVALID"
-      }
-    },
-    {
-      "id": "CASE-LAYERED-ATTRIBUTION",
-      "requirements": [
-        "DDK-SYNTAX-002",
-        "DDK-CATALOG-003"
-      ],
-      "profile": "core",
-      "runtimeStatus": "planned",
-      "scenario": "A derived dataset omits its derivation, a retained original declares one, or an attribution names an unknown asserting party.",
-      "expected": {
-        "decision": "failed",
-        "checkStatus": "failed",
-        "exitCode": 1,
-        "diagnostic": "DOC-SCHEMA"
-      }
-    },
-    {
       "id": "CASE-REF-004-REMOTE-REFERENCE",
       "requirements": [
         "DDK-REF-004"
@@ -4438,6 +4377,172 @@
       "profile": "catalog",
       "runtimeStatus": "planned",
       "scenario": "A granted project extension names its own withheld namespace; granting that name as an alias admits the extension unchanged.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-DISCLOSURE"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-VIEW",
+      "requirements": [
+        "DDK-POLICY-007"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A view-sources rule selects the source namespace; its view property names a stored sibling in transformSourceObjects and gives transformLogic.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-SOURCE",
+      "requirements": [
+        "DDK-POLICY-007"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "Within the rule's scope a view reads a missing property or another view, or omits transformLogic.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-VIEW-SOURCE"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-UPSTREAM",
+      "requirements": [
+        "DDK-POLICY-007"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A resolved dataset outside the rule lists an upstream object in transformSourceObjects and passes; selecting that dataset in the rule makes it fail.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-VIEW-SOURCE"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-SCOPE",
+      "requirements": [
+        "DDK-POLICY-007"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A view-sources rule names a namespace that is not loaded.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-VIEW-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ORIGIN",
+      "requirements": [
+        "DDK-SYNTAX-002",
+        "DDK-CATALOG-003"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A retained original declares a derived or model origin, or a dataset names an unknown origin.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "DOC-SCHEMA"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-ALIAS-COLLISION",
+      "requirements": [
+        "DDK-REF-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A layer registers an artifact with the same alias as its aliased import; the artifact and the imported namespace both still resolve.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-POLICY-002-PRIMARY-KEY",
+      "requirements": [
+        "DDK-POLICY-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A row-identity rule targets an object that declares its key only with ODCS primaryKey and primaryKeyPosition.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-POLICY-002-KEY-POSITIONS",
+      "requirements": [
+        "DDK-POLICY-002"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A row-identity rule targets an object with no key, or with two primary-key properties at the same position.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-ROW-IDENTITY"
+      }
+    },
+    {
+      "id": "CASE-LAYERED-SLA-ELEMENTS",
+      "requirements": [
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "SLA entries name the object by schema path, a property path, a mixed list, another object, a differently cased name, or only through the deprecated default element.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-PUBLIC-SLA",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public view with descriptions receives SLA entries naming a private field, entry links and custom properties, and verified statements with custom properties.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-LAYERED-EXTENSION-PARTS",
+      "requirements": [
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Granted extension values embed a withheld alias inside a path or name a withheld ODCS object name; a granted identifier and plain words pass.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",

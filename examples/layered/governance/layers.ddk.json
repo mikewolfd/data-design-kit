@@ -33,6 +33,13 @@
           ]
         }
       ]
+    },
+    {
+      "id": "source-views",
+      "check": "view-sources",
+      "namespaces": [
+        "/source"
+      ]
     }
   ]
 }

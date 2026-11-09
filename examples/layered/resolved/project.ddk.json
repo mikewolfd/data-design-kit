@@ -10,13 +10,7 @@
       "object": "stations",
       "catalogId": "urn:example:layered:dataset:stations",
       "role": "derived",
-      "attribution": {
-        "assertedBy": "project",
-        "derivation": [
-          "deterministic",
-          "model"
-        ]
-      }
+      "origin": "model"
     },
     "resolve-stations": {
       "kind": "component",

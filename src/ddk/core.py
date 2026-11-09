@@ -4,7 +4,7 @@ from collections import defaultdict
 import heapq
 
 from .capabilities import discover_capabilities
-from .datasets import check_view_properties, record_comparison
+from .datasets import record_comparison
 from .documents import DocumentError, RegistryError, ResourceLimit, json_pointer, schema_registry
 from .interfaces import check_arguments, check_interface
 from .inventory import ProjectInventory
@@ -31,6 +31,8 @@ def _reference_sites(artifact):
             for key in ("artifact", "dataset"):
                 if key in rule:
                     yield ("rules", index, key), rule[key], "dataset" if key == "dataset" else None
+            for position, reference in enumerate(rule.get("datasets", ())):
+                yield ("rules", index, "datasets", position), reference, "dataset"
 
 
 def _catalog_dependencies(inventory):
@@ -117,10 +119,10 @@ def _select(inventory, selection):
     selected = set()
     for entry in filters:
         try:
-            key = inventory.scoped(entry, "")
+            key, namespace = inventory.scoped(entry), inventory.scoped(entry, whole=True)
         except DocumentError:
-            key = ""
-        matches = {alias for alias in inventory.registrations if key and (alias == key or alias.startswith(f"{key}/"))}
+            key = namespace = ""
+        matches = {alias for alias in inventory.registrations if key and (alias == key or alias.startswith(f"{namespace}/"))}
         if not matches:
             inventory.report.add("DDK-CHECK-002", "core.references", f"selection:{entry}", "failed",
                                  diagnostics=[diagnostic("REF-SELECTION-MISSING", "The requested selection did not match an artifact or namespace.",
@@ -380,9 +382,7 @@ def check_inventory(inventory, required_groups=(), *, selection=None, handled_gr
                 edge_count = _check_design(inventory, artifact, validators, edge_count)
         for alias in sorted(inventory.selected_aliases):
             artifact = inventory.artifacts.get(alias)
-            if artifact and artifact.kind == "dataset":
-                check_view_properties(inventory, artifact)
-            elif artifact and artifact.kind == "policy":
+            if artifact and artifact.kind == "policy":
                 check_policy(inventory, artifact)
         record_definition_uses(inventory, inventory.selected_aliases)
     except ResourceLimit as exc:

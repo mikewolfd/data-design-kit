@@ -3,11 +3,13 @@
 from collections import Counter
 from pathlib import Path
 
+from .catalog_access import CatalogError, row_identity_names
 from .documents import DocumentError, json_pointer, pointer_get
 from .interfaces import json_contains
+from .ports import product_ports
 from .results import diagnostic, location
 
-KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary", "layer-order"}
+KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary", "layer-order", "view-sources"}
 
 
 def _annotations(value, key):
@@ -54,6 +56,9 @@ def check_policy(inventory, artifact):
         if kind == "layer-order":
             _layer_order(inventory, artifact, rule, subject, where)
             continue
+        if kind == "view-sources":
+            _view_sources(inventory, artifact, rule, subject, where)
+            continue
         requirement = {
             "fields-exist": "DDK-POLICY-002", "row-identity": "DDK-POLICY-002",
             "quality-fields": "DDK-POLICY-003", "vocabulary": "DDK-POLICY-004",
@@ -90,15 +95,18 @@ def check_policy(inventory, artifact):
                                       **where, related=related) for name in absent]
             report.add(requirement, "core.policies", subject, "failed" if absent else "passed", diagnostics=diagnostics)
         elif kind == "row-identity":
-            declarations = _annotations(target.effective, "rowIdentity")
-            valid = len(declarations) == 1 and _names(declarations[0]) and set(declarations[0]) <= fields
-            diagnostics = [] if valid else [
-                diagnostic("POLICY-ROW-IDENTITY", "Expected one rowIdentity annotation with distinct existing field names.",
+            try:
+                names = row_identity_names(target.effective)
+            except DocumentError:
+                names = None
+            diagnostics = [] if names else [
+                diagnostic("POLICY-ROW-IDENTITY", "Expected a row identity: ODCS primaryKey properties with unambiguous "
+                           "positions, or one rowIdentity annotation with distinct existing field names.",
                            **where, related=related)
             ]
-            report.add(requirement, "core.policies", subject, "passed" if valid else "failed", diagnostics=diagnostics)
-            if valid:
-                report.metadata.setdefault("rowIdentityAssumptions", {})[target.alias] = declarations[0]
+            report.add(requirement, "core.policies", subject, "passed" if names else "failed", diagnostics=diagnostics)
+            if names:
+                report.metadata.setdefault("rowIdentityAssumptions", {})[target.alias] = names
         else:
             _quality(report, requirement, subject, target, fields, where, related, inventory.display_path)
 
@@ -174,16 +182,14 @@ def record_definition_uses(inventory, aliases):
 
 def _layer_edges(inventory):
     """Yield (kind, consumer, consumer namespace, target alias, declaration location) and unresolved reasons."""
-    from .catalog_access import CatalogError
-    from .ports import product_ports
-
     def site(path, parts=()):
         return location(inventory.display_path(path), json_pointer(parts))
 
     try:
         for product, ports in product_ports(inventory):
-            for direction, port, _, dataset in ports:
-                index = next(i for i, item in enumerate(product.value[f"{direction}Ports"]) if item["name"] == port)
+            for direction, port, version, dataset in ports:
+                index = next(i for i, item in enumerate(product.value[f"{direction}Ports"])
+                             if (item["name"], item.get("version")) == (port, version))
                 yield ("port", f"{product.alias} {direction} port {port}", product.namespace, dataset.alias,
                        site(product.path, (f"{direction}Ports", index)))
     except (CatalogError, DocumentError) as exc:
@@ -229,7 +235,7 @@ def _layer_order(inventory, artifact, rule, subject, where):
     ranks, invalid = {}, [] if len(set(names)) == len(names) else ["Layer names must be unique."]
     for rank, layer in enumerate(rule["layers"]):
         for reference in layer["namespaces"]:
-            namespace = inventory.scoped(reference, artifact.namespace)
+            namespace = inventory.scoped(reference, artifact.namespace, whole=True)
             if namespace not in inventory.projects:
                 invalid.append(f"Namespace {reference!r} is not a loaded project namespace.")
             elif namespace in ranks:
@@ -266,3 +272,56 @@ def _layer_order(inventory, artifact, rule, subject, where):
     status = "failed" if violations else "unknown" if uncertain else "passed"
     report.add("DDK-POLICY-006", "core.policies", subject, status, diagnostics=details,
                reason="Some declared dependencies could not be placed in a layer." if status == "unknown" else None)
+
+
+def _properties(value, parts=()):
+    for index, prop in enumerate(value.get("properties", ())):
+        yield prop, (*parts, "properties", index)
+        yield from _properties(prop, (*parts, "properties", index))
+    if isinstance(value.get("items"), dict):
+        yield from _properties(value["items"], (*parts, "items"))
+
+
+def _view_sources(inventory, artifact, rule, subject, where):
+    """In the selected datasets, `transformSourceObjects` names stored siblings: each such property is a view.
+
+    ODCS uses the field for upstream objects in general; this rule applies the
+    project's narrower convention only where the policy selects it.
+    """
+    report = inventory.report
+    targets, scope, unavailable = {}, [], []
+    for reference in rule.get("datasets", ()):
+        try:
+            target = inventory.resolve(reference, artifact.namespace, "dataset")
+        except DocumentError as exc:
+            unavailable.append(str(exc))
+            continue
+        targets[target.alias] = target
+    for reference in rule.get("namespaces", ()):
+        namespace = inventory.scoped(reference, artifact.namespace, whole=True)
+        if namespace not in inventory.projects:
+            scope.append(diagnostic("POLICY-VIEW-SCOPE", f"Namespace {reference!r} is not a loaded project namespace.", **where))
+        targets.update((alias, item) for alias, item in inventory.artifacts.items() if item.kind == "dataset"
+                       and (item.namespace == namespace or item.namespace.startswith(f"{namespace}/")))
+    problems, views = list(scope), 0
+    for alias, target in sorted(targets.items()):
+        if target.effective is None:
+            unavailable.append(f"The effective definition of {alias} is unavailable.")
+            continue
+        stored = {prop["name"] for prop in target.effective.get("properties", ()) if not prop.get("transformSourceObjects")}
+        for prop, parts in _properties(target.effective):
+            sources = prop.get("transformSourceObjects")
+            if not sources:
+                continue
+            views += 1
+            related = [location(inventory.display_path(target.path), target.pointer + json_pointer(parts))]
+            if not prop.get("transformLogic"):
+                problems.append(diagnostic("POLICY-VIEW-SOURCE", f"View {alias}.{prop['name']} has no transformLogic.",
+                                           **where, related=related))
+            problems.extend(diagnostic("POLICY-VIEW-SOURCE", f"View {alias}.{prop['name']} reads {name!r}, which is not "
+                                       "a stored property of the same object.", **where, related=related)
+                            for name in sources if name not in stored)
+    report.metadata.setdefault("viewSources", {})[subject] = {"datasets": len(targets), "views": views}
+    status = "failed" if problems else "not_run" if unavailable else "passed"
+    report.add("DDK-POLICY-007", "core.policies", subject, status, diagnostics=problems,
+               reason=" ".join(unavailable) if status == "not_run" else None)

@@ -177,6 +177,50 @@
                 "$ref": "common.schema.json#/$defs/alias"
               },
               "check": {
+                "const": "view-sources"
+              },
+              "namespaces": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/artifactRef"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "datasets": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/artifactRef"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "check"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "namespaces"
+                ]
+              },
+              {
+                "required": [
+                  "datasets"
+                ]
+              }
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/alias"
+              },
+              "check": {
                 "type": "string",
                 "format": "uri",
                 "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*:"

@@ -9,7 +9,7 @@ from pathlib import Path
 from types import MappingProxyType
 
 from .catalog_access import (
-    CatalogError, compare_equal, field_at, field_type, relationship_keys, row_identity_paths,
+    CatalogError, compare_equal, field_at, field_type, relationship_keys, row_identity_names,
     resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
@@ -177,7 +177,7 @@ class Assembly:
             "contractId": artifact.identity, "version": artifact.version,
             "object": artifact.selection, "source": owner_record(artifact.document),
         }}
-        for output, source, key in (("role", artifact.registration, "role"), ("attribution", artifact.registration, "attribution"),
+        for output, source, key in (("role", artifact.registration, "role"), ("origin", artifact.registration, "origin"),
                                     ("title", selected, "businessName"), ("rowMeaning", selected, "dataGranularityDescription")):
             if source.get(key):
                 result[output] = deepcopy(source[key])
@@ -231,22 +231,9 @@ class Assembly:
         self.production_definitions()
 
     def derive_identity(self, alias, schema):
-        row_paths = row_identity_paths(schema)
-        authored = [identity for identity in self.identities[alias] if identity["kind"] == "key"]
-        if authored:
+        names = row_identity_names(schema)
+        if names is None or any(identity["kind"] == "key" for identity in self.identities[alias]):
             return
-        if row_paths is not None:
-            names = [path[0]["field"] for path in row_paths]
-        else:
-            primary = [field for field in schema.get("properties", ()) if field.get("primaryKey") is True]
-            if not primary:
-                return
-            positions = [field.get("primaryKeyPosition", -1) for field in primary]
-            if len(primary) > 1 and (any(position < 1 for position in positions) or len(set(positions)) != len(positions)):
-                raise CatalogError("CATALOG-KEY-INCOMPLETE", "A composite ODCS key needs unambiguous positions.")
-            names = [field["name"] for field in sorted(primary, key=lambda field: field.get("primaryKeyPosition", -1))]
-        if len(set(names)) != len(names):
-            raise CatalogError("CATALOG-KEY-INCOMPLETE", "An ODCS row identity needs unique ordered field names.")
         identity = {"dataset": alias, "kind": "key", "scope": "dataset_version",
                     "meaning": "Declared row identity from the selected ODCS object.", "fields": []}
         for name in names:

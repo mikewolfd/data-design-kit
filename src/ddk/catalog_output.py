@@ -8,6 +8,7 @@ from hashlib import file_digest, sha256
 from importlib.metadata import version
 import os
 from pathlib import Path
+import re
 from shutil import rmtree
 import sys
 from tempfile import mkdtemp
@@ -23,6 +24,7 @@ POLICY_LISTS = {"identifiers", "aliases", "locations", "evidence", "recipes", "n
 FIELD_SHAPE = {"name", "logicalType", "required"}
 FIELD_DESCRIPTIONS = {"businessName", "description", "dataGranularityDescription"}
 TYPE_DETAIL_GRANTS = {"definitionPhysicalTypes": "physicalType", "definitionLogicalTypeOptions": "logicalTypeOptions"}
+NAME_SEPARATORS = re.compile(r"[/:#\s]+")
 
 
 def read_disclosure(document):
@@ -116,13 +118,27 @@ def _withheld_names(catalog, policy, details):
         identifiers.add(identity)
     for row in catalog["datasets"]:
         names.add(row["definition"]["object"])
+        names.add(details.get("datasetDefinitions", {}).get(row["alias"], {}).get("name", ""))
         identifiers.update((row["id"], row["definition"]["contractId"]))
     for row in catalog["products"]:
         identifiers.add(row["id"])
         names.update(port["port"] for port in row["ports"])
     for section in ("relationships", "recipes", "versions", "sources", "representations", "releases", "runs"):
         identifiers.update(row["id"] for row in catalog[section])
+    names.discard("")
     return (names - set(policy["aliases"])) | (identifiers - policy["identifiers"])
+
+
+def _withheld_name(value, withheld, policy):
+    """The first withheld name in a value, matching whole strings and their path-like parts."""
+    granted = set(policy["aliases"]) | policy["identifiers"]
+    for text in _strings(value):
+        if text in granted:
+            continue
+        for name in (text, *NAME_SEPARATORS.split(text)):
+            if name in withheld:
+                return name
+    return None
 
 
 def public_view(catalog, policy, details_key):
@@ -237,8 +253,9 @@ def public_view(catalog, policy, details_key):
                 raise CatalogError("CATALOG-DISCLOSURE", "A disclosed extension's source project identifier must be permitted.")
             values = {key: deepcopy(value) for key, value in row["extensions"].items() if key in permitted}
             # An extension value is opaque: refuse rather than edit it when it names a withheld identity.
-            if any(name in withheld for name in _strings(values)):
-                raise CatalogError("CATALOG-DISCLOSURE", "A granted project extension names a withheld alias, namespace or identifier.")
+            if (name := _withheld_name(values, withheld, policy)) is not None:
+                raise CatalogError("CATALOG-DISCLOSURE", f"A granted project extension names withheld {name!r}; "
+                                   "grant that alias or identifier, or remove it from the extension.")
             disclosed_extensions.append({
                 "project": deepcopy(row["project"]),
                 "namespace": _alias(row["namespace"], policy["aliases"]) if row["namespace"] else "",

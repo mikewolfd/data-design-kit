@@ -206,19 +206,25 @@ class ProjectInventory:
             return False
         return True
 
-    def canonical(self, alias):
-        """Replace the longest aliased import-namespace prefix until none remains."""
+    def canonical(self, alias, *, whole=False):
+        """Replace the longest aliased import-namespace prefix until none remains.
+
+        An artifact alias's last segment names the artifact, so only its
+        namespace prefixes are rewritten; ``whole`` also rewrites a complete
+        namespace reference.
+        """
         for _ in range(self.limits["maxReferenceDepth"] + 1):
             parts = alias.split("/")
-            prefix = next((end for end in range(len(parts), 0, -1)
+            longest = len(parts) if whole else len(parts) - 1
+            prefix = next((end for end in range(longest, 0, -1)
                            if "/".join(parts[:end]) in self.import_aliases), None)
             if prefix is None:
                 return alias
             alias = "/".join(filter(None, (self.import_aliases["/".join(parts[:prefix])], *parts[prefix:])))
         raise ResourceLimit(f"Import namespace aliases exceed depth {self.limits['maxReferenceDepth']}.")
 
-    def scoped(self, reference, namespace=""):
-        return self.canonical(scoped_alias(reference, namespace))
+    def scoped(self, reference, namespace="", *, whole=False):
+        return self.canonical(scoped_alias(reference, namespace), whole=whole)
 
     def visit(self, root):
         """Load each project file once, at its shortest import path from the root.

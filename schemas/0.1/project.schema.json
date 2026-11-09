@@ -51,8 +51,8 @@
                   "evidence"
                 ]
               },
-              "attribution": {
-                "$ref": "common.schema.json#/$defs/attribution"
+              "origin": {
+                "$ref": "common.schema.json#/$defs/datasetOrigin"
               }
             },
             "required": [
@@ -66,47 +66,21 @@
                 "if": {
                   "properties": {
                     "role": {
-                      "enum": [
-                        "derived",
-                        "application"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "role",
-                    "attribution"
-                  ]
-                },
-                "then": {
-                  "properties": {
-                    "attribution": {
-                      "required": [
-                        "derivation"
-                      ]
-                    }
-                  }
-                }
-              },
-              {
-                "if": {
-                  "properties": {
-                    "role": {
                       "const": "original"
                     }
                   },
                   "required": [
                     "role",
-                    "attribution"
+                    "origin"
                   ]
                 },
                 "then": {
                   "properties": {
-                    "attribution": {
-                      "not": {
-                        "required": [
-                          "derivation"
-                        ]
-                      }
+                    "origin": {
+                      "enum": [
+                        "publisher",
+                        "third_party"
+                      ]
                     }
                   }
                 }

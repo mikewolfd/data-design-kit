@@ -39,6 +39,9 @@ Head [`34b12923`](https://github.com/datacontract/datacontract-cli/commit/34b129
 
 Open [PR 1725](https://github.com/datacontract/datacontract-cli/pull/1725) proposes rejecting extra fields, and [PR 1726](https://github.com/datacontract/datacontract-cli/pull/1726) proposes declared field-order enforcement. These are not credited as shipped capabilities.
 
+<a id="data-contract-cli-inline-references"></a>
+In the installed 1.2.9 package, `inline_references` decides whether `authoritativeDefinitions` of type `definition`, `semantics`, or `businessDefinition` are resolved and inlined. Its help text says relative URLs and semantics IRIs are looked up on the configured Entropy Data host, other URLs are fetched, and file references are read from disk. The CLI commands and the `DataContract` API enable it by default; `--no-inline-references` turns it off. DDK's quality adapter calls lint and tests with `inline_references=False`, so offline core treats remote links as references unless a document opts in.
+
 **Plan consequence:** compare 1.2.9 and the pinned development resolver before choosing a baseline. Prefer delegation to upstream implementations when they meet the required behavior. Test case-sensitive logical names separately from native backend conventions.
 
 ### 2.5 Frictionless

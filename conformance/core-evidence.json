@@ -580,35 +580,6 @@
       ]
     },
     {
-      "id": "CASE-LAYERED-VIEW",
-      "coverage": "exercised",
-      "tests": [
-        "tests/core/test_layered_imports.py::test_view_property_reads_a_stored_property_of_the_same_object",
-        "tests/core/test_layered_imports.py::test_storage_annotations_of_other_vendors_are_not_interpreted"
-      ]
-    },
-    {
-      "id": "CASE-LAYERED-VIEW-SOURCE",
-      "coverage": "exercised",
-      "tests": [
-        "tests/core/test_layered_imports.py::test_view_property_without_a_stored_source_fails"
-      ]
-    },
-    {
-      "id": "CASE-LAYERED-STORAGE-INVALID",
-      "coverage": "exercised",
-      "tests": [
-        "tests/core/test_layered_imports.py::test_view_property_without_a_stored_source_fails"
-      ]
-    },
-    {
-      "id": "CASE-LAYERED-ATTRIBUTION",
-      "coverage": "exercised",
-      "tests": [
-        "tests/core/test_layered_imports.py::test_attribution_names_derivation_for_derived_data_and_none_for_originals"
-      ]
-    },
-    {
       "id": "CASE-REF-004-REMOTE-REFERENCE",
       "coverage": "exercised",
       "tests": [
@@ -621,6 +592,62 @@
       "tests": [
         "tests/core/test_inventory_impact.py::test_remote_definition_link_is_a_reference_unless_the_contract_opts_in",
         "tests/core/test_inventory_impact.py::test_definition_failures_keep_dependent_comparison_not_run"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-VIEW",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_view_sources_rule_checks_views_in_its_namespaces"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-SOURCE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_view_without_a_stored_sibling_or_logic_fails"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-UPSTREAM",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_upstream_source_objects_outside_the_rule_are_ordinary_odcs"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-VIEW-SCOPE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_view_sources_rule_names_only_loaded_namespaces"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ORIGIN",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_origin_is_one_known_value_and_originals_are_never_derived"
+      ]
+    },
+    {
+      "id": "CASE-LAYERED-ALIAS-COLLISION",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_artifact_named_like_an_aliased_import_still_resolves"
+      ]
+    },
+    {
+      "id": "CASE-POLICY-002-PRIMARY-KEY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_row_identity_accepts_the_odcs_primary_key"
+      ]
+    },
+    {
+      "id": "CASE-POLICY-002-KEY-POSITIONS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/core/test_layered_imports.py::test_row_identity_accepts_the_odcs_primary_key"
       ]
     }
   ]

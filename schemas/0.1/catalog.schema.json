@@ -795,8 +795,8 @@
             "evidence"
           ]
         },
-        "attribution": {
-          "$ref": "common.schema.json#/$defs/attribution"
+        "origin": {
+          "$ref": "common.schema.json#/$defs/datasetOrigin"
         },
         "definition": {
           "type": "object",
@@ -839,9 +839,6 @@
         },
         "context": {
           "$ref": "#/$defs/agentContext"
-        },
-        "canonicalUrls": {
-          "$ref": "#/$defs/canonicalUrls"
         },
         "contract": {
           "type": "object",

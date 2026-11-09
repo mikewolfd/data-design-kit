@@ -50,6 +50,20 @@ def row_identity_paths(schema):
     return paths
 
 
+def row_identity_names(schema):
+    """The object's ordered row identity: its DDK rowIdentity annotation, else its ODCS primaryKey properties."""
+    paths = row_identity_paths(schema)
+    if paths is not None:
+        return [path[0]["field"] for path in paths]
+    primary = [field for field in schema.get("properties", ()) if field.get("primaryKey") is True]
+    if not primary:
+        return None
+    positions = [field.get("primaryKeyPosition", -1) for field in primary]
+    if len(primary) > 1 and (any(position < 1 for position in positions) or len(set(positions)) != len(positions)):
+        raise CatalogError("CATALOG-KEY-INCOMPLETE", "A composite ODCS key needs unambiguous positions.")
+    return [field["name"] for field in sorted(primary, key=lambda field: field.get("primaryKeyPosition", -1))]
+
+
 def field_type(field):
     """The initial equality profile recognizes only native bytes and supported logical scalars."""
     logical = field.get("logicalType")

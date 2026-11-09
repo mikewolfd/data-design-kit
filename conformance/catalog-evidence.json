@@ -45,8 +45,8 @@
         "evidenceSha256": "a0f3b43f59476443eedfeffb8d96b2a6b3b661051c2de66e752cc3b73f1e909c"
       },
       {
-        "passedTests": 8,
-        "scope": "Source-checkout layered-map catalog cases on branch codex/ddk-datamap-requirements-20261108: shared imports, product and dataset descriptive facts, SLA applicability, public disclosure and extension refusal. No installed qualification."
+        "passedTests": 19,
+        "scope": "Source-checkout layered-map catalog cases on branch codex/ddk-datamap-requirements-20261108: shared imports, product and dataset descriptive facts and origin, SLA applicability, public SLA/context/extension disclosure. No installed qualification."
       }
     ]
   },
@@ -1344,7 +1344,7 @@
       "tests": [
         "tests/catalog/test_layered_catalog.py::test_datasets_carry_their_contract_values_and_only_applicable_sla"
       ],
-      "evidence": "The retention entry naming another object is excluded; the frequency and readings latency entries remain."
+      "evidence": "The retention entry naming another object is excluded; the frequency and readings latency entries remain; origin is copied."
     },
     {
       "id": "CASE-LAYERED-SLA-UNKNOWN",
@@ -1379,6 +1379,40 @@
         "tests/catalog/test_layered_catalog.py::test_public_extension_naming_a_withheld_namespace_is_refused"
       ],
       "evidence": "The refused view writes no artifacts; the granted view discloses the extension value exactly."
+    },
+    {
+      "id": "CASE-LAYERED-SLA-ELEMENTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_sla_elements_apply_by_object_name_or_stable_id",
+        "tests/catalog/test_layered_catalog.py::test_deprecated_default_element_scopes_entries_without_their_own"
+      ],
+      "evidence": "Entries attach only when an element names this object by name or stable ID."
+    },
+    {
+      "id": "CASE-LAYERED-PUBLIC-SLA",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_public_sla_and_context_entries_withhold_names_links_and_custom_properties"
+      ],
+      "evidence": "Field-level entries are withheld; object-level entries keep plain values; no element, link or custom property reaches public bytes."
+    },
+    {
+      "id": "CASE-LAYERED-EXTENSION-PARTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-DISCLOSURE",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_public_extension_values_are_checked_by_their_path_like_parts"
+      ],
+      "evidence": "Path-like parts and object names are matched; granted whole identifiers are not split."
     }
   ],
   "additionalReceiptTests": [

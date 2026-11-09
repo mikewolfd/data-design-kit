@@ -84,20 +84,15 @@
               "type": "businessDefinition",
               "url": "https://glossary.example.org/terms/station-code"
             }
-          ]
+          ],
+          "transformLogic": "$.station"
         },
         {
           "name": "payload",
           "logicalType": "string",
           "physicalType": "JSON",
           "required": true,
-          "customProperties": [
-            {
-              "vendor": "ddk",
-              "property": "storage",
-              "value": "stored"
-            }
-          ]
+          "transformLogic": "$"
         },
         {
           "name": "temperature_c",
@@ -106,14 +101,7 @@
           "transformSourceObjects": [
             "payload"
           ],
-          "transformLogic": "CAST(payload ->> 'temp_c' AS DOUBLE)",
-          "customProperties": [
-            {
-              "vendor": "ddk",
-              "property": "storage",
-              "value": "view"
-            }
-          ]
+          "transformLogic": "CAST(payload ->> 'temp_c' AS DOUBLE)"
         }
       ]
     },

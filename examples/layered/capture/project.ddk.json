@@ -16,9 +16,7 @@
       "object": "station-files",
       "catalogId": "urn:example:layered:dataset:station-files",
       "role": "original",
-      "attribution": {
-        "assertedBy": "publisher"
-      }
+      "origin": "publisher"
     },
     "capture-product": {
       "kind": "product",
