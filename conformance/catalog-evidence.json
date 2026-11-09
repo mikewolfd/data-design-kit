@@ -1378,6 +1378,46 @@
       ]
     },
     {
+      "id": "CASE-CATALOG-013-GRAPH",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_graph.py::test_graph_holds_every_catalog_fact_once",
+        "tests/catalog/test_catalog_graph.py::test_graph_keeps_dcat_unchanged_turtle_equal_and_bytes_stable",
+        "tests/catalog/test_catalog_graph.py::test_graph_states_runs_checks_links_and_origins_with_standard_terms",
+        "tests/catalog/test_catalog_graph.py::test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_uses"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-014-RML",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_rml_maps_rows_values_and_links_from_the_declarations",
+        "tests/catalog/test_catalog_rml.py::test_rml_yaml_reads_back_as_the_mapping_structure"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-014-MATCH-DECISIONS",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_match_decisions_map_to_skos_matches_and_never_to_same_as"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-014-NO-DEFINITIONS",
+      "coverage": "exercised",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "ADAPTER-CAPABILITY-MISSING",
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_rml_without_dataset_definitions_is_not_run"
+      ]
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "coverage": "exercised",
       "expectedDecision": "error",

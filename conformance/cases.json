@@ -94,6 +94,66 @@
       }
     },
     {
+      "id": "CASE-CATALOG-013-GRAPH",
+      "requirements": [
+        "DDK-CATALOG-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce and layered catalogs export a JSON-LD graph, and Turtle on request, that an independent reader parses. It holds as many datasets, versions, linksets, quality measurements, products and plans as the catalog. A not-run check stays not_run with declared evidence. Runs, origins, layers and link facets use standard terms. Every DDK term it uses is defined in vocab/ddk.ttl, whose schemes restate the schema enums. The DCAT companion is byte-identical with or without the graph.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-RML",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce catalog exports one YARRRML document per dataset. Row IRIs come from the key, typed values from logical types, and the orders-to-customers relationship maps to the customer row IRI. Predicates and graphs are explicit IRI term maps, and the YAML reads back as the generated structure.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-MATCH-DECISIONS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An evidence dataset with a decision column and two relationships maps same to skos:exactMatch, undecided to skos:closeMatch and not_same to ddkv:noMatch, never to owl:sameAs. The same table with another role maps only its own rows.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-NO-DEFINITIONS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A catalog without its dataset definitions, such as one whose definitions were withheld, cannot generate mappings, and the export stays not_run.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-CAPABILITY-MISSING"
+      }
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "requirements": [
         "DDK-CATALOG-007"

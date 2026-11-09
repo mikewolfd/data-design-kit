@@ -87,7 +87,7 @@ A conforming product MUST identify its specification version and claimed product
 <a id="DDK-CONF-002"></a>
 ### DDK-CONF-002 — Required profiles
 
-`core` is mandatory for a core checker. Command-selected profiles are `impact`, `catalog`, `catalog.dcat`, `lineage.openlineage`, `odcs-cli`, `files.frictionless`, `ingest.dlt`, `plan.docspec-sql`, `execute.docspec-job`, `runtime.docspec-managed`, `plan.datafusion`, `plan.substrait-validator`, `test.fixtures`, and `test.portability`. The `catalog` profile includes ODPS resolution and the checks in Section 19. `plan.datafusion` covers saved Substrait production and consumption through DocSpec. The first product release has a separate profile requirement in DDK-VERSION-003.
+`core` is mandatory for a core checker. Command-selected profiles are `impact`, `catalog`, `catalog.dcat`, `catalog.graph`, `catalog.rml`, `lineage.openlineage`, `odcs-cli`, `files.frictionless`, `ingest.dlt`, `plan.docspec-sql`, `execute.docspec-job`, `runtime.docspec-managed`, `plan.datafusion`, `plan.substrait-validator`, `test.fixtures`, and `test.portability`. The `catalog` profile includes ODPS resolution and the checks in Section 19. `plan.datafusion` covers saved Substrait production and consumption through DocSpec. The first product release has a separate profile requirement in DDK-VERSION-003.
 
 `core` operates on local declarations and a local schema registry. A checker MUST complete it without selecting an execution engine, importing component implementation modules, contacting databases, reading production rows, or using network access. `catalog` MUST support local generation from explicit metadata inputs without opening the data payloads they describe.
 
@@ -571,6 +571,8 @@ The detailed profile boundaries in [adapter-profiles.md](adapter-profiles.md) im
 | `catalog` | `catalog.definitions`, `catalog.relationships`, `catalog.versions`, `catalog.evidence`; requested `catalog.recipes` | Declared definitions and cited native observations; recipe SQL bound by a selected parser |
 | `catalog.dcat` | `catalog.dcat` | Generated DCAT 3 discovery and checked access links |
 | `lineage.openlineage` | `lineage.openlineage` | Declared job events and observed run events |
+| `catalog.graph` | `catalog.graph` | DCAT 3 with PROV-O, DQV, VoID and SKOS statements, counted against the catalog |
+| `catalog.rml` | `catalog.rml` | Generated YARRRML mappings; not executed by DDK |
 | `odcs-cli` | `odcs.lint`, `odcs.versions`, `data.odcs` | Declared or executed, depending on command |
 | `files.frictionless` (frozen) | `files.structure`, `files.constraints` | Executed |
 | `ingest.dlt` (frozen) | `ingest.schema-policy`, `ingest.receipt` | Declared/executed |
@@ -890,6 +892,36 @@ Each job is one production. Its identity is the declared `id`, versioned by the 
 
 A bounded or managed DocSpec run MAY name a job production. It binds only when its pinned request keeps the job's input names, its steps in order with their SQL, parameters and materialization, and its outputs. Input bindings, whether file paths or exact native versions, and scratch paths MAY differ. Any other difference MUST leave the run unbound with `CATALOG-NATIVE-RECEIPT`. A bound run uses the job's declared mappings unless the metadata entry narrows them. It then follows DDK-CATALOG-005: the run records the exact input and output versions observed, its time and outcome come from the native receipt, and check summaries attach to those versions.
 
+<a id="DDK-CATALOG-013"></a>
+### DDK-CATALOG-013 — Knowledge-graph export
+
+`--export graph` writes `discovery.graph.jsonld`, and `--export graph.ttl` writes the same graph as Turtle. The graph is the unchanged DCAT 3 document of DDK-CATALOG-008, derived only from the admitted catalog, plus these statements:
+
+- **PROV-O.** Each exact version is a `prov:Entity`. Each observed run is a `prov:Activity` that `prov:used` its input versions and generated its output versions (`prov:wasGeneratedBy`), with its times and a `prov:qualifiedAssociation` to the production it ran. Each production is a `prov:Plan`. A definition MUST NOT produce an activity, because a declared production is not evidence that anything ran (DDK-CATALOG-009).
+- **Origin.** A dataset's `origin` becomes `prov:wasAttributedTo` an agent typed with a concept from the DDK origin scheme.
+- **DQV.** Each check is a `dqv:QualityMeasurement` `dqv:computedOn` the version it binds to, `dqv:isMeasurementOf` its rule as a `dqv:Metric`, and attributed to its evaluator. Its `dqv:value` is a concept from the DDK check-outcome scheme, and its `dcterms:type` is a concept from the evidence-strength scheme: `executed` only with a retained native report. `unknown` and `not_run` MUST stay distinct.
+- **VoID.** Each relationship is a `void:Linkset` between its two datasets, with the relationship identifier as `void:linkPredicate`, its meaning as `dcterms:description`, and its cardinality, scope, null handling and match rule as SKOS concepts under `dcterms:type`.
+- **SKOS and descriptions.** Roles, statuses and layer names are `dcat:theme` concepts; statuses and layers form schemes under the catalog identifier. A dataset's description is `dcterms:description` and its row meaning `skos:definition`. Each field is described under the predicate DDK-CATALOG-014 maps it to, with its description as `skos:definition`.
+- **Products.** Each product is a `dcat:Resource` that conforms to ODPS, with its output datasets as `dcterms:hasPart` and its inputs as `dcterms:requires`.
+
+Identifiers are the catalog's own; new nodes take stable identifiers derived from them, with no blank nodes, so identical inputs give identical bytes. The DDK vocabulary is [vocab/ddk.ttl](../vocab/ddk.ttl). Its check-outcome and evidence-strength schemes are DDK's own; its other schemes restate enums defined in DDK schemas, and `ddkv:noMatch` records a negative match decision.
+
+*Acceptance.* An independent JSON-LD reader MUST parse the graph and count as many datasets, versions, relationships, checks and products as the catalog holds; otherwise the export fails with `CATALOG-GRAPH-VALIDATION`.
+
+<a id="DDK-CATALOG-014"></a>
+### DDK-CATALOG-014 — RML mappings
+
+`--export rml` writes one YARRRML document per dataset, `rml/<alias>.yarrrml.yml`, derived from the effective ODCS definition, row identity and relationships. DDK writes mappings; it does not run them. An RML engine lifts the rows of one exact version, named by the document's `external.source`, into the named graph `external.version`. When the catalog knows an available Parquet or CSV file for a version, the export fills both in.
+
+- **Rows.** The subject is an IRI template under the dataset identifier built from its first top-level key. A dataset without one maps rows to blank nodes.
+- **Values.** Each top-level property maps to its ODCS `authoritativeDefinitions` entry of type `canonicalUrl`, when present, or else to a predicate scoped to the dataset. Integer, boolean, date, time and timestamp values carry XSD datatypes; `number` stays untyped, following DDK-DATA-003.
+- **Links.** A relationship whose target fields are the target's key maps to the target row's IRI. A relationship on one other column maps to a join condition.
+- **Explicit IRIs.** Predicates and graphs are written as explicit IRI term maps, because readers that guess IRIs from the scheme read `urn:` constants as literals.
+- **Match decisions.** A dataset with role `evidence`, a string `decision` column and two relationships to the rows it matches also maps each row to a link between those rows. `same` maps to `skos:exactMatch`, `undecided` to `skos:closeMatch`, and `not_same` to `ddkv:noMatch`; it MUST NOT map to `owl:sameAs`. The relationship with the lower identifier gives the subject. Each decision value reads the file through a DuckDB view.
+- **Not mapped.** Nested objects and arrays, composite or repeated-value joins and links to targets without a key stay unmapped, and a comment in the document names each one.
+
+*Acceptance.* Morph-KGC MUST materialize the commerce example's exact versions from the generated mappings, each in its own named graph, and a SPARQL query MUST join orders to customers through the generated relationship predicate.
+
 ### 19.1 Layered maps (informative)
 
 A layered map keeps retained originals, source records, resolved entities, and products in separate projects. An aggregator root imports every layer while each layer also imports its lower neighbour; DDK-REF-002 loads each layer once. DDK-POLICY-006 keeps the layer direction checkable under that flat root, and DDK-CATALOG-003 `origin` separates publisher assertions from project and model derivations. The [layered example](../examples/layered/README.md) shows these together. [WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) records further requirements that are specified but not implemented.
@@ -908,6 +940,8 @@ A layered map keeps retained originals, source records, resolved entities, and p
 - [ODCS 3.2.0](https://github.com/bitol-io/open-data-contract-standard/tree/v3.2.0), its [pinned schema correction](https://github.com/bitol-io/open-data-contract-standard/commit/448f7b93329ece7827897d7dd51e827a3e279460), and the [vendored schema](../vendor/odcs/3.2.0/odcs-json-schema.json). The draft intentionally uses this development revision; it is not byte-identical to the published tag.
 - [ODPS 1.1.0](https://github.com/bitol-io/open-data-product-standard/tree/v1.1.0) and its [pinned schema](../vendor/odps/1.1.0/odps-json-schema-v1.1.0.json).
 - [DCAT 3](https://www.w3.org/TR/2024/REC-vocab-dcat-3-20240822/) and [JSON-LD 1.1](https://www.w3.org/TR/json-ld11/).
+- [PROV-O](https://www.w3.org/TR/prov-o/), [SKOS](https://www.w3.org/TR/skos-reference/), the [Data Quality Vocabulary](https://www.w3.org/TR/vocab-dqv/) and [VoID](https://www.w3.org/TR/void/), with [RDF 1.1 Turtle](https://www.w3.org/TR/turtle/): the graph export (DDK-CATALOG-013).
+- [RML](https://kg-construct.github.io/rml-core/spec/docs/) and [YARRRML](https://rml.io/yarrrml/spec/): the mapping export (DDK-CATALOG-014).
 - [OpenLineage 1.55.0](https://github.com/OpenLineage/OpenLineage/tree/1.55.0), the [event schema](../vendor/openlineage/1.55.0/OpenLineage.json), and the [version facet](../vendor/openlineage/1.55.0/DatasetVersionDatasetFacet.json).
 - [Substrait](https://substrait.io/spec/specification/) for the plan format version selected by the qualified adapter.
 - [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) for DDK artifact version syntax.
@@ -916,3 +950,5 @@ A layered map keeps retained originals, source records, resolved entities, and p
 ### 20.2 Informative references
 
 [Research and references](references.md) records specific upstream versions, licenses, documented capabilities, and links for Data Contract CLI, Frictionless, dlt, Substrait, DataFusion, pytest, CUE, and W3C specification guidance. The adapter profiles record which behaviors remain proposed or unverified.
+
+[Morph-KGC](https://github.com/morph-kgc/morph-kgc) 2.10.0 (Apache-2.0) is the RML engine that DDK-CATALOG-014's acceptance runs; DDK does not depend on it.
