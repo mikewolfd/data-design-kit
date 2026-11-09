@@ -55,6 +55,45 @@ CASES = {
                         "CATALOG-RECIPE-SQL-UNSUPPORTED"),
     "json-extraction": ("SELECT raw ->> 'battery' AS battery FROM stations", {}, "unknown", "CATALOG-RECIPE-SQL-UNSUPPORTED"),
     "unknown-dialect": ("SELECT station_code FROM stations", {"dialect": "kusto"}, "unknown", "CATALOG-RECIPE-SQL-UNSUPPORTED"),
+    # Positional parameters follow the SQL text, not the parse tree.
+    "parameters-in-text-order": ("WITH high AS (SELECT station_code FROM stations WHERE elevation_m > ?) "
+                                 "SELECT station_code FROM high WHERE station_code = ?",
+                                 {"parameterOrder": ["minimum", "code"]}, "passed", None),
+    "parameters-in-tree-order": ("WITH high AS (SELECT station_code FROM stations WHERE elevation_m > ?) "
+                                 "SELECT station_code FROM high WHERE station_code = ?",
+                                 {"parameterOrder": ["code", "minimum"]}, "failed", "CATALOG-RECIPE-TYPE"),
+    "limit-parameter": ("SELECT station_code FROM stations WHERE station_code = ? LIMIT ?",
+                        {"parameterOrder": ["code", "minimum"]}, "passed", None),
+    "recursive-cte": ("WITH RECURSIVE n AS (SELECT 1 AS k UNION ALL SELECT k + 1 FROM n WHERE k < 3) SELECT k FROM n",
+                      {}, "passed", None),
+    "cte-reads-itself": ("WITH again AS (SELECT * FROM again) SELECT * FROM again", {}, "failed", "CATALOG-RECIPE-TABLE"),
+    "in-list-type": ("SELECT station_code FROM stations WHERE elevation_m IN ('high', 'low')", {}, "failed",
+                     "CATALOG-RECIPE-TYPE"),
+    "in-subquery-type": ("SELECT station_code FROM stations WHERE elevation_m IN (SELECT station_code FROM readings)", {},
+                         "failed", "CATALOG-RECIPE-TYPE"),
+    "between-type": ("SELECT station_code FROM stations WHERE station_code BETWEEN 1 AND 5", {}, "failed", "CATALOG-RECIPE-TYPE"),
+    "like-on-number": ("SELECT station_code FROM stations WHERE elevation_m LIKE '1%'", {}, "failed", "CATALOG-RECIPE-TYPE"),
+    "distinct-from-type": ("SELECT station_code FROM stations WHERE elevation_m IS DISTINCT FROM 'x'", {}, "failed",
+                           "CATALOG-RECIPE-TYPE"),
+    "date-literal-not-a-date": ("SELECT station_code FROM stations WHERE opened_on = 'last tuesday'", {}, "failed",
+                                "CATALOG-RECIPE-TYPE"),
+    "union-mixed-types": ("SELECT elevation_m AS v FROM stations UNION ALL SELECT station_code AS v FROM stations", {},
+                          "failed", "CATALOG-RECIPE-TYPE"),
+    "case-mixed-types": ("SELECT CASE WHEN elevation_m > 0 THEN station_code ELSE 0 END AS v FROM stations", {}, "failed",
+                         "CATALOG-RECIPE-TYPE"),
+    "arithmetic-on-string": ("SELECT station_code + 1 AS v FROM stations", {}, "failed", "CATALOG-RECIPE-TYPE"),
+    "field-of-string": ("SELECT (raw).battery AS b FROM stations", {}, "failed", "CATALOG-RECIPE-COLUMN"),
+    "index-of-string": ("SELECT raw[1] AS b FROM stations", {}, "failed", "CATALOG-RECIPE-COLUMN"),
+    "using-missing-column": ("SELECT s.station_code FROM stations AS s JOIN readings AS r USING (missing)", {}, "failed",
+                             "CATALOG-RECIPE-COLUMN"),
+    "missing-ordinal": ("SELECT station_code FROM stations ORDER BY 3", {}, "failed", "CATALOG-RECIPE-COLUMN"),
+    "nested-result-match": ("SELECT site FROM stations", {"result": {"properties": [
+        {"name": "site", "logicalType": "object", "properties": [{"name": "latitude", "logicalType": "number"}]}]}},
+        "passed", None),
+    "nested-result-shape": ("SELECT site FROM stations", {"result": {"properties": [
+        {"name": "site", "logicalType": "object", "properties": [{"name": "latitude", "logicalType": "string"},
+                                                                 {"name": "longitude", "logicalType": "number"}]}]}},
+        "failed", "CATALOG-RECIPE-RESULT"),
 }
 
 

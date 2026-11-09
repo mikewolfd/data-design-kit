@@ -134,9 +134,15 @@ def _execute(args, secret_parameters=None):
             evidence.mkdir(parents=True, exist_ok=True)
             tools = NativeTools(args.tool_python, output=Path(tempfile.mkdtemp(prefix="evidence-", dir=evidence)),
                                 timeout=args.timeout)
-        return build_catalog(args.project, metadata=args.metadata, metadata_adapter=args.metadata_adapter,
-                             exports=args.export, output=args.output, current_selection=args.current_selection,
-                             disclosure_policy=args.disclosure_policy, recipe_tools=tools, **shared)
+        report = build_catalog(args.project, metadata=args.metadata, metadata_adapter=args.metadata_adapter,
+                               exports=args.export, output=args.output, current_selection=args.current_selection,
+                               disclosure_policy=args.disclosure_policy, recipe_tools=tools, **shared)
+        if tools is not None and not any(tools.output.iterdir()):
+            # No tool request ran; leave no empty evidence folders behind.
+            tools.output.rmdir()
+            if not any(tools.output.parent.iterdir()):
+                tools.output.parent.rmdir()
+        return report
     if args.command == "check" and not args.tool_python:
         return check_project(args.project, lock=args.lock, locked=args.locked, selection=args.select,
                              adapter_manifests=args.adapter_manifest, **shared)

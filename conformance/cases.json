@@ -4572,7 +4572,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A recipe reads a table that is not one of its inputs, or a schema-qualified table.",
+      "scenario": "A recipe reads a table that is not one of its inputs, a schema-qualified table, or a non-recursive CTE from inside its own body.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4587,7 +4587,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A recipe reads an undeclared column, object field, or array-element field.",
+      "scenario": "A recipe reads an undeclared column, object field, or array-element field, reads a field of a string or indexes one, joins USING a missing column, or orders by a missing ordinal.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4602,7 +4602,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A recipe compares a number with a string column, or with a string-typed parameter.",
+      "scenario": "A recipe mixes type families in a comparison, IN list or subquery, BETWEEN, IS DISTINCT FROM, CASE branches or UNION columns, compares a date with a non-ISO string, applies LIKE to a number or arithmetic to a string, or binds positional parameters in parse-tree rather than text order.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4632,7 +4632,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A view's declared properties add a column and change a type that its recipe output does not match.",
+      "scenario": "A view's declared properties add a column and change a type that its recipe output does not match, or declare a nested object field type its recipe does not produce.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
