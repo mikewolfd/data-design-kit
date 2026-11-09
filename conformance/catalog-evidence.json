@@ -1362,6 +1362,22 @@
       "evidence": "An optional unknown check cites the entry pointer; no dataset carries the entry."
     },
     {
+      "id": "CASE-CONF-005-CATALOG-ONLY",
+      "coverage": "exercised",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_catalog_only_map_needs_no_component_or_design"
+      ]
+    },
+    {
+      "id": "CASE-CONF-005-RUN-NEEDS-PRODUCTION",
+      "coverage": "exercised",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-PRODUCTION-MISSING",
+      "tests": [
+        "tests/catalog/test_layered_catalog.py::test_run_naming_its_docspec_job_has_no_production_yet"
+      ]
+    },
+    {
       "id": "CASE-LAYERED-PUBLIC-FACTS",
       "profile": "catalog",
       "status": "verified",

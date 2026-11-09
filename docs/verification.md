@@ -1,5 +1,9 @@
 # DDK verification
 
+## November 8, 2026 product boundary (ADR-015) checks
+
+Commits on `codex/ddk-boundary-adr015-20261108` add the proposed [ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog) and DDK-CONF-005; they change documents and one test file, not behaviour. With the env-full interpreter and `DDK_NATIVE_PYTHON` set to the quality environment, `tests/core tests/catalog tests/test_cli.py tests/test_recipe_sql.py tests/test_native_tools.py` gave 450 passed, 288 skipped and the known source-checkout `lock` failure ([JUnit](/Users/mikewolfd/Work/artifacts/ddk-boundary-adr015-20261108/runs/env-full-after-review.junit.xml)). The [document audit](/Users/mikewolfd/Work/artifacts/ddk-boundary-adr015-20261108/audit/document-audit.json) passed traceability for 98 requirements, 18 work packages, 291 cases and 387 maintained test selectors. An independent greybeard/ETL/evolutionary-refactoring review found that run evidence still binds only to components or designs and that `ddk catalog` ignores `--lock`/`--locked`; both are now recorded in ADR-015.
+
 ## November 8, 2026 layered data-map source checks
 
 Commits on `codex/ddk-datamap-requirements-20261108` add aggregator projects, shared imports, `layer-order` and `view-sources` rules, primary-key row identity, dataset `origin`, remote definition references, extension refusal and catalog descriptive fields. These are source-checkout results only; no package was built or installed, and the SDK3 qualification above is unchanged. Two earlier results change: a byte-identical project copy imported from a second path now fails with `REF-IMPORT-LOCATION-CONFLICT`, and a remote `authoritativeDefinitions` link is now a reference rather than an `unknown` definition unless its document opts in.

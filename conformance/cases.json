@@ -69,12 +69,28 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "A layered map declares datasets, products, policies and a recipe but no component or design; `check` and `catalog` with a DCAT export run without any component, design, binding or fixture.",
+      "scenario": "A layered map declares datasets, products, policies and a recipe but no component or design; `check` and `catalog` with a DCAT export complete without any component, design, binding or fixture.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
         "exitCode": 0,
         "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CONF-005-RUN-NEEDS-PRODUCTION",
+      "requirements": [
+        "DDK-CONF-005",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Known gap: a run record names its DocSpec job instead of a declared component or design. Until DocSpec job definitions are accepted as production declarations, the run cannot attach and assembly fails.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-PRODUCTION-MISSING"
       }
     },
     {

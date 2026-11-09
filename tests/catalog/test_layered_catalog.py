@@ -229,14 +229,25 @@ def test_public_extension_values_are_checked_by_their_path_like_parts(layered, t
 
 
 def test_catalog_only_map_needs_no_component_or_design(layered):
-    """DDK-CONF-005: catalog, policy, reference and result checks run without the frozen artifact kinds."""
+    """DDK-CONF-005: definition, policy, reference and result checks run without components or designs."""
     _edit(layered / "resolved" / "project.ddk.json", lambda value: value["artifacts"].pop("resolve-stations"))
     (layered / "resolved" / "resolve-stations.ddk.json").unlink()
     report = check_project(layered / "project.ddk.json")
     assert report["decision"] == "passed"
-    frozen = {"core.calls", "core.graph"}
-    assert frozen <= set(report["coverage"]["requestedGroups"])
-    assert not [item for item in report["checks"] if item["group"] in frozen]
     assert {"core.documents", "core.policies"} <= {item["group"] for item in report["checks"]}
+    assert not [item for item in report["checks"] if item["group"] == "core.calls"]
     result = assemble_catalog(layered / "project.ddk.json", exports=("dcat",), required_groups=("catalog.dcat",))
-    assert result.report["decision"] == "passed" and not result.catalog["productions"]
+    assert result.report["decision"] == "passed"
+
+
+def test_run_naming_its_docspec_job_has_no_production_yet(tmp_path):
+    """Known gap under DDK-CONF-005: DDK-CATALOG-005 runs bind only to a component or design production."""
+    commerce = Path(__file__).resolve().parents[2] / "examples" / "commerce"
+    metadata = json.loads((commerce / "catalog" / "metadata.example.json").read_bytes())
+    metadata["runs"][0]["production"] = "daily-revenue-job"
+    (tmp_path / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    result = assemble_catalog(commerce / "project.ddk.json", metadata=tmp_path / "metadata.json",
+                              metadata_adapter="example")
+    assert result.report["decision"] == "failed"
+    assert [item["code"] for check in result.report["checks"] for item in check["diagnostics"]] == [
+        "CATALOG-PRODUCTION-MISSING"]

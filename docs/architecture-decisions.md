@@ -164,7 +164,7 @@
 
 ## ADR-015 — Keep DDK to the evidence-bound catalog
 
-**Status:** proposed November 8, 2026. Three items below stay open.
+**Status:** proposed November 8, 2026. The open items below need the `job-plan` experiment or the user.
 
 **Problem.** The first real map, SpicyRegs (194 datasets, 14 products, one policy document), uses DDK's catalog, policies, results, references and versioning. It declares no components or designs and runs only `ddk check` and `ddk catalog`. DDK's components, designs, saved plans and fixtures duplicate what dbt and SQLMesh do for SQL, while DocSpec already runs SQL as job steps. Developing both halves splits maintenance between the catalog people use and a transformation layer nobody uses.
 
@@ -175,28 +175,32 @@
 
 | Frozen | Named replacement | Live now |
 | --- | --- | --- |
-| §6 components and §8 designs | DocSpec job definitions as catalog production declarations | No. Catalog productions and their OpenLineage job events come only from components and designs. DocSpec run records already enter through the managed-job mapper. |
+| §6 components and §8 designs | DocSpec job definitions as catalog production declarations | No. Catalog productions and their OpenLineage job events come only from components and designs, and every run record, bounded or managed, must name one (`CATALOG-PRODUCTION-MISSING`). A map without them, such as SpicyRegs, cannot attach run evidence yet. |
 | §11 change impact | DDK-CATALOG-010, plus Data Contract CLI version classification (`odcs.versions`) | Partly. DDK-CATALOG-010 runs inside `ddk impact`, alongside the frozen checks. |
 | DDK-ADAPTER-005 and 006; `plan.datafusion` and `plan.substrait-validator` | DocSpec's own plan qualification, read as run records | No |
 | DDK-ADAPTER-007; `test.fixtures` and `test.portability` | Fixtures kept beside the SQL in project code | No |
 | DDK-ADAPTER-004; `files.frictionless` and `ingest.dlt` | Acquisition records read as catalog metadata | No |
 
-Everything not listed is unchanged.
 
 **Alternatives:** keep developing both halves; remove the frozen parts now; move transformations into dbt or SQLMesh models that DDK reads.
 
 **Reason.** Freezing stops new investment without discarding qualified work that the commerce release and DDK-VERSION-003 still cite. Removal waits for a named, live replacement, so no capability disappears without a successor. DocSpec already owns execution, so reading its job records avoids a third transformation format.
 
-**Consequence.** DDK-VERSION-003 still lists `plan.datafusion` and `test.fixtures`, and the existing qualification still satisfies them. Removing a frozen part also changes DDK-CHECK-001's stages, the mandatory groups in DDK-CHECK-002, and DDK-POLICY-006's component and design edges. The `layered` example keeps one component, which exercises that edge.
+**Consequence.** Until open item 1 lands, run evidence still needs a frozen artifact kind; case `CASE-CONF-005-RUN-NEEDS-PRODUCTION` records that gap. Removing a frozen part also changes DDK-CHECK-001's stages and DDK-POLICY-006's component and design edges. The `layered` example keeps one component, which exercises that edge.
+
+**Open: user decisions.**
+
+1. *Production declarations.* (a) Recommended: specify DocSpec job definitions as production declarations under DDK-CATALOG-005 as the next catalog work. It lets run evidence reach maps without components and is the precondition for removing §6 and §8. It waits for the DocSpec job-definition shape that the engine-line reconciliation settles. (b) Keep interface-only components ([DDK-CALL-001](specification.md#DDK-CALL-001)) as the production declaration and freeze only calls, arguments and designs.
+2. *§12 locks (DDK-LOCK-001 to 005).*
+   - *A. Freeze (the independent review's view).* The map never runs `ddk lock`. The catalog-lock clauses in DDK-LOCK-001, which every catalog build relies on, freeze too and would move into DDK-CATALOG-007 before they could change.
+   - *B. Keep, scoped to catalog evidence (recommended by the requesting session).* Pinning exact bytes is part of an exact version with evidence. Every `ddk catalog` build writes `catalog.lock.json` with the shared lock builder, and `load_catalog_artifacts` verifies each output against it, so DDK-CATALOG-007's integrity record depends on DDK-LOCK-001. DDK-LOCK-005 preserves the DocSpec identities that run records carry. DDK-LOCK-003 records inputs for DDK-run executions and follows item 3.
+   - Either way, `ddk catalog` accepts `--lock` and `--locked` but ignores them today; they need wiring (B) or refusal (A).
+3. *Unclassified execution paths.* DDK-ADAPTER-009 bundles and 010 bindings serve only designs; `execute.docspec-job`, `runtime.docspec-managed` and the `build`, `test` and `managed` commands run work that DDK composed. Recommended: freeze bundles, bindings, `build` and `test` with §8, and keep managed qualification, which is catalog evidence. `plan.docspec-sql` waits for the experiment.
+4. *Release and required groups.* DDK-VERSION-003 still makes `impact`, `plan.datafusion` and `test.fixtures` mandatory for the first product release; the local qualification satisfies them. DDK-CHECK-002 makes every root list `core.calls` and `core.graph`, which pass with no checks on a catalog-only map. Either can keep its text while frozen, or drop the frozen parts.
 
 **Open: decided by the DocSpec `job-plan` experiment.**
 
 1. *Recipe check mechanism ([DDK-CATALOG-011](specification.md#DDK-CATALOG-011)).* (a) Keep the sqlglot binder: it is offline and tested, but it reads DataFusion SQL with the PostgreSQL grammar, so DataFusion-only functions stay `unknown` and functions DataFusion lacks pass. (b) Plan each recipe with DocSpec `job-plan`: the engine checks its own functions, but the check needs the DocSpec executable. Whichever wins is specified under DDK-CATALOG-011 ([WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) item 3).
 2. *Nested compatibility (DDK-DATA-001 to 005).* (a) Extend the tabular rules to ODCS objects and arrays (WP-15 item 4). (b) Use the engine's planned output schema for shape agreement. This follows item 1.
-
-**Open: user decision on §12 locks (DDK-LOCK-001 to 005).**
-
-- *A. Freeze (the independent review's choice).* The map never runs `ddk lock`. Future catalog lock fields would then be specified under DDK-CATALOG-007.
-- *B. Keep, scoped to catalog evidence (recommended by the requesting session).* Pinning exact bytes is part of an exact version with evidence. Every `ddk catalog` build writes `catalog.lock.json` with the shared lock builder, and `load_catalog_artifacts` verifies each output against it, so DDK-CATALOG-007's integrity record depends on DDK-LOCK-001. `--locked` (DDK-LOCK-002) applies to `catalog`. DDK-LOCK-005 preserves the DocSpec identities that run records carry. Only DDK-LOCK-003, which records inputs for DDK-run executions, would follow the frozen execution profiles.
 
 **Requirement links:** [DDK-CONF-005](specification.md#DDK-CONF-005), [DDK-CATALOG-005](specification.md#DDK-CATALOG-005), [DDK-CATALOG-011](specification.md#DDK-CATALOG-011), [DDK-LOCK-001](specification.md#DDK-LOCK-001), [DDK-VERSION-003](specification.md#DDK-VERSION-003).

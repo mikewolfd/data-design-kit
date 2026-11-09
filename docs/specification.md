@@ -104,7 +104,7 @@ The schemas in `schemas/0.1/` define DDK document shapes. This specification def
 <a id="DDK-CONF-005"></a>
 ### DDK-CONF-005 — Product boundary
 
-DDK is an evidence-bound catalog: it resolves ODCS and ODPS definitions to exact versions and reports their origin, disclosure and check evidence, keeping `unknown` and `not_run` explicit. Project code owns transformations as SQL files that run as DocSpec job steps. DDK reads their declarations, job definitions and run records; it does not author transformations. Catalog, policy, reference and result checks MUST NOT require a component, design, binding or fixture.
+DDK is an evidence-bound catalog: it resolves ODCS and ODPS definitions to exact versions and reports their origin, disclosure and check evidence, keeping `unknown` and `not_run` explicit. Project code owns transformations as SQL files that run as DocSpec job steps. DDK reads their declarations, job definitions and run records; it does not author transformations. Definition, policy, reference and result checks MUST NOT require a component, design, binding or fixture. Run evidence is the current exception: until DocSpec job definitions are accepted as production declarations, DDK-CATALOG-005 binds each run to a component or design.
 
 Sections 6, 8 and 11 and DDK-ADAPTER-004 through DDK-ADAPTER-007 are frozen, with the profiles they define: `files.frictionless`, `ingest.dlt`, `plan.datafusion`, `plan.substrait-validator`, `test.fixtures` and `test.portability`. A frozen requirement keeps its text, cases and existing qualification and gains no new requirements. It is removed only after the replacement that [ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog) names for it is live and qualified.
 
