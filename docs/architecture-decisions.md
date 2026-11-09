@@ -191,7 +191,7 @@
 
 **Decided November 9, 2026: build records ([DDK-CATALOG-012](specification.md#DDK-CATALOG-012)).** DocSpec jobs count as productions, so every built table in a catalog like SpicyRegs can show its build record: job, inputs, time and check results.
 - **Declaring a job.** A project declares each job as an artifact of kind `job`. It maps the JobSpec's inputs and outputs to catalog datasets, and each step to the recipe that holds its SQL. The job becomes one production, versioned by the JobSpec's SHA-256.
-- **Binding runs.** A bounded or managed run binds to the job when its pinned request keeps the job's inputs, ordered steps and outputs; only input locations and scratch paths may differ.
+- **Binding runs.** A bounded or managed run binds to the job when its pinned request keeps the job's inputs, ordered steps and outputs; only input bindings (file paths or native versions) and scratch paths may differ.
 - **Status.** Specified now, and implemented after the DocSpec engine line lands ([WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) item 8). The alternative, interface-only components as productions, was not chosen.
 
 **Decided November 9, 2026: fingerprints. Keep the list, drop verification.**
