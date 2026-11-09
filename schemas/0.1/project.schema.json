@@ -53,6 +53,9 @@
               },
               "origin": {
                 "$ref": "common.schema.json#/$defs/datasetOrigin"
+              },
+              "model": {
+                "$ref": "common.schema.json#/$defs/modelMethod"
               }
             },
             "required": [
@@ -81,6 +84,23 @@
                         "publisher",
                         "third_party"
                       ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "model"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "origin"
+                  ],
+                  "properties": {
+                    "origin": {
+                      "const": "model"
                     }
                   }
                 }

@@ -189,6 +189,8 @@ def test_view_sources_rule_names_only_loaded_namespaces(layered):
 
 @pytest.mark.parametrize(("project", "alias", "origin"), [
     ("capture/project.ddk.json", "station-files", "derived"),
+    ("capture/project.ddk.json", "station-files", "rule"),
+    ("capture/project.ddk.json", "station-files", "human"),
     ("capture/project.ddk.json", "station-files", "model"),
     ("source/project.ddk.json", "readings", "crowd"),
 ])

@@ -10,7 +10,7 @@
       "object": "station-summary",
       "catalogId": "urn:example:layered:dataset:station-summary",
       "role": "application",
-      "origin": "derived"
+      "origin": "rule"
     },
     "summary-product": {
       "kind": "product",

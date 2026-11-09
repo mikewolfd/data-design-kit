@@ -41,11 +41,29 @@ ddkv:role-application a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:pre
 ddkv:role-evidence a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "evidence"@en .
 
 ddkv:DatasetOrigin a skos:ConceptScheme ; skos:prefLabel "Dataset origins"@en ;
-    skos:definition "Who asserts a dataset's content (DDK-CATALOG-003): the publisher, a third party, a project derivation or a model."@en .
-ddkv:origin-publisher a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "publisher"@en .
-ddkv:origin-third_party a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "third party"@en .
-ddkv:origin-derived a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "project derivation"@en .
-ddkv:origin-model a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "model"@en .
+    skos:definition "Who asserts a dataset's content (DDK-CATALOG-003). Method columns use the same values and two kinds of rule."@en .
+ddkv:origin-publisher a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "publisher"@en ;
+    skos:definition "As the original publisher published it."@en .
+ddkv:origin-third_party a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "third party"@en ;
+    skos:definition "Another outside party's assertion."@en .
+ddkv:origin-rule a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "rule"@en ;
+    skos:definition "Derived by deterministic code."@en .
+ddkv:origin-publisher_crosswalk a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:broader ddkv:origin-rule ;
+    skos:prefLabel "publisher crosswalk"@en ; skos:definition "A rule that applies a crosswalk the publisher provides."@en .
+ddkv:origin-exact_identifier a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:broader ddkv:origin-rule ;
+    skos:prefLabel "exact identifier"@en ; skos:definition "A rule that matches an exact shared identifier."@en .
+ddkv:origin-human a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "human"@en ;
+    skos:definition "Authored or reviewed by a person."@en .
+ddkv:origin-model a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "model"@en ;
+    skos:definition "Any value from a statistical, machine-learned or generative model."@en .
+ddkv:origin-derived a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "derived"@en ;
+    skos:narrower ddkv:origin-rule, ddkv:origin-human ;
+    skos:historyNote "Read for older projects. It does not say whether a rule or a person derived the content."@en .
+
+ddkv:ReviewState a skos:ConceptScheme ; skos:prefLabel "Model review states"@en .
+ddkv:review-unreviewed a skos:Concept ; skos:inScheme ddkv:ReviewState ; skos:prefLabel "unreviewed"@en .
+ddkv:review-spot_checked a skos:Concept ; skos:inScheme ddkv:ReviewState ; skos:prefLabel "spot checked"@en .
+ddkv:review-reviewed a skos:Concept ; skos:inScheme ddkv:ReviewState ; skos:prefLabel "reviewed"@en .
 
 ddkv:LinkCardinality a skos:ConceptScheme ; skos:prefLabel "Relationship cardinalities"@en .
 ddkv:cardinality-one_to_one a skos:Concept ; skos:inScheme ddkv:LinkCardinality ; skos:prefLabel "one to one"@en .
@@ -73,3 +91,6 @@ ddkv:match-project_rule a skos:Concept ; skos:inScheme ddkv:LinkMatch ; skos:pre
 ddkv:noMatch a rdf:Property ; rdfs:label "no match"@en ;
     rdfs:comment "A recorded decision that two resources do not denote the same thing. It is a judgement from a match-decision table, not a logical axiom such as owl:differentFrom."@en ;
     rdfs:seeAlso skos:exactMatch, skos:closeMatch .
+
+ddkv:methodColumn a rdf:Property ; rdfs:label "method column"@en ;
+    rdfs:comment "The field whose value attributes each row to the method that produced it; its values come from the dataset origin scheme."@en .

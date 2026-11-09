@@ -1,0 +1,7 @@
+{
+  "purpose": "Match station sites across the two published station lists.",
+  "model": "example-site-matcher",
+  "version": "1.0.0",
+  "threshold": 0.92,
+  "note": "Illustrative configuration. Its SHA-256 is the configurationSha256 in the stations method record."
+}

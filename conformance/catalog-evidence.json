@@ -1429,6 +1429,61 @@
       ]
     },
     {
+      "id": "CASE-CATALOG-003-ORIGIN-DETAIL",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": "CATALOG-ORIGIN-DETAIL",
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_derived_origin_is_read_but_its_detail_stays_unknown"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-003-MODEL-METHOD",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_model_method_record_completes_origin_evidence_and_becomes_provenance"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-003-METHOD-COLUMN",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_method_column_values_come_from_the_vocabulary_and_attribute_each_row"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPTS",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_concepts_list_every_field_that_inherits_a_definition_and_reach_graph_and_mappings",
+        "tests/catalog/test_origin_and_concepts.py::test_public_concepts_keep_only_granted_fields"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPT-JOINS",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": "CATALOG-RELATIONSHIP-CONCEPT",
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_a_join_between_different_definitions_warns_and_a_policy_can_make_it_an_error"
+      ]
+    },
+    {
+      "id": "CASE-CATALOG-013-CANDIDATE-JOINS",
+      "coverage": "exercised",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_candidate_links_anchor_on_keys_and_skip_declared_joins"
+      ]
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "coverage": "exercised",
       "expectedDecision": "error",

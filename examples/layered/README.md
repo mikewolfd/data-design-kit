@@ -16,7 +16,7 @@ The `governance` project holds two policy rules over the root namespaces. `layer
 Other behaviour shown here:
 
 - In `source/readings.odcs.json`, `temperature_c` is a view: standard ODCS `transformSourceObjects` names the stored `payload` property and `transformLogic` gives the expression. Stored properties carry only `transformLogic`, their source path. `station_code` links to a remote glossary page, which stays a documentation reference ([DDK-REF-004](../../docs/specification.md#DDK-REF-004)).
-- Dataset registrations declare one `origin` value. `resolved/stations` is `model` because its site matching uses a model, so its values must not be presented as a publisher's assertion ([DDK-CATALOG-003](../../docs/specification.md#DDK-CATALOG-003)).
+- Dataset registrations declare one `origin` value. `resolved/stations` is `model` because its site matching uses a model, so its values must not be presented as a publisher's assertion ([DDK-CATALOG-003](../../docs/specification.md#DDK-CATALOG-003)). Its method record names the model, its version, the SHA-256 of [its configuration](resolved/site-matching.config.json) and a spot-check review. `product/station-summary` is `rule`: deterministic code computes it.
 - The catalog carries each product's ODPS type, status and descriptions, and each dataset's contract description, context, tags, canonical URL and applicable SLA entries. The `retention` SLA entry names another object and is not attached to `readings`.
 
 ```sh

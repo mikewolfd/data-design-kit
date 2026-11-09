@@ -12,6 +12,7 @@ from urllib.parse import quote, unquote, urlsplit
 from .catalog_access import CatalogError
 from .catalog_exports import CONTEXT, dcat_document
 from .catalog_metadata import check_report, stable_id
+from .definitions import enum_values
 from .documents import json_dumps
 
 DETAILS = "urn:ddk:catalog:assembly"
@@ -30,6 +31,7 @@ DATATYPES = {"integer": "xsd:integer", "boolean": "xsd:boolean", "date": "xsd:da
 MATCH_PREDICATES = {"same": "http://www.w3.org/2004/02/skos/core#exactMatch",
                     "undecided": "http://www.w3.org/2004/02/skos/core#closeMatch", "not_same": VOCAB + "noMatch"}
 FILE_TYPES = {"text/csv": "csv", "application/vnd.apache.parquet": "parquet"}
+ATTRIBUTED = "http://www.w3.org/ns/prov#wasAttributedTo"
 ROW = "__ddk_row"  # row position, the identity of rows in a dataset without a top-level key
 # Morph-KGC 2.10.0 turns Parquet nulls into these strings before it drops missing values, so its configuration
 # must list them; a text value that is exactly one of them is then dropped as well.
@@ -49,6 +51,12 @@ def field_predicate(dataset_id, path):
 
 def _definitions(catalog):
     return catalog.get("extensions", {}).get(DETAILS, {}).get("datasetDefinitions", {})
+
+
+def _concepts(catalog):
+    """{(dataset alias, field names): concept IRI}; an array item's concept applies to the array's values."""
+    return {(field["dataset"], tuple(step["field"] for step in field["path"] if "field" in step)): row["concept"]
+            for row in catalog.get("concepts", ()) for field in row["fields"]}
 
 
 def _fields(properties, path=()):
@@ -130,7 +138,7 @@ def graph_document(catalog):
     nodes = _Nodes(dcat_document(catalog)["@graph"])
     root = nodes.node(catalog["id"])
     aliases = {item["alias"]: item["id"] for item in catalog["datasets"]}
-    definitions = _definitions(catalog)
+    definitions, concepts = _definitions(catalog), _concepts(catalog)
 
     def open_concept(scheme, value):
         """A concept in a catalog-scoped scheme for open values such as statuses and layer names."""
@@ -153,11 +161,29 @@ def graph_document(catalog):
             nodes.add(item, "dcterms:description", dataset["description"])
         nodes.add(item, "skos:definition", dataset.get("rowMeaning"))
         if dataset.get("origin"):
-            agent = nodes.node(stable_id("origin-agent", dataset["id"], dataset["origin"]), "prov:Agent")
-            nodes.add(agent, "dcterms:type", _concept("origin", dataset["origin"]))
-            nodes.add(item, "prov:wasAttributedTo", _ref(agent["@id"]))
-        for path, prop in _fields(definitions.get(dataset["alias"], {}).get("properties", ())):
+            nodes.add(item, "prov:wasAttributedTo", _ref(_origin_agent(nodes, dataset)))
+        model = dataset.get("model", {})
+        if model.get("review"):
+            nodes.add(item, "dcat:theme", _concept("review", model["review"]))
+        if model.get("review") in {"spot_checked", "reviewed"}:
+            review = nodes.node(stable_id("review", dataset["id"], model), "prov:Activity")
+            nodes.add(review, "dcterms:type", _concept("review", model["review"]))
+            nodes.add(review, "prov:used", _ref(dataset["id"]))
+            if model.get("reviewer"):
+                person = nodes.node(stable_id("person", model["reviewer"]), "prov:Person", "prov:Agent")
+                nodes.add(person, "rdfs:label", model["reviewer"])
+                nodes.add(review, "prov:wasAssociatedWith", _ref(person["@id"]))
+        properties = definitions.get(dataset["alias"], {}).get("properties", ())
+        if dataset.get("methodColumn"):
+            nodes.add(item, "ddkv:methodColumn", _ref(field_predicate(dataset["id"], (dataset["methodColumn"],))))
+            column = next((prop for prop in properties if prop["name"] == dataset["methodColumn"]), {})
+            for value in enum_values(column) or ():
+                agent = nodes.node(child_iri(dataset["id"], "agent", value), "prov:Agent")
+                nodes.add(agent, "dcterms:type", _concept("origin", value))
+        for path, prop in _fields(properties):
             field = nodes.node(field_predicate(dataset["id"], path), "rdf:Property")
+            nodes.add(field, "rdfs:subPropertyOf", _ref(concepts[(dataset["alias"], path)])
+                      if (dataset["alias"], path) in concepts else None)
             nodes.add(field, "rdfs:label", ".".join(path))
             nodes.add(field, "skos:definition", prop.get("description"))
             nodes.add(field, "rdfs:isDefinedBy", _ref(dataset["id"]))
@@ -209,6 +235,25 @@ def graph_document(catalog):
         nodes.add(linkset, "dcterms:description", relationship.get("meaning"))
         nodes.add(linkset, "dcterms:type", *(_concept(key, relationship[key]) for key in (
             "cardinality", "scope", "nulls", "match") if relationship.get(key)))
+    glossary = child_iri(catalog["id"], "glossary")
+    for row in catalog.get("concepts", ()):
+        concept = nodes.node(row["concept"], "skos:Concept", "rdf:Property")
+        nodes.add(nodes.node(glossary, "skos:ConceptScheme"), "skos:prefLabel", "glossary")
+        nodes.add(root, "dcat:themeTaxonomy", _ref(glossary))
+        nodes.add(concept, "skos:inScheme", _ref(glossary))
+        nodes.add(concept, "skos:prefLabel", row["definition"])
+        nodes.add(concept, "skos:definition", row.get("description"))
+        nodes.add(concept, "skos:exactMatch", *map(_ref, row.get("exactMatch", ())))
+        nodes.add(concept, "skos:closeMatch", *map(_ref, row.get("closeMatch", ())))
+        nodes.add(concept, "rdfs:seeAlso", *map(_ref, row.get("canonicalUrls", ())))
+    for subject, target, concept in candidate_links(catalog):
+        linkset = nodes.node(stable_id("candidate-linkset", subject, target, concept), "void:Linkset")
+        nodes.add(linkset, "void:subjectsTarget", _ref(aliases[subject]))
+        nodes.add(linkset, "void:objectsTarget", _ref(aliases[target]))
+        nodes.add(linkset, "void:linkPredicate", _ref(concept))
+        nodes.add(linkset, "dcterms:type", _concept("evidence", "inferred"))
+        nodes.add(linkset, "dcterms:description", "Both datasets carry this concept and the second keys its rows by it; "
+                  "no relationship between them is declared, so this is a candidate join, not a declared one.")
     for product in catalog["products"]:
         item = nodes.node(product["id"], "dcat:Resource")
         nodes.add(item, "dcterms:conformsTo", _ref(ODPS))
@@ -231,7 +276,8 @@ def graph_document(catalog):
     found = {
         "datasets": len(set(parsed.objects(iri(catalog["id"]), iri("dcat:dataset")))),
         "versions": len(set(parsed.subjects(iri("dcat:isVersionOf")))),
-        "relationships": len(set(parsed.subjects(RDF.type, iri("void:Linkset")))),
+        "relationships": len(set(parsed.subjects(RDF.type, iri("void:Linkset")))
+                             - set(parsed.subjects(iri("dcterms:type"), iri("ddkv:evidence-inferred")))),
         "checks": len(set(parsed.subjects(RDF.type, iri("dqv:QualityMeasurement")))),
         "products": len(set(parsed.subjects(iri("dcterms:conformsTo"), iri(ODPS)))),
     }
@@ -248,6 +294,42 @@ def graph_counts(catalog):
             "relationships": len(catalog["relationships"]),
             "checks": len({json_dumps(item) for item in catalog["checks"]}),
             "products": len({item["id"] for item in catalog["products"]})}
+
+
+def _origin_agent(nodes, dataset):
+    """The agent a dataset's origin names: its model, configured, when the method record says which."""
+    model = dataset.get("model", {}) if dataset["origin"] == "model" else {}
+    if not model.get("id"):
+        agent = nodes.node(stable_id("origin-agent", dataset["id"], dataset["origin"]), "prov:Agent")
+    else:
+        agent = nodes.node(stable_id("model", model["id"], model.get("version"), model.get("configurationSha256")),
+                           "prov:SoftwareAgent", "prov:Agent")
+        nodes.add(agent, "rdfs:label", model["id"])
+        nodes.add(agent, "dcterms:hasVersion", model.get("version"))
+        if model.get("configurationSha256"):
+            nodes.add(agent, "dcterms:identifier", "sha256:" + model["configurationSha256"])
+    nodes.add(agent, "dcterms:type", _concept("origin", dataset["origin"]))
+    return agent["@id"]
+
+
+def candidate_links(catalog):
+    """(carrier, keyed dataset, concept) for datasets that share a concept where the second keys its rows by it.
+
+    Inferred, never declared: pairs already joined by a declared relationship are left out. Anchoring on keys
+    keeps the count linear in carriers; every carrier pair would be quadratic and mostly not joins at all.
+    """
+    keys = {identity["dataset"]: identity["fields"] for identity in catalog["identities"] if identity["kind"] == "key"}
+    declared = {frozenset((row["source"]["dataset"], row["target"].get("dataset"))) for row in catalog["relationships"]}
+    found = set()
+    for row in catalog.get("concepts", ()):
+        anchors = {field["dataset"] for field in row["fields"]
+                   if [item["path"] for item in keys.get(field["dataset"], ())] == [field["path"]]}
+        for field in row["fields"]:
+            for anchor in sorted(anchors - {field["dataset"]}):
+                pair = tuple(sorted((field["dataset"], anchor))) if field["dataset"] in anchors else (field["dataset"], anchor)
+                if frozenset(pair) not in declared:
+                    found.add((*pair, row["concept"]))
+    return sorted(found)
 
 
 def graph_edges(catalog):
@@ -303,10 +385,11 @@ def _iri(value):
     return {"value": value, "type": "iri"}
 
 
-def _value(dataset_id, path, prop, column):
+def _values(dataset_id, path, prop, column, concept=None):
+    """A field's value under its dataset-scoped predicate and, when it inherits a shared definition, its concept."""
     datatype = DATATYPES.get(prop.get("logicalType"))
-    return {"p": _iri(field_predicate(dataset_id, path)),
-            "o": {"value": f"$({column})", "datatype": datatype} if datatype else f"$({column})"}
+    value = {"value": f"$({column})", "datatype": datatype} if datatype else f"$({column})"
+    return [{"p": _iri(predicate), "o": value} for predicate in (field_predicate(dataset_id, path), concept) if predicate]
 
 
 def _local_path(location):
@@ -366,7 +449,7 @@ def rml_mappings(catalog):
         raise CatalogError("ADAPTER-CAPABILITY-MISSING", "RML mappings need the catalog's dataset definitions.",
                            status="not_run")
     datasets = {item["alias"]: item for item in catalog["datasets"]}
-    keys, sources = _row_keys(catalog), _sources(catalog)
+    keys, sources, concepts = _row_keys(catalog), _sources(catalog), _concepts(catalog)
     chosen, notes = {}, {alias: [] for alias in datasets}
     for alias, dataset in datasets.items():
         found = sources.get(alias, [])
@@ -382,7 +465,7 @@ def rml_mappings(catalog):
     documents = {}
     for alias, dataset in sorted(datasets.items()):
         definition, here, version = definitions.get(alias, {}), rows[alias], chosen[alias][0]
-        mappings = _dataset_mappings(dataset, definition, here, outgoing.get(alias, ()), rows, notes[alias])
+        mappings = _dataset_mappings(dataset, definition, here, outgoing.get(alias, ()), rows, notes[alias], concepts)
         for mapping in mappings.values():
             mapping["graphs"] = _iri(version)
         documents[alias] = ({"prefixes": {"xsd": "http://www.w3.org/2001/XMLSchema#"}, "mappings": mappings},
@@ -390,8 +473,12 @@ def rml_mappings(catalog):
     return documents
 
 
-def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, notes):
+def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, notes, concepts):
     alias, dataset_id = dataset["alias"], dataset["id"]
+
+    def values(path, prop, column):
+        return _values(dataset_id, path, prop, column, concepts.get((alias, path)))
+
     flat, nested, arrays = [], [], []
     for path, prop in _walk(definition.get("properties", ())):
         kind = prop.get("logicalType")
@@ -399,13 +486,17 @@ def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, no
         if kind == "object":
             notes.append(f"{_column(path)} is an object without declared fields, so it is not mapped.")
     main = {"sources": [[rows.path]] if rows.key else [{"query": f"SELECT * FROM {rows.table}"}], "s": rows.subject(),
-            "po": [_value(dataset_id, path, prop, path[0]) for path, prop in flat if prop.get("logicalType") != "object"]}
+            "po": [entry for path, prop in flat if prop.get("logicalType") != "object"
+                   for entry in values(path, prop, path[0])]}
+    if dataset.get("methodColumn"):  # the documented row-level convention: each row is attributed by its method
+        main["po"].append({"p": _iri(ATTRIBUTED), "o": _iri(_template(child_iri(dataset_id, "agent"),
+                                                                     [dataset["methodColumn"]]))})
     mappings = {alias: main}
     if nested:
         expressions = [f"{_sql_field(path)} AS {_sql_name(_column(path))}" for path, _ in nested]
         mappings[f"{alias}#fields"] = {
             "sources": [{"query": f"SELECT {rows.select(*expressions)} FROM {rows.table}"}], "s": rows.subject(),
-            "po": [_value(dataset_id, path, prop, _column(path)) for path, prop in nested]}
+            "po": [entry for path, prop in nested for entry in values(path, prop, _column(path))]}
     each_links = {}
     for relationship in relationships:
         if relationship.get("match") == "project_rule":
@@ -422,7 +513,7 @@ def _dataset_mappings(dataset, definition, rows, relationships, catalog_rows, no
         else:
             mappings[f"{alias}#{relationship['id']}"] = value
     for path, prop in arrays:
-        mappings.update(_array_mappings(dataset_id, alias, path, prop, rows, each_links.pop(path, []), notes))
+        mappings.update(_array_mappings(dataset_id, alias, path, prop, rows, each_links.pop(path, []), notes, values))
     for path in each_links:
         notes.append(f"Links through {_column(path)} are not mapped: it is not a declared array field.")
     decisions = _custom(definition, "matchDecisions")
@@ -441,7 +532,7 @@ def _walk(properties, path=()):
             yield here, prop
 
 
-def _array_mappings(dataset_id, alias, path, prop, rows, links, notes):
+def _array_mappings(dataset_id, alias, path, prop, rows, links, notes, values):
     """Unnest one array: scalar items become repeated values, object items become nodes under the row."""
     column, items = _column(path), prop.get("items") if isinstance(prop.get("items"), dict) else {}
     if items.get("logicalType") != "object":
@@ -450,7 +541,7 @@ def _array_mappings(dataset_id, alias, path, prop, rows, links, notes):
             return {}
         query = f"SELECT {rows.select(f'UNNEST({_sql_field(path)}) AS {_sql_name(column)}')} FROM {rows.table}"
         return {f"{alias}#{column}": {"sources": [{"query": query}], "s": rows.subject(),
-                                      "po": [_value(dataset_id, path, items, column), *links]}}
+                                      "po": [*values(path, items, column), *links]}}
     index, leaves = f"{column}.__index", []
     for leaf, child in _walk(items.get("properties", ())):
         if child.get("logicalType") in {"array", "object"}:
@@ -475,8 +566,8 @@ def _array_mappings(dataset_id, alias, path, prop, rows, links, notes):
                                   "po": [{"p": _iri(field_predicate(dataset_id, path)),
                                           "o": _iri(element) if rows.key else element}]},
             f"{alias}#{column}.items": {"sources": [{"query": query}], "s": element,
-                                        "po": [_value(dataset_id, (*path, *leaf), child, f"{column}.{_column(leaf)}")
-                                               for leaf, child in leaves]}}
+                                        "po": [entry for leaf, child in leaves
+                                               for entry in values((*path, *leaf), child, f"{column}.{_column(leaf)}")]}}
 
 
 def _link(relationship, rows, catalog_rows, notes):

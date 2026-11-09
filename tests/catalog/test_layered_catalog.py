@@ -107,7 +107,7 @@ def test_datasets_carry_their_contract_values_and_only_applicable_sla(layered):
     }
     stations = _row(catalog["datasets"], "resolved/stations")
     assert (stations["origin"], stations["status"]) == ("model", "draft")
-    assert _row(catalog["datasets"], "product/station-summary")["origin"] == "derived"
+    assert _row(catalog["datasets"], "product/station-summary")["origin"] == "rule"
 
 
 @pytest.mark.parametrize(("entry", "applies"), [

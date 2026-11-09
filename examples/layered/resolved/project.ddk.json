@@ -10,7 +10,14 @@
       "object": "stations",
       "catalogId": "urn:example:layered:dataset:stations",
       "role": "derived",
-      "origin": "model"
+      "origin": "model",
+      "model": {
+        "id": "example-site-matcher",
+        "version": "1.0.0",
+        "configurationSha256": "51b188b877b257b0439b28c9be9e8713292bfb9f4221da36e9e5b421abb5046b",
+        "review": "spot_checked",
+        "reviewer": "Example reviewer"
+      }
     },
     "resolve-stations": {
       "kind": "component",

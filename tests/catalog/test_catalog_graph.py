@@ -94,7 +94,9 @@ def test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_u
     relationship = catalog_schema["relationship"]["properties"]
     expected = {"CheckOutcome": ("outcome", catalog_schema["check"]["properties"]["status"]["enum"]),
                 "EvidenceStrength": ("evidence", ["declared", "inferred", "executed"]),
-                "DatasetRole": ("role", role), "DatasetOrigin": ("origin", common["datasetOrigin"]["enum"]),
+                "DatasetRole": ("role", role),
+                "DatasetOrigin": ("origin", [*common["datasetOrigin"]["enum"], "publisher_crosswalk", "exact_identifier"]),
+                "ReviewState": ("review", common["modelMethod"]["properties"]["review"]["enum"]),
                 **{scheme: (key, relationship[key]["enum"]) for scheme, key in (
                     ("LinkCardinality", "cardinality"), ("LinkScope", "scope"), ("LinkNulls", "nulls"),
                     ("LinkMatch", "match"))}}

@@ -11,6 +11,9 @@ Commits on `codex/ddk-knowledge-graph-20261109` add `--export graph` (DDK-CATALO
   - *Match decisions:* a declared table produced `skos:exactMatch`, `skos:closeMatch` and `ddkv:noMatch`, and no `owl:sameAs`.
   - *Real data:* 11 SpicyRegs datasets over the SQL trial's real OCC Parquet slices became 920,798 quads in 4.9 s. Per-field counts for 342 fields equal the distinct row-value pairs DuckDB counts directly from the files. Two object-array fields stored as text in the slices were read as string arrays.
 - **SpicyRegs coverage.** All 158 relationships and all nested properties map: 194 main, 209 array and 27 item mappings. Each document notes only that the catalog knows no exact-version file yet.
+- **Origins and concepts** (source-checkout tests in `tests/catalog/test_origin_and_concepts.py`, 7 passed):
+  - The layered example now declares `rule` for its summary, and a method record for its model dataset (the SHA-256 of `resolved/site-matching.config.json`).
+  - On a copy of the SpicyRegs map at spicy-stack `fcb8e3b` with its definitions' custom-property vendor switched from `spicy-regs` to `ddk`, the catalog lists 18 concepts; the datasets per concept equal `definitionUses`. All 60 relationships whose endpoints both carry definitions join the same definition. Two probe joins added to the copy, rulemaking-id to docket ID and person-id to Bioguide ID, each give the expected non-blocking warning. Key-anchored candidate links number 147, against 3,913 for every carrier pair; 81 of the 147 come from `source/treasury-debt`, which keys its rows by a publisher date text.
 - **Morph-KGC null handling.** Under its default `na_values`, Morph-KGC writes Parquet nulls as the text `None`, `NaT` or `<NA>`, so each document states the setting it needs.
 
 ## November 8, 2026 product boundary (ADR-015) checks

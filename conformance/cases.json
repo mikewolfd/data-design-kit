@@ -169,6 +169,101 @@
       }
     },
     {
+      "id": "CASE-CATALOG-003-ORIGIN-DETAIL",
+      "requirements": [
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A dataset still registered with origin derived is assembled; its origin check is a non-required unknown with CATALOG-ORIGIN-DETAIL.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "unknown",
+        "exitCode": 0,
+        "diagnostic": "CATALOG-ORIGIN-DETAIL"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003-MODEL-METHOD",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The layered model dataset's complete method record passes and exports a configured software agent and a spot-check review by a person. Without its configuration digest, the origin evidence is unknown. A model record on a rule dataset fails document checking.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003-METHOD-COLUMN",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A declared method column whose values come from the method vocabulary is recorded and attributes each mapped row. A declared value outside the vocabulary fails with CATALOG-METHOD-COLUMN.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPTS",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-CATALOG-013",
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce amount-cents definition is listed as one concept carried by orders and daily-revenue. The graph makes it a SKOS concept that both fields specialise, and the mappings map amount_cents under it as well.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPT-JOINS",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-POLICY-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce customer relationship joins fields of two different shared definitions. That is a non-required unknown warning, a required failure under a concept-joins rule of severity error, and a pass once the rule declares the pair compatible.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "unknown",
+        "exitCode": 0,
+        "diagnostic": "CATALOG-RELATIONSHIP-CONCEPT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-013-CANDIDATE-JOINS",
+      "requirements": [
+        "DDK-CATALOG-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Datasets carrying a committee concept that another dataset keys its rows by become candidate links to it; a pair already joined by a declared relationship does not.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "requirements": [
         "DDK-CATALOG-007"

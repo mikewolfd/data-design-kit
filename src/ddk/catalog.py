@@ -1,5 +1,6 @@
 """Assemble a local product catalog from loaded definitions and admitted metadata."""
 
+import json
 from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
@@ -13,13 +14,15 @@ from .catalog_access import (
     resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
-from .catalog_graph import GRAPH_ADAPTER, RML_ADAPTER, graph_document, rml_documents, turtle_bytes
+from .catalog_graph import GRAPH_ADAPTER, RML_ADAPTER, child_iri, graph_document, rml_documents, turtle_bytes
 from .catalog_delivery import PAIRED_VIEW, paired_view_record
 from .catalog_descriptions import dataset_facts, product_facts
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, check_report, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
 from .catalog_semantics import admit_profile, resolved_key, resolved_relationship
 from .core import check_inventory, load_project
+from .definitions import enum_values
+from .policies import ddk_annotations
 from .ports import product_ports
 from .documents import (
     OPENLINEAGE_SCHEMA, OPENLINEAGE_VERSION_FACET, ODCS_SCHEMA, ODPS_SCHEMA, REPOSITORY,
@@ -43,6 +46,9 @@ CHECK_IDS = {name: f"DDK-CATALOG-{number:03d}" for name, number in {
     "catalog.graph": 13, "catalog.rml": 14,
 }.items()}
 DETAILS = "urn:ddk:catalog:assembly"
+MODEL_FIELDS = ("id", "version", "configurationSha256", "review")
+# A method column's values: the origin vocabulary plus two kinds of rule (DDK-CATALOG-003).
+METHOD_VALUES = {"publisher", "third_party", "rule", "human", "model", "publisher_crosswalk", "exact_identifier"}
 
 
 @dataclass(frozen=True)
@@ -109,6 +115,8 @@ class Assembly:
         self.managed_schema_profiles = {}
         self.relationship_assessments = []
         self.unknown_sla = set()
+        self.concept_fields = {}
+        self.concept_rules = None
         self.recipe_sources = {}
         self.recipe_parser = None
 
@@ -187,6 +195,7 @@ class Assembly:
             "object": artifact.selection, "source": owner_record(artifact.document),
         }}
         for output, source, key in (("role", artifact.registration, "role"), ("origin", artifact.registration, "origin"),
+                                    ("model", artifact.registration, "model"),
                                     ("title", selected, "businessName"), ("rowMeaning", selected, "dataGranularityDescription")):
             if source.get(key):
                 result[output] = deepcopy(source[key])
@@ -197,6 +206,144 @@ class Assembly:
             self.unknown_sla.add((artifact.identity, artifact.version, index, artifact.path))
         self.datasets[artifact.alias] = result
         self.dataset_schemas[artifact.alias] = selected
+        self.origin_evidence(artifact, result)
+        self.method_column(artifact, selected, result)
+
+    def origin_evidence(self, artifact, result):
+        """DDK-CATALOG-003: `derived` lacks the rule-or-person detail, and a model needs its method record."""
+        origin, subject = result.get("origin"), f"{artifact.alias}/origin"
+        if origin == "derived":
+            self.check("datasets", subject, CatalogError(
+                "CATALOG-ORIGIN-DETAIL", "Origin `derived` does not say whether a rule or a person derived the content; "
+                "declare `rule` or `human`.", status="unknown"), path=artifact.path, required=False, evidence="declared")
+        elif origin == "model":
+            missing = [key for key in MODEL_FIELDS if key not in result.get("model", {})]
+            self.check("datasets", subject, CatalogError(
+                "CATALOG-ORIGIN-METHOD", f"The model method record lacks {', '.join(missing)}, so the origin evidence "
+                "is unknown.", status="unknown") if missing else None, path=artifact.path, required=False,
+                evidence="declared")
+
+    def method_column(self, artifact, selected, result):
+        """A declared method column must exist, and any values it declares must come from the method vocabulary."""
+        names = ddk_annotations(selected, "methodColumn")
+        if not names:
+            return
+        column = names[0]
+        prop = next((item for item in selected.get("properties", ()) if item["name"] == column), None)
+        outside = sorted(set(enum_values(prop) or ()) - METHOD_VALUES) if prop else []
+        error = (CatalogError("CATALOG-METHOD-COLUMN", f"The declared method column {column!r} is not a top-level field.")
+                 if prop is None else CatalogError(
+                     "CATALOG-METHOD-COLUMN", f"Method column {column!r} declares values outside the method vocabulary: "
+                     + ", ".join(map(str, outside)) + ".") if outside else None)
+        if error is None:
+            result["methodColumn"] = column
+        self.check("datasets", f"{artifact.alias}/method-column", error, path=artifact.path, evidence="declared")
+
+    def catalog_id(self):
+        root = self.inventory.root.value
+        return root.get("catalog", {}).get("id", stable_id("catalog", root["id"]))
+
+    def field_definitions(self, alias):
+        """Fields of one dataset that reference a registered shared definition: {path as JSON: definition alias}."""
+        if alias not in self.concept_fields:
+            artifact, registered, found = self.inventory.artifacts[alias], {}, {}
+            for item in self.inventory.artifacts.values():
+                if item.kind == "definition":
+                    registered.setdefault(item.path, item.alias)
+
+            def walk(prop, path):
+                for link in prop.get("authoritativeDefinitions", ()):
+                    if link.get("type") != "definition" or not link.get("url") or "#" in link["url"]:
+                        continue
+                    try:
+                        target = resolve_path(artifact.path, link["url"], self.inventory.permitted_roots)
+                    except DocumentError:
+                        continue
+                    if target in registered:
+                        found[json_dumps(path)] = registered[target]
+                        break
+                for child in prop.get("properties", ()):
+                    walk(child, [*path, {"field": child["name"]}])
+                if isinstance(prop.get("items"), dict):
+                    walk(prop["items"], [*path, {"each": True}])
+
+            for prop in self.dataset_schemas[alias].get("properties", ()):
+                walk(prop, [{"field": prop["name"]}])
+            self.concept_fields[alias] = found
+        return self.concept_fields[alias]
+
+    def concept_iri(self, definition):
+        value = self.inventory.artifacts[definition].value
+        return (ddk_annotations(value, "concept") or [child_iri(self.catalog_id(), "concept", definition)])[0]
+
+    def concepts(self):
+        """DDK-CATALOG-004 discovery by concept: each shared definition with the dataset fields that inherit it."""
+        uses = defaultdict(list)
+        for alias in sorted(self.datasets):
+            for path, definition in sorted(self.field_definitions(alias).items()):
+                uses[definition].append({"dataset": alias, "path": json.loads(path)})
+        rows = []
+        for definition, fields in sorted(uses.items()):
+            value = self.inventory.artifacts[definition].value
+            row = {"concept": self.concept_iri(definition), "definition": definition, "fields": fields}
+            if isinstance(value.get("description"), str):
+                row["description"] = value["description"]
+            for key in ("exactMatch", "closeMatch"):
+                matches = sorted({iri for entry in ddk_annotations(value, key)
+                                  for iri in (entry if isinstance(entry, list) else [entry])})
+                if matches:
+                    row[key] = matches
+            urls = sorted({link["url"] for link in value.get("authoritativeDefinitions", ())
+                           if link.get("type") == "canonicalUrl" and link.get("url")})
+            if urls:
+                row["canonicalUrls"] = urls
+            rows.append(row)
+        return rows
+
+    def concept_policy(self):
+        """Severity and compatible definition pairs from `concept-joins` policy rules; warning by default."""
+        if self.concept_rules is None:
+            severity, compatible = "warning", set()
+            for artifact in self.inventory.artifacts.values():
+                if artifact.kind != "policy":
+                    continue
+                for rule in artifact.value.get("rules", ()):
+                    if rule.get("check") != "concept-joins":
+                        continue
+                    severity = "error" if rule["severity"] == "error" else severity
+                    for pair in rule.get("compatible", ()):
+                        try:
+                            compatible.add(frozenset(self.inventory.resolve(reference, artifact.namespace, "definition").alias
+                                                     for reference in pair))
+                        except DocumentError:
+                            continue
+            self.concept_rules = (severity, compatible)
+        return self.concept_rules
+
+    def concept_join(self, row, path):
+        """Both endpoints of an equal-value join that inherit shared definitions must inherit the same one."""
+        if "dataset" not in row["target"] or row["match"] != "equal":
+            return
+        severity, compatible = self.concept_policy()
+        pairs = [(self.field_definitions(row["source"]["dataset"]).get(json_dumps(left)),
+                  self.field_definitions(row["target"]["dataset"]).get(json_dumps(right)))
+                 for left, right in zip(row["source"]["paths"], row["target"]["paths"])]
+        pairs = [(left, right) for left, right in pairs if left and right]
+        if not pairs:
+            return
+
+        def same(left, right):
+            exact = {iri for entry in ddk_annotations(self.inventory.artifacts[left].value, "exactMatch")
+                     for iri in (entry if isinstance(entry, list) else [entry])}
+            return (left == right or frozenset((left, right)) in compatible
+                    or self.concept_iri(left) == self.concept_iri(right) or self.concept_iri(right) in exact)
+
+        mismatched = [f"{left} to {right}" for left, right in pairs if not same(left, right)]
+        error = CatalogError("CATALOG-RELATIONSHIP-CONCEPT", f"{row['id']} joins fields of different shared definitions "
+                             f"({'; '.join(mismatched)}). A concept-joins policy rule can declare the pair compatible.",
+                             status="failed" if severity == "error" else "unknown") if mismatched else None
+        self.check("relationships", f"{row['id']}/concepts", error, path=path, required=severity == "error",
+                   evidence="declared")
 
     def alias(self, reference, namespace):
         artifact = self.inventory.resolve(reference, namespace, "dataset")
@@ -329,6 +476,7 @@ class Assembly:
                 })
         self.check("relationships", identifier, error, path=path)
         self.relationships[identifier] = row
+        self.concept_join(row, path)
 
     def recipe(self, declaration, namespace, path):
         row = deepcopy(declaration)
@@ -459,7 +607,7 @@ class Assembly:
             "identities": [item for aliases in self.identities.values() for item in aliases],
             "relationships": list(self.relationships.values()),
             "recipes": [recipe for recipe, _ in self.queries.values()],
-            "productions": list(self.productions.values()), "files": [],
+            "productions": list(self.productions.values()), "files": [], "concepts": self.concepts(),
             **{section: self.metadata.observations[section] if self.metadata else [] for section in SECTIONS},
             "extensions": {DETAILS: details},
         }

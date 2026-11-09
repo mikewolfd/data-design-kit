@@ -9,12 +9,14 @@ from .interfaces import json_contains
 from .ports import product_ports
 from .results import diagnostic, location
 
-KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary", "layer-order", "view-sources"}
+KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary", "layer-order", "view-sources", "concept-joins"}
 
 
-def _annotations(value, key):
+def ddk_annotations(value, key):
+    """Values of the ODCS custom properties that carry a DDK convention (`vendor: ddk`)."""
     return [entry.get("value") for entry in value.get("customProperties", [])
             if entry.get("vendor") == "ddk" and entry.get("property") == key]
+
 
 
 def _names(value, *, empty=False):
@@ -58,6 +60,9 @@ def check_policy(inventory, artifact):
             continue
         if kind == "view-sources":
             _view_sources(inventory, artifact, rule, subject, where)
+            continue
+        if kind == "concept-joins":
+            _concept_joins(inventory, artifact, rule, subject, where)
             continue
         requirement = {
             "fields-exist": "DDK-POLICY-002", "row-identity": "DDK-POLICY-002",
@@ -115,7 +120,7 @@ def _quality(report, requirement, subject, target, fields, where, related, displ
     total = 0
     for rule, parts, containing in _quality_rules(target.effective):
         total += 1
-        annotations = _annotations(rule, "fieldDependencies")
+        annotations = ddk_annotations(rule, "fieldDependencies")
         dependencies = annotations[0] if len(annotations) == 1 else []
         inherited = target.provenance.get(parts[:-1], {})
         origin = inherited.get("source")
@@ -280,6 +285,22 @@ def _properties(value, parts=()):
         yield from _properties(prop, (*parts, "properties", index))
     if isinstance(value.get("items"), dict):
         yield from _properties(value["items"], (*parts, "items"))
+
+
+def _concept_joins(inventory, artifact, rule, subject, where):
+    """A concept-joins rule's compatible pairs must name registered shared definitions.
+
+    Catalog assembly applies the rule to relationships (DDK-CATALOG-004); here only its references are checked.
+    """
+    problems = []
+    for pair in rule.get("compatible", ()):
+        for reference in pair:
+            try:
+                inventory.resolve(reference, artifact.namespace, "definition")
+            except DocumentError as exc:
+                problems.append(diagnostic(exc.code, str(exc), **where))
+    inventory.report.add("DDK-POLICY-005", "core.policies", subject, "failed" if problems else "passed",
+                         diagnostics=problems)
 
 
 def _view_sources(inventory, artifact, rule, subject, where):
