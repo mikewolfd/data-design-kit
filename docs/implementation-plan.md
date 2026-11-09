@@ -335,6 +335,22 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Acceptance.** An independent reader can follow DCAT discovery to the selected access path. The lineage receiver shows the same job, run, and dataset identities when native and DDK events describe the same entities. A run with partial input coverage exposes only known consumption and retains its limits.
 
+### WP-15 — Layered data-map extensions (specified, not implemented)
+
+**Dependencies:** WP-13 and WP-14. **Owners:** DDK. **Output:** requirements recorded from building a layered capture → source → resolved → product map; none is implemented or claimed.
+
+The [layered example](../examples/layered/README.md) exercises the implemented parts: aggregator roots, shared imports, layer order, stored views, dataset attribution and descriptive catalog facts. These requirements remain open:
+
+1. **Judgement crosswalks.** A relationship may match through a declared judgement dataset whose rows record `same`, `not_same` or `undecided` decisions between source and target keys. Only `same` establishes a match; `undecided` stays unresolved. *Rationale:* cross-source entity resolution follows the OpenSanctions statement/judgement pattern; `equal` cannot express a decision table and `project_rule` hides it from the catalog.
+2. **Edition series.** Periodic editions of one logical dataset, such as two-year cycles or annual files, export as DCAT 3 `dcat:DatasetSeries` members with `dcat:inSeries` and `dcat:prev`/`dcat:previousVersion`, ordered by declared edition metadata rather than observation time. *Rationale:* consumers need the latest edition and its predecessors through standard terms.
+3. **Offline recipe SQL validation.** Check that each recipe's SQL references only declared inputs and their ODCS columns; unparseable or unsupported SQL stays unknown. Prefer DocSpec's existing schema-only preparation (`plan.compile`) over a new parser. *Rationale:* recipes are copied by consumers, and wrong column names are found today only by execution.
+4. **Nested compatibility.** Extend DDK-DATA-002 to ODCS objects and arrays: compare child properties by path, array element types and nullability at each level; unsupported shapes stay unknown. *Rationale:* source records keep publisher structure, which makes current compatibility results unknown.
+5. **Pinned status vocabulary.** Recognize `proposed`, `draft`, `active`, `deprecated` and `retired`, the values ODCS and ODPS list as examples, with defined meanings; preserve other values and let a policy require the pinned set. *Rationale:* catalog records now surface status, and consumers need comparable meaning across contracts and products.
+6. **Definitions-only qualification.** A qualification profile that requires only core and catalog definition checks, so a designed but unbuilt map passes `--require` without version-bound evidence. It must not claim availability or data qualification. *Rationale:* requiring `catalog.qualification` without metadata now yields `not_run`.
+7. **One vendored ODCS 3.2.0 schema.** Replace the `3.2.0-release` copy with a recorded difference: the published tag uses `oneOf` where the pinned revision uses `anyOf` in `DataQualityOperators`. Keep the comparison test. *Rationale:* two 110 KB copies that differ in one keyword invite drift.
+
+Deferred from the implemented set: property-level attribution, DCAT mapping of the new descriptive fields, and output-port `context`.
+
 ## 6. Commerce regression fixture
 
 The independently authored commerce fixture exercises a shared reader, changed interfaces, inherited field requirements, invalid dependencies, and known revenue outputs. The fixture filters cancelled orders, joins customer regions, and sums integer cents by date and region. Execute the SQL and saved Substrait plan against the same expected rows. Run exact-output ODCS checks, and exercise a missing required check and wrong-but-well-typed join.

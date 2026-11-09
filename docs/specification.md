@@ -847,6 +847,10 @@ Changes to a selected relationship profile's provenance or its declaration asses
 
 Public filtering MUST retain permitted profile identity and redacted source provenance for comparison. Withheld assessments and consumer coverage MUST remain explicitly unknown; they MUST NOT become an empty, completed scope or fabricated reader dependencies.
 
+### 19.1 Layered maps (informative)
+
+A layered map keeps retained originals, source records, resolved entities, and products in separate projects. An aggregator root imports every layer while each layer also imports its lower neighbour; DDK-REF-002 loads each layer once. DDK-POLICY-006 keeps the layer direction checkable under that flat root, and DDK-CATALOG-003 attribution separates publisher assertions from project and model derivations. The [layered example](../examples/layered/README.md) shows these together. [WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) records further requirements that are specified but not implemented.
+
 <a id="references"></a>
 ## 20. References
 

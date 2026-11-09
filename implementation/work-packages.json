@@ -351,6 +351,20 @@
       "owners": [
         "DDK integration"
       ]
+    },
+    {
+      "id": "WP-15",
+      "title": "Layered data-map extensions (specified, not implemented)",
+      "status": "specified",
+      "dependsOn": [
+        "WP-13",
+        "WP-14"
+      ],
+      "requirements": [],
+      "planSection": "WP-15 \u2014 Layered data-map extensions (specified, not implemented)",
+      "owners": [
+        "DDK"
+      ]
     }
   ],
   "firstRelease": {
