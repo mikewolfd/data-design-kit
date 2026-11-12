@@ -23,7 +23,8 @@ def _ref(identifier):
     return {"@id": identifier}
 
 
-def _current_versions(catalog, version_datasets):
+def current_versions(catalog, version_datasets):
+    """{dataset: (version, selection)} for the requested current selection; empty when none is requested."""
     selector = catalog.get("currentSelection")
     result = {}
     if selector is None:
@@ -43,14 +44,33 @@ def _current_versions(catalog, version_datasets):
 
 
 def dcat_document(catalog):
+    """The DCAT 3 document, checked by an independent JSON-LD reader."""
     try:
-        from rdflib import Graph, RDF, URIRef
+        from rdflib import Graph
     except ImportError as exc:
         raise CatalogError("ADAPTER-CAPABILITY-MISSING", "DCAT validation requires an independent JSON-LD reader.",
                            status="not_run") from exc
+    document = dcat_graph(catalog)
+    if not dcat_resolves(Graph().parse(data=json_dumps(document), format="json-ld"), catalog):
+        raise CatalogError("CATALOG-DCAT-VALIDATION", "The JSON-LD reader could not resolve the expected DCAT resources.")
+    return document
+
+
+def dcat_resolves(parsed, catalog):
+    """Whether a parsed graph holds the catalog and exactly its logical datasets."""
+    from rdflib import RDF, URIRef
+
+    catalog_uri = URIRef(catalog["id"])
+    return ((catalog_uri, RDF.type, URIRef(CONTEXT["dcat"] + "Catalog")) in parsed
+            and set(parsed.objects(catalog_uri, URIRef(CONTEXT["dcat"] + "dataset")))
+            == {URIRef(item["id"]) for item in catalog["datasets"]})
+
+
+def dcat_graph(catalog):
+    """The DCAT 3 JSON-LD document before validation; the graph export extends it and validates the whole."""
     datasets = {item["alias"]: item for item in catalog["datasets"]}
     version_datasets = {item["id"]: datasets[item["dataset"]]["id"] for item in catalog["versions"]}
-    selected = _current_versions(catalog, version_datasets)
+    selected = current_versions(catalog, version_datasets)
     version_index = defaultdict(list)
     for version, dataset in version_datasets.items():
         version_index[dataset].append(version)
@@ -118,13 +138,7 @@ def dcat_document(catalog):
     if services:
         root["dcat:service"] = [_ref(item) for item in services]
     graph[catalog["id"]] = root
-    document = {"@context": CONTEXT, "@graph": [graph[key] for key in sorted(graph)]}
-    parsed = Graph().parse(data=json_dumps(document), format="json-ld")
-    catalog_uri = URIRef(catalog["id"])
-    if ((catalog_uri, RDF.type, URIRef(CONTEXT["dcat"] + "Catalog")) not in parsed
-            or set(parsed.objects(catalog_uri, URIRef(CONTEXT["dcat"] + "dataset"))) != set(map(URIRef, logical))):
-        raise CatalogError("CATALOG-DCAT-VALIDATION", "The JSON-LD reader could not resolve the expected DCAT resources.")
-    return document
+    return {"@context": CONTEXT, "@graph": [graph[key] for key in sorted(graph)]}
 
 
 def _mapping(source, key):

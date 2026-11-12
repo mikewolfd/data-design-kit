@@ -1,16 +1,19 @@
 # DDK vocabulary for the knowledge-graph export (DDK-CATALOG-013) and RML mappings (DDK-CATALOG-014).
 # Two schemes are DDK's own: check outcomes and evidence strengths. The others restate enums the DDK
-# schemas already define, so graph readers can resolve them. noMatch records a negative match decision.
+# schemas already define, so graph readers can resolve them. noMatch records a negative match decision, and
+# CandidateLinkset keeps inferred joins apart from declared void:Linksets.
 
 @prefix ddkv: <urn:ddk:vocab:> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
 # Terms are URNs so they stay stable if the repository moves; this file, published with the repository at
 # https://github.com/mikewolfd/data-design-kit, is where they are defined.
-<urn:ddk:vocab> dcterms:title "Data Design Kit vocabulary"@en ;
+<urn:ddk:vocab> a owl:Ontology ;
+    dcterms:title "Data Design Kit vocabulary"@en ;
     dcterms:source <https://github.com/mikewolfd/data-design-kit/blob/main/vocab/ddk.ttl> .
 
 ddkv:CheckOutcome a skos:ConceptScheme ; skos:prefLabel "Check outcomes"@en ;
@@ -41,17 +44,13 @@ ddkv:role-application a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:pre
 ddkv:role-evidence a skos:Concept ; skos:inScheme ddkv:DatasetRole ; skos:prefLabel "evidence"@en .
 
 ddkv:DatasetOrigin a skos:ConceptScheme ; skos:prefLabel "Dataset origins"@en ;
-    skos:definition "Who asserts a dataset's content (DDK-CATALOG-003). Method columns use the same values and two kinds of rule."@en .
+    skos:definition "Who asserts a dataset's content (DDK-CATALOG-003). A method column's values are these, or finer methods its methodOrigins property maps to one."@en .
 ddkv:origin-publisher a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "publisher"@en ;
     skos:definition "As the original publisher published it."@en .
 ddkv:origin-third_party a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "third party"@en ;
     skos:definition "Another outside party's assertion."@en .
 ddkv:origin-rule a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "rule"@en ;
     skos:definition "Derived by deterministic code."@en .
-ddkv:origin-publisher_crosswalk a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:broader ddkv:origin-rule ;
-    skos:prefLabel "publisher crosswalk"@en ; skos:definition "A rule that applies a crosswalk the publisher provides."@en .
-ddkv:origin-exact_identifier a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:broader ddkv:origin-rule ;
-    skos:prefLabel "exact identifier"@en ; skos:definition "A rule that matches an exact shared identifier."@en .
 ddkv:origin-human a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "human"@en ;
     skos:definition "Authored or reviewed by a person."@en .
 ddkv:origin-model a skos:Concept ; skos:inScheme ddkv:DatasetOrigin ; skos:prefLabel "model"@en ;
@@ -88,9 +87,35 @@ ddkv:LinkMatch a skos:ConceptScheme ; skos:prefLabel "Relationship match rules"@
 ddkv:match-equal a skos:Concept ; skos:inScheme ddkv:LinkMatch ; skos:prefLabel "equal"@en .
 ddkv:match-project_rule a skos:Concept ; skos:inScheme ddkv:LinkMatch ; skos:prefLabel "project rule"@en .
 
-ddkv:noMatch a rdf:Property ; rdfs:label "no match"@en ;
-    rdfs:comment "A recorded decision that two resources do not denote the same thing. It is a judgement from a match-decision table, not a logical axiom such as owl:differentFrom."@en ;
+ddkv:ConceptKind a skos:ConceptScheme ; skos:prefLabel "Concept kinds"@en ;
+    skos:definition "Whether a shared concept names an entity identifier or a descriptive attribute."@en .
+ddkv:concept-kind-identifier a skos:Concept ; skos:inScheme ddkv:ConceptKind ; skos:prefLabel "identifier"@en ;
+    skos:definition "Identifies a thing so rows carrying the same value can denote or reference it."@en .
+ddkv:concept-kind-attribute a skos:Concept ; skos:inScheme ddkv:ConceptKind ; skos:prefLabel "attribute"@en ;
+    skos:definition "Describes a property, measurement, date or classification rather than an entity key."@en .
+
+ddkv:noMatch a rdf:Property, owl:SymmetricProperty ; rdfs:label "no match"@en ;
+    rdfs:comment "A symmetric recorded decision that two resources do not denote the same thing. It is a judgement from a match-decision table, not a logical axiom such as owl:differentFrom."@en ;
     rdfs:seeAlso skos:exactMatch, skos:closeMatch .
 
 ddkv:methodColumn a rdf:Property ; rdfs:label "method column"@en ;
-    rdfs:comment "The field whose value attributes each row to the method that produced it; its values come from the dataset origin scheme."@en .
+    rdfs:comment "The field whose value attributes each row to the method that produced it; its values are origins, or finer methods mapped to one."@en .
+
+ddkv:outcome a rdf:Property ; rdfs:label "outcome"@en ;
+    rdfs:range skos:Concept ;
+    rdfs:comment "The check outcome concept (from ddkv:CheckOutcome) recorded on a quality measurement while dqv:value carries the status literal."@en ;
+    rdfs:seeAlso <http://www.w3.org/ns/dqv#value>, ddkv:CheckOutcome .
+
+ddkv:CandidateLinkset a rdfs:Class ; rdfs:label "candidate linkset"@en ;
+    rdfs:comment "Two datasets that could be joined on a shared concept: one carries it and the other keys its rows by it. Inferred from definitions; no relationship declares it, so it is not a void:Linkset and has no link predicate."@en ;
+    rdfs:seeAlso <http://rdfs.org/ns/void#Linkset> .
+
+ddkv:subjectsTarget a rdf:Property ; rdfs:label "subjects target"@en ;
+    rdfs:domain ddkv:CandidateLinkset ;
+    rdfs:comment "The carrier dataset of a candidate linkset, distinct from void:subjectsTarget so RDFS does not infer void:Linkset."@en ;
+    rdfs:seeAlso <http://rdfs.org/ns/void#subjectsTarget> .
+
+ddkv:objectsTarget a rdf:Property ; rdfs:label "objects target"@en ;
+    rdfs:domain ddkv:CandidateLinkset ;
+    rdfs:comment "The dataset keyed by the shared concept of a candidate linkset, distinct from void:objectsTarget so RDFS does not infer void:Linkset."@en ;
+    rdfs:seeAlso <http://rdfs.org/ns/void#objectsTarget> .

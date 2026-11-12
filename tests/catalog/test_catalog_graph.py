@@ -66,8 +66,10 @@ def test_graph_states_runs_checks_links_and_origins_with_standard_terms():
     association = graph.value(run, prov.qualifiedAssociation)
     assert graph.value(graph.value(association, prov.hadPlan), rdflib.RDFS.label) == rdflib.Literal("summarize")
     # The example check did not run; the graph must not turn that into unknown, passed or executed evidence.
-    measurement = next(graph.subjects(rdflib.RDF.type, rdflib.URIRef("http://www.w3.org/ns/dqv#QualityMeasurement")))
-    assert graph.value(measurement, rdflib.URIRef("http://www.w3.org/ns/dqv#value")) == DDKV["outcome-not_run"]
+    dqv = rdflib.Namespace("http://www.w3.org/ns/dqv#")
+    measurement = next(graph.subjects(rdflib.RDF.type, dqv.QualityMeasurement))
+    assert graph.value(measurement, dqv.value) == rdflib.Literal("not_run")
+    assert graph.value(measurement, DDKV.outcome) == DDKV["outcome-not_run"]
     assert graph.value(measurement, rdflib.DCTERMS.type) == DDKV["evidence-declared"]
     linkset = rdflib.URIRef("urn:example:commerce:relationship:customer:linkset")
     assert {graph.value(linkset, rdflib.URIRef("http://rdfs.org/ns/void#" + term)) for term in
@@ -80,6 +82,9 @@ def test_graph_states_runs_checks_links_and_origins_with_standard_terms():
     station_files = rdflib.URIRef("urn:example:layered:dataset:station-files")
     agent = layered.value(station_files, prov.wasAttributedTo)
     assert layered.value(agent, rdflib.DCTERMS.type) == DDKV["origin-publisher"]
+    attribution = layered.value(station_files, prov.qualifiedAttribution)  # an origin is a declaration DDK never verified
+    assert (layered.value(attribution, prov.agent), layered.value(attribution, rdflib.DCTERMS.type)) == (
+        agent, DDKV["evidence-declared"])
     layers = {str(layered.value(concept, SKOS.prefLabel)) for concept in layered.objects(None, rdflib.URIRef(
         "http://www.w3.org/ns/dcat#theme")) if str(concept).startswith("urn:example:layered:catalog:layer:")}
     assert layers == {"capture", "source", "resolved", "product"}
@@ -95,16 +100,19 @@ def test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_u
     expected = {"CheckOutcome": ("outcome", catalog_schema["check"]["properties"]["status"]["enum"]),
                 "EvidenceStrength": ("evidence", ["declared", "inferred", "executed"]),
                 "DatasetRole": ("role", role),
-                "DatasetOrigin": ("origin", [*common["datasetOrigin"]["enum"], "publisher_crosswalk", "exact_identifier"]),
+                "DatasetOrigin": ("origin", common["datasetOrigin"]["enum"]),
                 "ReviewState": ("review", common["modelMethod"]["properties"]["review"]["enum"]),
+                "ConceptKind": ("concept-kind", catalog_schema["concept"]["properties"]["conceptKind"]["enum"]),
                 **{scheme: (key, relationship[key]["enum"]) for scheme, key in (
                     ("LinkCardinality", "cardinality"), ("LinkScope", "scope"), ("LinkNulls", "nulls"),
                     ("LinkMatch", "match"))}}
     for scheme, (prefix, values) in expected.items():
         assert set(vocabulary.subjects(SKOS.inScheme, DDKV[scheme])) == {DDKV[f"{prefix}-{value}"] for value in values}
-    from ddk.catalog import METHOD_VALUES
+    assert (rdflib.URIRef("urn:ddk:vocab"), rdflib.RDF.type, rdflib.OWL.Ontology) in vocabulary
+    assert (DDKV.noMatch, rdflib.RDF.type, rdflib.OWL.SymmetricProperty) in vocabulary
+    from ddk.catalog_descriptions import ORIGINS
     assert {str(item).rpartition("origin-")[2] for item in vocabulary.subjects(SKOS.inScheme, DDKV["DatasetOrigin"])} == (
-        METHOD_VALUES | {"derived"})  # the method vocabulary has one owner: this scheme
+        {*ORIGINS, "derived"})  # the code's origins and the scheme agree; `derived` is read from older projects
     defined = set(vocabulary.subjects())
     for result in (_commerce("dcat", "graph"), assemble_catalog(LAYERED / "project.ddk.json", exports=("dcat", "graph"))):
         used = {term for triple in _graph(result) for term in triple if str(term).startswith(VOCAB)}
@@ -132,6 +140,34 @@ def test_executed_evidence_needs_a_retained_report_and_missing_edges_fail_the_ex
     assert getattr(error.value, "code", "") == "CATALOG-GRAPH-VALIDATION"
 
 
+def test_external_targets_and_candidate_links_stay_apart_from_local_declared_links():
+    from ddk import catalog_graph
+    from ddk.documents import json_dumps
+
+    catalog = json.loads(json_dumps(_commerce("dcat").catalog))
+    declared = catalog["relationships"][0]
+    external = {**declared, "id": "urn:example:commerce:relationship:registry", "target": {"external": "https://registry.example.org/customers"},
+                "scope": "external", "resolution": "external"}
+    catalog["relationships"].append(external)
+    catalog["concepts"] = [{"concept": "urn:ex:concept:customer", "definition": "customer", "conceptKind": "identifier",
+                            "fields": [{"dataset": alias, "path": [{"field": "customer_id"}]}
+                                       for alias in ("orders", "customers", "daily-revenue")]}]
+    definitions = catalog["extensions"]["urn:ddk:catalog:assembly"]["datasetDefinitions"]
+    definitions["daily-revenue"]["properties"].append({"name": "customer_id", "logicalType": "string"})
+    _, graph = catalog_graph.graph_document(catalog)
+    void = rdflib.Namespace("http://rdfs.org/ns/void#")
+    linkset = rdflib.URIRef(external["id"] + ":linkset")
+    assert graph.value(linkset, void.objectsTarget) == rdflib.URIRef("https://registry.example.org/customers")
+    candidates = set(graph.subjects(rdflib.RDF.type, DDKV["CandidateLinkset"]))
+    assert len(candidates) == 1 and not candidates & set(graph.subjects(rdflib.RDF.type, void.Linkset))
+    candidate, = candidates
+    assert (graph.value(candidate, DDKV.subjectsTarget), graph.value(candidate, DDKV.objectsTarget)) == (
+        rdflib.URIRef("urn:example:commerce:dataset:daily-revenue"), rdflib.URIRef("urn:example:commerce:dataset:customers"))
+    assert graph.value(candidate, void.subjectsTarget) is None and graph.value(candidate, void.objectsTarget) is None
+    assert graph.value(candidate, void.linkPredicate) is None
+    assert {DDKV["evidence-inferred"], DDKV["concept-kind-identifier"]} <= set(graph.objects(candidate, rdflib.DCTERMS.type))
+
+
 def test_fields_keep_dataset_predicates_and_point_to_canonical_urls():
     from ddk import catalog_graph
     from ddk.documents import json_dumps
@@ -146,3 +182,43 @@ def test_fields_keep_dataset_predicates_and_point_to_canonical_urls():
     assert set(graph.subjects(rdflib.RDFS.seeAlso, canonical)) == {
         rdflib.URIRef(f"urn:example:commerce:dataset:{alias}:field:customer_id") for alias in ("orders", "customers")}
     assert not set(graph.predicate_objects(canonical))  # nothing is said about someone else's IRI
+
+
+def test_public_graph_keeps_valid_model_attribution_clean_and_preserves_unknown_origin(tmp_path):
+    import shutil
+
+    prov = rdflib.Namespace("http://www.w3.org/ns/prov#")
+    stations = rdflib.URIRef("urn:example:layered:dataset:stations")
+    datasets = {f"urn:example:layered:dataset:{name}": f"urn:example:layered:contract:{contract}" for name, contract in (
+        ("captures", "captures"), ("readings", "readings"), ("stations", "stations"), ("station-summary", "summary"))}
+    products = [f"urn:example:layered:product:{name}" for name in ("captures", "readings", "stations", "summary")]
+    policy = tmp_path / "public.json"
+    policy.write_text(json.dumps({"identifiers": ["urn:example:layered:catalog", "urn:example:layered:map", *products,
+                                                  *datasets, *datasets.values()]}), encoding="utf-8")
+
+    clean = assemble_catalog(LAYERED / "project.ddk.json", disclosure_policy=policy, exports=("graph", "graph.ttl"))
+    assert clean.report["decision"] == "passed"
+    graph = _graph(clean)
+    assert isomorphic(graph, _graph(clean, "discovery.graph.ttl", "turtle"))
+    assert not set(graph.subjects(rdflib.RDF.type, prov.SoftwareAgent))
+    assert not set(graph.subjects(rdflib.RDF.type, prov.Person))
+    attribution = graph.value(stations, prov.qualifiedAttribution)
+    assert set(graph.objects(attribution, rdflib.DCTERMS.type)) == {DDKV["evidence-declared"]}
+    assert graph.value(attribution, rdflib.RDFS.comment) is None
+
+    incomplete_dir = tmp_path / "layered-incomplete"
+    shutil.copytree(LAYERED, incomplete_dir)
+    resolved_project = incomplete_dir / "resolved" / "project.ddk.json"
+    project_doc = json.loads(resolved_project.read_text(encoding="utf-8"))
+    removed_sha = project_doc["artifacts"]["stations"]["model"].pop("configurationSha256")
+    resolved_project.write_text(json.dumps(project_doc), encoding="utf-8")
+    incomplete = assemble_catalog(incomplete_dir / "project.ddk.json", disclosure_policy=policy, exports=("graph",))
+    assert incomplete.report["decision"] == "passed"
+    inc_graph = _graph(incomplete)
+    inc_attribution = inc_graph.value(stations, prov.qualifiedAttribution)
+    assert set(inc_graph.objects(inc_attribution, rdflib.DCTERMS.type)) == {
+        DDKV["evidence-declared"], DDKV["outcome-unknown"]}
+    comment = str(inc_graph.value(inc_attribution, rdflib.RDFS.comment))
+    assert comment and "configurationSha256" not in comment
+    assert removed_sha.encode() not in b"".join(incomplete.artifacts.values())
+

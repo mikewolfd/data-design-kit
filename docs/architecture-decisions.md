@@ -170,7 +170,7 @@
 
 **Decision.** DDK is the evidence-bound catalog: ODCS and ODPS definitions resolved to exact versions, with origin, disclosure and explicit `unknown` and `not_run` outcomes. Transformations are SQL files that run as DocSpec job steps. DDK reads their declarations, job definitions and run records; it does not author transformations. [DDK-CONF-005](specification.md#DDK-CONF-005) makes the ownership sentence in §1.2 normative.
 
-- **Keep and extend:** §3, §5, §13 and §17; the policies in use, DDK-POLICY-001, 002, 004, 006 and 007; DDK-CATALOG-001 to 012; managed qualification; and `plan.docspec-sql`.
+- **Keep and extend:** §3, §5, §13 and §17; the policies in use, DDK-POLICY-001, 002, 004, 006 and 007; DDK-CATALOG-001 to 014; managed qualification; and `plan.docspec-sql`. The RML mappings of DDK-CATALOG-014 stay inside the boundary: DDK does not run them, and their DuckDB views only select declared fields, unnest declared arrays, number keyless rows, join along declared relationships and split a declared decision table by decision. They re-express rows and derive none; a mapping that needs another filter, an aggregate or a computed value belongs in a DocSpec job.
 - **Freeze:** §6, §8, §11 and §12; DDK-DATA-001 to 005; DDK-ADAPTER-004 to 007, 009 and 010; the `build` and `test` commands; and the profiles they define. The catalog lock, which moved into DDK-CATALOG-007, stays live. Frozen parts keep their text, cases and the commerce qualification and gain no requirements. Each becomes a removal candidate once its replacement is live:
 
 | Frozen | Named replacement | Live now |

@@ -10,6 +10,9 @@ or custom properties.
 
 from copy import deepcopy
 
+from .definitions import enum_values
+from .policies import ddk_annotations
+
 PURPOSE_FIELDS = ("purpose", "usage", "limitations")
 PRODUCT_TEXT = ("name", "domain", "description", "context")
 DATASET_TEXT = ("description", "tags", "context", "contract")
@@ -17,6 +20,61 @@ DATASET_TEXT = ("description", "tags", "context", "contract")
 # properties and links follow the ordinary withholding rules.
 PUBLIC_SLA = {"property", "value", "valueExt", "unit", "driver", "description"}
 PUBLIC_CONTEXT_ITEM = {"question", "answer", "constraint", "tags"}
+# Who asserts a dataset's content (DDK-CATALOG-003). Older projects may still declare `derived`.
+ORIGINS = ("publisher", "third_party", "rule", "human", "model")
+MODEL_FIELDS = ("id", "version", "configurationSha256", "review")
+
+
+def origin_gap(dataset, *, audience="local", unknown_origins=()):
+    """(code, reason) when a dataset's declared origin leaves its evidence unknown, else None."""
+    if dataset.get("origin") == "derived":
+        return "CATALOG-ORIGIN-DETAIL", ("Origin `derived` does not say whether a rule or a person derived the "
+                                         "content; declare `rule` or `human`.")
+    if dataset.get("origin") == "model":
+        if audience == "public":
+            if dataset.get("alias") in unknown_origins:
+                return "CATALOG-ORIGIN-METHOD", "The model method record is incomplete; details are withheld by the disclosure policy."
+            return None
+        missing = [key for key in MODEL_FIELDS if key not in dataset.get("model", {})]
+        if missing:
+            return "CATALOG-ORIGIN-METHOD", (f"The model method record lacks {', '.join(missing)}, so the origin "
+                                             "evidence is unknown.")
+    return None
+
+
+def method_origins(prop):
+    """The origin of each value a method column declares, and a failure reason when invalid (else None).
+
+    A method column must declare a non-empty `enum`. Each value is an origin, or a finer method that one
+    `vendor: ddk` custom property `methodOrigins` maps to an origin, such as {"exact_identifier": "rule"}.
+    """
+    declared = list(dict.fromkeys(map(str, enum_values(prop) or ())))
+    if not declared:
+        return {}, "declares no `enum` values"
+    annotations = ddk_annotations(prop, "methodOrigins")
+    if len(annotations) > 1 or (annotations and not isinstance(annotations[0], dict)):
+        return {}, "has a malformed `methodOrigins` custom property; expected one object"
+    finer = annotations[0] if annotations else {}
+    bad_targets = sorted(
+        f"{key!r}: {target!r}" for key, target in finer.items()
+        if not isinstance(key, str) or target not in ORIGINS or (key in ORIGINS and target != key)
+    )
+    if bad_targets:
+        return {}, "maps `methodOrigins` entries to invalid origins: " + ", ".join(bad_targets)
+    unknown_keys = sorted(set(str(key) for key in finer) - set(declared))
+    if unknown_keys:
+        return {}, "maps `methodOrigins` keys absent from `enum`: " + ", ".join(unknown_keys)
+    origins, outside = {}, []
+    for value in declared:
+        origin = value if value in ORIGINS else finer.get(value)
+        if origin in ORIGINS:
+            origins[value] = origin
+        else:
+            outside.append(value)
+    if outside:
+        return {}, ("declares values that are neither an origin nor mapped to one by `methodOrigins`: "
+                    + ", ".join(sorted(outside)))
+    return origins, None
 
 
 def _context(value):
@@ -116,6 +174,10 @@ def public_product(product, policy):
 
 def public_dataset(dataset, policy):
     """Withhold free text without a descriptions grant, and structural names and links within it."""
+    # A model method record names models, configurations and reviewers, and a method column names a field:
+    # neither has a disclosure grant.
+    dataset.pop("model", None)
+    dataset.pop("methodColumn", None)
     if not policy["descriptions"]:
         for key in DATASET_TEXT:
             dataset.pop(key, None)

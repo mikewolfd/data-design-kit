@@ -189,6 +189,7 @@
       "properties": {
         "concept": {"$ref": "common.schema.json#/$defs/identifier"},
         "definition": {"$ref": "common.schema.json#/$defs/artifactRef"},
+        "conceptKind": {"enum": ["identifier", "attribute"]},
         "fields": {
           "type": "array",
           "items": {
