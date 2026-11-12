@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createReadStream } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -26,7 +26,19 @@ import type {
 import type { OwnerAdapters, OwnerEvidenceReader, OwnerQuery, OwnerReader } from './access';
 import { fail, LIMITS, sha256, ViewerError, type CatalogRegistration } from './catalog-store';
 
-const BRIDGE_SCRIPT = fileURLToPath(new URL('../../scripts/docspec-owner-bridge.py', import.meta.url));
+export function resolveBridgeScriptPath(
+  moduleUrl: string = import.meta.url,
+  cwd: string = process.cwd(),
+): string {
+  const candidates = [
+    fileURLToPath(new URL('../../scripts/docspec-owner-bridge.py', moduleUrl)),
+    fileURLToPath(new URL('../../../scripts/docspec-owner-bridge.py', moduleUrl)),
+    resolve(cwd, 'scripts/docspec-owner-bridge.py'),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0]!;
+}
+
+const BRIDGE_SCRIPT = resolveBridgeScriptPath();
 const MAX_WORKER_STDOUT_LINE = 8 * 1024 * 1024;
 const DEFAULT_VERIFY_DIGEST_MAX_BYTES = 256 * 1024 * 1024;
 const FORBIDDEN_EVIDENCE_EXTENSIONS = new Set([

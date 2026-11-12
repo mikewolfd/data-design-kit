@@ -23,6 +23,7 @@ import {
 import {
   createDocSpecCatalogOwner,
   loadOperatorOwnerConfig,
+  resolveBridgeScriptPath,
 } from '../../src/server/docspec-owner';
 
 const DUCKDB_PYTHON = '/Users/mikewolfd/Work/congressional-tech/.venv/bin/python';
@@ -1027,3 +1028,27 @@ pq.write_table(table, sys.argv[1])
     }
   },
 );
+
+test('resolveBridgeScriptPath locates docspec-owner-bridge.py from both source and Astro dist/server/chunks', () => {
+  const viewerRoot = resolve(process.cwd());
+  const expected = resolve(viewerRoot, 'scripts/docspec-owner-bridge.py');
+  assert.equal(existsSync(expected), true);
+
+  const fromSource = resolveBridgeScriptPath(
+    pathToFileURL(resolve(viewerRoot, 'src/server/docspec-owner.ts')).href,
+    '/nonexistent',
+  );
+  assert.equal(fromSource, expected);
+
+  const fromBundledChunk = resolveBridgeScriptPath(
+    pathToFileURL(resolve(viewerRoot, 'dist/server/chunks/docspec-owner_abc123.mjs')).href,
+    '/nonexistent',
+  );
+  assert.equal(fromBundledChunk, expected);
+
+  const fromCwdFallback = resolveBridgeScriptPath(
+    pathToFileURL('/nonexistent/deep/a/b/c/chunk.mjs').href,
+    viewerRoot,
+  );
+  assert.equal(fromCwdFallback, expected);
+});
