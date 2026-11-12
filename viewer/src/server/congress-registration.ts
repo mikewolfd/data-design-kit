@@ -1,9 +1,15 @@
 import { createReadStream } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exactObjectField, isObject, parseMetadata } from '../domain/exact';
-import type { CatalogSnapshot, ExactBinding, RecordRef } from '../domain/types';
+import type { CatalogSnapshot, ExactBinding, ExactValue, RecordRef } from '../domain/types';
 import { fail, sha256, type CatalogRegistration } from './catalog-store';
+import { DEFAULT_DDK_SRC, DEFAULT_PYTHON } from './commerce-native';
+import {
+  createDocSpecCatalogOwner,
+  encodeExactOwnerValue,
+  type DocSpecCatalogOwner,
+} from './docspec-owner';
 
 const DIRECTORY = resolve(process.cwd(), 'fixtures/applications/congress-authored');
 const CATALOG_SHA = 'e45c819098623a7edc352230ce839691e3d954d28bd0abac56bd12afd8d2a834';
@@ -223,4 +229,72 @@ export function bindCongressInput(
       409,
     );
   return entry;
+}
+
+export function encodeCongressValue(
+  value: unknown,
+  owner: {
+    isArchiveDateValue: (value: unknown) => boolean;
+    isArchiveTimestampValue: (value: unknown) => boolean;
+  },
+): ExactValue {
+  return encodeExactOwnerValue(value, {
+    isDateValue: owner.isArchiveDateValue,
+    isTimestampValue: owner.isArchiveTimestampValue,
+  });
+}
+
+/** Thin configuration wrapper around startup-pinned DocSpecCatalogOwner for congress-authored. */
+export async function createCongressAdapter(options: {
+  snapshot: CatalogSnapshot;
+  pythonPath?: string;
+  ddkSrcPath?: string;
+  docspecBinary?: string;
+  docspecSha256?: string;
+  supportedDatasetIds?: readonly string[];
+}): Promise<DocSpecCatalogOwner> {
+  const inputs = await loadCongressInputs(options.snapshot);
+  const dataDirs = [...new Set([...inputs.data.values()].map((item) => dirname(item.path)))];
+  const manifestDir = dirname(fileURLToPath(inputs.originalManifestRecord.uri));
+  return createDocSpecCatalogOwner({
+    directory: DIRECTORY,
+    lockSha256: congressRegistration.lockSha256,
+    pythonPath: options.pythonPath ?? process.env.DDK_VIEWER_PYTHON ?? DEFAULT_PYTHON,
+    ddkSrcPath: options.ddkSrcPath ?? process.env.DDK_VIEWER_DDK_SRC ?? DEFAULT_DDK_SRC,
+    ...(options.docspecBinary ? { docspecBinary: options.docspecBinary } : {}),
+    ...(options.docspecSha256 ? { docspecSha256: options.docspecSha256 } : {}),
+    permittedRoots: [DIRECTORY, manifestDir, ...dataDirs],
+    supportedDatasetIds:
+      options.supportedDatasetIds ?? congressSupportedDatasetIds(options.snapshot),
+    description:
+      'Read saved authored Congress Parquet records through startup-pinned DocSpecCatalogOwner.',
+    resolveReadShards: async ({ snapshot, binding }) => {
+      const entry = bindCongressInput(inputs, snapshot, binding);
+      return {
+        shards: [
+          {
+            path: entry.path,
+            sha256: entry.sha256,
+            byteSize: entry.size,
+            rowCount: entry.rows,
+          },
+        ],
+        extraDetails: {
+          releaseId: inputs.releaseId,
+          file: {
+            name: entry.name,
+            sha256: entry.sha256,
+            size: entry.size,
+            rows: entry.rows,
+          },
+          originalManifest: inputs.originalManifestRecord,
+          localCatalogHandoff: inputs.handoffRecord,
+          ownerModule: {
+            entry: 'docspec-owner-bridge.py',
+            configuration: { sha256: congressRegistration.lockSha256 },
+          },
+        },
+      };
+    },
+  });
 }

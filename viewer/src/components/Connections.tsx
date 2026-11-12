@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type {
   CatalogDataset,
   CatalogSnapshot,
+  CatalogSummary,
   CatalogVersion,
   CatalogRecipe,
   QueryRequest,
@@ -17,10 +18,11 @@ import {
   pathLabel,
   shortId,
   safeLink,
+  textValue,
   titleOf,
   words,
 } from '../lib/display';
-import { Badge, Facts, Notice, Raw, Section, BlankValuesHelp } from './Primitives';
+import { Badge, Facts, Notice, Raw, RecordLink, Section, BlankValuesHelp } from './Primitives';
 import { enumLabel, formatLabel, isRecordResource } from '../lib/content';
 import { ResultTable } from './DataPanel';
 import { EvidenceRecord } from './EvidenceRecord';
@@ -97,16 +99,35 @@ function RelationshipAssessment({
   );
 }
 
+function resolvePeer(
+  snapshot: CatalogSnapshot,
+  catalogs: readonly CatalogSummary[] | undefined,
+  peerAlias: string,
+) {
+  const peerImport = snapshot.catalog.imports?.[peerAlias];
+  const peerCatalog = catalogs?.find(
+    (entry) =>
+      entry.id !== snapshot.id &&
+      ((peerImport?.id && (entry.catalogId === peerImport.id || entry.id === peerImport.id)) ||
+        entry.id === peerAlias),
+  );
+  return { peerImport, peerCatalog };
+}
+
 function Recipe({
   recipe,
   snapshot,
   version,
   dataset,
+  catalogs,
+  onNavigateCatalog,
 }: {
   recipe: CatalogRecipe;
   snapshot: CatalogSnapshot;
   version?: CatalogVersion;
   dataset: CatalogDataset;
+  catalogs?: readonly CatalogSummary[];
+  onNavigateCatalog?: (catalogId: string, datasetId: string) => void;
 }) {
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [releaseId, setRelease] = useState('');
@@ -154,7 +175,11 @@ function Recipe({
   );
   const requiresRelease = relationships.some((r) => r.scope === 'same_release');
   const unsupportedRelationship = relationships.some(
-    (r) => r.scope === 'declared' || r.scope === 'external' || !!r.target.external,
+    (r) =>
+      r.scope === 'declared' ||
+      r.scope === 'external' ||
+      !!r.target.external ||
+      !!r.target.catalog,
   );
   let bindingProblem = '';
   const release = snapshot.catalog.releases.find((r) => r.id === releaseId);
@@ -165,7 +190,12 @@ function Recipe({
   else if (bindingMode === 'release' && release?.membership !== 'complete')
     bindingProblem = 'This release does not list all required data versions.';
   else
-    for (const [input, alias] of Object.entries(recipe.inputs)) {
+    for (const [input, spec] of Object.entries(recipe.inputs)) {
+      if (typeof spec !== 'string') {
+        bindingProblem = `Input ${input} binds peer catalog ${spec.catalog} (${spec.dataset}) and cannot execute inside a single-catalog view.`;
+        break;
+      }
+      const alias = spec;
       const dataset = snapshot.catalog.datasets.find((d) => d.alias === alias || d.id === alias);
       const versions = snapshot.catalog.versions.filter(
         (v) =>
@@ -297,16 +327,48 @@ function Recipe({
           ],
           [
             'Datasets used',
-            Object.entries(recipe.inputs).map(([name, alias]) => (
-              <span className="subline" key={name}>
-                <code>{name}</code> →{' '}
-                {titleOf(
-                  snapshot.catalog.datasets.find((d) => d.alias === alias || d.id === alias) ??
-                    ({ id: alias, alias } as CatalogDataset),
-                )}{' '}
-                <code>{alias}</code>
-              </span>
-            )),
+            Object.entries(recipe.inputs).map(([name, spec]) => {
+              if (typeof spec !== 'string') {
+                const { peerImport, peerCatalog } = resolvePeer(snapshot, catalogs, spec.catalog);
+                return (
+                  <span className="subline" key={name}>
+                    <code>{name}</code> →{' '}
+                    <Badge status="unknown">
+                      Peer catalog: {spec.catalog}
+                      {peerImport ? ` · ${peerImport.audience}` : ''}
+                    </Badge>{' '}
+                    {peerCatalog ? (
+                      <a
+                        href={`/?catalog=${encodeURIComponent(peerCatalog.id)}&dataset=${encodeURIComponent(spec.dataset)}&tab=Overview`}
+                        onClick={(e) => {
+                          if (onNavigateCatalog) {
+                            e.preventDefault();
+                            onNavigateCatalog(peerCatalog.id, spec.dataset);
+                          }
+                        }}
+                      >
+                        {peerCatalog.title} · {spec.dataset} ↗
+                      </a>
+                    ) : (
+                      <code>
+                        {spec.catalog}:{spec.dataset}
+                      </code>
+                    )}
+                  </span>
+                );
+              }
+              const alias = spec;
+              return (
+                <span className="subline" key={name}>
+                  <code>{name}</code> →{' '}
+                  {titleOf(
+                    snapshot.catalog.datasets.find((d) => d.alias === alias || d.id === alias) ??
+                      ({ id: alias, alias } as CatalogDataset),
+                  )}{' '}
+                  <code>{alias}</code>
+                </span>
+              );
+            }),
           ],
           [
             'Related matching rules',
@@ -366,30 +428,32 @@ function Recipe({
               </select>
             </label>
           ) : (
-            Object.entries(recipe.inputs).map(([input, alias]) => (
-              <label className="stack-label" key={input}>
-                Version for {input}
-                <select
-                  value={versionsByInput[input] ?? ''}
-                  onChange={(e) => {
-                    controller.current?.abort();
-                    setLoading(false);
-                    setResult(undefined);
-                    setVersionsByInput((previous) => ({ ...previous, [input]: e.target.value }));
-                    setRepresentationsByInput((previous) => ({ ...previous, [input]: '' }));
-                  }}
-                >
-                  <option value="">Choose a data version</option>
-                  {snapshot.catalog.versions
-                    .filter((v) => v.dataset === alias)
-                    .map((v) => (
-                      <option value={v.id} key={v.id}>
-                        {shortId(v.id)} · {enumLabel(v.retention)}
-                      </option>
-                    ))}
-                </select>
-              </label>
-            ))
+            Object.entries(recipe.inputs)
+              .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+              .map(([input, alias]) => (
+                <label className="stack-label" key={input}>
+                  Version for {input}
+                  <select
+                    value={versionsByInput[input] ?? ''}
+                    onChange={(e) => {
+                      controller.current?.abort();
+                      setLoading(false);
+                      setResult(undefined);
+                      setVersionsByInput((previous) => ({ ...previous, [input]: e.target.value }));
+                      setRepresentationsByInput((previous) => ({ ...previous, [input]: '' }));
+                    }}
+                  >
+                    <option value="">Choose a data version</option>
+                    {snapshot.catalog.versions
+                      .filter((v) => v.dataset === alias)
+                      .map((v) => (
+                        <option value={v.id} key={v.id}>
+                          {shortId(v.id)} · {enumLabel(v.retention)}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ))
           )}
           {representationChoices
             .filter((item) => item.choices.length > 1)
@@ -577,6 +641,18 @@ function Recipe({
                 ? 'Demonstration execution'
                 : 'Connected source execution'}
             </Badge>
+            {result.execution?.engine && (
+              <span className="muted">
+                Engine: <code>{result.execution.engine.id}</code>{' '}
+                {result.execution.engine.version}
+                {result.execution.engine.binarySha256
+                  ? ` (${result.execution.engine.binarySha256.slice(0, 12)}…)`
+                  : ''}
+                {result.execution.elapsedMs !== undefined
+                  ? ` · ${result.execution.elapsedMs} ms`
+                  : ''}
+              </span>
+            )}
             <button
               onClick={() => {
                 try {
@@ -623,7 +699,7 @@ function Recipe({
             </Notice>
           )}
           <Raw value={result.execution} label="Technical execution record" />
-          {result.execution?.kind === 'owner' && (
+          {result.execution?.kind === 'owner' && result.execution.record && (
             <EvidenceRecord
               snapshot={snapshot}
               record={result.execution.record}
@@ -640,6 +716,8 @@ export function Connections({
   dataset,
   version,
   onNavigate,
+  catalogs,
+  onNavigateCatalog,
   releaseId,
   focusedRecipeId,
 }: {
@@ -647,6 +725,8 @@ export function Connections({
   dataset: CatalogDataset;
   version?: CatalogVersion;
   onNavigate: (id: string, versionId?: string, releaseId?: string) => void;
+  catalogs?: readonly CatalogSummary[];
+  onNavigateCatalog?: (catalogId: string, datasetId: string) => void;
   releaseId?: string;
   focusedRecipeId?: string;
 }) {
@@ -658,13 +738,20 @@ export function Connections({
     (r) =>
       r.source.dataset === dataset.alias ||
       r.source.dataset === dataset.id ||
-      r.target.dataset === dataset.alias ||
-      r.target.dataset === dataset.id,
+      (!r.target.catalog &&
+        (r.target.dataset === dataset.alias || r.target.dataset === dataset.id)),
+  );
+  const concepts = (snapshot.catalog.concepts ?? []).filter((concept) =>
+    concept.fields.some(
+      (field) =>
+        !field.catalog && (field.dataset === dataset.alias || field.dataset === dataset.id),
+    ),
   );
   const recipes = snapshot.catalog.recipes.filter(
     (r) =>
-      Object.values(r.inputs).includes(dataset.alias) ||
-      Object.values(r.inputs).includes(dataset.id) ||
+      Object.values(r.inputs).some(
+        (entry) => typeof entry === 'string' && (entry === dataset.alias || entry === dataset.id),
+      ) ||
       r.resultDataset === dataset.alias ||
       r.resultDataset === dataset.id,
   );
@@ -692,10 +779,14 @@ export function Connections({
         {relationships.length ? (
           relationships.map((r) => {
             const outgoing = r.source.dataset === dataset.alias || r.source.dataset === dataset.id;
+            const peerAlias = outgoing && !r.target.external ? r.target.catalog : undefined;
+            const peerInfo = peerAlias ? resolvePeer(snapshot, catalogs, peerAlias) : undefined;
             const otherAlias = outgoing ? r.target.dataset : r.source.dataset;
-            const target = snapshot.catalog.datasets.find(
-              (d) => d.alias === otherAlias || d.id === otherAlias,
-            );
+            const target = peerAlias
+              ? undefined
+              : snapshot.catalog.datasets.find(
+                  (d) => d.alias === otherAlias || d.id === otherAlias,
+                );
             const release = snapshot.catalog.releases.find((item) => item.id === releaseId);
             const targetVersions = snapshot.catalog.versions.filter(
               (v) =>
@@ -713,7 +804,32 @@ export function Connections({
                 <div className="relationship-route">
                   <span>{titleOf(dataset)}</span>
                   <span aria-hidden="true">{outgoing ? '→' : '←'}</span>
-                  {target ? (
+                  {peerAlias ? (
+                    <>
+                      <Badge status="unknown">
+                        Peer catalog: {peerAlias}
+                        {peerInfo?.peerImport ? ` · ${peerInfo.peerImport.audience}` : ''}
+                      </Badge>
+                      {peerInfo?.peerCatalog && r.target.dataset ? (
+                        <a
+                          className="peer-catalog-jump"
+                          href={`/?catalog=${encodeURIComponent(peerInfo.peerCatalog.id)}&dataset=${encodeURIComponent(r.target.dataset)}&tab=Overview`}
+                          onClick={(e) => {
+                            if (onNavigateCatalog) {
+                              e.preventDefault();
+                              onNavigateCatalog(peerInfo.peerCatalog!.id, r.target.dataset!);
+                            }
+                          }}
+                        >
+                          Open in {peerInfo.peerCatalog.title} · {r.target.dataset} ↗
+                        </a>
+                      ) : (
+                        <code>
+                          {peerAlias}:{r.target.dataset}
+                        </code>
+                      )}
+                    </>
+                  ) : target ? (
                     <button
                       onClick={() =>
                         onNavigate(target.id, boundTarget?.id, boundTarget ? releaseId : undefined)
@@ -730,6 +846,12 @@ export function Connections({
                     <code>{r.target.external || r.target.dataset}</code>
                   )}
                 </div>
+                {peerAlias && peerInfo?.peerImport && !peerInfo.peerCatalog && (
+                  <p className="muted">
+                    Declared peer catalog <code>{peerInfo.peerImport.id}</code> is not registered in
+                    this portal instance.
+                  </p>
+                )}
                 <p>{r.meaning}</p>
                 <p className="muted">
                   Declared requirement:{' '}
@@ -741,6 +863,65 @@ export function Connections({
                         ? 'External reference'
                         : 'Unknown'}
                 </p>
+                {r.unresolvedReason && (
+                  <p className="muted">
+                    Unresolved key reason: {enumLabel(r.unresolvedReason)} (
+                    <code>{r.unresolvedReason}</code>)
+                  </p>
+                )}
+                {r.target.external &&
+                  (r.target.externalDataset ||
+                    r.target.externalKeyFields?.length ||
+                    r.target.limitations) && (
+                    <div className="relationship-external-details muted">
+                      {r.target.externalDataset && (
+                        <p>
+                          External dataset: <code>{r.target.externalDataset}</code>
+                        </p>
+                      )}
+                      {r.target.externalKeyFields && r.target.externalKeyFields.length > 0 && (
+                        <p>
+                          External key fields:{' '}
+                          {r.target.externalKeyFields.map((field, idx) => (
+                            <span key={field}>
+                              {idx > 0 ? ', ' : ''}
+                              <code>{field}</code>
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      {r.target.limitations && <p>External limitations: {r.target.limitations}</p>}
+                    </div>
+                  )}
+                {r.joinMetrics && (
+                  <div className="relationship-join-metrics">
+                    <p>
+                      <strong>Observed join metrics:</strong>{' '}
+                      {r.joinMetrics.floorPct !== undefined && (
+                        <>Match floor {textValue(r.joinMetrics.floorPct)}% · </>
+                      )}
+                      {r.joinMetrics.matchedRows !== undefined && (
+                        <>
+                          {r.joinMetrics.matchedRows.toLocaleString('en-US')} matched
+                          {r.joinMetrics.totalSourceRows !== undefined
+                            ? ` of ${r.joinMetrics.totalSourceRows.toLocaleString('en-US')} source rows`
+                            : ''}{' '}
+                          ·{' '}
+                        </>
+                      )}
+                      <span className="muted">Basis: {r.joinMetrics.basis}</span>
+                    </p>
+                    <details>
+                      <summary>Join metrics evidence</summary>
+                      <RecordLink record={r.joinMetrics.record} />
+                      <EvidenceRecord
+                        snapshot={snapshot}
+                        record={r.joinMetrics.record}
+                        label="Inspect join metrics record"
+                      />
+                    </details>
+                  </div>
+                )}
                 {!boundTarget && target && (
                   <p className="muted">
                     Opens the dataset description. This link does not open matching records.
@@ -790,6 +971,125 @@ export function Connections({
           </Notice>
         )}
       </Section>
+      {concepts.length > 0 && (
+        <Section
+          title="Shared concepts"
+          aside={<span className="muted">{concepts.length} declared</span>}
+        >
+          <p>
+            Shared semantic concepts identify fields that represent the same identifier or attribute
+            across datasets or imported catalogs.
+          </p>
+          {concepts.map((concept) => {
+            const matches = [...(concept.exactMatch ?? []), ...(concept.closeMatch ?? [])];
+            return (
+              <article className="relationship concept-card" key={concept.concept}>
+                <div className="relationship-route">
+                  <code>{concept.concept}</code>
+                  {concept.conceptKind && (
+                    <Badge status="unknown">{enumLabel(concept.conceptKind)}</Badge>
+                  )}
+                </div>
+                {concept.description && <p>{concept.description}</p>}
+                {concept.iriTemplate && (
+                  <p className="muted">
+                    IRI template: <code>{concept.iriTemplate}</code>
+                  </p>
+                )}
+                {concept.exactMatch && concept.exactMatch.length > 0 && (
+                  <p className="muted">
+                    Exact match:{' '}
+                    {concept.exactMatch.map((uri, idx) => (
+                      <span key={uri}>
+                        {idx > 0 ? ', ' : ''}
+                        {safeLink(uri) ? (
+                          <a href={safeLink(uri)} target="_blank" rel="noreferrer">
+                            {uri}
+                          </a>
+                        ) : (
+                          <code>{uri}</code>
+                        )}
+                      </span>
+                    ))}
+                  </p>
+                )}
+                {matches.length > (concept.exactMatch?.length ?? 0) && concept.closeMatch && (
+                  <p className="muted">
+                    Close match:{' '}
+                    {concept.closeMatch.map((uri, idx) => (
+                      <span key={uri}>
+                        {idx > 0 ? ', ' : ''}
+                        {safeLink(uri) ? (
+                          <a href={safeLink(uri)} target="_blank" rel="noreferrer">
+                            {uri}
+                          </a>
+                        ) : (
+                          <code>{uri}</code>
+                        )}
+                      </span>
+                    ))}
+                  </p>
+                )}
+                <ul>
+                  {concept.fields.map((field, idx) => {
+                    if (field.catalog) {
+                      const { peerImport, peerCatalog } = resolvePeer(
+                        snapshot,
+                        catalogs,
+                        field.catalog,
+                      );
+                      return (
+                        <li key={`${field.catalog}:${field.dataset}:${idx}`}>
+                          <Badge status="unknown">
+                            Peer catalog: {field.catalog}
+                            {peerImport ? ` · ${peerImport.audience}` : ''}
+                          </Badge>{' '}
+                          {peerCatalog ? (
+                            <a
+                              className="peer-catalog-jump"
+                              href={`/?catalog=${encodeURIComponent(peerCatalog.id)}&dataset=${encodeURIComponent(field.dataset)}&tab=Overview`}
+                              onClick={(e) => {
+                                if (onNavigateCatalog) {
+                                  e.preventDefault();
+                                  onNavigateCatalog(peerCatalog.id, field.dataset);
+                                }
+                              }}
+                            >
+                              {peerCatalog.title} · {field.dataset} ↗
+                            </a>
+                          ) : (
+                            <code>
+                              {field.catalog}:{field.dataset}
+                            </code>
+                          )}{' '}
+                          · <code>{pathLabel(field.path)}</code>
+                        </li>
+                      );
+                    }
+                    const linkedDataset = snapshot.catalog.datasets.find(
+                      (d) => d.alias === field.dataset || d.id === field.dataset,
+                    );
+                    const isCurrent =
+                      linkedDataset?.id === dataset.id || field.dataset === dataset.alias;
+                    return (
+                      <li key={`local:${field.dataset}:${idx}`}>
+                        {linkedDataset && !isCurrent ? (
+                          <button type="button" onClick={() => onNavigate(linkedDataset.id)}>
+                            {titleOf(linkedDataset)} ↗
+                          </button>
+                        ) : (
+                          <span>{linkedDataset ? titleOf(linkedDataset) : field.dataset}</span>
+                        )}{' '}
+                        · <code>{pathLabel(field.path)}</code>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </article>
+            );
+          })}
+        </Section>
+      )}
       <Section
         title="Questions and queries"
         aside={
@@ -820,6 +1120,8 @@ export function Connections({
               snapshot={snapshot}
               version={version}
               dataset={dataset}
+              catalogs={catalogs}
+              onNavigateCatalog={onNavigateCatalog}
             />
           ))
         ) : (

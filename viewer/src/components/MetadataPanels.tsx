@@ -3,8 +3,8 @@ import ImpactPanel from './ImpactPanel';
 import { EvidenceRecord } from './EvidenceRecord';
 import type { CatalogDataset, CatalogSnapshot, CatalogVersion } from '../domain/types';
 import { Badge, FieldTree, Facts, Notice, Raw, RecordLink, Section } from './Primitives';
-import { objectOf, shortId, textValue, titleOf, versionsOf, words } from '../lib/display';
-import { datasetIntroduction, recordAccess } from '../lib/content';
+import { objectOf, safeLink, shortId, textValue, titleOf, versionsOf, words } from '../lib/display';
+import { datasetIntroduction, enumLabel, recordAccess } from '../lib/content';
 import { publisherMetadata } from '../features/publisher-metadata';
 import {
   CoverageContext,
@@ -38,6 +38,9 @@ export function Overview({
     p.ports.some((port) => port.dataset === dataset.alias || port.dataset === dataset.id),
   );
   const assembly = objectOf(snapshot.catalog.extensions?.['urn:ddk:catalog:assembly']);
+  const coreTags = dataset.tags ?? dataset.contract?.tags ?? [];
+  const coreContext = dataset.context ?? dataset.contract?.context;
+  const canonicalUrls = dataset.contract?.canonicalUrls ?? [];
   return (
     <>
       <div className="overview-intro">
@@ -45,6 +48,12 @@ export function Overview({
         <p>
           {introduction.purpose || 'The publisher has not supplied the purpose of this dataset.'}
         </p>
+        {introduction.usage && (
+          <>
+            <p className="eyebrow">How to use this dataset</p>
+            <p>{introduction.usage}</p>
+          </>
+        )}
         <p className="eyebrow">What one record represents</p>
         <p className="purpose">
           {introduction.rowMeaning || 'The publisher has not supplied what one record represents.'}
@@ -52,6 +61,24 @@ export function Overview({
         <Facts
           items={[
             ['View records here', access.label],
+            ...(dataset.origin ? ([['Dataset origin', enumLabel(dataset.origin)]] as [string, ReactNode][]) : []),
+            ...(dataset.status ? ([['Dataset status', enumLabel(dataset.status)]] as [string, ReactNode][]) : []),
+            ...(dataset.model
+              ? ([
+                  [
+                    'Model identity',
+                    <>
+                      <code>{dataset.model.id}</code> · {dataset.model.version}
+                    </>,
+                  ],
+                ] as [string, ReactNode][])
+              : []),
+            ...(dataset.methodColumn
+              ? ([['Method column', <code>{dataset.methodColumn}</code>]] as [string, ReactNode][])
+              : []),
+            ...(coreTags.length > 0
+              ? ([['Tags', coreTags.join(', ')]] as [string, ReactNode][])
+              : []),
             [
               'File availability',
               version ? (
@@ -74,6 +101,33 @@ export function Overview({
           ]}
         />
       </div>
+      {(coreContext || canonicalUrls.length > 0) && (
+        <Section title="Contract guidance & canonical references">
+          {coreContext?.instructions && <p>{coreContext.instructions}</p>}
+          {coreContext?.constraints && coreContext.constraints.length > 0 && (
+            <ul>
+              {coreContext.constraints.map((entry, idx) => (
+                <li key={idx}>{entry.constraint}</li>
+              ))}
+            </ul>
+          )}
+          {canonicalUrls.length > 0 && (
+            <ul>
+              {canonicalUrls.map((url) => (
+                <li key={url}>
+                  {safeLink(url) ? (
+                    <a href={safeLink(url)} target="_blank" rel="noreferrer">
+                      {url}
+                    </a>
+                  ) : (
+                    <code>{url}</code>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      )}
       <Notice title="What you can do here">
         {access.detail} You can explore the field descriptions and recorded checks below.
         <div className="intro-actions">
@@ -498,7 +552,23 @@ export function Activity({ snapshot, dataset, version }: Context) {
         <summary>Integration status</summary>
         <Section title="Processing plans & saved results">
           {productions.map((p) => (
-            <Raw key={p.alias} value={p} label={`${p.alias} · processing plan`} />
+            <div key={p.alias}>
+              <Raw
+                value={p}
+                label={`${p.alias} · ${p.kind ? `${p.kind} ` : ''}processing plan`}
+              />
+              {p.steps && p.steps.length > 0 && (
+                <p className="muted">
+                  Steps:{' '}
+                  {p.steps.map((step, idx) => (
+                    <span key={step.id}>
+                      {idx > 0 ? ' → ' : ''}
+                      <code>{step.id}</code> ({step.kind})
+                    </span>
+                  ))}
+                </p>
+              )}
+            </div>
           ))}
           {catalog.files
             .filter((f) => /substrait|plan|lineage/.test(f.role + ' ' + f.path))

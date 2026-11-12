@@ -38,6 +38,7 @@ export function discoveryItems(snapshot: CatalogSnapshot) {
       topic: distinct([
         supplied?.subject,
         ...(supplied?.topics?.map((topic) => topic.label) ?? []),
+        ...(dataset.tags ?? dataset.contract?.tags ?? []),
       ]),
       publisher: distinct([
         ...(supplied?.publishers?.map((publisher) => publisher.name) ?? []),

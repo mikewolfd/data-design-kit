@@ -23,23 +23,34 @@ DDK_VIEWER_APPLICATIONS=spicy-regs,congress npm run preview
 
 The allowlist in `src/server/registry.ts` pins each local directory and lock digest. Missing or changed sources refuse safely; no “latest” discovery or fallback data is used. These optional registrations use retained public metadata under `fixtures/applications/`. SpicyRegs is a public definition-only catalog regenerated from its maintained publisher definitions. Congress is a public application metadata fixture with 24 datasets and 16 recipes; its tiny physical reader fixtures do not establish full native candidate quality. The viewer opens neither application's row files. Their live data/query capabilities remain unavailable until an explicit owner adapter is registered.
 
-One actual owner-backed journey is also available from the pinned qualified commerce example:
+To register any local or paired DDK catalog and optional startup-pinned `DocSpecCatalogOwner` without editing code, point `DDK_VIEWER_OWNER_CONFIG` at an operator JSON file:
+
+```sh
+DDK_VIEWER_AUDIENCE=local \
+DDK_VIEWER_OWNER_CONFIG=/absolute/path/to/viewer-owners.json \
+DDK_VIEWER_APPLICATIONS=spicy-slice \
+npm run preview
+```
+
+Each entry in `DDK_VIEWER_OWNER_CONFIG` pins `id`, `directory`, `lockSha256` (plus optional `pairedLocalDirectory` and `pairedLocalLockSha256` when `DDK_VIEWER_AUDIENCE=local`), `pythonPath`, `ddkSrcPath`, optional `docspecBinary` + `docspecSha256`, and `permittedRoots`. `createDocSpecCatalogOwner` (`src/server/docspec-owner.ts` + `scripts/docspec-owner-bridge.py`) verifies the Python environment, catalog lock, and `docspec` binary SHA-256 once at server startup, paginates single-file or multi-shard `members[]` Parquet representations via bounded PyArrow slice reads, executes checked recipes via `ddk.catalog_access.run_checked_query`, and serves digest-verified `RecordRef` evidence records.
+
+One retained owner-backed journey is also available from the pinned qualified commerce example:
 
 ```sh
 DDK_VIEWER_AUDIENCE=local DDK_VIEWER_APPLICATIONS=spicy-regs,congress,commerce-native npm run preview
 ```
 
-This calls the maintained DDK checked-query and DocSpec interfaces to read the existing three-row Parquet result. The publisher copy refresh assigned a new definition-bound version, `667e1cdb…`, while preserving the original Parquet bytes and earlier `737bacee…` evidence. Current Commerce metadata uses DDK catalog dev5 and local metadata adapter 0.1.1; the bounded reader still uses the qualified dev4 package and dev2 native executable. The pinned Python environment, executable and retained input must remain available. Select the explicit `daily-revenue` version, then use View data, the `checked-revenue` query under Related data, and Checks & sources. See [the connected commerce guide](docs/owner-commerce.md) for exact identities and limits.
+This routes `commerce-native` through `DocSpecCatalogOwner` to call the maintained DDK checked-query and DocSpec interfaces against the existing three-row Parquet result. The publisher copy refresh assigned a new definition-bound version, `667e1cdb…`, while preserving the original Parquet bytes and earlier `737bacee…` evidence. Current Commerce metadata uses DDK catalog dev5 and local metadata adapter 0.1.1; the bounded reader still uses the qualified dev4 package and dev2 native executable verified once at adapter startup. Select the explicit `daily-revenue` version, then use View data, the `checked-revenue` query under Related data, and Checks & sources. See [the connected commerce guide](docs/owner-commerce.md) for exact identities and limits.
 
-The separate `congress-authored` local registration exposes a saved Congress example with 23 dataset definitions and 17 exact file versions. An optional, operator-pinned Congress reader connects its 52 retained authored records; queries remain unavailable. Default builds and metadata browsing do not require that external checkout. See [the Congress reader guide](docs/owner-congress.md) for configuration, exact-value handling and qualification limits.
+The separate `congress-authored` local registration exposes a saved Congress example with 23 dataset definitions and 17 exact file versions. An optional, operator-pinned configuration connects its 52 retained authored records through `DocSpecCatalogOwner` (with `congress-registration.ts` verifying the publisher's `data-files.json`, inventory, and manifest); queries remain unavailable because the catalog declares `same_release` relationships with `releases: []`. Default builds and metadata browsing do not require external checkouts. See [the Congress reader guide](docs/owner-congress.md) for configuration, exact-value handling and qualification limits.
 
 ## What works
 
 - Search dataset titles, descriptions and identifiers in the selected catalog. Filter by whether records can be opened here, and inspect collections and nested field definitions.
 - Choose an exact version and representation, read bounded pages, filter exact scalar values, inspect ordered nested occurrences, and export the page with its request and visible-column context.
-- Inspect ordered relationship keys, scope, null handling, external references, and navigate exact same-release endpoints when resolvable. Other links explicitly open definitions.
-- Inspect and run only registered recipes; exact SQL, parameters, real inputs, explanatory relationships, release and result identity remain visible.
-- Inspect report and exact-version checks without converting declared, unknown, or not_run outcomes into passes. Inspect source occurrences, coverage, runs, production definitions, release membership and publisher selections.
+- Inspect ordered relationship keys, scope, null handling, unresolved-key reasons, observed join metrics, cross-catalog peer imports (`target.catalog` jump links when the peer catalog is registered), shared semantic `concepts`, external target details, and navigate exact same-release endpoints when resolvable. Other links explicitly open definitions.
+- Inspect and run only registered recipes; exact SQL, parameters, real inputs (including cross-catalog input declarations), engine provenance receipts (`id`, `version`, `binarySha256`, `elapsedMs`), explanatory relationships, release and result identity remain visible.
+- Inspect report and exact-version checks without converting declared, unknown, or not_run outcomes into passes. Inspect source occurrences, core dataset origin/model/method/contract metadata, version dates and coverage bounds, representation byte size/row count/shard `members[]`, runs, `job`/`component`/`design` production steps, release membership and publisher selections.
 - Compare recorded versions and inspect a genuine `ddk.catalog_impact.compare_catalogs` report bound to exact base/candidate/report bytes. Metadata obligations, computation reuse, and qualification reuse stay distinct.
 - Share a link bound to a catalog copy, dataset and selected version and export exact references, bounded pages, query results and impact evidence.
 

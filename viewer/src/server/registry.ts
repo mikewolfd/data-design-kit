@@ -7,13 +7,18 @@ import {
   createCommerceAdapter,
   readCommerceEvidence,
 } from './commerce-native';
-import { congressRegistration, congressSupportedDatasetIds } from './congress-registration';
-import { createCongressAdapter } from './congress-reader';
+import {
+  congressRegistration,
+  congressSupportedDatasetIds,
+  createCongressAdapter,
+} from './congress-registration';
+import { loadOperatorOwnerConfig } from './docspec-owner';
 
 /** Operator-selected, read-only discovery inputs. No runtime paths arrive from HTTP. */
 export const applicationRegistrations: readonly CatalogRegistration[] = [
   {
     id: 'spicy-regs',
+    catalogId: 'urn:spicy-regs:definition-catalog',
     navigationLabel: 'SpicyRegs public catalog',
     navigationDescription:
       'Find descriptions of data about U.S. rules, legislation, courts, campaign finance and public spending. Records are not connected to this portal.',
@@ -23,6 +28,7 @@ export const applicationRegistrations: readonly CatalogRegistration[] = [
   },
   {
     id: 'congress',
+    catalogId: 'urn:congressional-tech:archive:catalog',
     navigationLabel: 'Congress archive public catalog',
     navigationDescription:
       'Explore descriptions of congressional hearings, documents, witnesses, bills and recordings. Records are not connected to this portal.',
@@ -31,16 +37,36 @@ export const applicationRegistrations: readonly CatalogRegistration[] = [
     lockSha256: '26967938b6e9e5bb067f8be52f798deb38ef2288449498b6cdde1373eddc7801',
   },
 ];
-const registrations = [...applicationRegistrations, commerceRegistration, congressRegistration];
+
+const audience = process.env.DDK_VIEWER_AUDIENCE === 'local' ? 'local' : 'public';
+const builtinRegistrations = [
+  ...applicationRegistrations,
+  commerceRegistration,
+  congressRegistration,
+];
+
+const operatorConfigPath = process.env.DDK_VIEWER_OWNER_CONFIG?.trim();
+const operatorLoaded = operatorConfigPath
+  ? await loadOperatorOwnerConfig(operatorConfigPath, audience)
+  : { registrations: [], owners: new Map() };
+const operatorIds = new Set(operatorLoaded.registrations.map((row) => row.id));
+
 const selected = (process.env.DDK_VIEWER_APPLICATIONS ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
-if (selected.some((id) => !registrations.some((row) => row.id === id)))
+
+if (
+  selected.some(
+    (id) => !builtinRegistrations.some((row) => row.id === id) && !operatorIds.has(id),
+  )
+) {
   fail(
     'invalid_registration',
-    'DDK_VIEWER_APPLICATIONS accepts spicy-regs, congress, commerce-native, and congress-authored.',
+    'DDK_VIEWER_APPLICATIONS accepts spicy-regs, congress, commerce-native, congress-authored, or IDs from DDK_VIEWER_OWNER_CONFIG.',
   );
+}
+
 export const store = new CatalogStore(
   [
     ...fixturePins.map((row) => ({
@@ -49,34 +75,46 @@ export const store = new CatalogStore(
       directory: resolve(process.cwd(), 'fixtures', row.id),
       mode: 'fixture' as const,
     })),
-    ...registrations.filter((row) => selected.includes(row.id)),
+    ...builtinRegistrations.filter(
+      (row) => selected.includes(row.id) && !operatorIds.has(row.id),
+    ),
+    ...operatorLoaded.registrations,
   ],
-  process.env.DDK_VIEWER_AUDIENCE === 'local' ? 'local' : 'public',
+  audience,
 );
-const commerceEvidence: OwnerEvidenceReader = ({ record, deadline, signal }) =>
-  readCommerceEvidence(record, { deadline, signal });
+
 const adapters = new Map<string, OwnerAdapters>();
-if (selected.includes(commerceRegistration.id))
+for (const [id, owner] of operatorLoaded.owners) {
+  adapters.set(id, owner);
+}
+
+if (
+  audience === 'local' &&
+  selected.includes(commerceRegistration.id) &&
+  !adapters.has(commerceRegistration.id)
+) {
+  const commerceEvidence: OwnerEvidenceReader = ({ record, deadline, signal }) =>
+    readCommerceEvidence(record, { deadline, signal });
+  const commerceOwner = await createCommerceAdapter();
   adapters.set(commerceRegistration.id, {
-    ...createCommerceAdapter(),
+    ...commerceOwner,
     evidence: commerceEvidence,
   });
-const congressConfig = process.env.DDK_VIEWER_CONGRESS_OWNER_CONFIG;
-const congressConfigSha = process.env.DDK_VIEWER_CONGRESS_OWNER_CONFIG_SHA256;
-if (congressConfig || congressConfigSha) {
-  if (!congressConfig || !congressConfigSha || !selected.includes(congressRegistration.id))
-    fail(
-      'invalid_registration',
-      'Select congress-authored and supply both owner configuration path and SHA-256.',
-    );
+}
+
+if (
+  audience === 'local' &&
+  selected.includes(congressRegistration.id) &&
+  !adapters.has(congressRegistration.id)
+) {
   const snapshot = await store.snapshot(congressRegistration.id);
   adapters.set(
     congressRegistration.id,
     await createCongressAdapter({
-      configPath: congressConfig,
-      configSha256: congressConfigSha,
+      snapshot,
       supportedDatasetIds: congressSupportedDatasetIds(snapshot),
     }),
   );
 }
+
 export const access = new CatalogAccess(store, adapters);

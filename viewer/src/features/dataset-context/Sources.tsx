@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Badge, Raw, RecordLink } from '../../components/Primitives';
+import { useState, type ReactNode } from 'react';
+import { Badge, Facts, Raw, RecordLink } from '../../components/Primitives';
 import { exactStringify } from '../../domain/exact';
+import { enumLabel } from '../../lib/content';
 import { safeLink, versionsOf } from '../../lib/display';
 import type { PublisherDatasetMetadata, PublisherRecord } from '../publisher-metadata';
 import { contextScopes, type DatasetContextProps } from './scope';
@@ -84,6 +85,28 @@ export function ProvenanceContext(props: DatasetContextProps) {
       <div className="context-scope">
         <h3>Definition and declared sources</h3>
         <Publishers metadata={datasetMetadata} />
+        {(dataset.origin || dataset.model || dataset.methodColumn) && (
+          <Facts
+            items={[
+              ...(dataset.origin
+                ? ([['Dataset origin', enumLabel(dataset.origin)]] as [string, ReactNode][])
+                : []),
+              ...(dataset.model
+                ? ([
+                    [
+                      'Model identity',
+                      <>
+                        <code>{dataset.model.id}</code> · {dataset.model.version}
+                      </>,
+                    ],
+                  ] as [string, ReactNode][])
+                : []),
+              ...(dataset.methodColumn
+                ? ([['Method column', <code>{dataset.methodColumn}</code>]] as [string, ReactNode][])
+                : []),
+            ]}
+          />
+        )}
         {reason && (
           <>
             <p>{reason.assurance}</p>
@@ -155,7 +178,17 @@ export function ProvenanceContext(props: DatasetContextProps) {
             <summary>Declared processing plans</summary>
             <p>These plans identify intended inputs and outputs.</p>
             {producers.map((production) => (
-              <Raw key={production.identity.id} value={production} label={production.alias} />
+              <div key={production.identity.id}>
+                {production.kind && (
+                  <p className="muted">
+                    Plan kind: <code>{production.kind}</code>
+                    {production.steps?.length
+                      ? ` · ${production.steps.length} declared ${production.steps.length === 1 ? 'step' : 'steps'}`
+                      : ''}
+                  </p>
+                )}
+                <Raw value={production} label={production.alias} />
+              </div>
             ))}
           </details>
         )}

@@ -158,6 +158,13 @@ export default function Workspace() {
               { datasetDefinitions?: CatalogSnapshot['definitions'] } | undefined
           )?.datasetDefinitions ?? {};
         setSnapshot(s);
+        setCatalogs((previous) =>
+          previous.map((entry) =>
+            entry.id === s.id && entry.catalogId !== s.catalog.id
+              ? { ...entry, catalogId: s.catalog.id }
+              : entry,
+          ),
+        );
         if (!route.digest) navigate({ digest: s.identity.catalogSha256 }, true);
       })
       .catch((e) => {
@@ -229,6 +236,22 @@ export default function Workspace() {
       release: releaseId || '',
       resource: '',
       recipe: '',
+      tab: 'Overview',
+    });
+    setExportOpen(false);
+    setTimeout(() => titleRef.current?.focus(), 0);
+  }
+  function choosePeerDataset(peerCatalogId: string, targetDataset: string) {
+    navigate({
+      catalog: peerCatalogId,
+      dataset: targetDataset,
+      version: '',
+      digest: '',
+      release: '',
+      resource: '',
+      recipe: '',
+      guide: '',
+      search: '',
       tab: 'Overview',
     });
     setExportOpen(false);
@@ -867,6 +890,8 @@ export default function Workspace() {
                     version={version}
                     releaseId={boundRelease}
                     onNavigate={chooseDataset}
+                    catalogs={catalogs}
+                    onNavigateCatalog={choosePeerDataset}
                     focusedRecipeId={route.recipe}
                   />
                 )}

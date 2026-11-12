@@ -13,7 +13,7 @@ export function datasetIntroduction(snapshot: CatalogSnapshot, dataset: CatalogD
   const coverageStart = description?.indexOf('Coverage limits:') ?? -1;
   const nullabilityStart = description?.indexOf('Nullability basis:') ?? -1;
   const technicalDescription = coverageStart >= 0 && nullabilityStart > coverageStart;
-  const coverageNote =
+  const legacyCoverageNote =
     technicalDescription && description
       ? description.slice(coverageStart + 'Coverage limits:'.length, nullabilityStart).trim()
       : undefined;
@@ -21,14 +21,22 @@ export function datasetIntroduction(snapshot: CatalogSnapshot, dataset: CatalogD
     ? description?.slice(0, coverageStart).trim() || undefined
     : description;
   const purposeMarker = '\n\nDefinition purpose:';
-  const purposeOffset = describedPurpose?.indexOf(purposeMarker) ?? -1;
-  const purpose =
-    purposeOffset >= 0 ? describedPurpose!.slice(purposeOffset + 2).trim() : describedPurpose;
+  const legacyPurpose =
+    (describedPurpose?.indexOf(purposeMarker) ?? -1) >= 0
+      ? describedPurpose!.slice(describedPurpose!.indexOf(purposeMarker) + 2).trim()
+      : describedPurpose;
+  const corePurpose =
+    dataset.contract?.description?.purpose?.trim() || dataset.description?.trim() || undefined;
+  const coreLimitations = dataset.contract?.description?.limitations?.trim() || undefined;
+  const usage = dataset.contract?.description?.usage?.trim() || undefined;
+  const purpose = corePurpose ?? legacyPurpose;
+  const coverageNote = coreLimitations ?? legacyCoverageNote;
   return {
     description,
     technicalDescription,
     coverageNote,
     purpose,
+    usage,
     summary: purpose !== dataset.rowMeaning ? purpose : undefined,
     rowMeaning:
       dataset.rowMeaning ||
@@ -162,13 +170,26 @@ const enumLabels: Readonly<Record<string, string>> = {
   source_record: 'Source records',
   derived_record: 'Derived records',
   lookup: 'Reference data',
+  publisher: 'Publisher source',
+  third_party: 'Third-party source',
+  derived: 'Derived',
+  aggregation: 'Aggregation',
+  model: 'Model',
   many_to_one: 'Many records can match one',
   one_to_many: 'One record can match many',
   one_to_one: 'One record can match one',
   many_to_many: 'Many records can match many',
   same_release: 'Same release',
+  version_pair: 'Version pair',
   dataset_version: 'Within one data version',
   unresolved_allowed: 'Unmatched records allowed',
+  scope_boundary: 'Scope boundary',
+  design_optional: 'Optional by design',
+  polymorphic_key: 'Polymorphic key',
+  publisher_defect: 'Publisher defect',
+  unmeasured: 'Unmeasured',
+  true_range: 'True range',
+  not_a_range: 'Not a range',
   not_run: 'Not run',
   equal: 'Equal values',
 };
