@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Badge, Facts, RecordLink, Value } from '../../components/Primitives';
 import type { CatalogVersion } from '../../domain/types';
 import { datasetIntroduction, enumLabel } from '../../lib/content';
-import { objectOf } from '../../lib/display';
+import { objectOf, textValue } from '../../lib/display';
 import type { DateKind, PublisherRecord } from '../publisher-metadata';
 import { contextScopes, type DatasetContextProps } from './scope';
 
@@ -55,6 +55,22 @@ function CoverageMeasurements({ coverage }: { coverage: CatalogVersion['coverage
     <div className="evidence-row" key={index}>
       <div>
         <strong>{measurement.scope}</strong>
+        {(measurement.kind || measurement.stage) && (
+          <p className="muted">
+            {[
+              measurement.kind ? `Kind: ${enumLabel(measurement.kind)}` : undefined,
+              measurement.stage ? `Stage: ${enumLabel(measurement.stage)}` : undefined,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
+        {measurement.bounds && (
+          <p>
+            Bounds on <code>{measurement.bounds.field}</code>:{' '}
+            <Value value={measurement.bounds.min} /> to <Value value={measurement.bounds.max} />.
+          </p>
+        )}
         <p>
           {measurement.observed === undefined ? (
             'Observed count not recorded.'
@@ -73,14 +89,16 @@ function CoverageMeasurements({ coverage }: { coverage: CatalogVersion['coverage
             </>
           )}
         </p>
-        {measurement.expected == null && <p>Completeness is unknown without an expected count.</p>}
+        {measurement.expected == null && !measurement.bounds && (
+          <p>Completeness is unknown without an expected count.</p>
+        )}
         <details>
           <summary>Coverage evidence for this scope</summary>
           <RecordLink record={measurement.record} />
         </details>
       </div>
       <Badge status={measurement.status}>
-        {measurement.status === 'complete' && measurement.expected == null
+        {measurement.status === 'complete' && measurement.expected == null && !measurement.bounds
           ? 'Reported scope status: complete'
           : `Coverage: ${enumLabel(measurement.status)}`}
       </Badge>
@@ -164,11 +182,30 @@ const dateLabels: Record<DateKind, string> = {
 };
 
 export function DateContext(props: DatasetContextProps) {
-  const { scopes } = contextScopes(props);
+  const { scopes, selectedVersion } = contextScopes(props);
   return (
     <div className="dataset-context">
-      {scopes.map(({ label, id, metadata }) => {
-        const dates = metadata?.dates ?? [];
+      {scopes.map(({ kind: scopeKind, label, id, metadata }) => {
+        const coreVersionDates: { kind: DateKind; value: string }[] =
+          scopeKind === 'version' && selectedVersion?.dates
+            ? [
+                ...(selectedVersion.dates.publishedAt
+                  ? [{ kind: 'sourcePublished' as const, value: selectedVersion.dates.publishedAt }]
+                  : []),
+                ...(selectedVersion.dates.sourceUpdatedAt
+                  ? [{ kind: 'dataUpdated' as const, value: selectedVersion.dates.sourceUpdatedAt }]
+                  : []),
+                ...(selectedVersion.dates.retrievedAt
+                  ? [{ kind: 'retrieved' as const, value: selectedVersion.dates.retrievedAt }]
+                  : []),
+              ]
+            : [];
+        const dates = [
+          ...coreVersionDates,
+          ...(metadata?.dates ?? []).filter(
+            (entry) => !coreVersionDates.some((core) => core.kind === entry.kind),
+          ),
+        ];
         const observationDate = metadata?.observationDate;
         const coverageObserved = dates.some(({ kind }) => kind === 'coverageObserved');
         const facts: [string, ReactNode][] = [];
@@ -186,6 +223,11 @@ export function DateContext(props: DatasetContextProps) {
         }
         if (metadata?.updateFrequency)
           facts.push(['Publisher’s expected update schedule', metadata.updateFrequency]);
+        if (scopeKind === 'dataset' && props.dataset.contract?.slaProperties?.length) {
+          for (const sla of props.dataset.contract.slaProperties) {
+            facts.push([`Declared SLA · ${sla.property}`, textValue(sla.value)]);
+          }
+        }
         return (
           <div className="context-scope" key={id}>
             <h3>{label}</h3>

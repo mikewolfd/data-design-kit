@@ -348,6 +348,9 @@ function validateBindings(
     ...snapshot.catalog.datasets.map(({ definition }) => definition.source),
     ...snapshot.catalog.products.map(({ definition }) => definition),
     ...snapshot.catalog.productions.map(({ definition }) => definition),
+    ...snapshot.catalog.relationships.flatMap((rel) =>
+      rel.joinMetrics?.record ? [rel.joinMetrics.record] : [],
+    ),
     ...[
       snapshot.catalog.versions,
       snapshot.catalog.sources,
@@ -466,9 +469,12 @@ function validateBindings(
       guide.links.some(({ target }) => {
         if (target.kind !== 'recipe') return false;
         const recipe = snapshot.catalog.recipes.find((item) => item.id === target.recipeId);
+        const localInputs = recipe
+          ? Object.values(recipe.inputs).filter((entry): entry is string => typeof entry === 'string')
+          : [];
         return (
           !recipe ||
-          ![recipe.resultDataset, ...Object.values(recipe.inputs)].some((alias) =>
+          ![recipe.resultDataset, ...localInputs].some((alias) =>
             snapshot.catalog.datasets.some(
               (dataset) => dataset.alias === alias || dataset.id === alias,
             ),

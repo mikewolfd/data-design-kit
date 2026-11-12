@@ -38,9 +38,11 @@ function parseSafe(text: string, mode: 'data' | 'metadata' | 'request'): any {
       throw new Error(`Duplicate JSON key: ${key}`);
     },
   });
+  const maxNodes = mode === 'metadata' ? 2_000_000 : 300_000;
+  const maxString = mode === 'metadata' ? 4_000_000 : 1_000_000;
   let nodes = 0;
   const visit = (value: any, depth: number): any => {
-    if (++nodes > 300_000 || depth > 48)
+    if (++nodes > maxNodes || depth > 48)
       throw new Error('JSON structure exceeds the supported budget.');
     if (isLosslessNumber(value)) {
       if (!validNumber(value.value))
@@ -53,7 +55,7 @@ function parseSafe(text: string, mode: 'data' | 'metadata' | 'request'): any {
         return Number(value.value);
       return { $number: value.value };
     }
-    if (typeof value === 'string' && value.length > 1_000_000)
+    if (typeof value === 'string' && value.length > maxString)
       throw new Error('JSON string exceeds the supported budget.');
     if (Array.isArray(value)) return value.map((item) => visit(item, depth + 1));
     if (isObject(value)) {

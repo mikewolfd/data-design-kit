@@ -2,19 +2,21 @@ import { createReadStream } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseMetadata } from '../domain/exact';
 import { fail, sha256, type CatalogStore } from './catalog-store';
+export const MAX_ARTIFACT_BYTES = 16 * 1024 * 1024;
 export type ImpactRegistration = { catalogId: string; directory: string; bindingSha256: string };
 async function readPinned(path: string, digest: string, deadline: number) {
   if (Date.now() >= deadline) fail('impact_timeout', 'The impact read exceeded its deadline.', 408);
   const chunks: Buffer[] = [];
   let size = 0;
   const stream = createReadStream(path, {
-    highWaterMark: 32 * 1024,
+    highWaterMark: 64 * 1024,
     signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
   });
   try {
     for await (const part of stream) {
       size += part.length;
-      if (size > 1024 * 1024) fail('impact_budget', 'The impact artifact exceeds 1 MiB.', 413);
+      if (size > MAX_ARTIFACT_BYTES)
+        fail('impact_budget', 'The impact artifact exceeds 16 MiB.', 413);
       chunks.push(part as Buffer);
     }
   } finally {

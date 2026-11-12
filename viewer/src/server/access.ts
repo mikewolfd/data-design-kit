@@ -773,6 +773,17 @@ export class CatalogAccess {
       };
     const names = Object.keys(recipe.inputs).sort(),
       bound = Object.keys(request.bindings).sort();
+    if (Object.values(recipe.inputs).some((target) => isObject(target) && 'catalog' in target))
+      return {
+        status: 'refused',
+        reason:
+          'This recipe binds a cross-catalog input from a peer catalog and cannot execute inside a single-catalog view.',
+        bindings: request.bindings,
+        rows: [],
+        columns: [],
+        returned: 0,
+        transport: TRANSPORT,
+      };
     if (names.length !== bound.length || names.some((name, index) => name !== bound[index]))
       fail(
         'recipe_inputs',
@@ -797,7 +808,8 @@ export class CatalogAccess {
       const result = checkedBinding(snapshot, binding);
       if (result.refusal) return { ...result.refusal, bindings: request.bindings };
       const dataset = snapshot.catalog.datasets.find((row) => row.id === binding.datasetId)!;
-      if (dataset.alias !== recipe.inputs[name])
+      const expectedInput = recipe.inputs[name];
+      if (typeof expectedInput !== 'string' || dataset.alias !== expectedInput)
         fail('recipe_inputs', 'A recipe input is bound to a different logical dataset.', 409);
       bindings[name] = binding;
     }
@@ -808,7 +820,10 @@ export class CatalogAccess {
       fail('recipe_relationships', 'A required recipe relationship is absent.', 409);
     if (
       requiredRelationships.some(
-        (row) => !['same_release', 'version_pair'].includes(row.scope) || 'external' in row.target,
+        (row) =>
+          !['same_release', 'version_pair'].includes(row.scope) ||
+          'external' in row.target ||
+          ('catalog' in row.target && row.target.catalog !== undefined),
       )
     )
       return {

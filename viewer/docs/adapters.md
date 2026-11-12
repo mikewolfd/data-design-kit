@@ -26,7 +26,7 @@ Adapters may restrict `supportedDatasetIds` and `supportedRecipeIds`. The same r
 
 An owner may call `onAttempt` with an immutable submitted-request reference before execution. Unknown results retain it separately from evidence of consumed inputs. A submitted attempt does not prove execution. Browser “Stop waiting” controls abort the response wait; they do not prove that owner work stopped.
 
-The optional local `commerce-native` integration connects the retained example through the qualified DDK/DocSpec interfaces. See [its scope and evidence](owner-commerce.md).
+The generic startup-pinned `DocSpecCatalogOwner` (`src/server/docspec-owner.ts` + `scripts/docspec-owner-bridge.py`) implements `OwnerReader`, `OwnerQuery` and `OwnerEvidenceReader` for local or paired DDK catalogs backed by Parquet representations and an optional `docspec` executable. Operators can register catalogs and owner bindings via `DDK_VIEWER_OWNER_CONFIG` without modifying source files; `commerce-native` and `congress-authored` also wrap `createDocSpecCatalogOwner`. It verifies the Python interpreter, catalog lock digest, and `docspec` binary SHA-256 once at startup in a persistent JSON-lines stdio worker, paginates single-file or multi-shard `members[]` Parquet slices via PyArrow without whole-table materialization, executes checked SQL recipes through `ddk.catalog_access.run_checked_query`, and returns a compact query provenance receipt (`recipeId`, `sqlSha256`, `engine: { id, version, binarySha256 }`, `consumedBindings`, `elapsedMs`). See [the connected commerce guide](owner-commerce.md) and [the Congress reader guide](owner-congress.md) for retained example configurations.
 
 ## Endpoints
 
@@ -46,7 +46,7 @@ Selection records are not sorted by time to choose “latest.” Only one applic
 
 ## Work and retention limits
 
-The implementation declares separate limits: 8 MiB per catalog control file, 64 listed output files, 8 configured sources, at most 2 retained parsed catalog sets and 32 MiB of retained wire/serialized-metadata accounting, 64 KiB request bodies, 256 KiB read/query results, at most 100 requested rows, and 8 concurrent API requests. Control/row reads and request bodies have deadlines. The fixture reader alone may parse up to 10,000 rows from a small pinned JSON file; it is not the native scalability path.
+The implementation declares separate limits: 4 MiB per `catalog.lock.json`, 16 MiB per catalog control or companion file, 2,048 listed inventory files, 32 configured sources, at most 2 retained parsed catalog sets and 128 MiB of retained wire/serialized-metadata accounting, 64 KiB request bodies, 512 KiB read/query results, at most 100 requested rows, and 8 concurrent API requests. Control/row reads and request bodies have deadlines. The fixture reader alone may parse up to 10,000 rows from a small pinned JSON file; it is not the native scalability path.
 
 These accounting limits are not a measured JavaScript heap or whole-process RSS guarantee. Parsed objects, active responses and concurrent calls add overhead. Native adapters own their own memory, read, scan, timeout and cancellation budgets. A row limit alone does not bound scanned bytes or guarantee streaming.
 
@@ -54,4 +54,4 @@ The browser retains only the active snapshot and task state, with no localStorag
 
 ## Impact reports
 
-`src/server/impact.ts` consumes a registration binding an exact report and base snapshot to the current candidate digest. It verifies every selected artifact within one deadline and under 1 MiB each. The included example was produced by the supplied qualified DDK wheel; it is not a custom dependency algorithm. The report's `metadata.catalogChanges`, `catalogAffectedObligations`, `runtimeReuse` and unresolved scope are displayed without turning them into scheduler commands. Register another owner's immutable report through the same boundary.
+`src/server/impact.ts` consumes a registration binding an exact report and base snapshot to the current candidate digest. It verifies every selected artifact within one deadline and under 16 MiB each (`MAX_ARTIFACT_BYTES`). The included example was produced by the supplied qualified DDK wheel; it is not a custom dependency algorithm. The report's `metadata.catalogChanges`, `catalogAffectedObligations`, `runtimeReuse` and unresolved scope are displayed without turning them into scheduler commands. Register another owner's immutable report through the same boundary.

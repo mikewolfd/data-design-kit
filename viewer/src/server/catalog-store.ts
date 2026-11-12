@@ -14,14 +14,15 @@ import type {
 export const ASSEMBLY = 'urn:ddk:catalog:assembly';
 export const OUTPUT_SET = 'urn:ddk:catalog:output-set';
 export const LIMITS = Object.freeze({
-  fileBytes: 8 * 1024 * 1024,
-  retainedBytes: 32 * 1024 * 1024,
-  files: 64,
-  catalogs: 8,
+  lockBytes: 4 * 1024 * 1024,
+  fileBytes: 16 * 1024 * 1024,
+  retainedBytes: 128 * 1024 * 1024,
+  files: 2048,
+  catalogs: 32,
   parsedCatalogs: 2,
   rows: 10_000,
   pageRows: 100,
-  resultBytes: 256 * 1024,
+  resultBytes: 512 * 1024,
   requestBytes: 64 * 1024,
   deadlineMs: 5000,
 });
@@ -54,6 +55,7 @@ export function relativePath(value: unknown): string {
 }
 export type CatalogRegistration = {
   id: string;
+  catalogId?: string;
   directory: string;
   lockSha256: string;
   mode: 'fixture' | 'application';
@@ -172,7 +174,16 @@ function validateStructure(raw: any, report: any, lock: any) {
     raw.representations.some(
       (row: any) =>
         !versionIds.has(row.version) ||
-        !['available', 'unavailable', 'unknown'].includes(row.availability),
+        !['available', 'unavailable', 'unknown'].includes(row.availability) ||
+        (row.members !== undefined &&
+          (!Array.isArray(row.members) ||
+            row.members.some(
+              (member: any) =>
+                !isObject(member) ||
+                typeof member.path !== 'string' ||
+                !member.path ||
+                !digest(member.sha256),
+            ))),
     ) ||
     raw.releases.some(
       (row: any) =>
@@ -182,6 +193,29 @@ function validateStructure(raw: any, report: any, lock: any) {
     )
   )
     fail('invalid_references', 'The catalog has unresolved version or release references.', 409);
+  if (
+    raw.imports !== undefined &&
+    (!isObject(raw.imports) ||
+      Object.values(raw.imports).some(
+        (entry: any) =>
+          !isObject(entry) ||
+          typeof entry.id !== 'string' ||
+          !entry.id ||
+          !['local', 'public'].includes(entry.audience) ||
+          !digest(entry.lockSha256),
+      ))
+  )
+    fail('invalid_catalog', 'The catalog peer imports declaration is invalid.', 409);
+  if (
+    raw.concepts !== undefined &&
+    (!Array.isArray(raw.concepts) ||
+      raw.concepts.length > 20_000 ||
+      raw.concepts.some(
+        (row: any) =>
+          !isObject(row) || typeof row.concept !== 'string' || !Array.isArray(row.fields),
+      ))
+  )
+    fail('invalid_catalog', 'The catalog shared concepts inventory is invalid.', 409);
   const definitions = raw.extensions?.[ASSEMBLY]?.datasetDefinitions ?? {};
   if (
     !isObject(definitions) ||
@@ -204,6 +238,7 @@ export class CatalogStore {
   private retainedRaw = 0;
   private parsedBytes = new Map<string, number>();
   private rawCatalogs = new Map<string, number>();
+  private knownCatalogIds = new Map<string, string>();
   private loadErrors = new Map<string, { id: string; code: string; reason: string }>();
   constructor(
     registrations: CatalogRegistration[],
@@ -353,6 +388,7 @@ export class CatalogStore {
       'catalog.lock.json',
       registration.lockSha256,
       deadline,
+      LIMITS.lockBytes,
     );
     const lock = parseMetadata(new TextDecoder('utf-8', { fatal: true }).decode(lockBytes));
     if (
@@ -453,6 +489,7 @@ export class CatalogStore {
       fail('invalid_fixture', 'The registered fixture has no explicit synthetic marker.', 409);
     const snapshot: CatalogSnapshot = freeze({
       id: registration.id,
+      catalogId: catalog.id,
       title: marker?.title ?? registration.navigationLabel ?? catalog.project.id,
       description:
         marker?.description ??
@@ -490,6 +527,7 @@ export class CatalogStore {
     const loaded = { snapshot, outputFiles: outputRows, registration };
     this.parsed.set(registration.id, loaded);
     this.parsedBytes.set(registration.id, size);
+    this.knownCatalogIds.set(registration.id, String(catalog.id));
     return loaded;
   }
   async snapshot(id: string): Promise<CatalogSnapshot> {
@@ -499,8 +537,10 @@ export class CatalogStore {
     // Labels identify navigation targets only. Facts and admission come from the selected set.
     const catalogs = [...this.registrations.values()].map((row) => {
       const snapshot = this.parsed.get(row.id)?.snapshot;
+      const catalogId = snapshot?.catalog.id ?? this.knownCatalogIds.get(row.id) ?? row.catalogId;
       return {
         id: row.id,
+        ...(catalogId ? { catalogId } : {}),
         title: snapshot?.title ?? row.navigationLabel ?? row.id,
         description:
           snapshot?.description ??
@@ -527,7 +567,7 @@ export class CatalogStore {
       path,
       selected.sha256,
       Date.now() + LIMITS.deadlineMs,
-      1024 * 1024,
+      LIMITS.fileBytes,
     );
   }
 }

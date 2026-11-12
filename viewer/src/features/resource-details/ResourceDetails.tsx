@@ -169,6 +169,8 @@ export function ResourceDetails({
             ? representation.location
             : undefined;
         const update = metadata?.dates?.find((date) => date.kind === 'dataUpdated');
+        const updatedValue = version.dates?.sourceUpdatedAt ?? update?.value;
+        const byteSize = representation.byteSize ?? resource?.byteSize;
         const selected =
           selectedRepresentationId === representation.id ||
           (!selectedRepresentationId && representations.length === 1);
@@ -197,16 +199,31 @@ export function ResourceDetails({
               <div>
                 <dt>Size</dt>
                 <dd>
-                  {resource?.byteSize === undefined
+                  {byteSize === undefined
                     ? 'Size not supplied'
-                    : `${resource.byteSize.toLocaleString('en-US')} bytes`}
+                    : `${byteSize.toLocaleString('en-US')} bytes`}
                 </dd>
               </div>
+              {representation.rowCount !== undefined && (
+                <div>
+                  <dt>Row count</dt>
+                  <dd>{representation.rowCount.toLocaleString('en-US')} rows</dd>
+                </div>
+              )}
+              {representation.members && representation.members.length > 0 && (
+                <div>
+                  <dt>Physical shards</dt>
+                  <dd>
+                    {representation.members.length.toLocaleString('en-US')}{' '}
+                    {representation.members.length === 1 ? 'member' : 'members'}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt>Data updated</dt>
                 <dd>
-                  {update ? (
-                    <time dateTime={update.value}>{update.value}</time>
+                  {updatedValue ? (
+                    <time dateTime={updatedValue}>{updatedValue}</time>
                   ) : (
                     'Update date not supplied'
                   )}
@@ -276,6 +293,24 @@ export function ResourceDetails({
                 </dd>
               </div>
             </dl>
+            {representation.members && representation.members.length > 0 && (
+              <details>
+                <summary>Shard inventory ({representation.members.length})</summary>
+                <ul>
+                  {representation.members.map((member, memberIndex) => (
+                    <li key={`${member.path}:${memberIndex}`}>
+                      <code>{member.path}</code>
+                      {member.rowCount !== undefined &&
+                        ` · ${member.rowCount.toLocaleString('en-US')} rows`}
+                      {member.rowRange !== undefined &&
+                        ` · range [${member.rowRange[0]}, ${member.rowRange[1]})`}
+                      {member.byteSize !== undefined &&
+                        ` · ${member.byteSize.toLocaleString('en-US')} bytes`}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
             {access !== 'withheld' &&
               (metadata?.reuse?.some(({ target }) => target.kind === 'external') ? (
                 <ReuseLinks links={metadata.reuse} />
