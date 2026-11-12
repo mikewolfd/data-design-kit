@@ -157,16 +157,60 @@ def _status(checks):
                 "passed" if states else "unknown")
 
 
+def _lint_status(result):
+    return {"warning": "unknown", "skipped": "not_run"}.get(result, result)
+
+
 def lint(request, folder):
     from datacontract.data_contract import DataContract
     schema_path = REPOSITORY / ODCS_SCHEMA
+    schema = {"path": str(schema_path), "sha256": file_sha256(schema_path)}
+    evaluator = _identity(folder)
+    if "documents" in request:
+        documents = request["documents"]
+        if not isinstance(documents, list):
+            raise ValueError("Batched odcs-lint requires a list of dataset documents")
+        keyed = bool(documents) and all(
+            isinstance(item, dict) and "alias" in item and "document" in item for item in documents
+        )
+        results = {} if keyed else []
+        seen = set()
+        for index, item in enumerate(documents):
+            if keyed:
+                alias = item["alias"]
+                if not isinstance(alias, str) or not alias or alias in seen:
+                    raise ValueError("Batched odcs-lint requires distinct non-empty dataset aliases")
+                seen.add(alias)
+                doc = item["document"]
+            else:
+                if not isinstance(item, dict):
+                    raise ValueError("Batched odcs-lint requires ODCS document objects")
+                doc = item
+            run = DataContract(data_contract_str=json_dumps(doc),
+                               schema_location=str(schema_path), inline_references=False).lint()
+            native = run.model_dump(mode="json")
+            report = write_json(folder / f"native-report-{index}.json", native)
+            entry = {
+                "status": _lint_status(native["result"]),
+                "nativeReport": report,
+                "evidence": {"kind": "native-report", "path": report["path"], "sha256": report["sha256"]},
+                "schema": schema,
+                "evaluator": evaluator,
+                "native": native,
+            }
+            if keyed:
+                results[alias] = entry
+            else:
+                results.append(entry)
+        entries = list(results.values()) if keyed else results
+        return {"status": _status(entries) if entries else "passed",
+                "schema": schema, "evaluator": evaluator, "results": results}
     run = DataContract(data_contract_str=json_dumps(request["document"]),
                        schema_location=str(schema_path), inline_references=False).lint()
     native = run.model_dump(mode="json")
     report = write_json(folder / "native-report.json", native)
-    return {"status": {"warning": "unknown", "skipped": "not_run"}.get(native["result"], native["result"]),
-            "nativeReport": report, "schema": {"path": str(schema_path), "sha256": file_sha256(schema_path)},
-            "evaluator": _identity(folder), "native": native}
+    return {"status": _lint_status(native["result"]), "nativeReport": report,
+            "schema": schema, "evaluator": evaluator, "native": native}
 
 
 def versions(request, folder):

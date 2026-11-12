@@ -29,9 +29,6 @@ def main():
                         raise ValueError("Unexpected native worker allocation arguments")
                     result = native_quality.evaluate(request, folder, plan_only=action == "quality-plan",
                                                      scratch=allocation[0] if allocation else None)
-            elif action == "recipe-sql":
-                from . import native_recipes
-                result = native_recipes.bind(request, folder)
             elif action in ("files", "stage", "fixture-files"):
                 from . import native_intake
                 result = getattr(native_intake, action.replace("-", "_"))(request, folder)

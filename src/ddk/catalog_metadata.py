@@ -13,6 +13,7 @@ SECTIONS = ("versions", "sources", "representations", "releases", "selections", 
 AUXILIARY = ("productionObservations", "lineage", "qualification", "publications", "executions", "managedExecutions", "quality", "staging")
 FILE_SCHEME = "urn:ddk:version:local-file-sha256"
 EXACT_FIELD_CHECK = "ddk:exact-field-names"
+QUALITY_COMPLETE_CHECK = "ddk:quality-execution-complete"
 DLT_SYSTEM_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state"}
 DCC_STATUS = {"passed": "passed", "failed": "failed", "warning": "unknown",
               "info": "unknown", "unknown": "unknown", "skipped": "not_run", "error": "unknown"}
@@ -110,7 +111,8 @@ def _staging_metrics(report, table, loads):
 
 
 class LocalMetadata:
-    def __init__(self, document, inventory, adapter, datasets, productions, *, native_rule_profile=None, identities=(), schema_profiles=None):
+    def __init__(self, document, inventory, adapter, datasets, productions, *, native_rule_profile=None, identities=(),
+                 schema_profiles=None, job_specs=None):
         self.document = document
         self.inventory = inventory
         self.adapter = adapter
@@ -119,6 +121,7 @@ class LocalMetadata:
         self.native_rule_profile = native_rule_profile
         self.schema_profiles = deepcopy(schema_profiles or {})
         self.identities = tuple(identities)
+        self.job_specs = dict(job_specs or {})
         self.observations = {section: [] for section in SECTIONS}
         self.records = {document.path: document}
         self.lineage = {}
@@ -218,34 +221,258 @@ class LocalMetadata:
                      "value": {"location": uri, "sha256": digest}}
         version_record = {"id": version, "dataset": alias, "reference": reference, "retention": "present",
                           "scope": "Exact local file named by its owner receipt.", "record": record, "sources": []}
+        attrs = item.get("attributes") if isinstance(item.get("attributes"), dict) else {}
+        byte_size = (item["size"] if type(item.get("size")) is int else (
+            item["bytes"] if type(item.get("bytes")) is int else (
+                attrs["size"] if type(attrs.get("size")) is int else None
+            )
+        ))
+        row_count = item["rows"] if type(item.get("rows")) is int else (
+            attrs["rows"] if type(attrs.get("rows")) is int else None
+        )
         representation = {
             "id": stable_id("representation", version, uri), "version": version, "kind": "file",
             "location": uri, "mediaType": "application/vnd.apache.parquet", "availability": "available",
             "record": record,
         }
+        if byte_size is not None and byte_size >= 0:
+            representation["byteSize"] = byte_size
+        if row_count is not None and row_count >= 0:
+            representation["rowCount"] = row_count
         old = self.version_facts.get(version)
         if old is None:
             self.version_facts[version] = version_record
             self.observations["representations"].append(representation)
         elif old["dataset"] != alias:
             raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "The same exact file version maps to conflicting aliases.")
+        else:
+            for existing in self.observations["representations"]:
+                if existing["id"] == representation["id"]:
+                    if "byteSize" in representation and "byteSize" not in existing:
+                        existing["byteSize"] = representation["byteSize"]
+                    if "rowCount" in representation and "rowCount" not in existing:
+                        existing["rowCount"] = representation["rowCount"]
         self.physical_datasets[version] = {"namespace": "file", "name": str(Path(item["path"]))}
         self.owners.setdefault(version, [])
         if record not in self.owners[version]:
             self.owners[version].append(record)
-        if output and "rows" in item.get("attributes", {}):
-            rows = item["attributes"]["rows"]
+        if output and row_count is not None and row_count >= 0:
             self.version_facts[version].setdefault("coverage", [])
             facts = self.version_facts[version]["coverage"]
             observation = {"scope": "Materialized output file.", "unit": "rows", "status": "unknown",
-                           "observed": rows, "record": record}
+                           "observed": row_count, "record": record}
             if observation not in facts:
                 facts.append(observation)
         return version
 
+    def _verify_job_request(self, alias, production, request, result, request_sha256, *, exact_spec=False):
+        _, spec_doc, _, _ = self.job_specs[alias]
+        spec = spec_doc.value
+        expected_id = production["identity"]["id"]
+        if "id" in request and request["id"] != expected_id:
+            raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                               f"Pinned request id {request['id']!r} differs from job production id {expected_id!r}.",
+                               step="jobs")
+        if "job_id" in result and result["job_id"] is not None and result["job_id"] != expected_id:
+            raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                               f"Observed DocSpec job_id {result['job_id']!r} differs from job production id {expected_id!r}.",
+                               step="jobs")
+        if "job_spec_sha256" in result:
+            if result["job_spec_sha256"] != request_sha256:
+                raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                                   "Observed DocSpec job_spec_sha256 disagrees with the pinned request digest.",
+                                   step="jobs")
+            if exact_spec and result["job_spec_sha256"] != spec_doc.sha256:
+                raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                                   "Observed DocSpec job_spec_sha256 differs from the declared JobSpec SHA-256.",
+                                   step="jobs")
+        allowed_keys = {"id", "scratch", "inputs", "steps", "outputs", "queries"}
+        extra_keys = (set(request) | set(spec)) - allowed_keys
+        if any(request.get(key) != spec.get(key) for key in extra_keys):
+            raise CatalogError("CATALOG-NATIVE-RECEIPT",
+                               "The pinned job request modifies non-binding JobSpec fields.", step="jobs")
+        req_inputs = request.get("inputs", ())
+        spec_inputs = spec.get("inputs", ())
+        if (not isinstance(req_inputs, list) or len(req_inputs) != len(spec_inputs)
+                or {row.get("name") for row in req_inputs if isinstance(row, dict)} != {row["name"] for row in spec_inputs}):
+            raise CatalogError("CATALOG-NATIVE-RECEIPT",
+                               "The pinned job request inputs differ from the declared job production.", step="jobs")
+        req_steps = [
+            (row.get("name"), row.get("sql"), row.get("parameters"), bool(row.get("materialize", False)))
+            for row in request.get("steps", ()) if isinstance(row, dict)
+        ]
+        spec_steps = [
+            (row["name"], row["sql"], row.get("parameters"), bool(row.get("materialize", False)))
+            for row in spec.get("steps", ())
+        ]
+        if len(req_steps) != len(request.get("steps", ())) or req_steps != spec_steps:
+            raise CatalogError("CATALOG-NATIVE-RECEIPT",
+                               "The pinned job request steps differ in order, SQL, parameters, or materialization from the job production.",
+                               step="jobs")
+        req_outputs = [
+            (row.get("name"), row.get("sql"), row.get("settings"))
+            for row in request.get("outputs", ()) if isinstance(row, dict)
+        ]
+        spec_outputs = [
+            (row["name"], row.get("sql"), row.get("settings"))
+            for row in spec.get("outputs", ())
+        ]
+        if len(req_outputs) != len(request.get("outputs", ())) or req_outputs != spec_outputs:
+            raise CatalogError("CATALOG-NATIVE-RECEIPT",
+                               "The pinned job request outputs differ from the declared job production.", step="jobs")
+        req_queries = [
+            (row.get("name"), row.get("sql"), row.get("parameters"))
+            for row in request.get("queries", ()) if isinstance(row, dict)
+        ]
+        spec_queries = [
+            (row["name"], row.get("sql"), row.get("parameters"))
+            for row in spec.get("queries", ())
+        ]
+        if len(req_queries) != len(request.get("queries", ())) or req_queries != spec_queries:
+            raise CatalogError("CATALOG-NATIVE-RECEIPT",
+                               "The pinned job request queries differ from the declared job production.", step="jobs")
+
+    def _run_job_quality_queries(self, alias, native_queries, output_versions_by_alias, tool, record):
+        from .odcs_sql_counters import evaluate_job_quality_queries
+
+        job_artifact, spec_doc, _, _ = self.job_specs[alias]
+        checks, obligations = evaluate_job_quality_queries(
+            job_artifact=job_artifact,
+            job_spec=spec_doc.value,
+            native_queries=native_queries,
+            output_versions_by_alias=output_versions_by_alias,
+            datasets=self.datasets,
+            inventory=self.inventory,
+            evaluator=tool,
+            record=record,
+            stable_id_fn=stable_id,
+        )
+        self.observations["checks"].extend(checks)
+        self.qualification.extend(obligations)
+
+    def _direct_job_result_execution(self, entry, receipt_doc, alias, production):
+        if alias not in self.job_specs:
+            raise CatalogError("CATALOG-NATIVE-RECEIPT",
+                               "Direct DocSpec JobResult receipts require a declared job production.")
+        _, spec_doc, default_in, default_out = self.job_specs[alias]
+        spec = spec_doc.value
+        raw = _need(receipt_doc.value, {"job_spec_sha256", "inputs", "steps", "outputs"},
+                    "DocSpec JobResult")
+        expected_id = production["identity"]["id"]
+        if raw.get("job_id") != expected_id:
+            raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                               f"Observed DocSpec job_id {raw.get('job_id')!r} differs from job production id {expected_id!r}.",
+                               step="jobs")
+        if raw.get("job_spec_sha256") != spec_doc.sha256:
+            raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                               "Observed DocSpec job_spec_sha256 differs from the declared JobSpec SHA-256.",
+                               step="jobs")
+        obs_steps = [
+            (row.get("name"), row.get("sql_sha256"), bool(row.get("materialize", False)))
+            for row in raw.get("steps", ()) if isinstance(row, dict)
+        ]
+        exp_steps = [
+            (row["name"], sha256(row["sql"].encode("utf-8")).hexdigest(), bool(row.get("materialize", False)))
+            for row in spec.get("steps", ())
+        ]
+        if obs_steps != exp_steps:
+            raise CatalogError("CATALOG-JOB-SPEC-MISMATCH",
+                               "Observed DocSpec step digests differ from the declared JobSpec.",
+                               step="jobs")
+        observed_at = _timestamp(
+            entry.get("observedAt") or entry.get("endedAt") or raw.get("endedAt"),
+            "DocSpec terminal observation",
+        )
+        started_at = (
+            _timestamp(entry.get("startedAt") or raw.get("startedAt"), "DocSpec start observation")
+            if (entry.get("startedAt") or raw.get("startedAt")) is not None
+            else None
+        )
+        tool = self._record_tool(entry.get("tool") or raw.get("tool") or {"id": "docspec", "version": "0.1.0"},
+                                 "DocSpec tool")
+        record = owner_record(receipt_doc)
+        input_mapping = _need(entry.get("inputs", default_in), set(), "DocSpec input mapping")
+        output_mapping = _need(entry.get("outputs", default_out), set(), "DocSpec output mapping")
+        spec_inputs = {row["name"]: row for row in spec.get("inputs", ())}
+        spec_outputs = {row["name"]: row for row in spec.get("outputs", ())}
+        if not input_mapping.keys() <= spec_inputs.keys() or not output_mapping.keys() <= spec_outputs.keys():
+            raise CatalogError("CATALOG-NATIVE-RECEIPT", "An input or output name is absent from the JobSpec.", step="jobs")
+        if not set(input_mapping.values()) <= set(production["inputs"]) or not set(output_mapping.values()) <= set(production["outputs"]):
+            raise CatalogError("CATALOG-NATIVE-RECEIPT", "A receipt mapping falls outside the selected production interface.", step="jobs")
+        bound_inputs, observed_inputs = {}, []
+        for item in raw.get("inputs", ()):
+            _need(item, {"name", "kind"}, "DocSpec JobResult input")
+            name = item["name"]
+            if item["kind"] != "parquet" or name not in input_mapping:
+                continue
+            _need(item, {"path", "sha256"}, "DocSpec JobResult parquet input")
+            version = self._file_version(input_mapping[name], item, record)
+            if name in bound_inputs:
+                raise CatalogError("CATALOG-NATIVE-RECEIPT", "The job repeats an exact input binding.", step="jobs")
+            bound_inputs[name] = version
+            observed_inputs.append(version)
+        output_paths = entry.get("outputPaths") if isinstance(entry.get("outputPaths"), dict) else {}
+        outputs = []
+        output_versions_by_alias = {}
+        mapped_outputs = set()
+        for item in raw.get("outputs", ()):
+            _need(item, {"name", "sha256", "rows", "size"}, "DocSpec JobResult output")
+            name = item["name"]
+            if name not in output_mapping:
+                continue
+            if name in mapped_outputs:
+                raise CatalogError("CATALOG-NATIVE-RECEIPT", "The native job repeats an output identity.", step="jobs")
+            raw_path = item.get("path") or output_paths.get(name) or spec_outputs[name].get("path")
+            if not isinstance(raw_path, str):
+                raise CatalogError("CATALOG-NATIVE-REFERENCE", f"Output {name!r} needs an absolute artifact path.")
+            resolved_out_path = Path(raw_path) if Path(raw_path).is_absolute() else (spec_doc.path.parent / raw_path).resolve()
+            version = self._file_version(
+                output_mapping[name],
+                {**item, "path": str(resolved_out_path), "attributes": {"name": name, "rows": item["rows"], "size": item["size"]}},
+                record, output=True,
+            )
+            mapped_outputs.add(name)
+            outputs.append(version)
+            output_versions_by_alias[output_mapping[name]] = version
+        if mapped_outputs != set(output_mapping):
+            raise CatalogError("CATALOG-NATIVE-RECEIPT", "The JobResult omits a mapped output.", step="jobs")
+        coverage_status = (
+            "complete" if set(input_mapping) == set(spec_inputs) and len(observed_inputs) == len(spec_inputs)
+            else ("partial" if observed_inputs else "unknown")
+        )
+        run = {
+            "id": stable_id("docspec-run", receipt_doc.sha256),
+            "production": alias,
+            "reference": {"scheme": "urn:ddk:docspec-request:sha256", "authority": "urn:ddk:docspec:bounded-job",
+                          "value": raw["job_spec_sha256"]},
+            "outcome": "succeeded",
+            "observedAt": observed_at,
+            **({"startedAt": started_at} if started_at is not None else {}),
+            "endedAt": observed_at,
+            "record": record,
+            "inputs": sorted(set(observed_inputs)),
+            "outputs": sorted(set(outputs)),
+            "inputCoverage": {"status": coverage_status, "scope": "Consumption within the native bounded job."},
+        }
+        self.observations["runs"].append(run)
+        self.bound_inputs[run["id"]] = bound_inputs
+        self.limits.add("The local DocSpec receipt supplies a terminal observation without a native START event.")
+        self._run_job_quality_queries(alias, raw.get("queries", ()), output_versions_by_alias, tool, record)
+
     def execution(self, entry):
-        _need(entry, {"path", "production", "inputs", "outputs"}, "execution mapping")
+        _need(entry, {"path", "production"}, "execution mapping")
+        alias = entry["production"]
+        if not isinstance(alias, str):
+            raise CatalogError("CATALOG-METADATA-SHAPE", "An execution mapping needs a production alias.")
+        production = self.productions.get(alias)
+        if production is None:
+            raise CatalogError("CATALOG-PRODUCTION-MISSING", f"Production {alias!r} is outside the loaded scope.")
         receipt_doc = self.read_owner(self.document, entry["path"], entry.get("sha256"))
+        if isinstance(receipt_doc.value, dict) and "operation" not in receipt_doc.value and "job_spec_sha256" in receipt_doc.value:
+            self._direct_job_result_execution(entry, receipt_doc, alias, production)
+            return
+        if alias not in self.job_specs:
+            _need(entry, {"path", "production", "inputs", "outputs"}, "execution mapping")
         receipt = _need(receipt_doc.value, {"request", "operation", "tool", "status", "inputs", "result", "endedAt"},
                         "DocSpec bounded-job receipt")
         operation = _need(receipt["operation"], {"runtime", "mode", "requestIdentity", "execution", "outputs"},
@@ -263,14 +490,21 @@ class LocalMetadata:
                 or request_identity["scheme"] != "urn:ddk:docspec-request:sha256"
                 or not _digest(request_record["sha256"]) or request_identity["value"] != request_record["sha256"]):
             raise CatalogError("CATALOG-NATIVE-RECEIPT", "The selected receipt is not a consistent DocSpec bounded job.")
-        request = self.read_pinned_owner(receipt_doc, request_record, "DocSpec job request").value
+        request_doc = self.read_pinned_owner(receipt_doc, request_record, "DocSpec job request")
+        request = request_doc.value
         _need(request, set(), "DocSpec job request")
-        alias = entry["production"]
-        production = self.productions.get(alias)
-        if production is None:
-            raise CatalogError("CATALOG-PRODUCTION-MISSING", f"Production {alias!r} is outside the loaded scope.")
         if outcome not in {"succeeded", "failed", "unknown", "not_submitted"}:
             raise CatalogError("CATALOG-NATIVE-RECEIPT", "The DocSpec outcome is unsupported.")
+        if alias in self.job_specs:
+            _, spec_doc, default_in, default_out = self.job_specs[alias]
+            exact_spec = (request_doc.path == spec_doc.path) or bool(entry.get("requireExactJobSpec"))
+            self._verify_job_request(alias, production, request, receipt["result"] or {}, request_record["sha256"],
+                                     exact_spec=exact_spec)
+            raw_in_map = entry.get("inputs", default_in)
+            raw_out_map = entry.get("outputs", default_out)
+        else:
+            raw_in_map = entry["inputs"]
+            raw_out_map = entry["outputs"]
         if diagnostic_limit:
             self.operational_errors.append(("DOCSPEC-DIAGNOSTIC-LIMIT",
                                             "DocSpec diagnostic capture did not complete.", receipt_doc.path))
@@ -279,9 +513,9 @@ class LocalMetadata:
             return
         observed_at = _timestamp(receipt["endedAt"], "DocSpec terminal observation")
         record = owner_record(receipt_doc)
-        self._record_tool(receipt["tool"], "DocSpec tool")
-        input_mapping = _need(entry["inputs"], set(), "DocSpec input mapping")
-        output_mapping = _need(entry["outputs"], set(), "DocSpec output mapping")
+        tool = self._record_tool(receipt["tool"], "DocSpec tool")
+        input_mapping = _need(raw_in_map, set(), "DocSpec input mapping")
+        output_mapping = _need(raw_out_map, set(), "DocSpec output mapping")
         declared_inputs = {item["name"]: item for item in request.get("inputs", ())}
         declared_outputs = {item["name"]: item for item in request.get("outputs", ())}
         if not input_mapping.keys() <= declared_inputs.keys() or not output_mapping.keys() <= declared_outputs.keys():
@@ -289,6 +523,7 @@ class LocalMetadata:
         if not set(input_mapping.values()) <= set(production["inputs"]) or not set(output_mapping.values()) <= set(production["outputs"]):
             raise CatalogError("CATALOG-NATIVE-RECEIPT", "A receipt mapping falls outside the selected production interface.")
         outputs, bound_inputs = [], {}
+        output_versions_by_alias = {}
         for item in receipt["inputs"]:
             _need(item, {"name", "format", "path", "sha256"}, "DocSpec input observation")
             name = item["name"]
@@ -302,6 +537,38 @@ class LocalMetadata:
                 if name in bound_inputs:
                     raise CatalogError("CATALOG-NATIVE-RECEIPT", "The job repeats an exact input binding.")
                 bound_inputs[name] = version
+        native_input_rows = receipt["result"].get("inputs") if isinstance(receipt["result"], dict) else None
+        has_dr297r_inputs = (
+            outcome in {"succeeded", "failed"}
+            and isinstance(native_input_rows, list)
+            and (bool(native_input_rows) or (not declared_inputs and "job_spec_sha256" in receipt["result"]))
+            and all(
+                isinstance(row, dict) and isinstance(row.get("name"), str) and isinstance(row.get("kind"), str)
+                and (row["kind"] not in {"parquet", "jsonl"} or (_digest(row.get("sha256")) and isinstance(row.get("path"), str)))
+                for row in native_input_rows
+            )
+        )
+        observed_run_inputs = []
+        input_coverage_status = "unknown"
+        if has_dr297r_inputs:
+            seen_native_inputs = set()
+            for row in native_input_rows:
+                name = row["name"]
+                if name in seen_native_inputs or name not in declared_inputs:
+                    raise CatalogError("CATALOG-NATIVE-RECEIPT", "Native input observations disagree with the pinned request.")
+                seen_native_inputs.add(name)
+                if row["kind"] == "parquet" and name in input_mapping:
+                    if row["path"] != declared_inputs[name].get("path"):
+                        raise CatalogError("CATALOG-NATIVE-RECEIPT", "Native input path differs from the pinned request.")
+                    version = self._file_version(input_mapping[name], row, record)
+                    if name in bound_inputs and bound_inputs[name] != version:
+                        raise CatalogError("CATALOG-NATIVE-RECEIPT", "Native input digest disagrees with receipt input custody.")
+                    bound_inputs[name] = version
+                    observed_run_inputs.append(version)
+            if not declared_inputs or (set(input_mapping) == set(declared_inputs) and len(observed_run_inputs) == len(declared_inputs)):
+                input_coverage_status = "complete"
+            elif observed_run_inputs:
+                input_coverage_status = "partial"
         native_rows = receipt["result"].get("outputs", ())
         native_outputs = {item["name"]: item for item in native_rows}
         if len(native_rows) != len(native_outputs):
@@ -317,21 +584,26 @@ class LocalMetadata:
                     or item["attributes"].get("size") != native.get("size")):
                 raise CatalogError("CATALOG-NATIVE-RECEIPT", "An output differs from the pinned request or native result.")
             mapped_outputs.add(name)
-            outputs.append(self._file_version(output_mapping[name], item, record, output=True))
+            version = self._file_version(output_mapping[name], item, record, output=True)
+            outputs.append(version)
+            output_versions_by_alias[output_mapping[name]] = version
         if mapped_outputs != native_outputs.keys() & output_mapping.keys():
             raise CatalogError("CATALOG-NATIVE-RECEIPT", "The receipt omits an observed native output in the requested mapping.")
         reference = {"scheme": request_identity["scheme"], "authority": "urn:ddk:docspec:bounded-job",
                      "value": request_identity["value"]}
         run = {"id": stable_id("docspec-run", receipt_doc.sha256), "production": alias,
                "reference": reference, "outcome": outcome, "observedAt": observed_at, "record": record,
-               "inputs": [], "outputs": sorted(set(outputs)),
-               "inputCoverage": {"status": "unknown", "scope": "Consumption within the native bounded job."}}
+               "inputs": sorted(set(observed_run_inputs)), "outputs": sorted(set(outputs)),
+               "inputCoverage": {"status": input_coverage_status, "scope": "Consumption within the native bounded job."}}
         if outcome in {"succeeded", "failed"}:
             run["endedAt"] = observed_at
         self.observations["runs"].append(run)
         self.bound_inputs[run["id"]] = bound_inputs
-        self.limits.add("DocSpec bound inputs without native input observations remain outside observed run lineage.")
+        if not has_dr297r_inputs:
+            self.limits.add("DocSpec bound inputs without native input observations remain outside observed run lineage.")
         self.limits.add("The local DocSpec receipt supplies a terminal observation without a native START event.")
+        if alias in self.job_specs and outcome == "succeeded":
+            self._run_job_quality_queries(alias, receipt["result"].get("queries", ()), output_versions_by_alias, tool, record)
 
     def _record_tool(self, value, context):
         tool = _tool(value, context)
@@ -515,7 +787,8 @@ class LocalMetadata:
             _need(check, {"id", "key", "result"}, "native quality check")
             identifier, key = check["id"], check["key"]
             if (not isinstance(identifier, str) or not identifier or identifier in native_ids
-                    or key in native_by_key or key not in required or key == EXACT_FIELD_CHECK
+                    or key in native_by_key or key not in required
+                    or key in {EXACT_FIELD_CHECK, QUALITY_COMPLETE_CHECK}
                     or check["result"] not in DCC_STATUS):
                 raise CatalogError("CATALOG-QUALITY-COVERAGE", "Native quality checks do not resolve uniquely to required rules.")
             native_by_key[key] = check
@@ -546,6 +819,8 @@ class LocalMetadata:
                                  "reason": _quality_reason(native_check, declared)})
             elif check_id == EXACT_FIELD_CHECK and check["nativeCheckIds"] == []:
                 verified.append(self._verify_exact_fields(document, receipt, declared, check))
+            elif check_id == QUALITY_COMPLETE_CHECK and check["nativeCheckIds"] == []:
+                verified.append(self._verify_quality_execution_complete(receipt, check))
             elif check["nativeCheckIds"] == [] and status == "not_run" and check.get("reason"):
                 verified.append(check)
             else:
@@ -556,6 +831,26 @@ class LocalMetadata:
         if receipt["status"] != aggregate:
             raise CatalogError("CATALOG-QUALITY-CONTRADICTION", "The receipt result disagrees with its normalized outcomes.")
         return verified
+
+    def _verify_quality_execution_complete(self, receipt, check):
+        status = check["status"]
+        if status not in {"passed", "unknown"}:
+            raise CatalogError("CATALOG-QUALITY-CONTRADICTION",
+                               "The quality execution completeness check has an invalid outcome.")
+        operational = receipt.get("operational")
+        if isinstance(operational, dict):
+            incomplete = bool(
+                operational.get("engineErrors")
+                or operational.get("diagnosticsTruncated")
+                or operational.get("unmeasuredChecks")
+                or any(isinstance(item, dict) and item.get("status") == "unknown"
+                       for item in operational.get("queryIssues", ()))
+            )
+            expected = "unknown" if incomplete else "passed"
+            if status != expected:
+                raise CatalogError("CATALOG-QUALITY-CONTRADICTION",
+                                   "The quality execution completeness outcome disagrees with operational evidence.")
+        return check
 
     def _verify_exact_fields(self, document, receipt, declared, check):
         schema = receipt.get("schemaObservation")

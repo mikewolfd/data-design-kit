@@ -12,10 +12,11 @@ from .documents import (
 
 
 class CatalogError(DocumentError):
-    def __init__(self, code, message, pointer="", *, status="failed", related=()):
+    def __init__(self, code, message, pointer="", *, status="failed", related=(), step=None):
         super().__init__(code, message, pointer)
         self.status = status
         self.related = tuple(related)
+        self.step = step
 
 
 def field_at(schema, path):

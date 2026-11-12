@@ -261,7 +261,7 @@ def test_design_groups_stay_required_while_a_component_is_declared(layered):
 
 
 def test_run_naming_its_docspec_job_has_no_production_yet(tmp_path):
-    """Known gap under DDK-CONF-005: DDK-CATALOG-005 runs bind only to a component or design production."""
+    """DDK-CONF-005 / DDK-CATALOG-005: a run naming an undeclared production fails with CATALOG-PRODUCTION-MISSING."""
     commerce = Path(__file__).resolve().parents[2] / "examples" / "commerce"
     metadata = json.loads((commerce / "catalog" / "metadata.example.json").read_bytes())
     metadata["runs"][0]["production"] = "daily-revenue-job"

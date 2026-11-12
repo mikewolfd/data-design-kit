@@ -256,3 +256,44 @@ def test_frictionless_primary_key_null_semantics_and_unsupported_precision(nativ
     reduced = builder.build()
     assert reduced["decision"] == "incomplete" and exit_code(reduced) == 2
     assert reduced["checks"][-1]["diagnostics"][0]["code"] == "ADAPTER-MAPPING-INCOMPLETE"
+
+
+def test_quality_resources_default_scratch_budget_is_256_mib():
+    from ddk.quality import QualityResources
+
+    assert QualityResources().scratchBytes == 256 << 20
+
+
+def test_batched_odcs_lint_evaluates_multiple_contracts_in_single_worker_invocation(native, tmp_path):
+    from ddk.cli import main as cli_main
+
+    valid_doc = document()
+    bad_doc = deepcopy(valid_doc)
+    bad_doc["id"] = "urn:test:quality-bad"
+    bad_doc.pop("version")
+    batch = native.invoke("odcs-lint", {"documents": [
+        {"alias": "good", "document": valid_doc},
+        {"alias": "bad", "document": bad_doc},
+    ]})
+    assert batch["status"] == "failed"
+    assert batch["results"]["good"]["status"] == "passed"
+    assert batch["results"]["bad"]["status"] in {"failed", "error"}
+    assert batch["evaluator"]["id"] == "urn:ddk:quality:datacontract-cli"
+
+    # End-to-end ddk check --require odcs.lint batches all project dataset contracts in one worker call
+    commerce = tmp_path / "commerce"
+    import shutil
+    shutil.copytree(ROOT / "examples/commerce", commerce)
+    report_path = tmp_path / "lint-report.ddk.json"
+    rc = cli_main([
+        "check", str(commerce / "project.ddk.json"),
+        "--require", "odcs.lint",
+        "--tool-python", str(native.python),
+        "--output", str(report_path),
+    ])
+    assert rc == 0
+    rep = json.loads(report_path.read_text())
+    lint_checks = [c for c in rep["checks"] if c["group"] == "odcs.lint"]
+    assert len(lint_checks) == 3 and all(c["status"] == "passed" for c in lint_checks)
+    assert len({c["subject"] for c in lint_checks}) == 3
+

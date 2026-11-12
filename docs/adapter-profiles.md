@@ -36,7 +36,7 @@ Open PRs 1725 and 1726 propose extra-field and order checks. They are candidates
 
 **Failure cases:** unresolved definition, schema mismatch, unsupported quality engine, unavailable local file, native process failure, differing native/DDK schema revisions.
 
-File-backed quality support and native-candidate quality support are separate claims. The initial path tests identified local Parquet or DuckDB output. A native path must prove that the selected CLI backend reads the exact protected DocSpec candidate without resolving latest or requiring an unnecessary export. The local bridge streams the protected version through Arrow IPC into a bounded DuckDB view and records native field identities. Its tested tuple appears in the implementation status. Preserve evaluator versions, mapping semantics, complete requested checks, and unsupported outcomes. A CLI report is evaluation evidence; DocSpec must accept it before it can gate managed selection.
+File-backed quality support and native-candidate quality support are separate claims. The initial path tests identified local Parquet or DuckDB output; `QualityResources` reserves a default `256 MiB` DuckDB scratch spill budget (`scratchBytes = 256 << 20`), and `ddk check --require odcs.lint` batches dataset contracts into one `odcs-lint` worker call. A native path must prove that the selected CLI backend reads the exact protected DocSpec candidate without resolving latest or requiring an unnecessary export. The local bridge streams the protected version through Arrow IPC into a bounded DuckDB view and records native field identities. Its tested tuple appears in the implementation status. Preserve evaluator versions, mapping semantics, complete requested checks, and unsupported outcomes. A CLI report is evaluation evidence; DocSpec must accept it before it can gate managed selection.
 
 ## 3. Frictionless
 
@@ -154,6 +154,8 @@ The [example adapter manifest](../examples/adapter-manifest.ddk.json) deliberate
 ## 10. Product catalog and standards outputs
 
 The `catalog` profile reads ODPS 1.1.0 product documents and resolves participating ports to the project's ODCS definitions. Load native publication manifests, version records, and run or check receipts through an explicitly selected metadata adapter. Emit the resolved catalog and preserve source inventory, exact reference schemes, scope, and disclosure policy. Profile discovery stays separate from adapter invocation.
+
+The `catalog.recipes` and `catalog.jobs` profiles use `DocSpecAdapter` directly: `catalog.recipes` synthesizes zero-row Parquet inputs from effective ODCS schemas (including nested `Struct` and `List` columns), runs `docspec prepare-job` and a zero-row `docspec job` run, and compares inferred outputs recursively against `resultDataset`; `catalog.jobs` admits `kind: "job"` productions, gates whole `JobSpec`s over zero-row inputs, binds `job_id` and `job_spec_sha256` run evidence, and evaluates deterministic ODCS zero-counter SQL queries without re-scanning Parquet files.
 
 The `catalog.dcat` profile writes DCAT 3 JSON-LD. Preserve a dataset's stable identity and exact version relationships. Emit an available distribution or service only for an observed supported representation. Derive a current-version link only from an unambiguous publisher selection for the requested authority and purpose. Validate the resulting graph independently.
 

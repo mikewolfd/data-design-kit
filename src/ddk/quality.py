@@ -23,7 +23,7 @@ class QualityResources:
     """
 
     engineMemoryBytes: int = 64 << 20
-    scratchBytes: int = 0
+    scratchBytes: int = 256 << 20
     maxInputBytes: int | None = None
     maxDecodedInputBytes: int | None = None
     maxEncodedReadBytes: int = 8 << 20

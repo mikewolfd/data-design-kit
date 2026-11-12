@@ -117,10 +117,10 @@ class DocSpecAdapter:
         """
         return self._invoke("prepare-job", request)
 
-    def execute(self, request, *, input_digests=None, semantic_profile=None, cancel_event=None):
+    def execute(self, request, *, input_digests=None, semantic_profile=None, cancel_event=None, spec_path=None):
         """Run a bounded job and preserve exact source and partial output identities."""
         return self._invoke("job", request, input_digests=input_digests, semantic_profile=semantic_profile,
-                            cancel_event=cancel_event)
+                            cancel_event=cancel_event, spec_path=spec_path)
 
     def managed(self, workspace, request, *, prior=None, backend="local-iceberg", cancel_event=None):
         """Submit or reconcile the original local managed Build or Update."""
@@ -251,11 +251,16 @@ class DocSpecAdapter:
 
     def _invoke(self, command, request, *, input_digests=None, prefix=(), operation_context=None,
                 prior=None, confirmation=None, original_request=None, identity_constraint=None,
-                refusal=None, semantic_profile=None, cancel_event=None):
+                refusal=None, semantic_profile=None, cancel_event=None, spec_path=None):
         folder = Path(tempfile.mkdtemp(prefix=f"{command}-", dir=self.evidence_dir))
         request_path = folder / "request.json"
         limits_path = folder / "limits.json"
-        request_sha256 = write_json(request_path, self.redaction.data(request) if self.redaction else request)["sha256"]
+        if spec_path is not None and not self.redaction:
+            authored = Path(spec_path).resolve(strict=True).read_bytes()
+            request_path.write_bytes(authored)
+            request_sha256 = sha256(authored).hexdigest()
+        else:
+            request_sha256 = write_json(request_path, self.redaction.data(request) if self.redaction else request)["sha256"]
         if ((command == "managed-job" and request["action"] == "prepare")
                 or (command == "job-publication-intent" and request["action"] == "freeze")) and original_request is None:
             original_request = {"reference": {"path": str(request_path), "sha256": request_sha256}, "value": request}
@@ -660,11 +665,52 @@ def _version_reference(workspace, version):
 
 _LOGICAL_TYPES = {
     "Boolean": "boolean", "Int8": "integer", "Int16": "integer",
-    "Int32": "integer", "Int64": "integer", "Float32": "number", "Float64": "number",
-    "Utf8": "string", "LargeUtf8": "string", "Utf8View": "string",
+    "Int32": "integer", "Int64": "integer", "UInt8": "integer", "UInt16": "integer",
+    "UInt32": "integer", "UInt64": "integer", "Float16": "number", "Float32": "number",
+    "Float64": "number", "Utf8": "string", "LargeUtf8": "string", "Utf8View": "string",
     "Binary": "binary", "LargeBinary": "binary", "BinaryView": "binary",
     "Date32": "date", "Date64": "date",
 }
+
+
+def arrow_type_to_odcs(dtype):
+    """Recursively map a DocSpec JSON Arrow data_type to an ODCS logical shape."""
+    if isinstance(dtype, str):
+        if dtype in _LOGICAL_TYPES:
+            return {"logicalType": _LOGICAL_TYPES[dtype]}
+        return None
+    if not isinstance(dtype, dict) or len(dtype) != 1:
+        return None
+    kind, detail = next(iter(dtype.items()))
+    if kind in {"Decimal128", "Decimal256"}:
+        return {"logicalType": "number"}
+    if kind == "FixedSizeBinary":
+        return {"logicalType": "binary"}
+    if kind in {"Time32", "Time64"}:
+        return {"logicalType": "time"}
+    if kind == "Timestamp":
+        return {"logicalType": "timestamp"}
+    if kind == "Date32" or kind == "Date64":
+        return {"logicalType": "date"}
+    if kind in {"List", "LargeList", "FixedSizeList"}:
+        item_field = detail[0] if kind == "FixedSizeList" and isinstance(detail, list) and detail else detail
+        if not isinstance(item_field, dict) or "data_type" not in item_field:
+            return None
+        mapped = arrow_type_to_odcs(item_field["data_type"])
+        return {"logicalType": "array", "items": mapped} if mapped is not None else None
+    if kind == "Struct":
+        if not isinstance(detail, list):
+            return None
+        props = []
+        for child in detail:
+            if not isinstance(child, dict) or "name" not in child or "data_type" not in child:
+                return None
+            mapped = arrow_type_to_odcs(child["data_type"])
+            if mapped is None:
+                return None
+            props.append({"name": child["name"], **mapped})
+        return {"logicalType": "object", "properties": props}
+    return None
 
 
 def _native_read(version, receipt, profile=PRIMITIVE_PROFILE):

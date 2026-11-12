@@ -1133,6 +1133,14 @@
         "mediaType": {
           "$ref": "common.schema.json#/$defs/name"
         },
+        "byteSize": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rowCount": {
+          "type": "integer",
+          "minimum": 0
+        },
         "record": {
           "$ref": "#/$defs/record"
         }
@@ -1523,6 +1531,13 @@
         "alias": {
           "$ref": "common.schema.json#/$defs/artifactRef"
         },
+        "kind": {
+          "enum": [
+            "component",
+            "design",
+            "job"
+          ]
+        },
         "identity": {
           "$ref": "#/$defs/versionedIdentifier"
         },
@@ -1542,6 +1557,33 @@
             "$ref": "common.schema.json#/$defs/artifactRef"
           },
           "uniqueItems": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/name"
+              },
+              "kind": {
+                "enum": [
+                  "sql",
+                  "view",
+                  "export",
+                  "report"
+                ]
+              },
+              "sqlSha256": {
+                "$ref": "common.schema.json#/$defs/digest"
+              }
+            },
+            "required": [
+              "id",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [

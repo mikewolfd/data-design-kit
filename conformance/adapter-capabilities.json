@@ -465,6 +465,57 @@
           "standards": {
             "ddk": "0.1"
           }
+        },
+        {
+          "artifactFormats": [
+            "sql"
+          ],
+          "evidence": [],
+          "facets": {
+            "implicitCastRefusal": "checked",
+            "nestedStructsAndLists": "checked",
+            "noProductionScan": "checked",
+            "zeroRowOptimizerExecution": "checked"
+          },
+          "group": "catalog.recipes",
+          "limitations": [
+            "DataFusion SQL dialect only; non-DataFusion dialects remain unknown."
+          ],
+          "operations": [
+            "zero-row-parquet-prepare",
+            "zero-row-job-execute",
+            "recursive-result-schema-comparison"
+          ],
+          "standards": {
+            "arrow": "58.4.0",
+            "odcs": "3.2.0",
+            "sql": "datafusion-sql"
+          }
+        },
+        {
+          "artifactFormats": [
+            "sql"
+          ],
+          "evidence": [],
+          "facets": {
+            "jobSpecDigestBinding": "checked",
+            "noProductionScan": "checked",
+            "zeroCounterQualityQueries": "checked",
+            "zeroRowOptimizerExecution": "checked"
+          },
+          "group": "catalog.jobs",
+          "limitations": [],
+          "operations": [
+            "whole-job-prepare",
+            "zero-row-job-execute",
+            "job-run-receipt-binding",
+            "zero-counter-quality-lowering"
+          ],
+          "standards": {
+            "arrow": "58.4.0",
+            "docspec": "0.1.0",
+            "odcs": "3.2.0"
+          }
         }
       ],
       "id": "urn:ddk:adapter:docspec",
@@ -474,7 +525,9 @@
         "execute.docspec-job",
         "plan.datafusion",
         "runtime.docspec-managed",
-        "test.fixtures"
+        "test.fixtures",
+        "catalog.recipes",
+        "catalog.jobs"
       ],
       "specVersion": "0.1",
       "status": "experimental-unverified",
@@ -557,6 +610,7 @@
           ],
           "operations": [
             "native-lint",
+            "batched-lint",
             "directional-version-comparison"
           ],
           "standards": {

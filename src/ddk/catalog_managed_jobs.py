@@ -151,9 +151,30 @@ def managed_execution(metadata, entry):
     """
     from .catalog_metadata import _need, _timestamp, owner_record, stable_id
 
-    _need(entry, {"receipt", "production", "inputs", "outputs", "outOfCatalog"}, "managed execution mapping")
+    _need(entry, {"receipt", "production"}, "managed execution mapping")
     if set(entry) - {"receipt", "production", "inputs", "outputs", "outOfCatalog", "nativeRules"}:
         raise CatalogError("CATALOG-METADATA-SHAPE", "Unknown managed execution mapping member.")
+    alias = entry["production"]
+    if not isinstance(alias, str):
+        raise CatalogError("CATALOG-METADATA-SHAPE", "A managed execution needs a production alias.")
+    production = metadata.productions.get(alias)
+    if production is None:
+        raise CatalogError("CATALOG-PRODUCTION-MISSING", f"Production {alias!r} is outside the loaded scope.")
+    job_specs = getattr(metadata, "job_specs", {})
+    if alias in job_specs:
+        job_artifact, _, default_in, default_out = job_specs[alias]
+        entry = {
+            **entry,
+            "inputs": entry.get("inputs", default_in),
+            "outputs": entry.get("outputs", default_out),
+            "outOfCatalog": entry.get("outOfCatalog", {
+                "inputs": [{"name": name, "reason": "Declared outOfCatalogInputs on job production."}
+                           for name in job_artifact.value.get("outOfCatalogInputs", ())],
+                "outputs": [{"name": name, "reason": "Declared outOfCatalogOutputs on job production."}
+                            for name in job_artifact.value.get("outOfCatalogOutputs", ())],
+            }),
+        }
+    _need(entry, {"receipt", "production", "inputs", "outputs", "outOfCatalog"}, "managed execution mapping")
     _need(entry["outOfCatalog"], {"inputs", "outputs"}, "out-of-catalog native membership")
     if set(entry["outOfCatalog"]) != {"inputs", "outputs"}:
         raise CatalogError("CATALOG-METADATA-SHAPE", "Only input/output dispositions define catalog dataset scope.")
@@ -165,12 +186,6 @@ def managed_execution(metadata, entry):
             or context["operationId"] != result["operation"] or not isinstance(context["workspace"], str)
             or not Path(context["workspace"]).is_absolute()):
         raise CatalogError("CATALOG-NATIVE-RECEIPT", "The retained native job belongs to another operation context.")
-    alias = entry["production"]
-    if not isinstance(alias, str):
-        raise CatalogError("CATALOG-METADATA-SHAPE", "A managed execution needs a production alias.")
-    production = metadata.productions.get(alias)
-    if production is None:
-        raise CatalogError("CATALOG-PRODUCTION-MISSING", f"Production {alias!r} is outside the loaded scope.")
     observed_at = _timestamp(receipt["endedAt"], "native managed-job observation")
     record = owner_record(document)
     metadata._record_tool(receipt["tool"], "DocSpec tool")
@@ -184,6 +199,27 @@ def managed_execution(metadata, entry):
         evidence = verify_completed_job(result)
     except JobEvidenceError as exc:
         raise CatalogError(exc.code, str(exc), status=exc.status) from exc
+    if alias in job_specs:
+        native_res = result.get("result") if isinstance(result.get("result"), dict) else {}
+        obs_job_id = native_res.get("job_id") if "job_id" in native_res else evidence.manifest.get("job_id")
+        if obs_job_id is not None and obs_job_id != production["identity"]["id"]:
+            raise CatalogError(
+                "CATALOG-JOB-SPEC-MISMATCH",
+                f"Observed DocSpec job_id {obs_job_id!r} differs from job production id {production['identity']['id']!r}.",
+                step="jobs",
+            )
+        if "job_spec_sha256" in native_res and native_res["job_spec_sha256"] != evidence.manifest["job"]["sha256"]:
+            raise CatalogError(
+                "CATALOG-JOB-SPEC-MISMATCH",
+                "Observed DocSpec job_spec_sha256 disagrees with the retained managed job manifest.",
+                step="jobs",
+            )
+        if "nativeRules" not in entry and evidence.manifest["job"]["sha256"] != production["definition"]["sha256"]:
+            raise CatalogError(
+                "CATALOG-JOB-SPEC-MISMATCH",
+                "Retained managed job SHA-256 differs from the declared JobSpec SHA-256.",
+                step="jobs",
+            )
     input_mapping = _mapping(entry, "inputs", evidence.view_names["inputs"], production["inputs"])
     output_mapping = _mapping(entry, "outputs", evidence.view_names["outputs"], production["outputs"])
     definition_identity, schemas = _current_definition(metadata, production, entry)
