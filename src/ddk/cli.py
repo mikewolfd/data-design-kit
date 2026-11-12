@@ -67,6 +67,9 @@ def _parser():
             command.add_argument("--implementation", choices=("sql", "substrait", "both"), default="both")
             command.add_argument("--secret-parameter", metavar="NAME=ENV", action="append", default=[],
                                  help="Bind a designated bounded SQL parameter from the named environment variable")
+        if name in ("catalog", "impact"):
+            command.add_argument("--peer-catalog", metavar="ALIAS=DIR", action="append", default=[],
+                                 help="Bind an imported peer catalog output directory")
         if name == "catalog":
             command.add_argument("--metadata")
             command.add_argument("--metadata-adapter")
@@ -112,12 +115,25 @@ def _secret_parameters(args):
     return bindings
 
 
+def _peer_catalogs(args):
+    peers = {}
+    for argument in getattr(args, "peer_catalog", ()):
+        alias, separator, directory = argument.partition("=")
+        if not separator or not re.fullmatch(r"[a-z][a-z0-9-]*", alias) or not directory:
+            raise UsageError("--peer-catalog requires ALIAS=DIR")
+        if alias in peers:
+            raise UsageError(f"Duplicate --peer-catalog binding for {alias!r}")
+        peers[alias] = directory
+    return peers
+
+
 def _execute(args, secret_parameters=None):
     shared = {"required_groups": args.require, "permitted_roots": args.permit_root}
     if args.command == "impact":
         return impact_projects(args.base, args.candidate, non_weakening=args.non_weakening, selection=args.select,
                                base_catalog=args.base_catalog, candidate_catalog=args.candidate_catalog,
-                               require_complete_scope=args.require_complete_scope, **shared)
+                               require_complete_scope=args.require_complete_scope,
+                               peer_catalogs=_peer_catalogs(args) or None, **shared)
     if args.command == "lock":
         if not args.output:
             raise UsageError("lock requires --output")
@@ -137,7 +153,8 @@ def _execute(args, secret_parameters=None):
                                 timeout=args.timeout)
         report = build_catalog(args.project, metadata=args.metadata, metadata_adapter=args.metadata_adapter,
                                exports=args.export, output=args.output, current_selection=args.current_selection,
-                               disclosure_policy=args.disclosure_policy, recipe_tools=tools, **shared)
+                               disclosure_policy=args.disclosure_policy, recipe_tools=tools,
+                               peer_catalogs=_peer_catalogs(args) or None, **shared)
         if tools is not None and not any(tools.output.iterdir()):
             # No tool request ran; leave no empty evidence folders behind.
             tools.output.rmdir()

@@ -33,6 +33,10 @@ def _reference_sites(artifact):
                     yield ("rules", index, key), rule[key], "dataset" if key == "dataset" else None
             for position, reference in enumerate(rule.get("datasets", ())):
                 yield ("rules", index, "datasets", position), reference, "dataset"
+            for position, reference in enumerate(rule.get("artifacts", ())):
+                yield ("rules", index, "artifacts", position), reference, None
+            for position, entry in enumerate(rule.get("exceptions", ())):
+                yield ("rules", index, "exceptions", position, "artifact"), entry["artifact"], None
 
 
 def _catalog_dependencies(inventory):
@@ -47,14 +51,20 @@ def _catalog_dependencies(inventory):
                              ("relationship", configuration.get("relationships", []))):
             for item in items:
                 if group == "recipe":
-                    references = list(item["inputs"].values())
+                    references = [ref for ref in item["inputs"].values() if isinstance(ref, str)]
+                    peer_refs = [ref["catalog"] for ref in item["inputs"].values()
+                                 if isinstance(ref, dict) and "catalog" in ref]
                     if "resultDataset" in item:
                         references.append(item["resultDataset"])
                 else:
                     references = [endpoint["dataset"] for endpoint in (item["source"], item["target"])
-                                  if "dataset" in endpoint]
+                                  if "dataset" in endpoint and "catalog" not in endpoint]
+                    peer_refs = [endpoint["catalog"] for endpoint in (item["source"], item["target"])
+                                 if "catalog" in endpoint]
                 for reference in references:
                     inventory.dependency(item["id"], inventory.scoped(reference, namespace))
+                for peer_alias in peer_refs:
+                    inventory.dependency(item["id"], f"peer-catalog:{peer_alias}")
                 for relationship in (*item.get("relationships", ()), *item.get("contextualRelationships", ())):
                     inventory.dependency(item["id"], relationship)
 

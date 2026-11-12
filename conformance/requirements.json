@@ -240,6 +240,12 @@
     "owner": "WP-05"
   },
   {
+    "id": "DDK-POLICY-008",
+    "title": "No decaying snapshot facts in prose",
+    "specification": "docs/specification.md#DDK-POLICY-008",
+    "owner": "WP-05"
+  },
+  {
     "id": "DDK-CHECK-001",
     "title": "Processing order",
     "specification": "docs/specification.md#DDK-CHECK-001",
@@ -604,5 +610,11 @@
     "title": "RML mappings",
     "specification": "docs/specification.md#DDK-CATALOG-014",
     "owner": "WP-14"
+  },
+  {
+    "id": "DDK-CATALOG-015",
+    "title": "Cross-stack catalog federation",
+    "specification": "docs/specification.md#DDK-CATALOG-015",
+    "owner": "WP-13"
   }
 ]

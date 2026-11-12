@@ -271,6 +271,61 @@
               "severity"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/alias"
+              },
+              "check": {
+                "const": "prose-no-decaying-facts"
+              },
+              "severity": {
+                "enum": [
+                  "warning",
+                  "error"
+                ]
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/artifactRef"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "artifact": {
+                      "$ref": "common.schema.json#/$defs/artifactRef"
+                    },
+                    "pointer": {
+                      "type": "string",
+                      "pattern": "^(/.*)?$"
+                    },
+                    "reason": {
+                      "$ref": "common.schema.json#/$defs/name"
+                    }
+                  },
+                  "required": [
+                    "artifact",
+                    "pointer",
+                    "reason"
+                  ],
+                  "additionalProperties": false
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "check"
+            ],
+            "additionalProperties": false
           }
         ]
       },

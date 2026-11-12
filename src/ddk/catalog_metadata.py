@@ -223,12 +223,29 @@ class LocalMetadata:
             "location": uri, "mediaType": "application/vnd.apache.parquet", "availability": "available",
             "record": record,
         }
+        attrs = item.get("attributes") if isinstance(item.get("attributes"), dict) else {}
+        byte_size = attrs.get("size", item.get("size"))
+        row_count = attrs.get("rows", item.get("rows"))
+        if type(byte_size) is int and byte_size >= 0:
+            representation["byteSize"] = byte_size
+        if type(row_count) is int and row_count >= 0:
+            representation["rowCount"] = row_count
+        if isinstance(item.get("members"), list) and item["members"]:
+            representation["members"] = deepcopy(item["members"])
         old = self.version_facts.get(version)
         if old is None:
             self.version_facts[version] = version_record
             self.observations["representations"].append(representation)
         elif old["dataset"] != alias:
             raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "The same exact file version maps to conflicting aliases.")
+        else:
+            existing = next((row for row in self.observations["representations"] if row["id"] == representation["id"]), None)
+            if existing is not None:
+                for key in ("byteSize", "rowCount", "members"):
+                    if key in representation:
+                        if key in existing and existing[key] != representation[key]:
+                            raise CatalogError("CATALOG-AUTHORITY-CONFLICT", f"Conflicting {key} observations on {version!r}.")
+                        existing[key] = representation[key]
         self.physical_datasets[version] = {"namespace": "file", "name": str(Path(item["path"]))}
         self.owners.setdefault(version, [])
         if record not in self.owners[version]:

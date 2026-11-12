@@ -368,3 +368,45 @@ def test_graph_and_rml_profiles_qualify_independently_of_base_catalog(release_ev
     assert full_result["decision"] == "passed"
     assert set(full_result["coverage"]["completedProfiles"]) == {"core", "catalog", "catalog.graph", "catalog.rml"}
 
+
+def test_federation_and_cross_product_requirements_and_cases_stay_traceable():
+    from ddk.conformance import _catalog
+    from ddk.documents import REPOSITORY, read_json
+
+    reqs = {row["id"]: row for row in read_json(REPOSITORY / "conformance" / "requirements.json").value}
+    assert reqs["DDK-POLICY-008"]["owner"] == "WP-05"
+    assert reqs["DDK-CATALOG-015"]["owner"] == "WP-13"
+
+    packages = {
+        pkg["id"]: set(pkg["requirements"])
+        for pkg in read_json(REPOSITORY / "implementation" / "work-packages.json").value["workPackages"]
+    }
+    assert "DDK-POLICY-008" in packages["WP-05"]
+    assert "DDK-CATALOG-015" in packages["WP-13"]
+
+    merged = _catalog(None)
+    expected_cases = (
+        "CASE-POLICY-008-DECAYING-PROSE",
+        "CASE-POLICY-008-EXCEPTIONS",
+        "CASE-CATALOG-004-KEY-FORMAT-CONFLICT",
+        "CASE-CATALOG-004-CONCEPT-IRI-TEMPLATE",
+        "CASE-CATALOG-004-JOIN-METRICS-RANGE",
+        "CASE-CATALOG-005-REPRESENTATION-SHARDS",
+        "CASE-CATALOG-007-PUBLIC-NO-LOCAL-LEAK",
+        "CASE-CATALOG-008-TEMPORAL-AND-BYTESIZE",
+        "CASE-CATALOG-010-PEER-IMPACT",
+        "CASE-CATALOG-013-CROSS-STACK-LINKSETS",
+        "CASE-CATALOG-014-CROSS-STACK-AND-OBJECT-ARRAY-RML",
+        "CASE-CATALOG-015-FEDERATION",
+        "CASE-CATALOG-015-IMPORT-UNBOUND",
+        "CASE-CATALOG-015-IMPORT-MISMATCH",
+        "CASE-CATALOG-015-CROSS-SCOPE",
+        "CASE-CATALOG-015-PEER-FIELD-WITHHELD",
+        "CASE-CATALOG-015-PEER-AUDIENCE",
+        "CASE-CATALOG-015-PAIRED-REWRITE",
+    )
+    for case_id in expected_cases:
+        assert case_id in merged, case_id
+        assert merged[case_id].get("tests"), f"{case_id} must bind maintained test selectors"
+
+

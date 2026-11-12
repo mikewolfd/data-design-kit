@@ -41,6 +41,7 @@ MATCH_PREDICATES = {"same": "http://www.w3.org/2004/02/skos/core#exactMatch",
 FILE_TYPES = ("application/vnd.apache.parquet", "text/csv")  # a version's copies, preferred first: Parquet keeps types
 ATTRIBUTED = "http://www.w3.org/ns/prov#wasAttributedTo"
 SUBPROPERTY = "http://www.w3.org/2000/01/rdf-schema#subPropertyOf"
+SEE_ALSO = "http://www.w3.org/2000/01/rdf-schema#seeAlso"
 ROW = "__ddk_row"  # row position, the identity of rows in a dataset without a top-level key
 # DuckDB renders these as text itself: through pandas, a nullable integer column becomes floats, and a key of 5
 # would name row "5.0" in one mapping and "5" in another.
@@ -68,10 +69,25 @@ def _definitions(catalog):
     return catalog.get("extensions", {}).get(DETAILS, {}).get("datasetDefinitions", {})
 
 
+def _peer_catalogs(catalog):
+    return catalog.get("extensions", {}).get(DETAILS, {}).get("peerCatalogs", {})
+
+
 def _concepts(catalog):
     """{(dataset alias, field names): concept IRI}; an array item's concept applies to the array's values."""
     return {(field["dataset"], tuple(step["field"] for step in field["path"] if "field" in step)): row["concept"]
-            for row in catalog.get("concepts", ()) for field in row["fields"]}
+            for row in catalog.get("concepts", ()) for field in row["fields"] if "catalog" not in field}
+
+
+def _concept_templates(catalog):
+    """{(dataset alias, field names): iriTemplate} for local identifier-concept fields declaring iriTemplate."""
+    return {
+        (field["dataset"], tuple(step["field"] for step in field["path"] if "field" in step)): row["iriTemplate"]
+        for row in catalog.get("concepts", ())
+        if row.get("conceptKind") == "identifier" and row.get("iriTemplate")
+        for field in row["fields"]
+        if "catalog" not in field
+    }
 
 
 def _fields(properties, path=()):
@@ -152,9 +168,16 @@ def _concept(prefix, value):
     return _ref(f"ddkv:{prefix}-{value}")
 
 
-def _target_id(relationship, aliases):
-    """A relationship target's dataset identifier, or the external identifier it keeps."""
+def _target_id(relationship, aliases, peer_catalogs=None, imports=None):
+    """A relationship target's dataset identifier, peer dataset identifier, or external identifier."""
     target = relationship["target"]
+    if "catalog" in target:
+        peer_alias, peer_ds = target["catalog"], target["dataset"]
+        peer_ds_id = (peer_catalogs or {}).get(peer_alias, {}).get("datasets", {}).get(peer_ds)
+        if peer_ds_id is not None:
+            return peer_ds_id
+        peer_cat_id = (imports or {}).get(peer_alias, {}).get("id", f"urn:ddk:peer:{peer_alias}")
+        return child_iri(peer_cat_id, "dataset", peer_ds)
     return aliases[target["dataset"]] if "dataset" in target else target["external"]
 
 
@@ -172,6 +195,8 @@ def graph_document(catalog):
     nodes = _Nodes(dcat_graph(catalog)["@graph"])
     root = nodes.node(catalog["id"])
     aliases = {item["alias"]: item["id"] for item in catalog["datasets"]}
+    peer_catalogs = _peer_catalogs(catalog)
+    imports = catalog.get("imports", {})
     definitions, concepts = _definitions(catalog), _concepts(catalog)
     audience = catalog.get("audience", "local")
     unknown_origins = frozenset(catalog.get("extensions", {}).get(DETAILS, {}).get("unknownOrigins", ()))
@@ -272,7 +297,7 @@ def graph_document(catalog):
         nodes.add(nodes.node(relationship["id"], "rdf:Property"), "rdfs:label", relationship.get("meaning"))
         nodes.add(linkset, "void:linkPredicate", _ref(relationship["id"]))
         nodes.add(linkset, "void:subjectsTarget", _ref(aliases[relationship["source"]["dataset"]]))
-        nodes.add(linkset, "void:objectsTarget", _ref(_target_id(relationship, aliases)))
+        nodes.add(linkset, "void:objectsTarget", _ref(_target_id(relationship, aliases, peer_catalogs, imports)))
         nodes.add(linkset, "dcterms:description", relationship.get("meaning"))
         nodes.add(linkset, "dcterms:type", *(_concept(key, relationship[key]) for key in (
             "cardinality", "scope", "nulls", "match") if relationship.get(key)))
@@ -289,10 +314,16 @@ def graph_document(catalog):
         nodes.add(concept, "skos:exactMatch", *map(_ref, row.get("exactMatch", ())))
         nodes.add(concept, "skos:closeMatch", *map(_ref, row.get("closeMatch", ())))
         nodes.add(concept, "rdfs:seeAlso", *map(_ref, row.get("canonicalUrls", ())))
-    for subject, target, concept in candidate_links(catalog):
-        linkset = nodes.node(stable_id("candidate-linkset", subject, target, concept), "ddkv:CandidateLinkset")
-        nodes.add(linkset, "ddkv:subjectsTarget", _ref(aliases[subject]))
-        nodes.add(linkset, "ddkv:objectsTarget", _ref(aliases[target]))
+    candidate_entries = [
+        *((stable_id("candidate-linkset", subject, target, concept), aliases[subject], aliases[target], concept)
+          for subject, target, concept in candidate_links(catalog)),
+        *((stable_id("candidate-linkset", subject_id, target_id, concept), subject_id, target_id, concept)
+          for subject_id, target_id, concept in cross_catalog_candidate_links(catalog)),
+    ]
+    for node_id, subject_id, target_id, concept in candidate_entries:
+        linkset = nodes.node(node_id, "ddkv:CandidateLinkset")
+        nodes.add(linkset, "ddkv:subjectsTarget", _ref(subject_id))
+        nodes.add(linkset, "ddkv:objectsTarget", _ref(target_id))
         nodes.add(linkset, "dcterms:subject", _ref(concept))
         nodes.add(linkset, "dcterms:type", _concept("evidence", "inferred"),
                   _concept("concept-kind", concept_kinds[concept]) if concept in concept_kinds else None)
@@ -379,16 +410,19 @@ def candidate_links(catalog):
     are left out. The count grows with carriers times keyed datasets per concept, not with every pair of carriers.
     """
     keys = _row_keys(catalog)
-    declared = {frozenset((row["source"]["dataset"], row["target"].get("dataset"))) for row in catalog["relationships"]}
+    declared = {frozenset((row["source"]["dataset"], row["target"].get("dataset")))
+                for row in catalog["relationships"] if "catalog" not in row["target"]}
     joined = {(row[side]["dataset"], json_dumps(path)) for row in catalog["relationships"]
-              for side in ("source", "target") if "dataset" in row[side] for path in row[side]["paths"]}
+              for side in ("source", "target") if "dataset" in row[side] and "catalog" not in row[side]
+              for path in row[side]["paths"]}
     found = set()
     for row in catalog.get("concepts", ()):
-        if not any((field["dataset"], json_dumps(field["path"])) in joined for field in row["fields"]):
+        local_fields = [field for field in row["fields"] if "catalog" not in field]
+        if not any((field["dataset"], json_dumps(field["path"])) in joined for field in local_fields):
             continue
-        anchors = {field["dataset"] for field in row["fields"]
+        anchors = {field["dataset"] for field in local_fields
                    if keys.get(field["dataset"]) and [[{"field": name}] for name in keys[field["dataset"]]] == [field["path"]]}
-        for field in row["fields"]:
+        for field in local_fields:
             for anchor in sorted(anchors - {field["dataset"]}):
                 pair = tuple(sorted((field["dataset"], anchor))) if field["dataset"] in anchors else (field["dataset"], anchor)
                 if frozenset(pair) not in declared:
@@ -396,9 +430,54 @@ def candidate_links(catalog):
     return sorted(found)
 
 
+def cross_catalog_candidate_links(catalog):
+    """(subject_dataset_id, object_dataset_id, concept) across local and imported peer catalogs."""
+    aliases = {item["alias"]: item["id"] for item in catalog.get("datasets", ())}
+    peer_catalogs = _peer_catalogs(catalog)
+    imports = catalog.get("imports", {})
+    local_keys = _row_keys({"identities": catalog.get("identities", ())})
+    peer_keys = {peer_alias: _row_keys({"identities": peer_info.get("identities", ())})
+                 for peer_alias, peer_info in peer_catalogs.items()}
+    declared_cross = {(row["source"]["dataset"], (row["target"]["catalog"], row["target"]["dataset"]))
+                      for row in catalog.get("relationships", ()) if "catalog" in row["target"]}
+    joined_any = {(row[side].get("catalog"), row[side]["dataset"], json_dumps(path))
+                  for row in catalog.get("relationships", ())
+                  for side in ("source", "target") if "dataset" in row[side] for path in row[side]["paths"]}
+    found = set()
+    for row in catalog.get("concepts", ()):
+        local_fields = [field for field in row["fields"] if "catalog" not in field and field["dataset"] in aliases]
+        peer_fields = [field for field in row["fields"] if "catalog" in field]
+        if not local_fields or not peer_fields:
+            continue
+        if row.get("conceptKind") != "identifier" and not any(
+            (field.get("catalog"), field["dataset"], json_dumps(field["path"])) in joined_any
+            for field in row["fields"]
+        ):
+            continue
+        for lf in local_fields:
+            l_is_key = bool(local_keys.get(lf["dataset"])
+                            and [[{"field": name}] for name in local_keys[lf["dataset"]]] == [lf["path"]])
+            for pf in peer_fields:
+                if (lf["dataset"], (pf["catalog"], pf["dataset"])) in declared_cross:
+                    continue
+                peer_info = peer_catalogs.get(pf["catalog"], {})
+                peer_ds_id = (peer_info.get("datasets", {}).get(pf["dataset"])
+                              or child_iri(imports.get(pf["catalog"], {}).get("id", f"urn:ddk:peer:{pf['catalog']}"),
+                                           "dataset", pf["dataset"]))
+                p_keys = peer_keys.get(pf["catalog"], {}).get(pf["dataset"])
+                p_is_key = bool(p_keys and [[{"field": name}] for name in p_keys] == [pf["path"]])
+                if p_is_key or (not p_is_key and not l_is_key and not peer_info.get("identities")):
+                    found.add((aliases[lf["dataset"]], peer_ds_id, row["concept"]))
+                elif l_is_key:
+                    found.add((peer_ds_id, aliases[lf["dataset"]], row["concept"]))
+    return sorted(found)
+
+
 def graph_edges(catalog):
     """The evidence-carrying edges the graph must contain, read straight from the catalog records."""
     aliases = {item["alias"]: item["id"] for item in catalog["datasets"]}
+    peer_catalogs = _peer_catalogs(catalog)
+    imports = catalog.get("imports", {})
     for run in catalog["runs"]:
         yield from ((run["id"], "prov:used", version) for version in run["inputs"])
         yield from ((version, "prov:wasGeneratedBy", run["id"]) for version in run["outputs"])
@@ -410,7 +489,7 @@ def graph_edges(catalog):
     for relationship in catalog["relationships"]:
         linkset = child_iri(relationship["id"], "linkset")
         yield linkset, "void:subjectsTarget", aliases[relationship["source"]["dataset"]]
-        yield linkset, "void:objectsTarget", _target_id(relationship, aliases)
+        yield linkset, "void:objectsTarget", _target_id(relationship, aliases, peer_catalogs, imports)
         yield linkset, "void:linkPredicate", relationship["id"]
     for product in catalog["products"]:
         for port in product["ports"]:
@@ -614,14 +693,30 @@ class _Rows:
         return " AND ".join(clauses)
 
 
-# What every dataset's mappings share: each dataset's rows, its concept fields and the catalog's releases.
-_Context = namedtuple("_Context", "rows concepts same_release")
+class _PeerRows:
+    """A peer catalog dataset's row identity and schema, resolved offline without opening peer data files."""
+
+    def __init__(self, dataset, key, properties):
+        self.dataset = dataset
+        self.key = key
+        self.properties = tuple(properties)
+        self.version = None
+        self.chosen_version = None
+        self.is_peer = True
+
+
+# What every dataset's mappings share: each dataset's rows, peer rows, its concept fields and the catalog's releases.
+_Context = namedtuple("_Context", "rows peer_rows concepts templates same_release")
 
 
 def _target(relationship, context):
     """Target fields, when they are top-level fields, and the target's rows when it has a key."""
-    target = context.rows.get(relationship["target"].get("dataset"))
-    paths = relationship["target"]["paths"] if target else ()
+    endpoint = relationship["target"]
+    if "catalog" in endpoint:
+        target = context.peer_rows.get((endpoint["catalog"], endpoint.get("dataset")))
+    else:
+        target = context.rows.get(endpoint.get("dataset"))
+    paths = endpoint["paths"] if target else ()
     if target is None or not target.key or not all(len(path) == 1 and "field" in path[0] for path in paths):
         return None, None
     return [path[0]["field"] for path in paths], target
@@ -658,20 +753,44 @@ def _rml_plan(catalog):
                                            "one exact version's file."]
         rows[alias] = _Rows(dataset, keys.get(alias), path, version, chosen.get(alias),
                             definitions.get(alias, {}).get("properties", ()))
-    context = _Context(rows, _concepts(catalog), _release_sharing(catalog))
+    peer_rows = {}
+    for peer_alias, peer_info in sorted(_peer_catalogs(catalog).items()):
+        peer_keys = _row_keys({"identities": peer_info.get("identities", ())})
+        peer_defs = peer_info.get("datasetDefinitions", {})
+        peer_disclosed = peer_info.get("disclosedDefinitionPaths", {})
+        for peer_ds, peer_ds_id in sorted(peer_info.get("datasets", {}).items()):
+            key_fields = peer_keys.get(peer_ds)
+            if not key_fields:
+                continue
+            if peer_info.get("audience") == "public" and peer_ds in peer_disclosed:
+                if not all([{"field": name}] in peer_disclosed[peer_ds] for name in key_fields):
+                    continue
+            peer_rows[(peer_alias, peer_ds)] = _PeerRows(
+                {"id": peer_ds_id, "alias": peer_ds},
+                key_fields,
+                peer_defs.get(peer_ds, {}).get("properties", ()),
+            )
+    context = _Context(rows, peer_rows, _concepts(catalog), _concept_templates(catalog), _release_sharing(catalog))
     outgoing = defaultdict(list)
     for relationship in catalog["relationships"]:
         source_alias = relationship["source"]["dataset"]
         if source_alias not in mappable:
             continue
         if public:
-            target_alias = relationship["target"].get("dataset")
-            if (not all(path in disclosed_paths.get(source_alias, ()) for path in relationship["source"]["paths"])
-                    or (target_alias is not None and (
-                        target_alias not in mappable
-                        or not all(path in disclosed_paths.get(target_alias, ())
-                                   for path in relationship["target"]["paths"])))):
+            if not all(path in disclosed_paths.get(source_alias, ()) for path in relationship["source"]["paths"]):
                 continue
+            if "catalog" in relationship["target"]:
+                peer_target = (relationship["target"]["catalog"], relationship["target"].get("dataset"))
+                if peer_target not in peer_rows:
+                    continue
+            else:
+                target_alias = relationship["target"].get("dataset")
+                if target_alias is not None and (
+                    target_alias not in mappable
+                    or not all(path in disclosed_paths.get(target_alias, ())
+                               for path in relationship["target"]["paths"])
+                ):
+                    continue
         outgoing[source_alias].append(relationship)
     documents = {}
     for alias, dataset in sorted(mappable.items()):
@@ -709,9 +828,11 @@ def _dataset_mappings(dataset, definition, relationships, context, notes, *, pub
         raw_expr = _sql_field(phys_path)
         query = (f"SELECT {', '.join([*rows.select_keys(), f'{_text(raw_expr, prop)} AS v0'])} "
                  f"FROM {rows.reader} WHERE {rows.where(f'{raw_expr} IS NOT NULL')}")
+        po = [_value(dataset_id, logical_path, prop, "v0")]
+        if (alias, logical_path) in context.templates:
+            po.append({"p": _iri(SEE_ALSO), "o": _iri(context.templates[(alias, logical_path)].replace("{value}", "$(v0)"))})
         mappings[f"{alias}#field:{_path_key(logical_path)}"] = {
-            "sources": [{"query": query}], "s": rows.subject(),
-            "po": [_value(dataset_id, logical_path, prop, "v0")],
+            "sources": [{"query": query}], "s": rows.subject(), "po": po,
         }
     if dataset.get("methodColumn") and (not public or [{"field": dataset["methodColumn"]}] in disclosed_paths):
         method_prop = next((prop for prop in definition.get("properties", ())
@@ -726,6 +847,7 @@ def _dataset_mappings(dataset, definition, relationships, context, notes, *, pub
                 "po": [{"p": _iri(ATTRIBUTED), "o": _iri(_template(child_iri(dataset_id, "agent"), ["v0"]))}],
             }
     each_links = defaultdict(list)
+    each_object_links = defaultdict(list)
     for relationship in relationships:
         link = _link(relationship, rows, context, notes)
         if link is None:
@@ -733,12 +855,15 @@ def _dataset_mappings(dataset, definition, relationships, context, notes, *, pub
         kind, value = link
         if kind == "each":
             each_links[value[0]].append(value[1])
+        elif kind == "each_object":
+            each_object_links[value[0]].append(value[1])
         else:
             mappings[f"{alias}#{relationship['id']}"] = value
     for logical_path, phys_path, prop in arrays:
         mappings.update(_array_mappings(dataset_id, alias, logical_path, phys_path, prop, rows,
-                                        each_links.pop(logical_path, []), notes))
-    for path in each_links:
+                                        each_links.pop(logical_path, []),
+                                        each_object_links.pop(logical_path, []), context.templates, notes))
+    for path in dict.fromkeys([*each_links, *each_object_links]):
         notes.append(f"Links through {_column(path)} are not mapped: it is not a declared array field.")
     # A concept field keeps its own predicate; one statement per field says which concept it carries, so the rows
     # are not written twice. SPARQL reaches every carrier with `?p rdfs:subPropertyOf <concept>`.
@@ -764,7 +889,7 @@ def _walk(properties, logical=(), physical=()):
             yield here_logical, here_physical, prop
 
 
-def _array_mappings(dataset_id, alias, logical_path, phys_path, prop, rows, links, notes):
+def _array_mappings(dataset_id, alias, logical_path, phys_path, prop, rows, links, object_links, templates, notes):
     """Unnest one array: scalar items become repeated values, object items become nodes under the row."""
     label, key = _column(logical_path), _path_key(logical_path)
     if not isinstance(prop.get("items"), dict):
@@ -776,12 +901,16 @@ def _array_mappings(dataset_id, alias, logical_path, phys_path, prop, rows, link
         if items.get("logicalType") == "array":
             notes.append(f"{label} is not mapped: arrays of arrays need a view of their own.")
             return {}
+        if object_links:
+            notes.append(f"Links through {label} are not mapped: its items are not objects.")
         unnested = _text(f"UNNEST({raw_array})", items)
         inner = (f"SELECT {', '.join([*rows.select_keys(), f'{unnested} AS v0'])} "
                  f"FROM {rows.reader} WHERE {rows.where(f'{raw_array} IS NOT NULL')}")
         query = f"SELECT * FROM ({inner}) WHERE v0 IS NOT NULL"
-        return {f"{alias}#array:{key}": {"sources": [{"query": query}], "s": rows.subject(),
-                                         "po": [_value(dataset_id, logical_path, items, "v0"), *links]}}
+        po = [_value(dataset_id, logical_path, items, "v0"), *links]
+        if (alias, logical_path) in templates:
+            po.append({"p": _iri(SEE_ALSO), "o": _iri(templates[(alias, logical_path)].replace("{value}", "$(v0)"))})
+        return {f"{alias}#array:{key}": {"sources": [{"query": query}], "s": rows.subject(), "po": po}}
     leaves = []
     for leaf_logical, leaf_phys, child in _walk(items.get("properties", ())):
         if child.get("logicalType") in {"array", "object"}:
@@ -811,11 +940,56 @@ def _array_mappings(dataset_id, alias, logical_path, phys_path, prop, rows, link
         leaf_raw = _sql_field(("__ddk_item", *leaf_phys))
         leaf_query = (f"SELECT {rows.projected_keys()}, i0, {_text(leaf_raw, child)} AS v0 "
                       f"FROM ({inner}) WHERE __ddk_item IS NOT NULL AND {leaf_raw} IS NOT NULL")
+        full_path = (*logical_path, *leaf_logical)
+        po = [_value(dataset_id, full_path, child, "v0")]
+        if (alias, full_path) in templates:
+            po.append({"p": _iri(SEE_ALSO), "o": _iri(templates[(alias, full_path)].replace("{value}", "$(v0)"))})
         result[f"{alias}#item:{key}:{_path_key(leaf_logical)}"] = {
-            "sources": [{"query": leaf_query}], "s": subject_element,
-            "po": [_value(dataset_id, (*logical_path, *leaf_logical), child, "v0")],
+            "sources": [{"query": leaf_query}], "s": subject_element, "po": po,
+        }
+    item_props = items.get("properties", ())
+    for obj_link in object_links:
+        target = obj_link["target"]
+        projections, not_nulls, target_aliases = [], [], []
+        for index, (tgt_field, item_logical) in enumerate(obj_link["item_fields"]):
+            item_phys, src_prop = _resolve_field(item_props, item_logical)
+            _, tgt_prop = _resolve_field(target.properties, (tgt_field,))
+            cast_prop = src_prop if src_prop.get("logicalType") in AS_TEXT else tgt_prop
+            raw_fk = _sql_field(("__ddk_item", *item_phys))
+            projections.append(f"{_text(raw_fk, cast_prop)} AS t{index}")
+            not_nulls.append(f"{raw_fk} IS NOT NULL")
+            target_aliases.append(f"t{index}")
+        where_clauses = ["__ddk_item IS NOT NULL", *dict.fromkeys(not_nulls)]
+        link_query = (f"SELECT {', '.join([rows.projected_keys(), 'i0', *projections])} "
+                      f"FROM ({inner}) WHERE {' AND '.join(where_clauses)}")
+        result[f"{alias}#item-link:{key}:{obj_link['id']}"] = {
+            "sources": [{"query": link_query}], "s": subject_element,
+            "po": [{"p": _iri(obj_link["id"]),
+                    "o": _iri(_template(child_iri(target.dataset["id"], "row"), target_aliases))}],
         }
     return result
+
+
+def _object_array_paths(source_paths):
+    """Return shared array_logical tuple if every source path traverses one shared array then item fields."""
+    if not source_paths:
+        return None
+    shared = None
+    for path in source_paths:
+        each_idxs = [idx for idx, step in enumerate(path) if step.get("each")]
+        if len(each_idxs) != 1:
+            return None
+        idx = each_idxs[0]
+        if idx == 0 or idx >= len(path) - 1:
+            return None
+        if not all("field" in step for pos, step in enumerate(path) if pos != idx):
+            return None
+        prefix = tuple(step["field"] for step in path[:idx])
+        if shared is None:
+            shared = prefix
+        elif shared != prefix:
+            return None
+    return shared
 
 
 def _scope_allows_key_link(identifier, scope, rows, target, context, notes):
@@ -878,9 +1052,20 @@ def _link(relationship, rows, context, notes):
         array = tuple(step["field"] for step in eaches[0][:-1])
         return "each", (array, {"p": _iri(identifier),
                                 "o": _iri(_template(child_iri(target.dataset["id"], "row"), ["v0"]))})
+    object_array = _object_array_paths(source_paths)
+    if (nulls != "match" and object_array is not None
+            and len(fields) == len(source_paths) and set(fields) == set(target.key)):
+        if not _scope_allows_key_link(identifier, scope, rows, target, context, notes):
+            return None
+        item_fields = [(field, tuple(step["field"] for step in pairs[field][len(object_array) + 1:]))
+                       for field in target.key]
+        return "each_object", (object_array, {"id": identifier, "item_fields": item_fields, "target": target})
     if len(eaches) > 1 or any(not all("field" in step for step in (path[:-1] if path in eaches else path))
                               for path in source_paths):
         notes.append(f"{identifier} is not mapped: its source path is not fields with at most one array.")
+        return None
+    if getattr(target, "is_peer", False):
+        notes.append(f"{identifier} is not mapped: cross-catalog RML links project foreign keys to peer primary keys without scanning peer files.")
         return None
     # A join reads both files, so both sides need a bound exact version, paired as the scope allows.
     if not (rows.version and target.version):

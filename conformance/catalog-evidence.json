@@ -62,6 +62,11 @@
         "passedTests": 489,
         "skippedTests": 290,
         "scope": "Source-checkout env-full lane on branch codex/ddk-knowledge-graph-20261109 (plus 121 passed, 20 skipped in the quality lane): catalog.graph (DDK-CATALOG-013), catalog.rml (DDK-CATALOG-014), origin/method attribution (DDK-CATALOG-003), conceptKind and concept impact/delivery (DDK-CATALOG-004), public RML key/path disclosure, 64-bit xsd:long bounds, and DuckDB non-null view projections. Six independent Morph-KGC 2.10.0 acceptance suites passed (including nulls-and-bigint 2^53+1/None/empty-string round-trip and 920,843 quads across 342 SpicyRegs OCC fields). No installed qualification."
+      },
+      {
+        "passedTests": 484,
+        "skippedTests": 289,
+        "scope": "Source-checkout env-full lane on branch codex/ddk-federation-and-primitives-20261111 (plus 251 passed, 5 skipped in the quality lane, and Morph-KGC 2.10.0 cross-stack SPARQL join passed without peer Parquet scan): cross-stack catalog.imports federation (DDK-CATALOG-015), key format conflict and shared exactMatch concept joins (DDK-CATALOG-004), representation shards and version dates/bounds (DDK-CATALOG-005, DDK-CATALOG-008), prose-no-decaying-facts (DDK-POLICY-008), unresolvedReason/joinMetrics/externalTarget, public local-leak guard (DDK-CATALOG-007), cross-catalog impact (DDK-CATALOG-010), cross-catalog graph linksets (DDK-CATALOG-013), and zero-scan cross-stack + object-array FK RML (DDK-CATALOG-014). No installed qualification."
       }
     ]
   },
@@ -1770,6 +1775,184 @@
         "tests/test_recipe_sql.py::test_binding_runs_only_when_requested"
       ],
       "evidence": "A requested binding without a tool is not_run; an unrequested one adds no check."
+    },
+    {
+      "id": "CASE-CATALOG-004-KEY-FORMAT-CONFLICT",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-KEY-FORMAT-CONFLICT",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_mismatched_key_regex_and_format_fail_offline_with_key_format_conflict"
+      ],
+      "evidence": "Fails offline with zero Parquet opens when equal-match string endpoints declare conflicting logicalTypeOptions.pattern or logicalTypeOptions.format."
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPT-IRI-TEMPLATE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-CONCEPT-IRI-TEMPLATE",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_mismatched_key_regex_and_format_fail_offline_with_key_format_conflict"
+      ],
+      "evidence": "Refuses iriTemplate on an attribute concept or when {value} is missing from the template."
+    },
+    {
+      "id": "CASE-CATALOG-004-JOIN-METRICS-RANGE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-JOIN-METRICS-RANGE",
+      "tests": [
+        "tests/catalog/test_cross_product_primitives.py::test_unresolved_relationships_join_metrics_external_target_and_job_production_schema"
+      ],
+      "evidence": "Preserves unresolvedReason, externalTarget details, and joinMetrics with public record redaction, and fails when matchedRows exceeds totalSourceRows."
+    },
+    {
+      "id": "CASE-CATALOG-005-REPRESENTATION-SHARDS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-REPRESENTATION-SHARDS",
+      "tests": [
+        "tests/catalog/test_cross_product_primitives.py::test_representation_shards_dcat_bytesize_and_public_redaction"
+      ],
+      "evidence": "Validates sharded member byteSize sums, contiguous half-open [0..rowCount) rowRange intervals, member rowCounts, unique paths, and location-gated public member disclosure."
+    },
+    {
+      "id": "CASE-CATALOG-007-PUBLIC-NO-LOCAL-LEAK",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-PUBLIC-NO-LOCAL-LEAK",
+      "tests": [
+        "tests/catalog/test_cross_product_primitives.py::test_public_no_local_leak_guard_catches_paths_cloud_uris_and_credentials"
+      ],
+      "evidence": "Post-redaction guard refuses public catalogs or companions containing local filesystem prefixes, private storage URIs (s3://, r2://, gs://, ungranted file://), or URL userinfo credentials."
+    },
+    {
+      "id": "CASE-CATALOG-008-TEMPORAL-AND-BYTESIZE",
+      "profile": "catalog.dcat",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_cross_product_primitives.py::test_representation_shards_dcat_bytesize_and_public_redaction",
+        "tests/catalog/test_cross_product_primitives.py::test_version_dates_and_coverage_bounds_lift_to_dcat_and_respect_disclosure"
+      ],
+      "evidence": "RDFLib verifies dcat:byteSize (xsd:decimal), dcterms:issued, dcterms:modified, and dcterms:temporal PeriodOfTime dcat:startDate/endDate across DCAT and graph exports."
+    },
+    {
+      "id": "CASE-CATALOG-010-PEER-IMPACT",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_peer_catalog_schema_change_propagates_downstream_impact"
+      ],
+      "evidence": "Propagates peer-catalog and peer-dataset schema/lock changes through compare_catalogs, impact_projects, and ddk impact --peer-catalog to downstream relationships, recipes, and datasets."
+    },
+    {
+      "id": "CASE-CATALOG-013-CROSS-STACK-LINKSETS",
+      "profile": "catalog.graph",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_harmonized_cross_stack_federation_concepts_recipes_and_graph"
+      ],
+      "evidence": "RDFLib verifies cross-catalog void:Linkset objectsTarget and cross-catalog ddkv:CandidateLinkset nodes inferred via shared identifier concepts and exactMatch URIs."
+    },
+    {
+      "id": "CASE-CATALOG-014-CROSS-STACK-AND-OBJECT-ARRAY-RML",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_object_array_foreign_keys_iri_templates_and_zero_scan_peer_row_links",
+        "tests/catalog/test_cross_stack_federation.py::test_cross_stack_rml_lifts_in_morph_kgc_without_peer_parquet_scan"
+      ],
+      "evidence": "Morph-KGC 2.10.0 materializes Stack A and Stack B independently (with bills.parquet deleted before Stack B's lift), and RDFLib SPARQL joins across flat FKs, array<object> FKs, and iriTemplate rdfs:seeAlso links."
+    },
+    {
+      "id": "CASE-CATALOG-015-FEDERATION",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_harmonized_cross_stack_federation_concepts_recipes_and_graph"
+      ],
+      "evidence": "Binds pinned peer catalog via lockSha256, resolves cross-catalog relationships and shared exactMatch identifier concept joins, and binds cross-catalog recipe SQL columns and types."
+    },
+    {
+      "id": "CASE-CATALOG-015-IMPORT-UNBOUND",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-IMPORT-UNBOUND",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_unbound_and_mismatched_peer_imports_and_cli_peer_catalog"
+      ],
+      "evidence": "Omitting --peer-catalog records required not_run CATALOG-IMPORT-UNBOUND checks and exits 2 (incomplete) without crashing."
+    },
+    {
+      "id": "CASE-CATALOG-015-IMPORT-MISMATCH",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-IMPORT-MISMATCH",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_unbound_and_mismatched_peer_imports_and_cli_peer_catalog"
+      ],
+      "evidence": "Fails with CATALOG-IMPORT-MISMATCH on wrong lockSha256, wrong catalog id, or undeclared peer alias."
+    },
+    {
+      "id": "CASE-CATALOG-015-CROSS-SCOPE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-CROSS-CATALOG-SCOPE",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_cross_catalog_scope_and_withheld_peer_field_outcomes"
+      ],
+      "evidence": "Refuses cross-catalog relationships with same_release or declared scope instead of version_pair."
+    },
+    {
+      "id": "CASE-CATALOG-015-PEER-FIELD-WITHHELD",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "CATALOG-PEER-FIELD-WITHHELD",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_cross_catalog_scope_and_withheld_peer_field_outcomes"
+      ],
+      "evidence": "Reports status=unknown with CATALOG-PEER-FIELD-WITHHELD when a bound public peer omits a referenced target field from datasetDefinitions."
+    },
+    {
+      "id": "CASE-CATALOG-015-PEER-AUDIENCE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-DISCLOSURE-PEER-AUDIENCE",
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_public_disclosure_peer_audience_guard_and_paired_public_rewrite"
+      ],
+      "evidence": "Refuses public disclosure of a local peer import lacking a verified paired public view."
+    },
+    {
+      "id": "CASE-CATALOG-015-PAIRED-REWRITE",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_cross_stack_federation.py::test_public_disclosure_peer_audience_guard_and_paired_public_rewrite"
+      ],
+      "evidence": "Rewrites local peer imports with PAIRED_VIEW to the verified public peer lock and public dataset aliases, passing verify_catalog_pair."
     }
   ],
   "additionalReceiptTests": [

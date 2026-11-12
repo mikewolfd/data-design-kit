@@ -2,6 +2,7 @@
 
 from collections import Counter
 from pathlib import Path
+import re
 
 from .catalog_access import CatalogError, row_identity_names
 from .documents import DocumentError, json_pointer, pointer_get
@@ -9,7 +10,16 @@ from .interfaces import json_contains
 from .ports import product_ports
 from .results import diagnostic, location
 
-KNOWN_RULES = {"fields-exist", "row-identity", "quality-fields", "vocabulary", "layer-order", "view-sources", "concept-joins"}
+KNOWN_RULES = {
+    "fields-exist", "row-identity", "quality-fields", "vocabulary",
+    "layer-order", "view-sources", "concept-joins", "prose-no-decaying-facts",
+}
+PROSE_KEYS = frozenset({"description", "purpose", "usage", "limitations", "instructions"})
+DECAYING_PROSE_PATTERNS = (
+    ("count", re.compile(r"\b\d{1,3}(?:,\d{3})+\s+(?:rows|records|hearings|bills|documents|filings|dockets)\b", re.IGNORECASE)),
+    ("digest", re.compile(r"\b[0-9a-f]{64}\b")),
+    ("date", re.compile(r"\b(?:as of|measured on)\s+\d{4}-\d{2}-\d{2}\b", re.IGNORECASE)),
+)
 
 
 def ddk_annotations(value, key):
@@ -63,6 +73,9 @@ def check_policy(inventory, artifact):
             continue
         if kind == "concept-joins":
             _concept_joins(inventory, artifact, rule, subject, where)
+            continue
+        if kind == "prose-no-decaying-facts":
+            _prose_no_decaying_facts(inventory, artifact, rule, subject, where)
             continue
         requirement = {
             "fields-exist": "DDK-POLICY-002", "row-identity": "DDK-POLICY-002",
@@ -202,7 +215,7 @@ def _layer_edges(inventory):
     for namespace, document in inventory.projects.items():
         configuration = document.value.get("catalog", {})
         for index, item in enumerate(configuration.get("relationships", ())):
-            if any("dataset" not in item[side] for side in ("source", "target")):
+            if any("dataset" not in item[side] or "catalog" in item[side] for side in ("source", "target")):
                 continue
             try:
                 source = inventory.resolve(item["source"]["dataset"], namespace, "dataset")
@@ -214,6 +227,8 @@ def _layer_edges(inventory):
                    site(document.path, ("catalog", "relationships", index)))
         for index, item in enumerate(configuration.get("recipes", ())):
             for name, reference in sorted(item["inputs"].items()):
+                if not isinstance(reference, str):
+                    continue
                 try:
                     target = inventory.resolve(reference, namespace, "dataset")
                 except DocumentError as exc:
@@ -346,3 +361,79 @@ def _view_sources(inventory, artifact, rule, subject, where):
     status = "failed" if problems else "not_run" if unavailable else "passed"
     report.add("DDK-POLICY-007", "core.policies", subject, status, diagnostics=problems,
                reason=" ".join(unavailable) if status == "not_run" else None)
+
+
+def _prose_entries(value, parts=(), *, skip_root_keys=()):
+    if isinstance(value, dict):
+        if value.get("property") == "context" and isinstance(value.get("value"), str):
+            yield (*parts, "value"), value["value"]
+            return
+        for key, item in value.items():
+            if key in skip_root_keys and not parts:
+                continue
+            child = (*parts, key)
+            if key in PROSE_KEYS and isinstance(item, str):
+                yield child, item
+            else:
+                yield from _prose_entries(item, child)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from _prose_entries(item, (*parts, index))
+
+
+def _prose_no_decaying_facts(inventory, artifact, rule, subject, where):
+    """Fail when authored prose embeds snapshot counts, 64-hex digests, or dated claims unless exempted."""
+    report = inventory.report
+    severity = rule.get("severity", "error")
+    required = None if severity == "error" else False
+    exemptions = set()
+    try:
+        for entry in rule.get("exceptions", ()):
+            exc_target = inventory.resolve(entry["artifact"], artifact.namespace)
+            exemptions.add((exc_target.alias, entry["pointer"]))
+        if "artifacts" in rule:
+            targets = [inventory.resolve(reference, artifact.namespace) for reference in rule["artifacts"]]
+        else:
+            targets = [
+                item for _, item in sorted(inventory.artifacts.items())
+                if item.kind in {"dataset", "definition", "product"}
+                and (not artifact.namespace or item.namespace == artifact.namespace
+                     or item.namespace.startswith(f"{artifact.namespace}/"))
+            ]
+    except DocumentError as exc:
+        report.add("DDK-POLICY-008", "core.policies", subject, "not_run", required=required,
+                   reason=str(exc), diagnostics=[diagnostic(exc.code, str(exc), **where)])
+        return
+    problems = []
+    for target in targets:
+        if target.kind not in {"dataset", "definition", "product"}:
+            continue
+        t_path = inventory.display_path(target.path)
+        entries = []
+        if target.kind == "dataset":
+            for parts, text in _prose_entries(target.value, skip_root_keys=("schema",)):
+                ptr = json_pointer(parts)
+                entries.append((ptr, ptr, text))
+            if target.selected is not None:
+                for parts, text in _prose_entries(target.selected):
+                    local_ptr = json_pointer(parts)
+                    full_ptr = f"{target.pointer}{local_ptr}" if target.pointer else local_ptr
+                    entries.append((full_ptr, local_ptr, text))
+        else:
+            for parts, text in _prose_entries(target.value):
+                ptr = json_pointer(parts)
+                entries.append((ptr, ptr, text))
+        for full_ptr, local_ptr, text in entries:
+            if (target.alias, full_ptr) in exemptions or (target.alias, local_ptr) in exemptions:
+                continue
+            for kind_label, pattern in DECAYING_PROSE_PATTERNS:
+                if match := pattern.search(text):
+                    problems.append(diagnostic(
+                        "POLICY-PROSE-DECAYING-FACT",
+                        f"{target.alias} embeds decaying {kind_label} claim {match.group(0)!r} at {full_ptr}; "
+                        "record snapshot facts on version metadata or declare an explicit exception.",
+                        severity=severity, **where, related=[location(t_path, full_ptr)],
+                    ))
+                    break
+    report.add("DDK-POLICY-008", "core.policies", subject, "failed" if problems else "passed",
+               required=required, diagnostics=problems)

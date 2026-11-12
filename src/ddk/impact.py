@@ -225,6 +225,8 @@ def _catalog_items(inventory):
     items = {}
     for document in inventory.projects.values():
         catalog = document.value.get("catalog", {})
+        for alias, decl in sorted((catalog.get("imports") or {}).items()):
+            items[f"peer-catalog:{alias}"] = ("peer-catalog", {"alias": alias, **decl})
         for group in ("relationships", "recipes"):
             for item in catalog.get(group, []):
                 items[item["id"]] = (group, item)
@@ -315,7 +317,7 @@ def _project_record(inventory):
 
 def impact_projects(base, candidate, *, required_groups=(), permitted_roots=(), non_weakening=False, selection=None,
                     limits=None, excluded_consumers=(), base_catalog=None, candidate_catalog=None,
-                    require_complete_scope=False):
+                    require_complete_scope=False, peer_catalogs=None):
     if (base_catalog is None) != (candidate_catalog is None):
         raise ValueError("Catalog impact requires both base and candidate catalogs.")
     if require_complete_scope and base_catalog is None:
@@ -360,7 +362,15 @@ def impact_projects(base, candidate, *, required_groups=(), permitted_roots=(), 
         seeds.add(identity)
         change = "added" if old_item is None else "removed" if new_item is None else "content"
         category = (new_item or old_item)[0]
-        impact["changed"].append({"identity": identity, "kinds": [f"catalog-{category}", change]})
+        if category == "peer-catalog":
+            entry = {"identity": (new_item or old_item)[1]["id"], "kinds": ["peer-catalog", change]}
+            if old_item is not None:
+                entry["baseVersion"] = old_item[1]["lockSha256"]
+            if new_item is not None:
+                entry["candidateVersion"] = new_item[1]["lockSha256"]
+            impact["changed"].append(entry)
+        else:
+            impact["changed"].append({"identity": identity, "kinds": [f"catalog-{category}", change]})
     compared = set()
     for identity in sorted(before.keys() | after.keys()):
         for old, new in _pairs(before.get(identity, {}), after.get(identity, {})):
@@ -425,7 +435,7 @@ def impact_projects(base, candidate, *, required_groups=(), permitted_roots=(), 
                                    require_complete_scope=require_complete_scope,
                                    excluded_consumers=report.scope["excludedConsumers"],
                                    required_groups=("catalog.qualification",) if "catalog.qualification" in requested else (),
-                                   limits=limits)
+                                   limits=limits, peer_catalogs=peer_catalogs)
         _merge_catalog_impact(report, impact, catalog, base, candidate)
     impact["changed"].sort(key=lambda item: (item["identity"], item.get("baseVersion", ""), item.get("candidateVersion", "")))
     if not report.operational_errors and all(
