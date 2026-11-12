@@ -461,3 +461,138 @@ def test_physical_names_special_field_characters_null_items_multi_fk_decisions_a
     assert same["s"] == {"value": "urn:ex:dataset:people-a:row:$(s0)", "type": "iri"}
     assert '"DECISION_COL" = \'same\'' in same["sources"][0]["query"]
 
+
+def test_object_array_foreign_keys_iri_templates_and_zero_scan_peer_row_links():
+    s = lambda name, kind="string", **more: {"name": name, "logicalType": kind, **more}  # noqa: E731
+    catalog = {
+        "id": "urn:ex:oversight:catalog",
+        "imports": {
+            "legislative": {
+                "id": "urn:ex:legislative:catalog",
+                "audience": "public",
+                "lockSha256": "a" * 64,
+            }
+        },
+        "datasets": [
+            {"alias": "hearings", "id": "urn:ex:oversight:dataset:hearings", "role": "source_record"},
+            {"alias": "committees", "id": "urn:ex:oversight:dataset:committees", "role": "reference"},
+        ],
+        "extensions": {
+            "urn:ddk:catalog:assembly": {
+                "datasetDefinitions": {
+                    "hearings": {
+                        "properties": [
+                            s("hearing_id"),
+                            s("primary_bill_id"),
+                            s("related_bills", "array", items={"logicalType": "string"}),
+                            s("bill_refs", "array", items={
+                                "logicalType": "object",
+                                "properties": [s("bill_id"), s("committee_code")],
+                            }),
+                        ]
+                    },
+                    "committees": {"properties": [s("committee_code")]},
+                },
+                "peerCatalogs": {
+                    "legislative": {
+                        "id": "urn:ex:legislative:catalog",
+                        "audience": "public",
+                        "datasets": {"bills": "urn:ex:legislative:dataset:bills"},
+                        "identities": [{
+                            "dataset": "bills",
+                            "kind": "key",
+                            "fields": [{"path": [{"field": "bill_id"}], "virtual": False}],
+                        }],
+                        "datasetDefinitions": {"bills": {"properties": [s("bill_id")]}},
+                    }
+                },
+            }
+        },
+        "identities": [
+            {"dataset": "hearings", "kind": "key", "fields": [{"path": [{"field": "hearing_id"}], "virtual": False}]},
+            {"dataset": "committees", "kind": "key", "fields": [{"path": [{"field": "committee_code"}], "virtual": False}]},
+        ],
+        "relationships": [
+            {
+                "id": "urn:ex:oversight:relationship:primary-bill",
+                "match": "equal",
+                "scope": "version_pair",
+                "source": {"dataset": "hearings", "paths": [[{"field": "primary_bill_id"}]]},
+                "target": {"catalog": "legislative", "dataset": "bills", "paths": [[{"field": "bill_id"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:ref-bill",
+                "match": "equal",
+                "scope": "version_pair",
+                "source": {"dataset": "hearings", "paths": [[{"field": "bill_refs"}, {"each": True}, {"field": "bill_id"}]]},
+                "target": {"catalog": "legislative", "dataset": "bills", "paths": [[{"field": "bill_id"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:ref-committee",
+                "match": "equal",
+                "scope": "version_pair",
+                "source": {"dataset": "hearings", "paths": [[{"field": "bill_refs"}, {"each": True}, {"field": "committee_code"}]]},
+                "target": {"dataset": "committees", "paths": [[{"field": "committee_code"}]]},
+            },
+        ],
+        "concepts": [{
+            "concept": "urn:ex:oversight:concept:bill-id",
+            "definition": "bill-id",
+            "conceptKind": "identifier",
+            "iriTemplate": "https://congress.example.org/bill/{value}",
+            "fields": [
+                {"dataset": "hearings", "path": [{"field": "primary_bill_id"}]},
+                {"dataset": "hearings", "path": [{"field": "related_bills"}, {"each": True}]},
+                {"dataset": "hearings", "path": [{"field": "bill_refs"}, {"each": True}, {"field": "bill_id"}]},
+                {"catalog": "legislative", "dataset": "bills", "path": [{"field": "bill_id"}]},
+            ],
+        }],
+        "versions": [{"id": "urn:ex:oversight:version:hearings:1", "dataset": "hearings"}],
+        "representations": [{
+            "id": "urn:ex:oversight:file:hearings:1",
+            "version": "urn:ex:oversight:version:hearings:1",
+            "kind": "file",
+            "availability": "available",
+            "mediaType": "application/vnd.apache.parquet",
+            "location": "file:///data/hearings.parquet",
+        }],
+        "releases": [],
+    }
+    hearings_doc, notes = rml_mappings(catalog)["hearings"]
+    assert not notes
+    mappings = hearings_doc["mappings"]
+
+    # Zero-scan flat peer FK mints peer row IRI directly from hearings.parquet without reading bills.parquet.
+    flat_peer = mappings["hearings#urn:ex:oversight:relationship:primary-bill"]
+    assert flat_peer["s"] == "urn:ex:oversight:dataset:hearings:row:$(k0)"
+    assert flat_peer["po"] == [{
+        "p": {"value": "urn:ex:oversight:relationship:primary-bill", "type": "iri"},
+        "o": {"value": "urn:ex:legislative:dataset:bills:row:$(t0)", "type": "iri"},
+    }]
+    assert "bills.parquet" not in json.dumps(hearings_doc)
+
+    # Object-array FKs mint item-level edges for both cross-catalog and intra-catalog targets.
+    peer_item_link = mappings["hearings#item-link:bill_refs:urn:ex:oversight:relationship:ref-bill"]
+    assert peer_item_link["s"] == {"value": "urn:ex:oversight:dataset:hearings:row:$(k0):bill_refs:$(i0)", "type": "iri"}
+    assert peer_item_link["po"] == [{
+        "p": {"value": "urn:ex:oversight:relationship:ref-bill", "type": "iri"},
+        "o": {"value": "urn:ex:legislative:dataset:bills:row:$(t0)", "type": "iri"},
+    }]
+    assert '"__ddk_item"[\'bill_id\'] AS t0' in peer_item_link["sources"][0]["query"]
+
+    local_item_link = mappings["hearings#item-link:bill_refs:urn:ex:oversight:relationship:ref-committee"]
+    assert local_item_link["po"] == [{
+        "p": {"value": "urn:ex:oversight:relationship:ref-committee", "type": "iri"},
+        "o": {"value": "urn:ex:oversight:dataset:committees:row:$(t0)", "type": "iri"},
+    }]
+
+    # Identifier concept iriTemplate emits rdfs:seeAlso across scalar, scalar-array, and object-array leaves.
+    see_also = {
+        "p": {"value": "http://www.w3.org/2000/01/rdf-schema#seeAlso", "type": "iri"},
+        "o": {"value": "https://congress.example.org/bill/$(v0)", "type": "iri"},
+    }
+    assert see_also in mappings["hearings#field:primary_bill_id"]["po"]
+    assert see_also in mappings["hearings#array:related_bills"]["po"]
+    assert see_also in mappings["hearings#item:bill_refs:bill_id"]["po"]
+
+

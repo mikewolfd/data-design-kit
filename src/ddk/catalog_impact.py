@@ -89,7 +89,7 @@ def _read(value, name, limits):
 
 
 class Snapshot:
-    def __init__(self, value, rules):
+    def __init__(self, value, rules, peer_catalogs=None):
         self.value = value
         details = value.get("extensions", {}).get(DETAILS, {})
         if not isinstance(details, dict):
@@ -107,10 +107,49 @@ class Snapshot:
         self.contextual_dependents = defaultdict(set)
         self.unresolved = set()
         self.datasets = {}
+        self.peer_catalogs = {}
+        self.peer_datasets = {}
+        self.peer_definitions = {}
         self.versions = {}
         self.releases = {}
         self.unevidenced_rules = set()
         recipe_digests = {row["path"]: row["sha256"] for row in value["files"]}
+        peer_summaries = dict(details.get("peerCatalogs") or {})
+        if peer_catalogs:
+            from .catalog import _peer_summary
+            from .catalog_delivery import CatalogArtifacts, CatalogError, load_catalog_artifacts
+            for peer_alias, decl in sorted((value.get("imports") or {}).items()):
+                if peer_alias in peer_summaries or peer_alias not in peer_catalogs:
+                    continue
+                entry = peer_catalogs[peer_alias]
+                try:
+                    captured = (entry if isinstance(entry, CatalogArtifacts)
+                                else load_catalog_artifacts(entry, expected_lock_sha256=decl["lockSha256"],
+                                                            audience=decl["audience"]))
+                    if captured.catalog.get("id") == decl["id"] and captured.lock_sha256 == decl["lockSha256"]:
+                        peer_summaries[peer_alias] = _peer_summary(captured)
+                except (CatalogError, OSError, ValueError):
+                    pass
+
+        for peer_alias, decl in sorted((value.get("imports") or {}).items()):
+            peer_node = self.add("peer-catalog", peer_alias, decl["id"], decl, decl["lockSha256"])
+            self.peer_catalogs[peer_alias] = peer_node
+            summary = peer_summaries.get(peer_alias)
+            if isinstance(summary, Mapping):
+                peer_defs = summary.get("datasetDefinitions") or {}
+                peer_ids = summary.get("identities") or ()
+                for ds_alias, ds_id in sorted((summary.get("datasets") or {}).items()):
+                    pds_key = f"{peer_alias}:{ds_alias}"
+                    pds_node = self.add("peer-dataset", pds_key, ds_id, {
+                        "catalog": peer_alias, "alias": ds_alias, "id": ds_id,
+                        "identities": [i for i in peer_ids if i.get("dataset") == ds_alias],
+                    })
+                    self.peer_datasets[(peer_alias, ds_alias)] = pds_node
+                    if ds_alias in peer_defs:
+                        self.peer_definitions[pds_key] = peer_defs[ds_alias]
+                    self.link(peer_node, pds_node, decl["id"])
+            else:
+                self.unresolved.add(decl["id"])
 
         extensions = details.get("projectExtensions", [])
         if not isinstance(extensions, list):
@@ -135,7 +174,12 @@ class Snapshot:
         for row in value.get("concepts", ()):
             node = self.add("concept", row["concept"], row["concept"], row)
             for field in row["fields"]:
-                self.link(node, self.datasets.get(field["dataset"]), field["dataset"])
+                if "catalog" in field:
+                    peer_key = (field["catalog"], field["dataset"])
+                    source = self.peer_datasets.get(peer_key) or self.peer_catalogs.get(field["catalog"])
+                    self.link(source, node, f"{field['catalog']}:{field['dataset']}")
+                else:
+                    self.link(node, self.datasets.get(field["dataset"]), field["dataset"])
         for row in value["versions"]:
             node = self.add("native-version", row["id"], row["id"], row)
             self.versions[row["id"]] = node
@@ -155,11 +199,15 @@ class Snapshot:
         for row in value["relationships"]:
             node = self.add("relationship", row["id"], row["id"], row)
             for side in ("source", "target"):
-                alias = row[side].get("dataset")
-                if alias is not None:
+                endpoint = row[side]
+                if "catalog" in endpoint:
+                    peer_key = (endpoint["catalog"], endpoint["dataset"])
+                    source = self.peer_datasets.get(peer_key) or self.peer_catalogs.get(endpoint["catalog"])
+                    self.link(source, node, f"{endpoint['catalog']}:{endpoint['dataset']}")
+                elif (alias := endpoint.get("dataset")) is not None:
                     self.link(self.datasets.get(alias), node, alias)
                 else:
-                    self.unresolved.add(row[side].get("externalDataset", row["id"]))
+                    self.unresolved.add(endpoint.get("externalDataset", row["id"]))
         self.relationship_semantics(details)
         for row in value["recipes"]:
             node = self.add("recipe", row["id"], row["id"], {
@@ -167,8 +215,13 @@ class Snapshot:
             })
             if row["sql"] not in recipe_digests:
                 self.unresolved.add(row["id"])
-            for alias in row["inputs"].values():
-                self.link(self.datasets.get(alias), node, alias)
+            for ref in row["inputs"].values():
+                if isinstance(ref, Mapping):
+                    peer_key = (ref["catalog"], ref["dataset"])
+                    source = self.peer_datasets.get(peer_key) or self.peer_catalogs.get(ref["catalog"])
+                    self.link(source, node, f"{ref['catalog']}:{ref['dataset']}")
+                else:
+                    self.link(self.datasets.get(ref), node, ref)
             if alias := row.get("resultDataset"):
                 self.link(self.datasets.get(alias), node, alias)
             for relationship in row["relationships"]:
@@ -292,8 +345,20 @@ class Snapshot:
 def _change(kind, key, old, new, base, candidate):
     consequences = {METADATA}
     if kind in {"representation", "publisher-release", "publisher-selection", "discovery-selector", "recipe", "relationship",
-                "relationship-profile", "relationship-assessment", "concept"}:
+                "relationship-profile", "relationship-assessment", "concept", "peer-catalog", "peer-dataset"}:
         consequences.add(REBIND)
+    if kind == "peer-dataset":
+        left = base.peer_definitions.get(key)
+        right = candidate.peer_definitions.get(key)
+        if old is None or new is None:
+            consequences.update((COMPUTE, REQUALIFY))
+        elif isinstance(left, dict) and isinstance(right, dict):
+            if not json_equal(_field_projection(left, SCHEMA_FIELDS), _field_projection(right, SCHEMA_FIELDS)):
+                consequences.add(COMPUTE)
+            if not json_equal(_field_projection(left, QUALITY_FIELDS), _field_projection(right, QUALITY_FIELDS)):
+                consequences.add(REQUALIFY)
+        elif left != right:
+            consequences.update((COMPUTE, REQUALIFY))
     if kind == "requested-quality" and new is not None and (
         old is None or not json_equal(old.value["rules"], new.value["rules"]) or not new.value["matchingPasses"]
     ):
@@ -409,7 +474,7 @@ def _scope(report, old, new, excluded, require_complete):
 
 def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), require_complete_scope=False,
                      excluded_consumers=(), base_rules=None, candidate_rules=None, base_reuse_records=(),
-                     candidate_reuse_records=(), limits=None):
+                     candidate_reuse_records=(), limits=None, peer_catalogs=None):
     """Compare explicit local snapshots and preserve runtime-issued identities."""
     limits = {**DEFAULT_LIMITS, **(limits or {})}
     report = ReportBuilder("urn:ddk:catalog-impact", [GROUP, *required_groups])
@@ -435,7 +500,7 @@ def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), req
                 ])
                 continue
             impact[f"{side}Project"] = value["project"]["id"]
-            snapshots.append(Snapshot(value, rules))
+            snapshots.append(Snapshot(value, rules, peer_catalogs=peer_catalogs))
         if len(snapshots) != 2:
             report.add(REQUIREMENT, GROUP, "comparison", "not_run", reason="Both catalog snapshots must validate.")
             return report.build(impact=impact)
@@ -477,7 +542,10 @@ def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), req
         for node in sorted(old.records.keys() | new.records.keys()):
             kind, key = node
             base_record, candidate_record = old.records.get(node), new.records.get(node)
-            effective_changed = kind == "dataset" and not json_equal(old.definitions.get(key), new.definitions.get(key))
+            effective_changed = (
+                (kind == "dataset" and not json_equal(old.definitions.get(key), new.definitions.get(key)))
+                or (kind == "peer-dataset" and not json_equal(old.peer_definitions.get(key), new.peer_definitions.get(key)))
+            )
             if base_record and candidate_record and json_equal(base_record.value, candidate_record.value) and not effective_changed:
                 continue
             identity = (candidate_record or base_record).identity
@@ -501,7 +569,8 @@ def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), req
                                       "Declaration reasoning identifies reader rechecks; domain computation and qualification effects require their owners."},
                 })
             if kind in {"native-version", "representation", "publisher-release", "publisher-selection", "requested-quality",
-                        "project-extension", "relationship-profile", "relationship-assessment", "concept"}:
+                        "project-extension", "relationship-profile", "relationship-assessment", "concept",
+                        "peer-catalog", "peer-dataset"}:
                 details[f"{kind}:{key}"].update({
                     "baseRecord": base_record.value if base_record else None,
                     "candidateRecord": candidate_record.value if candidate_record else None,

@@ -141,7 +141,7 @@ def _withheld_name(value, withheld, policy):
     return None
 
 
-def _public_concepts(concepts, aliases, disclosed_paths, policy, catalog_id):
+def _public_concepts(concepts, aliases, disclosed_paths, policy, catalog_id, peer_alias_maps=None, peer_summaries=None):
     """Concepts keep only fields whose exact path is granted, and every other value needs its own grant.
 
     A concept IRI the policy does not list among its identifiers, including one DDK minted from a private
@@ -149,17 +149,35 @@ def _public_concepts(concepts, aliases, disclosed_paths, policy, catalog_id):
     """
     from .catalog_graph import child_iri
 
+    peer_alias_maps = peer_alias_maps or {}
+    peer_summaries = peer_summaries or {}
     view = []
     for row in concepts:
         fields = [{"dataset": aliases[field["dataset"]], "path": deepcopy(field["path"])} for field in row["fields"]
-                  if field["dataset"] in aliases and field["path"] in disclosed_paths.get(aliases[field["dataset"]], ())]
+                  if "catalog" not in field and field["dataset"] in aliases
+                  and field["path"] in disclosed_paths.get(aliases[field["dataset"]], ())]
         if not fields:
             continue
+        for field in row["fields"]:
+            if "catalog" not in field:
+                continue
+            peer_alias = field["catalog"]
+            mapping = peer_alias_maps.get(peer_alias, {})
+            if field["dataset"] not in mapping:
+                continue
+            pub_ds = mapping[field["dataset"]]
+            peer_summary = peer_summaries.get(peer_alias, {})
+            if ("disclosedDefinitionPaths" in peer_summary
+                    and field["path"] not in peer_summary["disclosedDefinitionPaths"].get(pub_ds, ())):
+                continue
+            fields.append({"catalog": peer_alias, "dataset": pub_ds, "path": deepcopy(field["path"])})
         definition = _alias(row["definition"], policy["aliases"])
         concept = row["concept"] if row["concept"] in policy["identifiers"] else child_iri(catalog_id, "concept", definition)
         item = {"concept": concept, "definition": definition, "fields": fields}
         if "conceptKind" in row:
             item["conceptKind"] = row["conceptKind"]
+        if "iriTemplate" in row and row["iriTemplate"] in (policy["identifiers"] | policy["locations"]):
+            item["iriTemplate"] = row["iriTemplate"]
         for key in ("exactMatch", "closeMatch"):
             if matches := [iri for iri in row.get(key, ()) if iri in policy["identifiers"]]:
                 item[key] = matches
@@ -276,7 +294,36 @@ def public_view(catalog, policy, details_key):
         details["disclosedDefinitionPaths"] = disclosed_paths
     if unknown_origins:
         details["unknownOrigins"] = sorted(unknown_origins)
-    view["concepts"] = _public_concepts(catalog.get("concepts", ()), aliases, disclosed_paths, policy, catalog["id"])
+    authored_peers = authored_details.get("peerCatalogs", {})
+    public_imports = {}
+    peer_alias_maps = {}
+    public_peer_summaries = {}
+    for peer_alias, decl in sorted((view.get("imports") or {}).items()):
+        if decl["audience"] == "local":
+            if decl["id"] not in ids:
+                continue
+            peer_info = authored_peers.get(peer_alias, {})
+            if "pairedPublic" not in peer_info:
+                raise CatalogError("CATALOG-DISCLOSURE-PEER-AUDIENCE",
+                                   f"Public catalog cannot import local peer catalog {peer_alias!r} without a paired public view.")
+            paired = peer_info["pairedPublic"]
+            public_imports[peer_alias] = {"id": decl["id"], "audience": "public", "lockSha256": paired["lockSha256"]}
+            peer_alias_maps[peer_alias] = {row["localAlias"]: row["publicAlias"] for row in paired["datasets"]}
+            public_peer_summaries[peer_alias] = deepcopy(paired["peerSummary"])
+        elif decl["id"] in ids:
+            public_imports[peer_alias] = deepcopy(decl)
+            if peer_alias in authored_peers:
+                peer_info = authored_peers[peer_alias]
+                peer_alias_maps[peer_alias] = {ds_alias: ds_alias for ds_alias in peer_info.get("datasets", {})}
+                public_peer_summaries[peer_alias] = deepcopy({k: v for k, v in peer_info.items() if k != "pairedPublic"})
+    if public_imports:
+        view["imports"] = public_imports
+    else:
+        view.pop("imports", None)
+    if public_peer_summaries:
+        details["peerCatalogs"] = public_peer_summaries
+    view["concepts"] = _public_concepts(catalog.get("concepts", ()), aliases, disclosed_paths, policy, catalog["id"],
+                                        peer_alias_maps=peer_alias_maps, peer_summaries=public_peer_summaries)
     extension_grants = {json_dumps(row["project"]): set(row["extensions"]) for row in policy["projectExtensions"]}
     known_extensions = defaultdict(set)
     disclosed_extensions = []
@@ -345,29 +392,57 @@ def public_view(catalog, policy, details_key):
     view["identities"] = identities
     relationships = {}
     for relationship in view["relationships"]:
-        endpoints = [relationship["source"], relationship["target"]]
+        source, target = relationship["source"], relationship["target"]
         if (not policy["descriptions"] or relationship["id"] not in ids
-                or any((item["dataset"] not in aliases if "dataset" in item else item["external"] not in ids)
-                       for item in endpoints)
+                or source["dataset"] not in aliases
                 or ("rule" in relationship and relationship["rule"]["id"] not in ids)):
             continue
-        for endpoint in endpoints:
-            if "dataset" in endpoint:
-                endpoint["dataset"] = aliases[endpoint["dataset"]]
-        if any("dataset" in endpoint and not _paths_disclosed(endpoint["dataset"], endpoint["paths"])
-               for endpoint in endpoints):
+        source["dataset"] = aliases[source["dataset"]]
+        if not _paths_disclosed(source["dataset"], source["paths"]):
             continue
+        if "catalog" in target:
+            peer_alias = target["catalog"]
+            mapping = peer_alias_maps.get(peer_alias, {})
+            if target["dataset"] not in mapping:
+                continue
+            target["dataset"] = mapping[target["dataset"]]
+            peer_summary = public_peer_summaries.get(peer_alias, {})
+            if ("disclosedDefinitionPaths" in peer_summary
+                    and not all(path in peer_summary["disclosedDefinitionPaths"].get(target["dataset"], ())
+                                for path in target["paths"])):
+                continue
+        elif "dataset" in target:
+            if target["dataset"] not in aliases:
+                continue
+            target["dataset"] = aliases[target["dataset"]]
+            if not _paths_disclosed(target["dataset"], target["paths"]):
+                continue
+        elif target["external"] not in ids:
+            continue
+        if "joinMetrics" in relationship:
+            relationship["joinMetrics"] = record(relationship["joinMetrics"])
         relationships[relationship["id"]] = relationship
     view["relationships"] = list(relationships.values())
     recipes, omitted = [], []
+
+    def _recipe_input_disclosed(value):
+        if isinstance(value, str):
+            return value in aliases
+        return value["catalog"] in peer_alias_maps and value["dataset"] in peer_alias_maps[value["catalog"]]
+
+    def _rewrite_recipe_input(value):
+        if isinstance(value, str):
+            return aliases[value]
+        return {"catalog": value["catalog"], "dataset": peer_alias_maps[value["catalog"]][value["dataset"]]}
+
     for recipe in view["recipes"]:
         if (recipe["id"] not in policy["recipes"] or recipe["id"] not in ids
-                or not set(recipe["inputs"].values()) <= aliases.keys()
+                or not all(_recipe_input_disclosed(val) for val in recipe["inputs"].values())
                 or not set(recipe["relationships"]) <= relationships.keys()
                 or ("resultDataset" in recipe and recipe["resultDataset"] not in aliases)):
             omitted.append(recipe["id"])
             continue
-        recipe["inputs"] = {name: aliases[alias] for name, alias in recipe["inputs"].items()}
+        recipe["inputs"] = {name: _rewrite_recipe_input(val) for name, val in recipe["inputs"].items()}
         if "contextualRelationships" in recipe:
             recipe["contextualRelationships"] = [identifier for identifier in recipe["contextualRelationships"]
                                                  if identifier in relationships]
@@ -393,16 +468,22 @@ def public_view(catalog, policy, details_key):
         if not policy["descriptions"]:
             item["scope"] = "Disclosed version record."
             item.pop("coverage", None)
+            item.pop("dates", None)
         else:
             item["coverage"] = [record(fact) for fact in item.get("coverage", ())]
         versions.append(record(item))
     view["versions"] = versions
     version_ids = {item["id"] for item in versions}
-    view["representations"] = [
-        record(item) for item in view["representations"]
-        if item["id"] in ids and item["version"] in version_ids
-        and ("location" not in item or item["location"] in policy["locations"])
-    ]
+    representations = []
+    for item in view["representations"]:
+        if item["id"] not in ids or item["version"] not in version_ids:
+            continue
+        if "location" in item and item["location"] not in policy["locations"]:
+            continue
+        if "location" not in item:
+            item.pop("members", None)
+        representations.append(record(item))
+    view["representations"] = representations
     releases = []
     for item in view["releases"]:
         if item["id"] not in ids:

@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field as dataclass_field
 from hashlib import sha256
 from pathlib import Path
+import re
 from types import MappingProxyType
 from urllib.parse import unquote, urlsplit
 
@@ -16,7 +17,9 @@ from .catalog_access import (
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
 from .catalog_graph import GRAPH_ADAPTER, RML_ADAPTER, child_iri, graph_document, rml_documents, turtle_bytes
-from .catalog_delivery import PAIRED_VIEW, paired_view_record
+from .catalog_delivery import (
+    PAIRED_VIEW, CatalogArtifacts, load_catalog_artifacts, paired_view_record, verify_catalog_pair,
+)
 from .catalog_descriptions import dataset_facts, method_origins, origin_gap, product_facts
 from .catalog_metadata import EXAMPLE_ADAPTER, LOCAL_ADAPTER, SECTIONS, LocalMetadata, check_report, owner_record, stable_id
 from .catalog_output import prepare_output_set, public_report, public_view, read_disclosure, write_output_set
@@ -38,14 +41,90 @@ EXPORTS = {
 }
 METADATA_ADAPTERS = {"local": LOCAL_ADAPTER, "example": EXAMPLE_ADAPTER,
                      "example-commerce-metadata": EXAMPLE_ADAPTER}
-GROUPS = ("catalog.assembly", "catalog.relationships", "catalog.qualification")
+GROUPS = ("catalog.assembly", "catalog.imports", "catalog.relationships", "catalog.qualification")
 RECIPE_GROUP = "catalog.recipes"
 CHECK_IDS = {name: f"DDK-CATALOG-{number:03d}" for name, number in {
     "assembly": 7, "exports": 7, "metadata": 1, "products": 2, "datasets": 3, "concepts": 4,
     "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9, "recipes": 11,
-    "catalog.graph": 13, "catalog.rml": 14,
+    "catalog.graph": 13, "catalog.rml": 14, "federation": 15,
 }.items()}
 DETAILS = "urn:ddk:catalog:assembly"
+URL_CREDENTIAL_PATTERN = re.compile(r"https?://[^/\s:@\"']+:[^/\s@\"']+@")
+LOCAL_LEAK_SUBSTRINGS = (
+    "/Users/", "/home/", "/private/tmp/", "/private/var/", "/var/folders/",
+    "C:\\Users\\", "file://", "s3://", "r2://", "gs://",
+)
+
+
+def _peer_summary(peer, paired_public=None):
+    cat = peer.catalog
+    ext = cat.get("extensions", {}).get(DETAILS, {})
+    summary = {
+        "id": cat["id"],
+        "audience": cat["audience"],
+        "datasets": {row["alias"]: row["id"] for row in cat["datasets"]},
+        "identities": deepcopy(list(cat.get("identities", ()))),
+        "concepts": deepcopy(list(cat.get("concepts", ()))),
+    }
+    if ext.get("datasetDefinitions"):
+        summary["datasetDefinitions"] = deepcopy(dict(ext["datasetDefinitions"]))
+    if "disclosedDefinitionPaths" in ext:
+        summary["disclosedDefinitionPaths"] = deepcopy(dict(ext["disclosedDefinitionPaths"]))
+    if paired_public is not None:
+        paired_ext = peer.lock.get("extensions", {}).get(PAIRED_VIEW)
+        summary["pairedPublic"] = {
+            "lockSha256": paired_public.lock_sha256,
+            "datasets": deepcopy(list(paired_ext["datasets"])),
+            "peerSummary": _peer_summary(paired_public),
+        }
+    return summary
+
+
+def _collect_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, Mapping):
+        for key, item in value.items():
+            if isinstance(key, str):
+                yield key
+            yield from _collect_strings(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _collect_strings(item)
+
+
+def _check_public_no_local_leak(catalog, files, policy):
+    identifiers = policy.get("identifiers", frozenset())
+    evidence = policy.get("evidence", frozenset())
+    native_refs = policy.get("nativeReferences", frozenset())
+    exempt = {uri for uri in (identifiers | evidence)
+              if isinstance(uri, str) and uri.startswith("file://")}
+    for section in ("sources", "versions", "releases"):
+        for row in catalog.get(section, ()):
+            if row.get("id") in native_refs and "reference" in row:
+                exempt.update(s for s in _collect_strings(row["reference"]) if s)
+    ordered_exempt = sorted(exempt, key=len, reverse=True)
+
+    def scan(text, label):
+        if URL_CREDENTIAL_PATTERN.search(text):
+            raise CatalogError("CATALOG-PUBLIC-NO-LOCAL-LEAK", f"Public {label} embeds URL userinfo credentials.")
+        masked = text
+        for token in ordered_exempt:
+            masked = masked.replace(token, "")
+            escaped = json.dumps(token)[1:-1]
+            if escaped != token:
+                masked = masked.replace(escaped, "")
+        for needle in LOCAL_LEAK_SUBSTRINGS:
+            escaped_needle = needle.replace("\\", "\\\\")
+            if needle in masked or escaped_needle in masked:
+                raise CatalogError("CATALOG-PUBLIC-NO-LOCAL-LEAK",
+                                   f"Public {label} leaks local or private storage path ({needle!r}).")
+
+    for entry in _collect_strings(catalog):
+        scan(entry, "catalog.ddk.json")
+    for path, (_, data) in sorted(files.items()):
+        scan(path, "companion path")
+        scan(data.decode("utf-8", errors="replace"), f"companion {path}")
 
 
 @dataclass(frozen=True)
@@ -117,6 +196,101 @@ class Assembly:
         self.concept_rules = {}
         self.recipe_sources = {}
         self.recipe_parser = None
+        self.imports = {}
+        self.import_paths = {}
+        self.peers = {}
+        self.paired_public_peers = {}
+        self.unbound_peers = {}
+
+    def bind_imports(self, peer_catalogs):
+        for _namespace, document in sorted(self.inventory.projects.items()):
+            for alias, decl in sorted(document.value.get("catalog", {}).get("imports", {}).items()):
+                if alias in self.imports and self.imports[alias] != decl:
+                    raise CatalogError("CATALOG-AUTHORITY-CONFLICT",
+                                       f"Conflicting import declarations for peer catalog {alias!r}.")
+                self.imports[alias] = deepcopy(decl)
+                self.import_paths[alias] = document.path
+        supplied = dict(peer_catalogs or {})
+        for alias in sorted(supplied):
+            if alias not in self.imports:
+                raise CatalogError("CATALOG-IMPORT-MISMATCH",
+                                   f"Supplied peer catalog {alias!r} is not declared in catalog.imports.")
+
+        def load_one(entry, expected_lock, expected_audience):
+            if isinstance(entry, CatalogArtifacts):
+                if (not entry.externally_pinned or entry.lock_sha256 != expected_lock
+                        or entry.catalog.get("audience") != expected_audience):
+                    raise CatalogError("CATALOG-IMPORT-MISMATCH",
+                                       "Peer catalog capture does not match declared lockSha256 or audience.")
+                return entry
+            return load_catalog_artifacts(entry, expected_lock_sha256=expected_lock, audience=expected_audience)
+
+        def discover_paired_public(local_peer, explicit_public=None):
+            paired = local_peer.lock.get("extensions", {}).get(PAIRED_VIEW)
+            if not isinstance(paired, Mapping):
+                return None
+            pub_sha = paired.get("publicLockSha256")
+            if explicit_public is not None:
+                pub = load_one(explicit_public, pub_sha, "public")
+                verify_catalog_pair(pub, local_peer)
+                return pub
+            try:
+                siblings = sorted(local_peer.directory.parent.iterdir())[:64]
+            except OSError:
+                return None
+            for child in siblings:
+                if child == local_peer.directory or child.is_symlink() or not child.is_dir():
+                    continue
+                lock_file = child / "catalog.lock.json"
+                if not lock_file.is_file() or lock_file.is_symlink():
+                    continue
+                try:
+                    if sha256(lock_file.read_bytes()).hexdigest() != pub_sha:
+                        continue
+                    pub = load_catalog_artifacts(child, expected_lock_sha256=pub_sha, audience="public")
+                    verify_catalog_pair(pub, local_peer)
+                    return pub
+                except (CatalogError, OSError, ValueError):
+                    continue
+            return None
+
+        for alias, decl in sorted(self.imports.items()):
+            if alias not in supplied:
+                self.unbound_peers[alias] = "unbound"
+                self.check(
+                    "federation", f"import/{alias}",
+                    CatalogError("CATALOG-IMPORT-UNBOUND",
+                                 f"Imported peer catalog {alias!r} is not bound; supply --peer-catalog {alias}=<dir>.",
+                                 status="not_run"),
+                    path=self.import_paths[alias], required=True,
+                )
+                continue
+            raw_entry = supplied[alias]
+            explicit_pub = None
+            if isinstance(raw_entry, Mapping) and not isinstance(raw_entry, CatalogArtifacts):
+                local_entry = raw_entry.get("local")
+                explicit_pub = raw_entry.get("public")
+            elif isinstance(raw_entry, tuple) and len(raw_entry) == 2:
+                local_entry, explicit_pub = raw_entry
+            else:
+                local_entry = raw_entry
+            try:
+                captured = load_one(local_entry, decl["lockSha256"], decl["audience"])
+                if captured.catalog["id"] != decl["id"]:
+                    raise CatalogError("CATALOG-IMPORT-MISMATCH",
+                                       f"Peer catalog {alias!r} id {captured.catalog['id']!r} differs from declared {decl['id']!r}.")
+                if decl["audience"] == "local":
+                    paired_pub = discover_paired_public(captured, explicit_pub)
+                    if paired_pub is not None:
+                        self.paired_public_peers[alias] = paired_pub
+            except (CatalogError, OSError, ValueError) as exc:
+                self.unbound_peers[alias] = "mismatch"
+                self.check("federation", f"import/{alias}",
+                           CatalogError("CATALOG-IMPORT-MISMATCH", str(exc), status="failed"),
+                           path=self.import_paths[alias], required=True)
+                continue
+            self.peers[alias] = captured
+            self.check("federation", f"import/{alias}", None, path=self.import_paths[alias], required=True)
 
     def select_relationship_profile(self, profile):
         if profile is None:
@@ -136,7 +310,8 @@ class Assembly:
 
     def check(self, step, subject, error=None, *, path=None, required=None, evidence="inferred",
               related=(), evidence_records=(), severity=None):
-        group = {"relationships": "catalog.relationships", "qualification": "catalog.qualification", "recipes": RECIPE_GROUP,
+        group = {"federation": "catalog.imports", "relationships": "catalog.relationships",
+                 "qualification": "catalog.qualification", "recipes": RECIPE_GROUP,
                  "catalog.dcat": "catalog.dcat", "lineage.openlineage": "lineage.openlineage",
                  "catalog.graph": "catalog.graph", "catalog.rml": "catalog.rml"}.get(step, "catalog.assembly")
         status = error.status if error is not None else "passed"
@@ -277,6 +452,7 @@ class Assembly:
                 uses[definition].append({"dataset": alias, "path": json.loads(path)})
         seen_concepts = {}
         resolved_kinds = {}
+        valid_templates = {}
         for item in sorted(self.inventory.artifacts.values(), key=lambda entry: entry.alias):
             if item.kind != "definition":
                 continue
@@ -310,6 +486,19 @@ class Assembly:
                 ), path=item.path, required=False, evidence="declared", severity="warning")
             else:
                 resolved_kinds[item.alias] = "attribute"
+            templates = ddk_annotations(item.value, "iriTemplate")
+            if templates:
+                if (len(templates) != 1 or not isinstance(templates[0], str)
+                        or "{value}" not in templates[0] or resolved_kinds.get(item.alias) != "identifier"):
+                    self.check("concepts", f"{item.alias}/iri-template", CatalogError(
+                        "CATALOG-CONCEPT-IRI-TEMPLATE",
+                        f"Shared definition {item.alias!r} `iriTemplate` requires `conceptKind` `identifier` and `{{value}}`.",
+                        related=[location(self.inventory.display_path(item.path))],
+                    ), path=item.path, required=True, evidence="declared")
+                else:
+                    valid_templates[item.alias] = templates[0]
+                    self.check("concepts", f"{item.alias}/iri-template", None, path=item.path,
+                               required=False, evidence="declared")
             if (item.alias in uses or explicit) and len(explicit) <= 1 and (
                 not explicit or (isinstance(explicit[0], str) and explicit[0].strip())
             ):
@@ -331,6 +520,8 @@ class Assembly:
             kind = resolved_kinds.get(definition, "attribute")
             row = {"concept": self.concept_iri(definition), "definition": definition,
                    "conceptKind": kind, "fields": fields}
+            if definition in valid_templates:
+                row["iriTemplate"] = valid_templates[definition]
             if isinstance(value.get("description"), str):
                 row["description"] = value["description"]
             for key in ("exactMatch", "closeMatch"):
@@ -342,6 +533,20 @@ class Assembly:
                            if link.get("type") == "canonicalUrl" and link.get("url")})
             if urls:
                 row["canonicalUrls"] = urls
+            row_exact = set(row.get("exactMatch", ()))
+            for peer_alias, peer in sorted(self.peers.items()):
+                for p_row in peer.catalog.get("concepts", ()):
+                    p_exact = set(p_row.get("exactMatch", ()))
+                    if (p_row["concept"] == row["concept"] or p_row["concept"] in row_exact
+                            or row["concept"] in p_exact
+                            or (kind == "identifier" and p_row.get("conceptKind", "attribute") == "identifier"
+                                and bool(row_exact & p_exact))):
+                        for pf in p_row.get("fields", ()):
+                            if "catalog" not in pf:
+                                candidate_field = {"catalog": peer_alias, "dataset": pf["dataset"],
+                                                   "path": deepcopy(pf["path"])}
+                                if candidate_field not in row["fields"]:
+                                    row["fields"].append(candidate_field)
             rows.append(row)
         return rows
 
@@ -375,23 +580,61 @@ class Assembly:
         if "dataset" not in row["target"] or row["match"] != "equal":
             return
         severity, compatible = self.concept_policy(namespace)
-        pairs = [(self.field_definitions(row["source"]["dataset"]).get(json_dumps(left)),
-                  self.field_definitions(row["target"]["dataset"]).get(json_dumps(right)))
-                 for left, right in zip(row["source"]["paths"], row["target"]["paths"])]
-        pairs = [(left, right) for left, right in pairs if left and right]
-        if not pairs:
-            return
 
-        def exact(definition):
-            return {iri for entry in ddk_annotations(self.inventory.artifacts[definition].value, "exactMatch")
-                    for iri in (entry if isinstance(entry, list) else [entry])}
+        def def_info(definition):
+            val = self.inventory.artifacts[definition].value
+            kinds = ddk_annotations(val, "conceptKind")
+            kind = kinds[0] if len(kinds) == 1 and kinds[0] in {"identifier", "attribute"} else "attribute"
+            exact = {iri for entry in ddk_annotations(val, "exactMatch")
+                     for iri in (entry if isinstance(entry, list) else [entry])}
+            return self.concept_iri(definition), kind, exact
 
-        def same(left, right):  # skos:exactMatch is symmetric, so either side may declare it
-            return (left == right or frozenset((left, right)) in compatible
-                    or self.concept_iri(left) == self.concept_iri(right)
-                    or self.concept_iri(right) in exact(left) or self.concept_iri(left) in exact(right))
+        if "catalog" in row["target"]:
+            peer_alias = row["target"]["catalog"]
+            if peer_alias not in self.peers:
+                return
+            peer = self.peers[peer_alias]
+            peer_concepts = {
+                (pf["dataset"], json_dumps(pf["path"])): p_row
+                for p_row in peer.catalog.get("concepts", ())
+                for pf in p_row.get("fields", ()) if "catalog" not in pf
+            }
+            mismatched = []
+            has_pair = False
+            for left_path, right_path in zip(row["source"]["paths"], row["target"]["paths"]):
+                left_def = self.field_definitions(row["source"]["dataset"]).get(json_dumps(left_path))
+                p_row = peer_concepts.get((row["target"]["dataset"], json_dumps(right_path)))
+                if not left_def or not p_row:
+                    continue
+                has_pair = True
+                l_iri, l_kind, l_exact = def_info(left_def)
+                r_iri = p_row["concept"]
+                r_kind = p_row.get("conceptKind", "attribute")
+                r_exact = set(p_row.get("exactMatch", ()))
+                same_concept = (
+                    l_iri == r_iri or r_iri in l_exact or l_iri in r_exact
+                    or (l_kind == "identifier" and r_kind == "identifier" and bool(l_exact & r_exact))
+                )
+                if not same_concept:
+                    mismatched.append(f"{left_def} to {peer_alias}:{p_row['definition']}")
+            if not has_pair:
+                return
+        else:
+            pairs = [(self.field_definitions(row["source"]["dataset"]).get(json_dumps(left)),
+                      self.field_definitions(row["target"]["dataset"]).get(json_dumps(right)))
+                     for left, right in zip(row["source"]["paths"], row["target"]["paths"])]
+            pairs = [(left, right) for left, right in pairs if left and right]
+            if not pairs:
+                return
 
-        mismatched = [f"{left} to {right}" for left, right in pairs if not same(left, right)]
+            def same(left, right):  # skos:exactMatch is symmetric, so either side may declare it
+                l_iri, l_kind, l_exact = def_info(left)
+                r_iri, r_kind, r_exact = def_info(right)
+                return (left == right or frozenset((left, right)) in compatible
+                        or l_iri == r_iri or r_iri in l_exact or l_iri in r_exact
+                        or (l_kind == "identifier" and r_kind == "identifier" and bool(l_exact & r_exact)))
+
+            mismatched = [f"{left} to {right}" for left, right in pairs if not same(left, right)]
         error = CatalogError("CATALOG-RELATIONSHIP-CONCEPT", f"{row['id']} joins fields of different shared definitions "
                              f"({'; '.join(mismatched)}). A concept-joins policy rule can declare the pair compatible.",
                              status="failed") if mismatched else None
@@ -428,6 +671,12 @@ class Assembly:
                 self.relationship(declaration, namespace, document.path)
             for declaration in configuration.get("recipes", ()):
                 self.recipe(declaration, namespace, document.path)
+
+        def _endpoint_ref(endpoint):
+            if "catalog" in endpoint:
+                return {"catalog": endpoint["catalog"], "dataset": endpoint["dataset"]}
+            return endpoint["dataset"]
+
         for recipe, _ in self.queries.values():
             if any(link not in self.relationships for link in recipe.get("contextualRelationships", ())):
                 raise CatalogError("CATALOG-RECIPE-RELATIONSHIP", "A recipe references an unknown contextual relationship.")
@@ -435,7 +684,7 @@ class Assembly:
                 relationship = self.relationships.get(link)
                 if relationship is None:
                     raise CatalogError("CATALOG-RECIPE-RELATIONSHIP", "A recipe references an unknown relationship.")
-                if any(relationship[side].get("dataset") not in recipe["inputs"].values()
+                if any(_endpoint_ref(relationship[side]) not in recipe["inputs"].values()
                        for side in ("source", "target") if "dataset" in relationship[side]):
                     raise CatalogError("CATALOG-RECIPE-RELATIONSHIP", "The recipe does not bind both relationship endpoints.")
         self.production_definitions()
@@ -460,13 +709,94 @@ class Assembly:
         identifier = row["id"]
         if identifier in self.relationships:
             raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "A relationship ID is declared more than once.")
+        if "joinMetrics" in row:
+            jm = row["joinMetrics"]
+            if ("matchedRows" in jm and "totalSourceRows" in jm
+                    and jm["matchedRows"] > jm["totalSourceRows"]):
+                raise CatalogError(
+                    "CATALOG-JOIN-METRICS-RANGE",
+                    f"Relationship {identifier!r} joinMetrics matchedRows ({jm['matchedRows']}) exceeds "
+                    f"totalSourceRows ({jm['totalSourceRows']}).",
+                )
         keys = {}
+        side_identities = {}
+        peer_deferred = None
         for side in ("source", "target"):
             endpoint = row[side]
             if "external" in endpoint:
                 continue
+            if "catalog" in endpoint:
+                peer_alias = endpoint["catalog"]
+                if peer_alias not in self.imports:
+                    raise CatalogError("CATALOG-ENDPOINT-MISSING",
+                                       f"Relationship {identifier!r} targets undeclared peer catalog {peer_alias!r}.")
+                if row["scope"] != "version_pair":
+                    raise CatalogError("CATALOG-CROSS-CATALOG-SCOPE",
+                                       f"Cross-catalog relationship {identifier!r} must declare scope 'version_pair'.")
+                if peer_alias in self.unbound_peers:
+                    code = ("CATALOG-IMPORT-UNBOUND" if self.unbound_peers[peer_alias] == "unbound"
+                            else "CATALOG-IMPORT-MISMATCH")
+                    status = "not_run" if code == "CATALOG-IMPORT-UNBOUND" else "failed"
+                    peer_deferred = (
+                        CatalogError(code, f"Relationship {identifier!r} requires bound peer catalog {peer_alias!r}.",
+                                     status=status),
+                        True,
+                    )
+                    continue
+                peer = self.peers[peer_alias]
+                peer_ds = endpoint["dataset"]
+                peer_datasets = {d["alias"] for d in peer.catalog["datasets"]}
+                if peer_ds not in peer_datasets:
+                    raise CatalogError("CATALOG-ENDPOINT-MISSING",
+                                       f"Peer catalog {peer_alias!r} has no dataset {peer_ds!r}.")
+                peer_ext = peer.catalog.get("extensions", {}).get(DETAILS, {})
+                peer_defs = peer_ext.get("datasetDefinitions", {})
+                peer_disclosed = peer_ext.get("disclosedDefinitionPaths", {})
+                peer_ids = [item for item in peer.catalog.get("identities", ()) if item["dataset"] == peer_ds]
+                side_identities[side] = peer_ids
+                peer_schema = peer_defs.get(peer_ds)
+                if peer.catalog["audience"] == "public" and (
+                    peer_schema is None
+                    or (peer_ds in peer_disclosed
+                        and any(kp not in peer_disclosed[peer_ds] for kp in endpoint["paths"]))
+                    or any(field_at(peer_schema, kp) is None for kp in endpoint["paths"])
+                ):
+                    key_ids = [item for item in peer_ids if item["kind"] in {"key", "row_position"}]
+                    if row["cardinality"] in {"one_to_one", "many_to_one"} and key_ids and not any(
+                        endpoint["paths"] == [field["path"] for field in item["fields"]] for item in key_ids
+                    ):
+                        raise CatalogError("CATALOG-KEY-INCOMPLETE",
+                                           "The unique endpoint needs its full declared key in order.")
+                    peer_deferred = (
+                        CatalogError("CATALOG-PEER-FIELD-WITHHELD",
+                                     f"Target field on public peer {peer_alias}:{peer_ds} is withheld from datasetDefinitions.",
+                                     status="unknown"),
+                        None,
+                    )
+                    continue
+                if peer_schema is None:
+                    raise CatalogError("CATALOG-KEY-PATH", "Peer dataset definition is unavailable.")
+                fields = []
+                for key_path in endpoint["paths"]:
+                    field = field_at(peer_schema, key_path)
+                    if field is not None:
+                        fields.append(resolved_key(key_path, field))
+                        continue
+                    virtual = {(identity["scope"], item["physicalType"]) for identity in peer_ids
+                               for item in identity["fields"] if item["virtual"] and item["path"] == key_path}
+                    if len(virtual) > 1:
+                        raise CatalogError("CATALOG-AUTHORITY-CONFLICT",
+                                           "A virtual field has conflicting scope or type declarations.")
+                    if not virtual:
+                        raise CatalogError("CATALOG-KEY-PATH",
+                                           "A peer relationship endpoint does not resolve to one declared field.")
+                    scope, physical = next(iter(virtual))
+                    fields.append(resolved_key(key_path, {"physicalType": physical, "logicalType": physical}, scope))
+                keys[side] = fields
+                continue
             alias = self.alias(endpoint["dataset"], namespace)
             endpoint["dataset"] = alias
+            side_identities[side] = self.identities[alias]
             fields = []
             for key_path in endpoint["paths"]:
                 release_position = any(identity["kind"] == "row_position" and identity["scope"] == "release"
@@ -489,23 +819,44 @@ class Assembly:
                     raise CatalogError("CATALOG-RELEASE-SCOPE", "A release-local identity requires the same exact release.")
                 fields.append(resolved_key(key_path, {"physicalType": physical, "logicalType": physical}, scope))
             keys[side] = fields
+        if peer_deferred is not None:
+            src_ids = [identity for identity in side_identities.get("source", ())
+                       if identity["kind"] in {"key", "row_position"}]
+            if row["cardinality"] in {"one_to_one", "one_to_many"} and src_ids and not any(
+                row["source"]["paths"] == [field["path"] for field in identity["fields"]] for identity in src_ids
+            ):
+                raise CatalogError("CATALOG-KEY-INCOMPLETE", "The unique endpoint needs its full declared key in order.")
+            deferred_error, deferred_required = peer_deferred
+            self.check("relationships", identifier, deferred_error, path=path, required=deferred_required)
+            self.relationships[identifier] = row
+            return
         if "target" in keys:
             if row["match"] == "equal" and len(keys["source"]) != len(keys["target"]):
                 raise CatalogError("CATALOG-KEY-INCOMPLETE", "Both endpoints must supply every ordered key component.")
             for side, cardinalities in (("source", {"one_to_one", "one_to_many"}),
                                         ("target", {"one_to_one", "many_to_one"})):
                 endpoint = row[side]
-                identities = [identity for identity in self.identities[endpoint["dataset"]]
+                identities = [identity for identity in side_identities[side]
                               if identity["kind"] in {"key", "row_position"}]
                 if row["cardinality"] in cardinalities and identities and not any(
                     endpoint["paths"] == [field["path"] for field in identity["fields"]] for identity in identities
                 ):
                     raise CatalogError("CATALOG-KEY-INCOMPLETE", "The unique endpoint needs its full declared key in order.")
-            if row["match"] == "equal" and any(
-                left.shared_type is not None and right.shared_type is not None and left.shared_type != right.shared_type
-                for left, right in zip(keys["source"], keys["target"])
-            ):
-                raise CatalogError("CATALOG-KEY-TYPE", "Equal key components need compatible declared types.")
+            if row["match"] == "equal":
+                if any(
+                    left.shared_type is not None and right.shared_type is not None and left.shared_type != right.shared_type
+                    for left, right in zip(keys["source"], keys["target"])
+                ):
+                    raise CatalogError("CATALOG-KEY-TYPE", "Equal key components need compatible declared types.")
+                for left, right in zip(keys["source"], keys["target"]):
+                    ldef, rdef = left.definition, right.definition
+                    if ldef.get("logicalType") == "string" and rdef.get("logicalType") == "string":
+                        lopts = ldef.get("logicalTypeOptions") or {}
+                        ropts = rdef.get("logicalTypeOptions") or {}
+                        if (("pattern" in lopts and "pattern" in ropts and lopts["pattern"] != ropts["pattern"])
+                                or ("format" in lopts and "format" in ropts and lopts["format"] != ropts["format"])):
+                            raise CatalogError("CATALOG-KEY-FORMAT-CONFLICT",
+                                               f"Relationship {identifier!r} pairs string keys with incompatible format or pattern options.")
         error = None
         if row["match"] == "project_rule" or row["nulls"] == "unknown" or any(
             field.shared_type is None for parts in keys.values() for field in parts
@@ -538,7 +889,22 @@ class Assembly:
             raise CatalogError("CATALOG-AUTHORITY-CONFLICT", "A recipe ID is declared more than once.")
         if "parameterOrder" in row and set(row["parameterOrder"]) != row["parameters"].get("properties", {}).keys():
             raise CatalogError("CATALOG-RECIPE-PARAMETERS", "Parameter order must name every parameter property exactly once.")
-        row["inputs"] = {name: self.alias(alias, namespace) for name, alias in row["inputs"].items()}
+        normalized_inputs = {}
+        for name, ref in row["inputs"].items():
+            if isinstance(ref, str):
+                normalized_inputs[name] = self.alias(ref, namespace)
+            else:
+                peer_alias, peer_ds = ref["catalog"], ref["dataset"]
+                if peer_alias not in self.imports:
+                    raise CatalogError("CATALOG-ENDPOINT-MISSING",
+                                       f"Recipe {row['id']!r} inputs undeclared peer catalog {peer_alias!r}.")
+                if peer_alias in self.peers:
+                    peer_datasets = {d["alias"] for d in self.peers[peer_alias].catalog["datasets"]}
+                    if peer_ds not in peer_datasets:
+                        raise CatalogError("CATALOG-ENDPOINT-MISSING",
+                                           f"Peer catalog {peer_alias!r} has no dataset {peer_ds!r}.")
+                normalized_inputs[name] = {"catalog": peer_alias, "dataset": peer_ds}
+        row["inputs"] = normalized_inputs
         if "resultDataset" in row:
             row["resultDataset"] = self.alias(row["resultDataset"], namespace)
         source = resolve_path(path, row["sql"], self.inventory.permitted_roots)
@@ -574,19 +940,53 @@ class Assembly:
                     "ADAPTER-CAPABILITY-MISSING", "Recipe SQL binding needs an explicitly selected tool environment.",
                     status="not_run"), path=self.recipe_sources[identifier], required=True)
             return
-        response = tools.invoke("recipe-sql", {"recipes": [{
-            "id": identifier, "sql": data.decode("utf-8"), "dialect": row["dialect"],
-            "inputs": {name: self.dataset_schemas[alias] for name, alias in row["inputs"].items()},
-            "parameters": row["parameters"], **({"parameterOrder": row["parameterOrder"]} if "parameterOrder" in row else {}),
-            "result": self.dataset_schemas.get(row.get("resultDataset")),
-        } for identifier, (row, data) in sorted(self.queries.items())]})
+        bindable = []
+        for identifier, (row, data) in sorted(self.queries.items()):
+            input_schemas = {}
+            blocked = None
+            for name, ref in row["inputs"].items():
+                if isinstance(ref, str):
+                    input_schemas[name] = self.dataset_schemas[ref]
+                else:
+                    peer_alias, peer_ds = ref["catalog"], ref["dataset"]
+                    if peer_alias in self.unbound_peers:
+                        code = ("CATALOG-IMPORT-UNBOUND" if self.unbound_peers[peer_alias] == "unbound"
+                                else "CATALOG-IMPORT-MISMATCH")
+                        status = "not_run" if code == "CATALOG-IMPORT-UNBOUND" else "failed"
+                        blocked = CatalogError(code, f"Recipe {identifier!r} requires bound peer catalog {peer_alias!r}.",
+                                               status=status)
+                        break
+                    peer = self.peers[peer_alias]
+                    peer_defs = peer.catalog.get("extensions", {}).get(DETAILS, {}).get("datasetDefinitions", {})
+                    if peer_ds not in peer_defs:
+                        blocked = CatalogError(
+                            "CATALOG-PEER-FIELD-WITHHELD",
+                            f"Peer dataset {peer_alias}:{peer_ds} withholds datasetDefinitions needed for SQL binding.",
+                            status="unknown",
+                        )
+                        break
+                    input_schemas[name] = peer_defs[peer_ds]
+            if blocked is not None:
+                self.check("recipes", identifier, blocked, path=self.recipe_sources[identifier], required=True)
+                continue
+            bindable.append({
+                "id": identifier, "sql": data.decode("utf-8"), "dialect": row["dialect"],
+                "inputs": input_schemas,
+                "parameters": row["parameters"],
+                **({"parameterOrder": row["parameterOrder"]} if "parameterOrder" in row else {}),
+                "result": self.dataset_schemas.get(row.get("resultDataset")),
+            })
+        if not bindable:
+            return
+        response = tools.invoke("recipe-sql", {"recipes": bindable})
         receipt = response.get("receipt")
         evidence = ({"kind": "native-report", "path": receipt["path"], "sha256": receipt["sha256"]},) if receipt else ()
         results = response.get("results", {}) if response.get("status") == "completed" else {}
         if response.get("status") == "completed":
             self.recipe_parser = {"id": response["parser"]["id"], "version": response["parser"]["version"]}
         bindings = report.metadata.setdefault("recipeBindings", {})
-        for identifier in sorted(self.queries):
+        for entry in bindable:
+            identifier = entry["id"]
             path = self.inventory.display_path(self.recipe_sources[identifier])
             result = results.get(identifier)
             if result is None:
@@ -634,6 +1034,11 @@ class Assembly:
         }
         if self.inventory.import_aliases:
             details["importAliases"] = dict(sorted(self.inventory.import_aliases.items()))
+        if self.peers:
+            details["peerCatalogs"] = {
+                alias: _peer_summary(peer, self.paired_public_peers.get(alias))
+                for alias, peer in sorted(self.peers.items())
+            }
         if self.relationship_profile is not None:
             details["relationshipProfile"] = deepcopy(self.report.metadata["relationshipProfile"])
             details["relationshipAssessments"] = sorted(self.relationship_assessments, key=json_dumps)
@@ -656,6 +1061,8 @@ class Assembly:
             "kind": "catalog", "specVersion": "0.1", "version": VERSION,
             "id": project.value.get("catalog", {}).get("id", stable_id("catalog", project.value["id"])),
             "project": {"id": project.value["id"], "version": project.value["version"]}, "audience": "local",
+            **({"imports": {alias: deepcopy(decl) for alias, decl in sorted(self.imports.items())}}
+               if self.imports else {}),
             "sourceInventory": [], "adapters": [], "products": products,
             "datasets": list(self.datasets.values()),
             "identities": [item for aliases in self.identities.values() for item in aliases],
@@ -727,12 +1134,52 @@ class Assembly:
                 raise CatalogError("CATALOG-REFERENCE-UNRESOLVED", "A version has an unresolved definition or source occurrence.")
             for coverage in version.get("coverage", ()):
                 observed, expected = coverage.get("observed"), coverage.get("expected")
-                if ((coverage["status"] == "complete" and observed != expected)
-                        or (coverage["status"] == "partial" and observed >= expected)):
+                if observed is not None and expected is not None and (
+                    (coverage["status"] == "complete" and observed != expected)
+                    or (coverage["status"] == "partial" and observed >= expected)
+                ):
                     raise CatalogError("CATALOG-COVERAGE-CONFLICT", "Coverage counts contradict the stated coverage status.")
+                bounds = coverage.get("bounds")
+                if isinstance(bounds, dict):
+                    low, high = bounds.get("min"), bounds.get("max")
+                    if ((isinstance(low, (int, float)) and isinstance(high, (int, float)) and low > high)
+                            or (isinstance(low, str) and isinstance(high, str) and low > high)):
+                        raise CatalogError("CATALOG-COVERAGE-CONFLICT", "Coverage bounds min exceeds max.")
         for row in self.catalog["representations"]:
             if row["version"] not in versions:
                 raise CatalogError("CATALOG-REFERENCE-UNRESOLVED", "A representation has no exact dataset version.")
+            if "members" in row:
+                members = row["members"]
+                if len({m["path"] for m in members}) != len(members):
+                    raise CatalogError("CATALOG-REPRESENTATION-SHARDS", "Representation members repeat a shard path.")
+                if "byteSize" in row and all("byteSize" in m for m in members):
+                    if sum(m["byteSize"] for m in members) != row["byteSize"]:
+                        raise CatalogError("CATALOG-REPRESENTATION-SHARDS",
+                                           "Member byteSize sum differs from representation byteSize.")
+                if "rowCount" in row and all("rowCount" in m for m in members):
+                    if sum(m["rowCount"] for m in members) != row["rowCount"]:
+                        raise CatalogError("CATALOG-REPRESENTATION-SHARDS",
+                                           "Member rowCount sum differs from representation rowCount.")
+                ranged = ["rowRange" in m for m in members]
+                if any(ranged):
+                    if not all(ranged):
+                        raise CatalogError("CATALOG-REPRESENTATION-SHARDS",
+                                           "Every member must declare rowRange when shard ranges are used.")
+                    cursor = 0
+                    for m in members:
+                        start, end = m["rowRange"]
+                        if start != cursor or start > end or ("rowCount" in m and m["rowCount"] != end - start):
+                            raise CatalogError("CATALOG-REPRESENTATION-SHARDS",
+                                               "Member rowRanges must form contiguous half-open [0..rowCount) intervals.")
+                        cursor = end
+                    if "rowCount" in row and cursor != row["rowCount"]:
+                        raise CatalogError("CATALOG-REPRESENTATION-SHARDS",
+                                           "Contiguous shard rowRanges do not end at representation rowCount.")
+        if self.catalog["audience"] == "public" and any(
+            imp["audience"] == "local" for imp in (self.catalog.get("imports") or {}).values()
+        ):
+            raise CatalogError("CATALOG-DISCLOSURE-PEER-AUDIENCE",
+                               "A public catalog cannot import a local peer catalog.")
         for row in self.catalog["releases"]:
             if not set(row["members"]) <= versions.keys():
                 raise CatalogError("CATALOG-REFERENCE-UNRESOLVED", "A release has an unresolved member.")
@@ -854,7 +1301,8 @@ class Assembly:
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
                      permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None,
-                     include_private_artifacts=False, managed_schema_profiles=None, recipe_tools=None):
+                     include_private_artifacts=False, managed_schema_profiles=None, recipe_tools=None,
+                     peer_catalogs=None):
     """Load once and return admitted metadata with its report and companions.
 
     ``recipe_tools`` is an explicitly selected native tool environment; it binds
@@ -908,6 +1356,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
             assembly.check("datasets", f"{identity}@{version}/slaProperties/{index}", CatalogError(
                 "CATALOG-SLA-ELEMENT-UNKNOWN", "The SLA element does not identify a selected object; no dataset carries it.",
                 f"/slaProperties/{index}", status="unknown"), path=path, required=False)
+        step = "federation"
+        assembly.bind_imports(peer_catalogs)
         step = "relationships"
         assembly.select_relationship_profile(relationship_profile)
         assembly.declarations()
@@ -988,6 +1438,10 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         assembly.catalog["files"] = [{"path": name, "role": role, "sha256": sha256(data).hexdigest()}
                                      for name, (role, data) in sorted(assembly.files.items())]
         _schema(assembly.catalog, "catalog")
+        if assembly.policy is not None or assembly.catalog["audience"] == "public":
+            _check_public_no_local_leak(assembly.catalog, assembly.files, assembly.policy or {
+                "identifiers": frozenset(), "evidence": frozenset(), "nativeReferences": frozenset(),
+            })
         admitted = assembly.catalog
         companions = MappingProxyType({name: data for name, (_, data) in assembly.files.items()})
         result = report.build()
@@ -1056,11 +1510,12 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
 
 def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                   current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                  permitted_roots=(), limits=None, relationship_profile=None, recipe_tools=None):
+                  permitted_roots=(), limits=None, relationship_profile=None, recipe_tools=None,
+                  peer_catalogs=None):
     """Build and optionally publish a catalog; return its checking report."""
     return assemble_catalog(
         project_path, metadata=metadata, metadata_adapter=metadata_adapter, exports=exports, output=output,
         current_selection=current_selection, disclosure_policy=disclosure_policy, audience=audience,
         required_groups=required_groups, permitted_roots=permitted_roots, limits=limits,
-        relationship_profile=relationship_profile, recipe_tools=recipe_tools,
+        relationship_profile=relationship_profile, recipe_tools=recipe_tools, peer_catalogs=peer_catalogs,
     ).local_report

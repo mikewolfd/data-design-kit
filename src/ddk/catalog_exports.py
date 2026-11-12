@@ -1,12 +1,35 @@
 """DCAT 3 and pinned OpenLineage mappings for the assembled catalog."""
 
 from collections import defaultdict
+from datetime import date, datetime
+import re
 from urllib.parse import urlsplit
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from .catalog_access import CatalogError
 from .catalog_metadata import stable_id
 from .documents import json_dumps, schema_registry, validate_document
+
+ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$")
+
+
+def _temporal_datatype(value):
+    if not isinstance(value, str):
+        return None
+    if ISO_DATE.fullmatch(value):
+        try:
+            date.fromisoformat(value)
+        except ValueError:
+            return None
+        return "http://www.w3.org/2001/XMLSchema#date"
+    if ISO_DATETIME.fullmatch(value):
+        try:
+            datetime.fromisoformat(value[:-1] + "+00:00" if value[-1] in "Zz" else value)
+        except ValueError:
+            return None
+        return "http://www.w3.org/2001/XMLSchema#dateTime"
+    return None
 
 CONTEXT = {
     "dcat": "http://www.w3.org/ns/dcat#",
@@ -96,6 +119,9 @@ def dcat_graph(catalog):
                 node["dcat:downloadURL"] = _ref(record["location"])
             if record.get("mediaType"):
                 node["dcat:mediaType"] = _ref("https://www.iana.org/assignments/media-types/" + record["mediaType"])
+            if "byteSize" in record:
+                node["dcat:byteSize"] = {"@value": str(record["byteSize"]),
+                                         "@type": "http://www.w3.org/2001/XMLSchema#decimal"}
             distributions[version].append(identifier)
         graph[identifier] = node
 
@@ -132,6 +158,30 @@ def dcat_graph(catalog):
             node["dcat:distribution"] = [_ref(item) for item in distributions[identifier]]
         if release_index[identifier]:
             node["dcterms:isPartOf"] = [_ref(item) for item in release_index[identifier]]
+        dates = version.get("dates") or {}
+        if "publishedAt" in dates:
+            node["dcterms:issued"] = {"@value": dates["publishedAt"],
+                                      "@type": "http://www.w3.org/2001/XMLSchema#dateTime"}
+        if "sourceUpdatedAt" in dates:
+            node["dcterms:modified"] = {"@value": dates["sourceUpdatedAt"],
+                                        "@type": "http://www.w3.org/2001/XMLSchema#dateTime"}
+        temporals = []
+        for cov_index, cov in enumerate(version.get("coverage", ())):
+            bounds = cov.get("bounds")
+            if not isinstance(bounds, dict):
+                continue
+            min_val, max_val = bounds.get("min"), bounds.get("max")
+            min_type, max_type = _temporal_datatype(min_val), _temporal_datatype(max_val)
+            if min_type and max_type:
+                period_id = stable_id("temporal", identifier, cov_index, bounds)
+                graph[period_id] = {
+                    "@id": period_id, "@type": "dcterms:PeriodOfTime",
+                    "dcat:startDate": {"@value": min_val, "@type": min_type},
+                    "dcat:endDate": {"@value": max_val, "@type": max_type},
+                }
+                temporals.append(_ref(period_id))
+        if temporals:
+            node["dcterms:temporal"] = temporals
         graph[identifier] = node
     root = {"@id": catalog["id"], "@type": "dcat:Catalog", "dcterms:title": catalog["id"],
             "dcat:dataset": [_ref(identifier) for identifier in sorted(logical)]}

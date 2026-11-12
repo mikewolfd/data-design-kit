@@ -147,7 +147,8 @@
         "DDK-POLICY-004",
         "DDK-POLICY-005",
         "DDK-POLICY-006",
-        "DDK-POLICY-007"
+        "DDK-POLICY-007",
+        "DDK-POLICY-008"
       ],
       "planSection": "WP-05 \u2014 Shared definitions, project policies, and provenance",
       "owners": [
@@ -330,7 +331,8 @@
         "DDK-CATALOG-005",
         "DDK-CATALOG-006",
         "DDK-CATALOG-007",
-        "DDK-CATALOG-011"
+        "DDK-CATALOG-011",
+        "DDK-CATALOG-015"
       ],
       "planSection": "WP-13 \u2014 Product catalog and native metadata",
       "owners": [

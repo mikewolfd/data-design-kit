@@ -658,6 +658,20 @@
       "tests": [
         "tests/core/test_layered_imports.py::test_row_identity_accepts_the_odcs_primary_key"
       ]
+    },
+    {
+      "id": "CASE-POLICY-008-DECAYING-PROSE",
+      "coverage": "exercised",
+      "tests": [
+        "tests/catalog/test_cross_product_primitives.py::test_prose_no_decaying_facts_flags_volatile_counts_hashes_and_dates_and_honors_exceptions"
+      ]
+    },
+    {
+      "id": "CASE-POLICY-008-EXCEPTIONS",
+      "coverage": "exercised",
+      "tests": [
+        "tests/catalog/test_cross_product_primitives.py::test_prose_no_decaying_facts_flags_volatile_counts_hashes_and_dates_and_honors_exceptions"
+      ]
     }
   ]
 }

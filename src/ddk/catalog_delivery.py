@@ -153,6 +153,22 @@ def verify_catalog_pair(public, local):
     _need(local.lock.get("extensions", {}).get(PAIRED_VIEW) == expected,
           "Private lock does not identify this exact public view and dataset mapping")
     aliases = {row["publicAlias"]: row["localAlias"] for row in expected["datasets"]}
+    local_details = q.get("extensions", {}).get("urn:ddk:catalog:assembly", {})
+    peer_public_to_local = {}
+    for peer_alias, pub_imp in (p.get("imports") or {}).items():
+        _need(peer_alias in (q.get("imports") or {}), "Public import is outside the paired local catalog")
+        loc_imp = q["imports"][peer_alias]
+        _need(pub_imp["audience"] == "public" and pub_imp["id"] == loc_imp["id"],
+              "Paired import changed its audience or peer identity")
+        peer_info = local_details.get("peerCatalogs", {}).get(peer_alias, {})
+        if loc_imp["audience"] == "public":
+            _need(pub_imp["lockSha256"] == loc_imp["lockSha256"], "Paired public import changed its lockSha256")
+            peer_public_to_local[peer_alias] = {ds: ds for ds in peer_info.get("datasets", {})}
+        else:
+            paired_pub = peer_info.get("pairedPublic")
+            _need(paired_pub is not None and pub_imp["lockSha256"] == paired_pub["lockSha256"],
+                  "Paired import does not match the peer's paired public lock")
+            peer_public_to_local[peer_alias] = {r["publicAlias"]: r["localAlias"] for r in paired_pub["datasets"]}
     datasets = {row["id"]: row for row in q["datasets"]}
     for row in p["datasets"]:
         source = datasets[row["id"]]
@@ -164,9 +180,25 @@ def verify_catalog_pair(public, local):
     for row in p["relationships"]:
         normalized = deepcopy(row)
         for side in ("source", "target"):
-            if "dataset" in normalized[side]:
+            if "catalog" in normalized[side]:
+                peer_alias = normalized[side]["catalog"]
+                _need(peer_alias in peer_public_to_local
+                      and normalized[side]["dataset"] in peer_public_to_local[peer_alias],
+                      "Paired cross-catalog relationship references an undisclosed peer dataset")
+                normalized[side]["dataset"] = peer_public_to_local[peer_alias][normalized[side]["dataset"]]
+            elif "dataset" in normalized[side]:
                 normalized[side]["dataset"] = aliases[normalized[side]["dataset"]]
-        _need(relationships.get(row["id"]) == normalized,
+        orig = relationships.get(row["id"])
+        if orig is not None and "joinMetrics" in normalized and "joinMetrics" in orig:
+            pub_rec = normalized["joinMetrics"]["record"]
+            loc_rec = orig["joinMetrics"]["record"]
+            expected_redacted = {
+                **loc_rec,
+                "uri": f"urn:ddk:sha256:{loc_rec['sha256']}" if "sha256" in loc_rec else "urn:ddk:withheld",
+            }
+            if pub_rec == expected_redacted:
+                normalized["joinMetrics"]["record"] = deepcopy(loc_rec)
+        _need(orig == normalized,
               "Paired relationship changed its endpoint, matching, scope or resolution meaning")
     public_versions = {row["id"] for row in p["versions"]}
     for section in ("versions", "representations", "recipes", "releases"):
@@ -181,7 +213,9 @@ def verify_catalog_pair(public, local):
                       and ("reference" not in row or row["reference"] == source["reference"]),
                       "Paired version changed its dataset, retention or native identity")
             elif section == "representations":
-                _need(all(row.get(key) == source.get(key) for key in ("version", "kind", "availability", "location", "mediaType")),
+                _need(all(row.get(key) == source.get(key)
+                          for key in ("version", "kind", "availability", "location", "mediaType", "byteSize", "rowCount"))
+                      and ("members" not in row or row["members"] == source.get("members")),
                       "Paired representation changed its exact access meaning")
             elif section == "releases":
                 members = [member for member in source["members"] if member in public_versions]
@@ -192,7 +226,18 @@ def verify_catalog_pair(public, local):
                       and ("reference" not in row or row["reference"] == source["reference"]),
                       "Paired release changed its membership, completeness or native identity")
             else:
-                _need({key: aliases[alias] for key, alias in row["inputs"].items()} == source["inputs"],
+                mapped_inputs = {}
+                for key, val in row["inputs"].items():
+                    if isinstance(val, str):
+                        mapped_inputs[key] = aliases[val]
+                    else:
+                        peer_alias = val["catalog"]
+                        _need(peer_alias in peer_public_to_local
+                              and val["dataset"] in peer_public_to_local[peer_alias],
+                              "Paired recipe references an undisclosed peer dataset")
+                        mapped_inputs[key] = {"catalog": peer_alias,
+                                              "dataset": peer_public_to_local[peer_alias][val["dataset"]]}
+                _need(mapped_inputs == source["inputs"],
                       "Paired recipe changed its named input mapping")
                 _need(("resultDataset" not in row or aliases[row["resultDataset"]] == source.get("resultDataset"))
                       and all(row.get(key) == source.get(key) for key in ("sql", "dialect", "parameters", "parameterOrder", "relationships", "resultGrain"))
@@ -203,17 +248,23 @@ def verify_catalog_pair(public, local):
         matches = [source for source in q["selections"]
                    if all(row.get(key) == source.get(key) for key in selection_keys)]
         _need(len(matches) == 1, "Paired selection changed its authority, purpose, release or observation")
-    _verify_paired_concepts(p, q, aliases)
+    _verify_paired_concepts(p, q, aliases, peer_public_to_local)
     _need(p.get("currentSelection") == q.get("currentSelection"),
           "Paired catalogs request different current selections")
     return deepcopy(aliases)
 
 
-def _verify_paired_concepts(public_catalog, local_catalog, aliases):
+def _verify_paired_concepts(public_catalog, local_catalog, aliases, peer_public_to_local=None):
     from .catalog_graph import child_iri
 
+    peer_public_to_local = peer_public_to_local or {}
+    peer_local_to_public = {
+        peer_alias: {loc_ds: pub_ds for pub_ds, loc_ds in mapping.items()}
+        for peer_alias, mapping in peer_public_to_local.items()
+    }
     details = public_catalog.get("extensions", {}).get("urn:ddk:catalog:assembly", {})
     disclosed_paths = details.get("disclosedDefinitionPaths", {})
+    peer_summaries = details.get("peerCatalogs", {})
     inverse_aliases = {local_alias: public_alias for public_alias, local_alias in aliases.items()}
     local_concepts = local_catalog.get("concepts", ())
     public_concepts = public_catalog.get("concepts", ())
@@ -229,23 +280,39 @@ def _verify_paired_concepts(public_catalog, local_catalog, aliases):
         _need(len(candidates) == 1, "Public concept does not match one shared definition in the local catalog")
         source = candidates[0]
         matched_local.add(source["definition"])
-        expected_fields = [
+        expected_local = [
             {"dataset": inverse_aliases[field["dataset"]], "path": field["path"]}
             for field in source["fields"]
-            if field["dataset"] in inverse_aliases
+            if "catalog" not in field and field["dataset"] in inverse_aliases
             and field["path"] in disclosed_paths.get(inverse_aliases[field["dataset"]], ())
         ]
+        expected_peer = []
+        for field in source["fields"]:
+            if "catalog" not in field:
+                continue
+            peer_alias = field["catalog"]
+            mapping = peer_local_to_public.get(peer_alias, {})
+            if field["dataset"] not in mapping:
+                continue
+            pub_ds = mapping[field["dataset"]]
+            peer_summary = peer_summaries.get(peer_alias, {})
+            if ("disclosedDefinitionPaths" in peer_summary
+                    and field["path"] not in peer_summary["disclosedDefinitionPaths"].get(pub_ds, ())):
+                continue
+            expected_peer.append({"catalog": peer_alias, "dataset": pub_ds, "path": field["path"]})
+        expected_fields = [*expected_local, *expected_peer]
         minted = child_iri(public_catalog["id"], "concept", row["definition"])
         _need(row["concept"] in {source["concept"], minted}
               and row.get("conceptKind") == source.get("conceptKind")
-              and list(row["fields"]) == expected_fields and bool(expected_fields)
+              and ("iriTemplate" not in row or row["iriTemplate"] == source.get("iriTemplate"))
+              and list(row["fields"]) == expected_fields and bool(expected_local)
               and ("description" not in row or row["description"] == source.get("description"))
               and all(set(row.get(key, ())) <= set(source.get(key, ()))
                       for key in ("exactMatch", "closeMatch", "canonicalUrls")),
               "Paired concept changed its identity, kind, carrier fields or vocabulary links")
     for source in local_concepts:
         has_disclosed_field = any(
-            field["dataset"] in inverse_aliases
+            "catalog" not in field and field["dataset"] in inverse_aliases
             and field["path"] in disclosed_paths.get(inverse_aliases[field["dataset"]], ())
             for field in source["fields"]
         )

@@ -137,7 +137,25 @@ def _record(records, identity, role):
     return candidates[0]
 
 
-def _version_binding(catalog, aliases, *, release=None, selection=None, versions=None):
+def _peer_catalog_doc(peer):
+    from .catalog_delivery import CatalogArtifacts
+
+    if isinstance(peer, CatalogArtifacts):
+        if not peer.externally_pinned:
+            raise CatalogError("CATALOG-EXTERNAL-PIN", "Captured peer catalog access requires an external lock pin.")
+        return peer.catalog
+    if isinstance(peer, dict):
+        return peer
+    raise CatalogError("CATALOG-BINDING-UNRESOLVED", "Supply a CatalogArtifacts or catalog mapping for peer binding.",
+                       status="unknown")
+
+
+def _version_binding(catalog, aliases, *, release=None, selection=None, versions=None, peer_catalogs=None):
+    local_aliases = {name: alias for name, alias in aliases.items() if isinstance(alias, str)}
+    peer_aliases = {name: alias for name, alias in aliases.items() if isinstance(alias, dict)}
+    if peer_aliases and versions is None:
+        raise CatalogError("CATALOG-BINDING-UNRESOLVED",
+                           "Cross-catalog bindings require explicit version mappings across catalogs.")
     if (release is not None) + (selection is not None) + (versions is not None) != 1:
         raise CatalogError("CATALOG-BINDING-UNRESOLVED", "Supply one exact release, selection, or version mapping.")
     versions_by_id = {item["id"]: item for item in catalog["versions"]}
@@ -152,7 +170,7 @@ def _version_binding(catalog, aliases, *, release=None, selection=None, versions
         if not {"authority", "purpose"} <= selection.keys():
             raise CatalogError("CATALOG-BINDING-UNRESOLVED", "The selection needs its authority and purpose.")
         matches = [item for item in catalog["selections"] if all(item[key] == value for key, value in selection.items())]
-        matches = [item for item in matches if set(aliases.values()) <= {
+        matches = [item for item in matches if set(local_aliases.values()) <= {
             versions_by_id[member]["dataset"]
             for member in _record(catalog["releases"], item["release"], "release")["members"]
         }]
@@ -164,7 +182,7 @@ def _version_binding(catalog, aliases, *, release=None, selection=None, versions
     if versions is not None and (not isinstance(versions, dict) or set(versions) != set(aliases)):
         raise CatalogError("CATALOG-BINDING-UNRESOLVED", "Supply an exact version for every required input.")
     bound = {}
-    for name, alias in aliases.items():
+    for name, alias in local_aliases.items():
         if release_record is not None:
             candidates = [versions_by_id[key] for key in release_record["members"]
                           if versions_by_id[key]["dataset"] == alias]
@@ -177,6 +195,17 @@ def _version_binding(catalog, aliases, *, release=None, selection=None, versions
             if version["dataset"] != alias:
                 raise CatalogError("CATALOG-VERSION-MISMATCH", f"Version {version['id']!r} does not bind {alias!r}.")
         bound[name] = version
+    for name, target in peer_aliases.items():
+        peer_alias, peer_ds = target["catalog"], target["dataset"]
+        if not peer_catalogs or peer_alias not in peer_catalogs:
+            raise CatalogError("CATALOG-BINDING-UNRESOLVED",
+                               f"Peer catalog {peer_alias!r} is required to bind {name!r}.", status="unknown")
+        peer_doc = _peer_catalog_doc(peer_catalogs[peer_alias])
+        version = _record(peer_doc["versions"], versions[name], "peer dataset version")
+        if version["dataset"] != peer_ds:
+            raise CatalogError("CATALOG-VERSION-MISMATCH",
+                               f"Version {version['id']!r} does not bind peer dataset {peer_ds!r}.")
+        bound[name] = version
     result = {"inputs": bound}
     if release_record is not None:
         result["release"] = release_record
@@ -185,24 +214,31 @@ def _version_binding(catalog, aliases, *, release=None, selection=None, versions
     return deepcopy(result)
 
 
-def resolve_relationship(catalog, relationship_id, *, release=None, selection=None, versions=None):
+def resolve_relationship(catalog, relationship_id, *, release=None, selection=None, versions=None, peer_catalogs=None):
     relationship = _record(catalog["relationships"], relationship_id, "relationship")
     if "external" in relationship["target"] or relationship["scope"] == "declared":
         raise CatalogError("CATALOG-BINDING-UNRESOLVED", "This relationship needs a project-specific scope resolver.",
                            status="unknown")
     if relationship["scope"] == "same_release" and release is None and selection is None:
         raise CatalogError("CATALOG-RELEASE-SCOPE", "Both endpoints must bind to one exact release.")
-    aliases = {side: relationship[side]["dataset"] for side in ("source", "target")}
-    return _version_binding(catalog, aliases, release=release, selection=selection, versions=versions)
+    aliases = {
+        side: ({"catalog": relationship[side]["catalog"], "dataset": relationship[side]["dataset"]}
+               if "catalog" in relationship[side] else relationship[side]["dataset"])
+        for side in ("source", "target")
+    }
+    return _version_binding(catalog, aliases, release=release, selection=selection, versions=versions,
+                            peer_catalogs=peer_catalogs)
 
 
-def resolve_query(catalog, recipe_id, *, release=None, selection=None, versions=None, parameters=None):
+def resolve_query(catalog, recipe_id, *, release=None, selection=None, versions=None, parameters=None,
+                  peer_catalogs=None):
     recipe = _record(catalog["recipes"], recipe_id, "query recipe")
     parameters = {} if parameters is None else parameters
     errors = list(schema_validator(recipe["parameters"]).iter_errors(parameters))
     if errors:
         raise CatalogError("CATALOG-QUERY-PARAMETERS", errors[0].message)
-    binding = _version_binding(catalog, recipe["inputs"], release=release, selection=selection, versions=versions)
+    binding = _version_binding(catalog, recipe["inputs"], release=release, selection=selection, versions=versions,
+                               peer_catalogs=peer_catalogs)
     for relationship_id in recipe["relationships"]:
         relationship = _record(catalog["relationships"], relationship_id, "relationship")
         if relationship["scope"] == "same_release" and "release" not in binding:

@@ -5052,6 +5052,288 @@
         "exitCode": 2,
         "diagnostic": "ADAPTER-CAPABILITY-MISSING"
       }
+    },
+    {
+      "id": "CASE-POLICY-008-DECAYING-PROSE",
+      "requirements": [
+        "DDK-POLICY-008"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A prose-no-decaying-facts rule inspects ODCS and ODPS descriptive prose containing volatile row counts, SHA-256 digests, and as-of snapshot dates.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "POLICY-PROSE-DECAYING-FACT"
+      }
+    },
+    {
+      "id": "CASE-POLICY-008-EXCEPTIONS",
+      "requirements": [
+        "DDK-POLICY-008"
+      ],
+      "profile": "core",
+      "runtimeStatus": "planned",
+      "scenario": "A prose-no-decaying-facts rule exempts audited artifact and RFC 6901 pointer pairs with reasons while keeping non-exempt volatile prose checked, and honors warning severity.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-KEY-FORMAT-CONFLICT",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "An equal-match string relationship pairs fields whose logicalTypeOptions.pattern or logicalTypeOptions.format conflict; offline checking refuses without opening data payloads.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-KEY-FORMAT-CONFLICT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPT-IRI-TEMPLATE",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A concept declares iriTemplate on an attribute concept or omits the {value} placeholder.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-CONCEPT-IRI-TEMPLATE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-JOIN-METRICS-RANGE",
+      "requirements": [
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A relationship's joinMetrics reports matchedRows greater than totalSourceRows.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-JOIN-METRICS-RANGE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-005-REPRESENTATION-SHARDS",
+      "requirements": [
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A sharded representation's member byteSize sum disagrees with byteSize, its half-open rowRange intervals are non-contiguous or disagree with rowCount, or member paths repeat.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-REPRESENTATION-SHARDS"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-007-PUBLIC-NO-LOCAL-LEAK",
+      "requirements": [
+        "DDK-CATALOG-007",
+        "DDK-SAFE-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public catalog or companion embeds a local filesystem path prefix, private object-store URI (s3://, r2://, gs://, ungranted file://), or URL userinfo credentials.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-PUBLIC-NO-LOCAL-LEAK"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-008-TEMPORAL-AND-BYTESIZE",
+      "requirements": [
+        "DDK-CATALOG-005",
+        "DDK-CATALOG-008"
+      ],
+      "profile": "catalog.dcat",
+      "runtimeStatus": "planned",
+      "scenario": "Representation byteSize lifts to dcat:byteSize, version dates lift to dcterms:issued and dcterms:modified, and ISO coverage bounds lift to dcterms:temporal PeriodOfTime startDate/endDate.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-010-PEER-IMPACT",
+      "requirements": [
+        "DDK-CATALOG-010",
+        "DDK-CATALOG-015"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Advancing an imported peer catalog's schema and lock propagates peer-catalog and peer-dataset obligations across cross-catalog relationships and recipes.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-013-CROSS-STACK-LINKSETS",
+      "requirements": [
+        "DDK-CATALOG-013",
+        "DDK-CATALOG-015"
+      ],
+      "profile": "catalog.graph",
+      "runtimeStatus": "planned",
+      "scenario": "Exported catalog graphs emit cross-catalog void:Linkset targets and cross-catalog ddkv:CandidateLinkset nodes for shared identifier concepts and exactMatch URIs.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-CROSS-STACK-AND-OBJECT-ARRAY-RML",
+      "requirements": [
+        "DDK-CATALOG-014",
+        "DDK-CATALOG-015"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "Generated YARRRML emits zero-scan cross-stack peer row IRIs across flat and array<object> foreign keys plus identifier concept iriTemplate rdfs:seeAlso links, materializing in Morph-KGC without peer Parquet files.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-FEDERATION",
+      "requirements": [
+        "DDK-CATALOG-015",
+        "DDK-CATALOG-004",
+        "DDK-CATALOG-011"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Bind an imported peer catalog via lockSha256 and audience, verify cross-catalog relationships, shared exactMatch identifier concept joins, and cross-catalog recipe SQL columns and types.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-IMPORT-UNBOUND",
+      "requirements": [
+        "DDK-CATALOG-015",
+        "DDK-RESULT-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A project declares catalog.imports.<alias> and omits --peer-catalog <alias>=<dir>; dependent federation checks record required not_run outcomes without crashing.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-IMPORT-UNBOUND"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-IMPORT-MISMATCH",
+      "requirements": [
+        "DDK-CATALOG-015"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A supplied peer catalog disagrees with the declared lockSha256, audience, or catalog id, or names an undeclared import alias.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-IMPORT-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-CROSS-SCOPE",
+      "requirements": [
+        "DDK-CATALOG-015",
+        "DDK-CATALOG-004"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A cross-catalog relationship declares same_release or declared scope instead of version_pair.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-CROSS-CATALOG-SCOPE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-PEER-FIELD-WITHHELD",
+      "requirements": [
+        "DDK-CATALOG-015",
+        "DDK-RESULT-001"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A cross-catalog relationship targets a field withheld by a bound public peer catalog's disclosure policy; the check reports unknown.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "unknown",
+        "exitCode": 2,
+        "diagnostic": "CATALOG-PEER-FIELD-WITHHELD"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-PEER-AUDIENCE",
+      "requirements": [
+        "DDK-CATALOG-015",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public catalog attempts to disclose a local peer import that has no verified paired public view.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-DISCLOSURE-PEER-AUDIENCE"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-015-PAIRED-REWRITE",
+      "requirements": [
+        "DDK-CATALOG-015",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "Assembling a paired public catalog over a local peer with PAIRED_VIEW rewrites imports[alias] to the verified public peer lock and maps peer dataset aliases, passing verify_catalog_pair.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
     }
   ]
 }

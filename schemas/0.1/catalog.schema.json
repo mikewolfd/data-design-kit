@@ -19,6 +19,9 @@
     "project": {
       "$ref": "#/$defs/versionedIdentifier"
     },
+    "imports": {
+      "$ref": "#/$defs/catalogImports"
+    },
     "audience": {
       "enum": [
         "local",
@@ -183,6 +186,36 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "catalogImports": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "audience": {
+            "enum": [
+              "local",
+              "public"
+            ]
+          },
+          "lockSha256": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        },
+        "required": [
+          "id",
+          "audience",
+          "lockSha256"
+        ],
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    },
     "concept": {
       "description": "One shared definition and the dataset fields that inherit it.",
       "type": "object",
@@ -190,11 +223,13 @@
         "concept": {"$ref": "common.schema.json#/$defs/identifier"},
         "definition": {"$ref": "common.schema.json#/$defs/artifactRef"},
         "conceptKind": {"enum": ["identifier", "attribute"]},
+        "iriTemplate": {"type": "string", "minLength": 1},
         "fields": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
+              "catalog": {"$ref": "common.schema.json#/$defs/alias"},
               "dataset": {"$ref": "common.schema.json#/$defs/artifactRef"},
               "path": {"$ref": "#/$defs/disclosureFieldPath"}
             },
@@ -385,6 +420,56 @@
       ],
       "additionalProperties": false
     },
+    "peerEndpoint": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "$ref": "common.schema.json#/$defs/alias"
+        },
+        "dataset": {
+          "$ref": "common.schema.json#/$defs/artifactRef"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fieldPath"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "dataset",
+        "paths"
+      ],
+      "additionalProperties": false
+    },
+    "externalTarget": {
+      "type": "object",
+      "properties": {
+        "external": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "externalDataset": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "externalKeyFields": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "limitations": {
+          "$ref": "common.schema.json#/$defs/name"
+        }
+      },
+      "required": [
+        "external"
+      ],
+      "additionalProperties": false
+    },
     "identity": {
       "type": "object",
       "properties": {
@@ -477,19 +562,10 @@
         "target": {
           "oneOf": [
             {
-              "$ref": "#/$defs/endpoint"
+              "$ref": "#/$defs/peerEndpoint"
             },
             {
-              "type": "object",
-              "properties": {
-                "external": {
-                  "$ref": "common.schema.json#/$defs/identifier"
-                }
-              },
-              "required": [
-                "external"
-              ],
-              "additionalProperties": false
+              "$ref": "#/$defs/externalTarget"
             }
           ]
         },
@@ -539,6 +615,56 @@
         },
         "scopeDescription": {
           "$ref": "common.schema.json#/$defs/name"
+        },
+        "unresolvedReason": {
+          "enum": [
+            "scope_boundary",
+            "design_optional",
+            "polymorphic_key",
+            "publisher_defect",
+            "unmeasured"
+          ]
+        },
+        "joinMetrics": {
+          "type": "object",
+          "properties": {
+            "matchedRows": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "totalSourceRows": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "floorPct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "basis": {
+              "$ref": "common.schema.json#/$defs/name"
+            },
+            "record": {
+              "$ref": "#/$defs/record"
+            }
+          },
+          "required": [
+            "basis",
+            "record"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "matchedRows"
+              ]
+            },
+            {
+              "required": [
+                "floorPct"
+              ]
+            }
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -585,16 +711,7 @@
           "then": {
             "properties": {
               "target": {
-                "type": "object",
-                "properties": {
-                  "external": {
-                    "$ref": "common.schema.json#/$defs/identifier"
-                  }
-                },
-                "required": [
-                  "external"
-                ],
-                "additionalProperties": false
+                "$ref": "#/$defs/externalTarget"
               },
               "scope": {
                 "const": "external"
@@ -671,7 +788,27 @@
             "$ref": "common.schema.json#/$defs/name"
           },
           "additionalProperties": {
-            "$ref": "common.schema.json#/$defs/artifactRef"
+            "oneOf": [
+              {
+                "$ref": "common.schema.json#/$defs/artifactRef"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "catalog": {
+                    "$ref": "common.schema.json#/$defs/alias"
+                  },
+                  "dataset": {
+                    "$ref": "common.schema.json#/$defs/artifactRef"
+                  }
+                },
+                "required": [
+                  "catalog",
+                  "dataset"
+                ],
+                "additionalProperties": false
+              }
+            ]
           },
           "minProperties": 1
         },
@@ -1036,6 +1173,25 @@
             "$ref": "#/$defs/coverage"
           },
           "uniqueItems": true
+        },
+        "dates": {
+          "type": "object",
+          "properties": {
+            "publishedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "retrievedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sourceUpdatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
         }
       },
       "required": [
@@ -1132,6 +1288,57 @@
         },
         "mediaType": {
           "$ref": "common.schema.json#/$defs/name"
+        },
+        "byteSize": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rowCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "$ref": "common.schema.json#/$defs/path"
+              },
+              "sha256": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "byteSize": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rowCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rowRange": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "additionalProperties": false
+          }
         },
         "record": {
           "$ref": "#/$defs/record"
@@ -1467,6 +1674,9 @@
         "id": {
           "$ref": "common.schema.json#/$defs/identifier"
         },
+        "imports": {
+          "$ref": "#/$defs/catalogImports"
+        },
         "ports": {
           "type": "array",
           "items": {
@@ -1523,6 +1733,13 @@
         "alias": {
           "$ref": "common.schema.json#/$defs/artifactRef"
         },
+        "kind": {
+          "enum": [
+            "component",
+            "design",
+            "job"
+          ]
+        },
         "identity": {
           "$ref": "#/$defs/versionedIdentifier"
         },
@@ -1542,6 +1759,33 @@
             "$ref": "common.schema.json#/$defs/artifactRef"
           },
           "uniqueItems": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/name"
+              },
+              "kind": {
+                "enum": [
+                  "sql",
+                  "view",
+                  "export",
+                  "report"
+                ]
+              },
+              "sqlSha256": {
+                "$ref": "common.schema.json#/$defs/digest"
+              }
+            },
+            "required": [
+              "id",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [
@@ -1569,6 +1813,25 @@
             "unknown"
           ]
         },
+        "kind": {
+          "enum": [
+            "true_range",
+            "window",
+            "sampled",
+            "derived",
+            "not_a_range",
+            "empty"
+          ]
+        },
+        "stage": {
+          "enum": [
+            "expected",
+            "discovered",
+            "fetched",
+            "extracted",
+            "published"
+          ]
+        },
         "observed": {
           "type": "integer",
           "minimum": 0
@@ -1576,6 +1839,34 @@
         "expected": {
           "type": "integer",
           "minimum": 0
+        },
+        "bounds": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "$ref": "common.schema.json#/$defs/name"
+            },
+            "min": {
+              "type": [
+                "string",
+                "integer",
+                "number"
+              ]
+            },
+            "max": {
+              "type": [
+                "string",
+                "integer",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "field",
+            "min",
+            "max"
+          ],
+          "additionalProperties": false
         },
         "record": {
           "$ref": "#/$defs/record"
@@ -1604,9 +1895,18 @@
             }
           },
           "then": {
-            "required": [
-              "observed",
-              "expected"
+            "anyOf": [
+              {
+                "required": [
+                  "observed",
+                  "expected"
+                ]
+              },
+              {
+                "required": [
+                  "bounds"
+                ]
+              }
             ]
           }
         }
