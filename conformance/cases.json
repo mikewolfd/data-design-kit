@@ -94,6 +94,237 @@
       }
     },
     {
+      "id": "CASE-CATALOG-013-GRAPH",
+      "requirements": [
+        "DDK-CATALOG-013"
+      ],
+      "profile": "catalog.graph",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce and layered catalogs export a JSON-LD graph, and Turtle on request, that an independent reader parses. It holds as many datasets, versions, linksets, quality measurements, products and plans as the catalog. A not-run check stays not_run with declared evidence. Runs, origins, layers and link facets use standard terms. Every DDK term it uses is defined in vocab/ddk.ttl, whose schemes restate the schema enums. The DCAT companion is byte-identical with or without the graph.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-RML",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce catalog exports one YARRRML document per dataset. Row IRIs come from the key, typed values from logical types, and the orders-to-customers relationship maps to the customer row IRI. Predicates and graphs are explicit IRI term maps, and the YAML reads back as the generated structure. Only daily-revenue's version has a file, so it maps into that version's graph; the other two documents are templates that name no graph, and the report counts them as a mapping limit.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-MATCH-DECISIONS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "An ODCS object that declares matchDecisions (vendor ddk) on its decision column, with two relationships to keyed rows, maps same to skos:exactMatch, undecided to skos:closeMatch and not_same to ddkv:noMatch, never to owl:sameAs. Without the declaration, the same table maps only its own rows.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-VIEWS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "Stations with nested object fields, scalar and object arrays and an array of tag keys; visits that join stations on two non-key columns; keyless logs; and a project-rule link, each with one bound Parquet version in one release. DuckDB views map the leaves, unnested values, positioned item nodes, the array and composite joins and one blank node per log row; the row-to-item link reads positions only; a shared region concept is one sub-property statement per field; the project-rule link is named as unmapped.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-VERSIONS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "With two versions of stations and no current selection, its document is a template that names no graph and says why; file order never picks one. With a current selection, stations binds to the selected release's version and file, and a dataset the selection does not name is a template.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-SCOPE",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "A same-release join between versions that share no release is not mapped and says so; as a version pair it is mapped; with a declared scope it is not. When one side has no file, its document is a template, the join reading that file is not mapped, and key links that read no target file still are.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-014-NO-DEFINITIONS",
+      "requirements": [
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog.rml",
+      "runtimeStatus": "planned",
+      "scenario": "A catalog without its assembly extension or a local catalog without dataset definitions cannot generate mappings, and the export stays not_run.",
+      "expected": {
+        "decision": "incomplete",
+        "checkStatus": "not_run",
+        "exitCode": 2,
+        "diagnostic": "ADAPTER-CAPABILITY-MISSING"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003-ORIGIN-DETAIL",
+      "requirements": [
+        "DDK-CATALOG-003"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A dataset still registered with origin derived is assembled; its origin check is a non-required unknown with CATALOG-ORIGIN-DETAIL.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "unknown",
+        "exitCode": 0,
+        "diagnostic": "CATALOG-ORIGIN-DETAIL"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003-MODEL-METHOD",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-013"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The layered model dataset's complete method record passes and exports a configured software agent, a declared qualified attribution and a spot-check review by a person. Without its configuration digest, the origin evidence is unknown, and the graph keeps that: no configured agent, and an attribution typed outcome-unknown with the reason. A model record on a rule dataset fails document checking.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003-METHOD-COLUMN",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A declared method column whose values are origins, or finer methods its methodOrigins property maps to an origin, is recorded and attributes each mapped row; the graph names each finer method and types it by its origin. A value that is neither, or one mapped to something that is not an origin, fails with CATALOG-METHOD-COLUMN.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPTS",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-CATALOG-013",
+        "DDK-CATALOG-014"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce amount-cents definition is listed as one concept carried by orders and daily-revenue. The graph makes it a SKOS concept that both fields specialise. The mappings write each row's value once, under the field's own predicate, plus one statement that the field is a sub-property of the concept.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPT-JOINS",
+      "requirements": [
+        "DDK-CATALOG-004",
+        "DDK-POLICY-005"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "The commerce customer relationship joins fields of two different shared definitions. That is a non-required failure with a warning, a required failure under a concept-joins rule of severity error, and a pass once the rule declares the pair compatible. In the layered example, a rule in another layer leaves a mismatched join a warning; the same rule in the layer that declares the join makes it required.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "failed",
+        "exitCode": 0,
+        "diagnostic": "CATALOG-RELATIONSHIP-CONCEPT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-013-CANDIDATE-JOINS",
+      "requirements": [
+        "DDK-CATALOG-013"
+      ],
+      "profile": "catalog.graph",
+      "runtimeStatus": "planned",
+      "scenario": "Datasets carrying a committee concept that another dataset keys its rows by become candidate links to it, because a declared relationship joins on that concept elsewhere. A pair that relationship already joins is left out. Once no relationship joins on the concept, there are no candidates. In the graph a candidate is a ddkv:CandidateLinkset, never a void:Linkset, and has no link predicate; a relationship to an external target keeps that target as its objects target.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-003-PUBLIC-METHOD",
+      "requirements": [
+        "DDK-CATALOG-003",
+        "DDK-CATALOG-007"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A public view of the layered example, with identifier grants only, withholds the model method record (model, configuration digest, reviewer) and the method column from the catalog and every written file, the graph included.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
+      "id": "CASE-CATALOG-006-RECIPE-FIELDS",
+      "requirements": [
+        "DDK-CATALOG-006"
+      ],
+      "profile": "catalog",
+      "runtimeStatus": "planned",
+      "scenario": "A project recipe carrying a title, notes and a parameterOrder that names its one parameter checks and assembles.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
+      }
+    },
+    {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
       "requirements": [
         "DDK-CATALOG-007"

@@ -3,15 +3,21 @@
   "profiles": [
     "catalog",
     "catalog.dcat",
+    "catalog.graph",
+    "catalog.rml",
     "lineage.openlineage"
   ],
+  "vocabulary": {
+    "path": "vocab/ddk.ttl",
+    "sha256": "bfc1e02ae36f8a5e870d16621a34f39e6fb4bd382cd83e408d7208d4b5cadd3e"
+  },
   "verification": {
     "scope": "Source-checkout catalog, disclosure, relationship-profile and impact checks over independent fixtures. Installed qualification and native application acceptance are separate.",
     "tests": "tests/catalog tests/core/test_catalog_impact.py tests/core/test_catalog_recipe_metadata.py tests/core/test_external_relationships.py tests/core/test_catalog_profile_impact.py",
     "passedTests": 102,
     "passedCases": 52,
     "statusMeaning": "Verified means that the test exercised the behavior and observed the expected decision and diagnostic. An expected failed or incomplete decision is a verified negative case.",
-    "standards": "RDFLib parses exported DCAT graphs. The pinned OpenLineage schemas validate exported events and version facets. A local independent receiver checks OpenLineage identity and replay.",
+    "standards": "RDFLib parses exported DCAT, JSON-LD, and Turtle catalog graphs against vocab/ddk.ttl. PyYAML parses generated YARRRML documents, and independent Morph-KGC + DuckDB acceptance suites materialize and verify row-level N-Quads. The pinned OpenLineage schemas validate exported events and version facets. A local independent receiver checks OpenLineage identity and replay.",
     "incrementalRuns": [
       {
         "passedTests": 102,
@@ -51,6 +57,11 @@
       {
         "passedTests": 6,
         "scope": "Source-checkout recipe SQL binding (DDK-CATALOG-011) through the quality tool environment's sqlglot 30.29.0, on branch codex/ddk-datamap-requirements-20261108. No installed qualification."
+      },
+      {
+        "passedTests": 489,
+        "skippedTests": 290,
+        "scope": "Source-checkout env-full lane on branch codex/ddk-knowledge-graph-20261109 (plus 121 passed, 20 skipped in the quality lane): catalog.graph (DDK-CATALOG-013), catalog.rml (DDK-CATALOG-014), origin/method attribution (DDK-CATALOG-003), conceptKind and concept impact/delivery (DDK-CATALOG-004), public RML key/path disclosure, 64-bit xsd:long bounds, and DuckDB non-null view projections. Six independent Morph-KGC 2.10.0 acceptance suites passed (including nulls-and-bigint 2^53+1/None/empty-string round-trip and 920,843 quads across 342 SpicyRegs OCC fields). No installed qualification."
       }
     ]
   },
@@ -298,9 +309,10 @@
       "expectedDecision": "passed",
       "expectedDiagnostic": null,
       "tests": [
-        "tests/core/test_catalog_impact.py::test_changed_rule_and_relationship_require_requalification_and_metadata"
+        "tests/core/test_catalog_impact.py::test_changed_rule_and_relationship_require_requalification_and_metadata",
+        "tests/core/test_catalog_impact.py::test_concept_changes_require_metadata_regeneration_and_rebind_on_carrier_datasets"
       ],
-      "evidence": "Compares exact snapshots and verifies affected recipe obligations, metadata regeneration, and requalification while computation remains unaffected by the changed rule."
+      "evidence": "Compares exact snapshots and verifies affected recipe obligations, concept metadata regeneration and carrier rebind, and requalification while computation remains unaffected by the changed rule."
     },
     {
       "id": "CASE-CATALOG-022",
@@ -1363,28 +1375,220 @@
     },
     {
       "id": "CASE-CONF-005-CATALOG-ONLY",
-      "coverage": "exercised",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
       "tests": [
         "tests/catalog/test_layered_catalog.py::test_catalog_only_map_needs_no_component_or_design"
-      ]
+      ],
+      "evidence": "Checks and exports a layered catalog-only map without components, designs, bindings or fixtures."
     },
     {
       "id": "CASE-CONF-005-RUN-NEEDS-PRODUCTION",
-      "coverage": "exercised",
+      "profile": "catalog",
+      "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-PRODUCTION-MISSING",
       "tests": [
         "tests/catalog/test_layered_catalog.py::test_run_naming_its_docspec_job_has_no_production_yet"
-      ]
+      ],
+      "evidence": "Refuses a run record naming an undeclared DocSpec job with CATALOG-PRODUCTION-MISSING."
+    },
+    {
+      "id": "CASE-CATALOG-013-GRAPH",
+      "profile": "catalog.graph",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_graph.py::test_graph_holds_every_catalog_fact_once",
+        "tests/catalog/test_catalog_graph.py::test_graph_keeps_dcat_unchanged_turtle_equal_and_bytes_stable",
+        "tests/catalog/test_catalog_graph.py::test_graph_states_runs_checks_links_and_origins_with_standard_terms",
+        "tests/catalog/test_catalog_graph.py::test_vocabulary_restates_the_schema_enums_and_defines_every_term_the_graph_uses",
+        "tests/catalog/test_catalog_graph.py::test_executed_evidence_needs_a_retained_report_and_missing_edges_fail_the_export",
+        "tests/catalog/test_catalog_graph.py::test_fields_keep_dataset_predicates_and_point_to_canonical_urls",
+        "tests/catalog/test_catalog_graph.py::test_public_graph_keeps_valid_model_attribution_clean_and_preserves_unknown_origin"
+      ],
+      "evidence": "RDFLib parses exported JSON-LD and Turtle graphs, checks isomorphic parity and byte stability, validates vocab/ddk.ttl coverage and literal DQV status ranges, and verifies public attribution withholding vs unknown origin retention."
+    },
+    {
+      "id": "CASE-CATALOG-014-RML",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_rml_maps_rows_values_and_links_from_the_declarations",
+        "tests/catalog/test_catalog_rml.py::test_rml_yaml_reads_back_as_the_mapping_structure",
+        "tests/catalog/test_catalog_rml.py::test_integer_bounds_select_xsd_integer_only_within_32_bits_and_xsd_long_otherwise",
+        "tests/catalog/test_catalog_rml.py::test_public_rml_maps_only_disclosed_keyed_datasets_and_granted_paths",
+        "tests/catalog/test_catalog_rml.py::test_physical_names_special_field_characters_null_items_multi_fk_decisions_and_glob_paths"
+      ],
+      "evidence": "Generates YARRRML documents with per-predicate non-null DuckDB views, 64-bit xsd:long vs 32-bit xsd:integer typing, physicalName/special-character escaping, glob-path refusal, and public key/field disclosure guards."
+    },
+    {
+      "id": "CASE-CATALOG-014-MATCH-DECISIONS",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_match_decisions_map_to_skos_matches_and_never_to_same_as",
+        "tests/catalog/test_catalog_rml.py::test_physical_names_special_field_characters_null_items_multi_fk_decisions_and_glob_paths"
+      ],
+      "evidence": "Maps declared matchDecisions to skos:exactMatch, skos:closeMatch, and ddkv:noMatch with explicit IRI subjects and objects, never owl:sameAs, and requires explicit relationship selection when >2 outgoing FKs exist."
+    },
+    {
+      "id": "CASE-CATALOG-014-VIEWS",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_views_map_nested_fields_array_items_keyless_rows_and_non_key_joins"
+      ],
+      "evidence": "Projects nested object leaves, unnested scalar arrays, non-null positioned object-array items, keyless blank-node rows, concept sub-property triples, and composite non-key DuckDB joins."
+    },
+    {
+      "id": "CASE-CATALOG-014-VERSIONS",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_versions_bind_by_current_selection_and_never_by_order"
+      ],
+      "evidence": "Binds multi-version datasets only through an explicit current selection and emits graphless templates with mappingLimits notes otherwise."
+    },
+    {
+      "id": "CASE-CATALOG-014-SCOPE",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_joins_pair_bound_versions_only_within_their_scope",
+        "tests/catalog/test_catalog_rml.py::test_key_and_array_links_respect_scope_and_joins_handle_null_match_unknown_and_typed_arrays"
+      ],
+      "evidence": "Enforces declared, same_release, and version_pair scopes across direct-key, array-element, and DuckDB-joined relationships, plus nulls=match/unknown and typed array element casting."
+    },
+    {
+      "id": "CASE-CATALOG-014-NO-DEFINITIONS",
+      "profile": "catalog.rml",
+      "status": "verified",
+      "expectedDecision": "incomplete",
+      "expectedDiagnostic": "ADAPTER-CAPABILITY-MISSING",
+      "tests": [
+        "tests/catalog/test_catalog_rml.py::test_rml_without_dataset_definitions_is_not_run"
+      ],
+      "evidence": "Leaves RML export not_run with ADAPTER-CAPABILITY-MISSING when dataset definitions are absent."
+    },
+    {
+      "id": "CASE-CATALOG-003-ORIGIN-DETAIL",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": "CATALOG-ORIGIN-DETAIL",
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_derived_origin_is_read_but_its_detail_stays_unknown"
+      ],
+      "evidence": "Assembles legacy derived origin as a non-required unknown check with CATALOG-ORIGIN-DETAIL."
+    },
+    {
+      "id": "CASE-CATALOG-003-MODEL-METHOD",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_model_method_record_completes_origin_evidence_and_becomes_provenance"
+      ],
+      "evidence": "Validates model method provenance, incomplete model origin uncertainty, and schema refusal on non-model origins."
+    },
+    {
+      "id": "CASE-CATALOG-003-METHOD-COLUMN",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_method_column_values_are_origins_or_map_to_one_and_attribute_each_row"
+      ],
+      "evidence": "Requires a non-empty enum on methodColumn, validates methodOrigins keys and targets, emits graph agents, and guards RML row attribution on valid method columns."
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPTS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_concepts_list_every_field_that_inherits_a_definition_and_reach_graph_and_mappings",
+        "tests/catalog/test_origin_and_concepts.py::test_public_concepts_keep_only_granted_fields",
+        "tests/catalog/test_origin_and_concepts.py::test_concept_kind_warns_when_missing_on_concept_definition_and_refuses_invalid_or_duplicate",
+        "tests/catalog/test_catalog_delivery.py::test_pair_verifies_disclosed_concepts_and_refuses_concept_tampering"
+      ],
+      "evidence": "Collects shared definitions with conceptKind validation and duplicate-IRI refusal, propagates them to SKOS concepts and RML subPropertyOf triples, and verifies public concept disclosure and paired delivery."
+    },
+    {
+      "id": "CASE-CATALOG-004-CONCEPT-JOINS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": "CATALOG-RELATIONSHIP-CONCEPT",
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_a_join_between_different_definitions_warns_and_a_policy_can_make_it_an_error",
+        "tests/catalog/test_origin_and_concepts.py::test_a_concept_joins_rule_governs_only_the_relationships_its_own_project_declares",
+        "tests/catalog/test_origin_and_concepts.py::test_concept_policy_fails_on_unresolved_compatible_definition_without_core_policies"
+      ],
+      "evidence": "Warns or fails on cross-concept relationships per layer-scoped concept-joins rules and records required failures on unresolved compatible definitions."
+    },
+    {
+      "id": "CASE-CATALOG-013-CANDIDATE-JOINS",
+      "profile": "catalog.graph",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_candidate_links_anchor_on_keys_and_skip_declared_joins",
+        "tests/catalog/test_catalog_graph.py::test_external_targets_and_candidate_links_stay_apart_from_local_declared_links"
+      ],
+      "evidence": "Infers candidate joins anchored on keyed concepts, separates ddkv:CandidateLinkset (ddkv:subjectsTarget/ddkv:objectsTarget and ddkv:concept-kind-*) from void:Linkset, and preserves external targets."
+    },
+    {
+      "id": "CASE-CATALOG-003-PUBLIC-METHOD",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_public_view_withholds_model_records_and_method_columns",
+        "tests/catalog/test_catalog_graph.py::test_public_graph_keeps_valid_model_attribution_clean_and_preserves_unknown_origin"
+      ],
+      "evidence": "Withholds model method records and method columns across public catalog, graph, and RML outputs without introducing false outcome-unknown markers."
+    },
+    {
+      "id": "CASE-CATALOG-006-RECIPE-FIELDS",
+      "profile": "catalog",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_origin_and_concepts.py::test_project_recipes_may_carry_a_title_notes_and_parameter_order"
+      ],
+      "evidence": "Checks and assembles project recipes carrying title, notes, and parameterOrder."
     },
     {
       "id": "CASE-CATALOG-LOCK-OPTIONS-REFUSED",
-      "coverage": "exercised",
+      "profile": "catalog",
+      "status": "verified",
       "expectedDecision": "error",
       "expectedDiagnostic": "CLI-USAGE",
       "tests": [
         "tests/test_cli.py::test_catalog_refuses_lock_verification_options"
-      ]
+      ],
+      "evidence": "Refuses --locked and --lock on the catalog command with CLI-USAGE exit code 64."
     },
     {
       "id": "CASE-LAYERED-PUBLIC-FACTS",

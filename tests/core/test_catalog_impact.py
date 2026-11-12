@@ -179,3 +179,30 @@ def test_catalog_definition_changes_classify_quality_and_shape_separately():
     quality_only["properties"][0]["logicalType"] = "string"
     report = compare_catalogs(base, candidate)
     assert report["metadata"]["catalogChanges"]["dataset:daily-revenue"]["computation"] == "review-required"
+
+
+def test_concept_changes_require_metadata_regeneration_and_rebind_on_carrier_datasets():
+    base, candidate = _snapshots()
+    concept = {
+        "concept": "urn:example:commerce:catalog:concept:amount-cents",
+        "definition": "amount-cents",
+        "conceptKind": "attribute",
+        "fields": [
+            {"dataset": "orders", "path": [{"field": "amount_cents"}]},
+            {"dataset": "daily-revenue", "path": [{"field": "amount_cents"}]},
+        ],
+    }
+    base["concepts"] = [deepcopy(concept)]
+    candidate["concepts"] = [{**deepcopy(concept), "canonicalUrls": ["https://example.org/amount-cents"],
+                              "conceptKind": "identifier"}]
+    report = compare_catalogs(base, candidate)
+    assert not validate_document(report)
+    assert report["decision"] == "passed"
+    key = f"concept:{concept['concept']}"
+    change = report["metadata"]["catalogChanges"][key]
+    assert change["obligations"] == ["consumer-rebind", "metadata-regeneration"]
+    assert change["computation"] == "unaffected-by-this-change"
+    affected = report["metadata"]["catalogAffectedObligations"]
+    assert "dataset:orders" in affected and "dataset:daily-revenue" in affected
+    assert any(name.startswith("recipe:") and "metadata-regeneration" in values for name, values in affected.items())
+

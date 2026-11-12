@@ -347,7 +347,9 @@
       ],
       "requirements": [
         "DDK-CATALOG-008",
-        "DDK-CATALOG-009"
+        "DDK-CATALOG-009",
+        "DDK-CATALOG-013",
+        "DDK-CATALOG-014"
       ],
       "planSection": "WP-14 \u2014 DCAT and OpenLineage interchange",
       "owners": [

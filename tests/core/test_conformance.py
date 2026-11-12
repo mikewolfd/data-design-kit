@@ -315,3 +315,56 @@ def test_relocated_release_preserves_case_and_expectation_source_bindings(releas
         shutil.rmtree(tmp_path)
         result = _check(claim, evidence, moved, "passed", captured_root=tmp_path)
         assert len(result["metadata"]["expectationBindings"]) == 2
+
+
+def test_graph_and_rml_profiles_qualify_independently_of_base_catalog(release_evidence, tmp_path):
+    from ddk.conformance import PROFILES
+    from ddk.documents import REPOSITORY, read_json
+
+    assert {"catalog.graph", "catalog.rml"} <= PROFILES
+    registry = read_json(REPOSITORY / "conformance" / "cases.json").value
+    by_id = {case["id"]: case["profile"] for case in registry["cases"]}
+    graph_cases = {cid for cid in by_id if cid.startswith("CASE-CATALOG-013-")}
+    rml_cases = {cid for cid in by_id if cid.startswith("CASE-CATALOG-014-")}
+    assert graph_cases and all(by_id[cid] == "catalog.graph" for cid in graph_cases)
+    assert rml_cases and all(by_id[cid] == "catalog.rml" for cid in rml_cases)
+
+    # Qualify catalog.graph and catalog.rml explicitly while verify base `catalog` does not require them.
+    custom_cases = {
+        "cases": [
+            *REGISTERED["cases"],
+            {"id": "CASE-TEST-CATALOG", "profile": "catalog", "tests": ["test_qualified.py::test_core"]},
+            {"id": "CASE-TEST-GRAPH", "profile": "catalog.graph", "tests": ["test_qualified.py::test_saved"]},
+            {"id": "CASE-TEST-RML", "profile": "catalog.rml", "tests": ["test_qualified.py::test_fixture"]},
+        ],
+    }
+    claim, evidence = release_evidence
+    claim["profiles"] = ["core", "catalog"]
+    claim["summaryClaims"] = [{"profile": "core", "status": "passed"}, {"profile": "catalog", "status": "passed"}]
+    evidence["requestedProfiles"] = ["core", "catalog"]
+    evidence["profileTools"].update({"catalog": ["ddk", "python"]})
+    evidence["caseResults"].append({"caseId": "CASE-TEST-CATALOG", "profile": "catalog", "kind": "executed",
+                                    "status": "passed", "runs": ["core-run"]})
+    # Even without CASE-TEST-GRAPH or CASE-TEST-RML results, base `catalog` qualifies cleanly.
+    base_result = qualify_release(claim, evidence, cases=custom_cases, evidence_root=tmp_path)
+    assert base_result["decision"] == "passed"
+    assert base_result["coverage"]["completedProfiles"] == ["catalog", "core"]
+
+    # Claiming catalog.graph and catalog.rml succeeds when their cases pass.
+    claim["profiles"] = ["core", "catalog", "catalog.graph", "catalog.rml"]
+    claim["summaryClaims"].extend([
+        {"profile": "catalog.graph", "status": "passed"},
+        {"profile": "catalog.rml", "status": "passed"},
+    ])
+    evidence["requestedProfiles"] = list(claim["profiles"])
+    evidence["profileTools"].update({"catalog.graph": ["ddk", "python"], "catalog.rml": ["ddk", "python"]})
+    evidence["caseResults"].extend([
+        {"caseId": "CASE-TEST-GRAPH", "profile": "catalog.graph", "kind": "executed",
+         "status": "passed", "runs": ["core-run"]},
+        {"caseId": "CASE-TEST-RML", "profile": "catalog.rml", "kind": "executed",
+         "status": "passed", "runs": ["core-run"]},
+    ])
+    full_result = qualify_release(claim, evidence, cases=custom_cases, evidence_root=tmp_path)
+    assert full_result["decision"] == "passed"
+    assert set(full_result["coverage"]["completedProfiles"]) == {"core", "catalog", "catalog.graph", "catalog.rml"}
+

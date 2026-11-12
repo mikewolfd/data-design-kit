@@ -229,3 +229,29 @@ def test_unsupported_public_lineage_cannot_leave_a_partial_private_set(inputs):
     result = assemble(inputs, include_private_artifacts=True, exports=("catalog.dcat", "lineage.openlineage"))
     assert result.report["decision"] != "passed"
     assert not result.artifacts and not result.local_artifacts
+
+
+def test_pair_verifies_disclosed_concepts_and_refuses_concept_tampering(inputs, tmp_path):
+    root, policy_path = inputs
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    # Disclose amount_cents on daily-revenue so the shared amount-cents concept enters the public catalog.
+    policy["definitionFields"]["urn:example:commerce:dataset:daily-revenue"] = [
+        [{"field": "region"}], [{"field": "amount_cents"}],
+    ]
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+    public, local = captured(inputs, tmp_path)
+    assert len(public.catalog["concepts"]) == 1
+    assert verify_catalog_pair(public, local)
+
+    for mutation in ("concept-kind", "omit-public-concept", "extra-match"):
+        mutated_local = replace(local, catalog=deepcopy(local.catalog))
+        mutated_public = replace(public, catalog=deepcopy(public.catalog))
+        if mutation == "concept-kind":
+            mutated_local.catalog["concepts"][0]["conceptKind"] = "identifier"
+        elif mutation == "omit-public-concept":
+            mutated_public.catalog["concepts"] = []
+        else:
+            mutated_public.catalog["concepts"][0]["exactMatch"] = ["https://example.org/unapproved"]
+        with pytest.raises(ValueError, match="concept|Concept"):
+            verify_catalog_pair(mutated_public, mutated_local)
+

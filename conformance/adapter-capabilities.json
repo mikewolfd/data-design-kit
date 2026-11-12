@@ -78,6 +78,59 @@
         {
           "evidence": [],
           "facets": {
+            "candidateLinksets": "checked",
+            "disclosurePolicy": "checked",
+            "jsonLdGraph": "checked",
+            "turtleGraph": "checked",
+            "vocabularyCoverage": "checked"
+          },
+          "group": "catalog.graph",
+          "limitations": [
+            "Exports catalog-level RDF statements only; row lifting uses external RML engines."
+          ],
+          "operations": [
+            "provenance-and-attribution",
+            "quality-measurements",
+            "declared-and-candidate-links",
+            "concept-glossary"
+          ],
+          "standards": {
+            "dcat": "3",
+            "ddk-vocab": "vocab/ddk.ttl",
+            "dqv": "20161215",
+            "prov-o": "20130430",
+            "skos": "20090818",
+            "void": "20110303"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
+            "disclosurePolicy": "checked",
+            "exactVersionBinding": "checked",
+            "matchDecisions": "checked",
+            "nestedAndArrayViews": "checked",
+            "releaseScopes": "checked",
+            "rowExecution": "unsupported"
+          },
+          "group": "catalog.rml",
+          "limitations": [
+            "Declarative YARRRML generation only; DDK does not execute RML or open data files; arrays of arrays, nested collections inside array items, external targets, and project_rule joins remain unmapped."
+          ],
+          "operations": [
+            "yarrrml-generation",
+            "duckdb-view-projections",
+            "scoped-version-joins",
+            "match-decision-mappings"
+          ],
+          "standards": {
+            "rml": "1.1.2",
+            "yarrrml": "1.0"
+          }
+        },
+        {
+          "evidence": [],
+          "facets": {
             "declaredVsObserved": "checked",
             "publicDisclosure": "unsupported",
             "registeredVsConsumed": "checked"
@@ -100,6 +153,8 @@
       "profiles": [
         "catalog",
         "catalog.dcat",
+        "catalog.graph",
+        "catalog.rml",
         "lineage.openlineage"
       ],
       "specVersion": "0.1",

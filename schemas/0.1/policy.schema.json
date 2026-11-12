@@ -235,6 +235,42 @@
               "configuration"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/alias"
+              },
+              "check": {
+                "const": "concept-joins"
+              },
+              "severity": {
+                "enum": [
+                  "warning",
+                  "error"
+                ]
+              },
+              "compatible": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "common.schema.json#/$defs/artifactRef"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "uniqueItems": true
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "check",
+              "severity"
+            ],
+            "additionalProperties": false
           }
         ]
       },

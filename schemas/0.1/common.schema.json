@@ -100,12 +100,44 @@
       ]
     },
     "datasetOrigin": {
+      "description": "Whose assertion a dataset's content is. `derived` is read for older projects and reported as unknown detail.",
       "enum": [
         "publisher",
         "third_party",
-        "derived",
-        "model"
+        "rule",
+        "human",
+        "model",
+        "derived"
       ]
+    },
+    "modelMethod": {
+      "description": "How a model produced a dataset's values: the model, its version, a digest of the prompt or configuration, and the human review it has had.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "configurationSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "review": {
+          "enum": [
+            "unreviewed",
+            "spot_checked",
+            "reviewed"
+          ]
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
     },
     "argument": {
       "oneOf": [

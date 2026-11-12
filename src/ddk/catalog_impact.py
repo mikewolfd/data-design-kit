@@ -132,6 +132,10 @@ class Snapshot:
             alias = row["alias"]
             node = self.add("dataset", alias, row["id"], row, row["definition"]["version"])
             self.datasets[alias] = node
+        for row in value.get("concepts", ()):
+            node = self.add("concept", row["concept"], row["concept"], row)
+            for field in row["fields"]:
+                self.link(node, self.datasets.get(field["dataset"]), field["dataset"])
         for row in value["versions"]:
             node = self.add("native-version", row["id"], row["id"], row)
             self.versions[row["id"]] = node
@@ -288,7 +292,7 @@ class Snapshot:
 def _change(kind, key, old, new, base, candidate):
     consequences = {METADATA}
     if kind in {"representation", "publisher-release", "publisher-selection", "discovery-selector", "recipe", "relationship",
-                "relationship-profile", "relationship-assessment"}:
+                "relationship-profile", "relationship-assessment", "concept"}:
         consequences.add(REBIND)
     if kind == "requested-quality" and new is not None and (
         old is None or not json_equal(old.value["rules"], new.value["rules"]) or not new.value["matchingPasses"]
@@ -497,7 +501,7 @@ def compare_catalogs(base_catalog, candidate_catalog, *, required_groups=(), req
                                       "Declaration reasoning identifies reader rechecks; domain computation and qualification effects require their owners."},
                 })
             if kind in {"native-version", "representation", "publisher-release", "publisher-selection", "requested-quality",
-                        "project-extension", "relationship-profile", "relationship-assessment"}:
+                        "project-extension", "relationship-profile", "relationship-assessment", "concept"}:
                 details[f"{kind}:{key}"].update({
                     "baseRecord": base_record.value if base_record else None,
                     "candidateRecord": candidate_record.value if candidate_record else None,

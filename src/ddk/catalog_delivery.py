@@ -203,6 +203,51 @@ def verify_catalog_pair(public, local):
         matches = [source for source in q["selections"]
                    if all(row.get(key) == source.get(key) for key in selection_keys)]
         _need(len(matches) == 1, "Paired selection changed its authority, purpose, release or observation")
+    _verify_paired_concepts(p, q, aliases)
     _need(p.get("currentSelection") == q.get("currentSelection"),
           "Paired catalogs request different current selections")
     return deepcopy(aliases)
+
+
+def _verify_paired_concepts(public_catalog, local_catalog, aliases):
+    from .catalog_graph import child_iri
+
+    details = public_catalog.get("extensions", {}).get("urn:ddk:catalog:assembly", {})
+    disclosed_paths = details.get("disclosedDefinitionPaths", {})
+    inverse_aliases = {local_alias: public_alias for public_alias, local_alias in aliases.items()}
+    local_concepts = local_catalog.get("concepts", ())
+    public_concepts = public_catalog.get("concepts", ())
+    _need(len({row["concept"] for row in local_concepts}) == len(local_concepts)
+          and len({row["concept"] for row in public_concepts}) == len(public_concepts),
+          "Concept identities must be unique in each catalog view")
+    matched_local = set()
+    for row in public_concepts:
+        candidates = [
+            source for source in local_concepts
+            if row["definition"] in {source["definition"], "public-" + sha256(source["definition"].encode()).hexdigest()}
+        ]
+        _need(len(candidates) == 1, "Public concept does not match one shared definition in the local catalog")
+        source = candidates[0]
+        matched_local.add(source["definition"])
+        expected_fields = [
+            {"dataset": inverse_aliases[field["dataset"]], "path": field["path"]}
+            for field in source["fields"]
+            if field["dataset"] in inverse_aliases
+            and field["path"] in disclosed_paths.get(inverse_aliases[field["dataset"]], ())
+        ]
+        minted = child_iri(public_catalog["id"], "concept", row["definition"])
+        _need(row["concept"] in {source["concept"], minted}
+              and row.get("conceptKind") == source.get("conceptKind")
+              and list(row["fields"]) == expected_fields and bool(expected_fields)
+              and ("description" not in row or row["description"] == source.get("description"))
+              and all(set(row.get(key, ())) <= set(source.get(key, ()))
+                      for key in ("exactMatch", "closeMatch", "canonicalUrls")),
+              "Paired concept changed its identity, kind, carrier fields or vocabulary links")
+    for source in local_concepts:
+        has_disclosed_field = any(
+            field["dataset"] in inverse_aliases
+            and field["path"] in disclosed_paths.get(inverse_aliases[field["dataset"]], ())
+            for field in source["fields"]
+        )
+        _need(not has_disclosed_field or source["definition"] in matched_local,
+              "Paired public catalog omits a concept carried by a disclosed field")

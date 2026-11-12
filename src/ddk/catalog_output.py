@@ -14,7 +14,7 @@ import sys
 from tempfile import mkdtemp
 
 from .catalog_access import CatalogError, field_at
-from .catalog_descriptions import public_dataset, public_product
+from .catalog_descriptions import origin_gap, public_dataset, public_product
 from .documents import json_dumps, read_json, schema_registry, schema_validator, validate_document
 from .locks import build_lock
 from .results import VERSION
@@ -141,6 +141,37 @@ def _withheld_name(value, withheld, policy):
     return None
 
 
+def _public_concepts(concepts, aliases, disclosed_paths, policy, catalog_id):
+    """Concepts keep only fields whose exact path is granted, and every other value needs its own grant.
+
+    A concept IRI the policy does not list among its identifiers, including one DDK minted from a private
+    definition alias, is minted again from the public alias.
+    """
+    from .catalog_graph import child_iri
+
+    view = []
+    for row in concepts:
+        fields = [{"dataset": aliases[field["dataset"]], "path": deepcopy(field["path"])} for field in row["fields"]
+                  if field["dataset"] in aliases and field["path"] in disclosed_paths.get(aliases[field["dataset"]], ())]
+        if not fields:
+            continue
+        definition = _alias(row["definition"], policy["aliases"])
+        concept = row["concept"] if row["concept"] in policy["identifiers"] else child_iri(catalog_id, "concept", definition)
+        item = {"concept": concept, "definition": definition, "fields": fields}
+        if "conceptKind" in row:
+            item["conceptKind"] = row["conceptKind"]
+        for key in ("exactMatch", "closeMatch"):
+            if matches := [iri for iri in row.get(key, ()) if iri in policy["identifiers"]]:
+                item[key] = matches
+        if policy["descriptions"] and "description" in row:
+            item["description"] = row["description"]
+        urls = [url for url in row.get("canonicalUrls", ()) if url in policy["locations"]]
+        if urls:
+            item["canonicalUrls"] = urls
+        view.append(item)
+    return view
+
+
 def public_view(catalog, policy, details_key):
     """Retain explicitly admitted identifiers, locations and SQL, and close visible references."""
     view = deepcopy(catalog)
@@ -185,12 +216,15 @@ def public_view(catalog, policy, details_key):
 
     aliases = {}
     datasets = []
+    unknown_origins = []
     for dataset in view["datasets"]:
         definition = dataset["definition"]
         if not {dataset["id"], definition["contractId"]} <= ids:
             continue
         alias = dataset["alias"]
         aliases[alias] = _alias(alias, policy["aliases"])
+        if dataset.get("origin") == "model" and origin_gap(dataset) is not None:
+            unknown_origins.append(aliases[alias])
         dataset["alias"] = aliases[alias]
         public_dataset(dataset, policy)
         if not policy["descriptions"]:
@@ -240,6 +274,9 @@ def public_view(catalog, policy, details_key):
     if disclosed_definitions:
         details["datasetDefinitions"] = disclosed_definitions
         details["disclosedDefinitionPaths"] = disclosed_paths
+    if unknown_origins:
+        details["unknownOrigins"] = sorted(unknown_origins)
+    view["concepts"] = _public_concepts(catalog.get("concepts", ()), aliases, disclosed_paths, policy, catalog["id"])
     extension_grants = {json_dumps(row["project"]): set(row["extensions"]) for row in policy["projectExtensions"]}
     known_extensions = defaultdict(set)
     disclosed_extensions = []
@@ -282,8 +319,30 @@ def public_view(catalog, policy, details_key):
     view["products"] = products
     if not products:
         raise CatalogError("CATALOG-DISCLOSURE", "The policy needs to permit a product and a participating output dataset.")
-    view["identities"] = [{**item, "dataset": aliases[item["dataset"]]} for item in view["identities"]
-                          if policy["descriptions"] and item["dataset"] in aliases]
+    restricted_aliases = {aliases[dataset_ids[identifier]] for identifier in policy["definitionFields"]}
+
+    def _paths_disclosed(public_alias, paths):
+        if public_alias not in restricted_aliases:
+            return True
+        allowed = disclosed_paths.get(public_alias, ())
+        return all(path in allowed for path in paths)
+
+    identities = []
+    for item in view["identities"]:
+        if item["dataset"] not in aliases:
+            continue
+        public_alias = aliases[item["dataset"]]
+        non_virtual = [field["path"] for field in item["fields"] if not field["virtual"]]
+        has_virtual = any(field["virtual"] for field in item["fields"])
+        if policy["descriptions"]:
+            if public_alias in restricted_aliases and (has_virtual or not _paths_disclosed(public_alias, non_virtual)):
+                continue
+            identities.append({**item, "dataset": public_alias})
+        elif item["kind"] == "key" and not has_virtual and all(
+            path in disclosed_paths.get(public_alias, ()) for path in non_virtual
+        ):
+            identities.append({**item, "dataset": public_alias, "meaning": "Disclosed key identity."})
+    view["identities"] = identities
     relationships = {}
     for relationship in view["relationships"]:
         endpoints = [relationship["source"], relationship["target"]]
@@ -295,6 +354,9 @@ def public_view(catalog, policy, details_key):
         for endpoint in endpoints:
             if "dataset" in endpoint:
                 endpoint["dataset"] = aliases[endpoint["dataset"]]
+        if any("dataset" in endpoint and not _paths_disclosed(endpoint["dataset"], endpoint["paths"])
+               for endpoint in endpoints):
+            continue
         relationships[relationship["id"]] = relationship
     view["relationships"] = list(relationships.values())
     recipes, omitted = [], []
@@ -467,7 +529,7 @@ def _lock(inventory, catalog, exports, metadata_adapter, generated):
         options["currentSelection"] = catalog["currentSelection"]
     tools = {item["id"]: {key: value for key, value in item.items() if key != "id"}
              for item in catalog["adapters"]}
-    if "catalog.dcat" in exports:
+    if {"catalog.dcat", "catalog.graph"} & set(exports):
         tools["rdflib"] = {"version": version("rdflib")}
     roles = {"metadata": "metadata", "policy": "disclosure-policy", "recipe": "recipe", "implementation": "implementation"}
     extra = [{"path": item["uri"], "role": roles[item["role"]], "sha256": item["sha256"]}

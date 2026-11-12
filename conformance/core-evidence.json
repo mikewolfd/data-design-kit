@@ -7,7 +7,8 @@
       "id": "CASE-CONF-001",
       "coverage": "exercised",
       "tests": [
-        "tests/core/test_conformance.py::test_core_only_claim_rejects_transformation_success_in_summary"
+        "tests/core/test_conformance.py::test_core_only_claim_rejects_transformation_success_in_summary",
+        "tests/core/test_conformance.py::test_graph_and_rml_profiles_qualify_independently_of_base_catalog"
       ]
     },
     {

@@ -80,6 +80,13 @@
       },
       "uniqueItems": true
     },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/concept"
+      },
+      "uniqueItems": true
+    },
     "versions": {
       "type": "array",
       "items": {
@@ -176,6 +183,34 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "concept": {
+      "description": "One shared definition and the dataset fields that inherit it.",
+      "type": "object",
+      "properties": {
+        "concept": {"$ref": "common.schema.json#/$defs/identifier"},
+        "definition": {"$ref": "common.schema.json#/$defs/artifactRef"},
+        "conceptKind": {"enum": ["identifier", "attribute"]},
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dataset": {"$ref": "common.schema.json#/$defs/artifactRef"},
+              "path": {"$ref": "#/$defs/disclosureFieldPath"}
+            },
+            "required": ["dataset", "path"],
+            "additionalProperties": false
+          },
+          "uniqueItems": true
+        },
+        "description": {"type": "string"},
+        "exactMatch": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/identifier"}, "uniqueItems": true},
+        "closeMatch": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/identifier"}, "uniqueItems": true},
+        "canonicalUrls": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/identifier"}, "uniqueItems": true}
+      },
+      "required": ["concept", "definition", "fields"],
+      "additionalProperties": false
+    },
     "disclosureIdentifiers": {
       "type": "array",
       "items": {"$ref": "common.schema.json#/$defs/identifier"}
@@ -798,6 +833,13 @@
         "origin": {
           "$ref": "common.schema.json#/$defs/datasetOrigin"
         },
+        "model": {
+          "$ref": "common.schema.json#/$defs/modelMethod"
+        },
+        "methodColumn": {
+          "type": "string",
+          "minLength": 1
+        },
         "definition": {
           "type": "object",
           "properties": {
@@ -1406,7 +1448,9 @@
             "openlineage",
             "consumer",
             "report",
-            "recipe"
+            "recipe",
+            "graph",
+            "mapping"
           ]
         }
       },
