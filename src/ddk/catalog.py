@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 
 from .catalog_access import (
     CatalogError, compare_equal, field_at, field_type, relationship_keys, row_identity_names,
-    resolve_query, resolve_relationship, run_checked_query,
+    row_identity_paths, resolve_query, resolve_relationship, run_checked_query,
 )
 from .catalog_exports import DCAT_ADAPTER, LINEAGE_ADAPTER, dcat_document, lineage_documents
 from .catalog_graph import GRAPH_ADAPTER, RML_ADAPTER, child_iri, graph_document, rml_documents, turtle_bytes
@@ -701,8 +701,11 @@ class Assembly:
         self.production_definitions()
 
     def derive_identity(self, alias, schema):
+        row_identity_paths(schema)
+        if any(identity["kind"] == "key" for identity in self.identities[alias]):
+            return
         names = row_identity_names(schema)
-        if names is None or any(identity["kind"] == "key" for identity in self.identities[alias]):
+        if names is None:
             return
         identity = {"dataset": alias, "kind": "key", "scope": "dataset_version",
                     "meaning": "Declared row identity from the selected ODCS object.", "fields": []}
