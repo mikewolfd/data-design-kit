@@ -1,4 +1,4 @@
-"""Deterministic ODCS 3.x -> DocSpec SQL zero-counter compiler and evaluator (Decision 3A / S3a)."""
+"""Deterministic ODCS 3.x -> DocSpec SQL zero-counter and join-metrics compiler (Decision 3A / S3a)."""
 
 from hashlib import sha256
 import re
@@ -26,12 +26,36 @@ def format_sql_literal(value, logical_type=None):
     return f"'{text}'"
 
 
-def _substitute_template(sql_text, table_name, column_name=None):
+def _format_table_ref(table_name, table_schema=None):
+    """Format an optional schema-qualified SQL table identifier."""
+    quoted_name = quote_sql_ident(table_name)
+    if table_schema:
+        return (
+            f"{table_schema}.{quoted_name}"
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", table_schema)
+            else f"{quote_sql_ident(table_schema)}.{quoted_name}"
+        )
+    return quoted_name
+
+
+def _table_ref_variants(table_name, table_schema=None):
+    """Return acceptable canonical SQL table reference spellings."""
+    name_forms = {quote_sql_ident(table_name)}
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", table_name):
+        name_forms.add(table_name)
+    if not table_schema:
+        return name_forms
+    schema_forms = {quote_sql_ident(table_schema)}
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", table_schema):
+        schema_forms.add(table_schema)
+    return {f"{sf}.{nf}" for sf in schema_forms for nf in name_forms}
+
+
+def _substitute_template(sql_text, table_ref, column_name=None):
     """Substitute ODCS ${object}/${table} and ${property}/${column} placeholders."""
-    quoted_table = quote_sql_ident(table_name)
     rendered = sql_text
     for token in ("${object}", "{object}", "${table}", "{table}"):
-        rendered = rendered.replace(token, quoted_table)
+        rendered = rendered.replace(token, table_ref)
     if column_name is not None:
         quoted_col = quote_sql_ident(column_name)
         for token in ("${property}", "{property}", "${column}", "{column}"):
@@ -44,11 +68,28 @@ def _safe_query_suffix(text):
     return slug or sha256(text.encode("utf-8")).hexdigest()[:12]
 
 
-def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None, table_schema="outputs"):
     """Lower standard ODCS 3.x quality rules on an object/properties into DocSpec SQL zero-counters.
+
+    Every uniqueness check lowers to a spill-capable ``GROUP BY ... HAVING COUNT(*) > 1`` subquery
+    rather than ``COUNT(DISTINCT ...)`` so datasets with multiple unique columns never trigger
+    multi-distinct planner failures or unbounded in-memory hash sets in DataFusion.
+
+    By default ``table_schema="outputs"`` targets the exported ``outputs.<table_name>`` relation
+    registered by ``docspec`` after Parquet materialization. Pass ``table_schema=None`` only when
+    compiling counters against an unqualified standalone or input relation.
 
     Returns a dictionary containing:
       - ``table``: target table/view name in the JobSpec
+      - ``tableSchema``: target SQL schema (``"outputs"`` or ``None``)
       - ``rules``: ordered list of compiled rule descriptors
       - ``queries``: ordered list of ``{"name": ..., "sql": ...}`` DocSpec query objects
       - ``unmapped``: list of ODCS rules outside the zero-counter SQL profile
@@ -58,14 +99,16 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
     if not isinstance(table_name, str) or not table_name.strip():
         raise ValueError("Expected a non-empty SQL table/view name.")
 
-    quoted_table = quote_sql_ident(table_name)
-    aggregate_query_name = query_name or f"odcs_counters_{_safe_query_suffix(table_name)}"
+    quoted_table = _format_table_ref(table_name, table_schema)
+    table_slug = _safe_query_suffix(table_name)
+    aggregate_query_name = query_name or f"odcs_counters_{table_slug}"
 
     rules = []
     scalar_projections = []
     explicit_queries = []
     unmapped = []
     seen_rule_ids = set()
+    seen_query_names = set()
 
     def unique_id(candidate):
         if candidate not in seen_rule_ids:
@@ -78,6 +121,17 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
         seen_rule_ids.add(final)
         return final
 
+    def unique_query_name(candidate):
+        if candidate not in seen_query_names and candidate != aggregate_query_name:
+            seen_query_names.add(candidate)
+            return candidate
+        suffix = 2
+        while f"{candidate}_{suffix}" in seen_query_names or f"{candidate}_{suffix}" == aggregate_query_name:
+            suffix += 1
+        final = f"{candidate}_{suffix}"
+        seen_query_names.add(final)
+        return final
+
     def add_scalar_counter(rule_id, kind, expr_sql, description, must_be=0):
         rid = unique_id(rule_id)
         alias_sql = f"{expr_sql} AS {quote_sql_ident(rid)}"
@@ -88,6 +142,26 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
             "query": aggregate_query_name,
             "column": rid,
             "sql": expr_sql,
+            "mustBe": must_be,
+            "description": description,
+        })
+
+    def add_uniqueness_query(rule_id, preferred_q_name, prop_names, description, must_be=0):
+        rid = unique_id(rule_id)
+        q_name = unique_query_name(preferred_q_name)
+        cols_sql = ", ".join(quote_sql_ident(p) for p in prop_names)
+        nn_sql = " AND ".join(f"{quote_sql_ident(p)} IS NOT NULL" for p in prop_names)
+        dup_sql = (
+            f"SELECT COUNT(*) FROM (SELECT {cols_sql} FROM {quoted_table} "
+            f"WHERE {nn_sql} GROUP BY {cols_sql} HAVING COUNT(*) > 1) AS _dup"
+        )
+        explicit_queries.append({"name": q_name, "sql": dup_sql})
+        rules.append({
+            "id": rid,
+            "kind": "uniqueness",
+            "query": q_name,
+            "column": None,
+            "sql": dup_sql,
             "mustBe": must_be,
             "description": description,
         })
@@ -116,10 +190,10 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
             )
 
         if prop.get("unique") is True:
-            add_scalar_counter(
+            add_uniqueness_query(
                 f"{prop_name}:unique",
-                "uniqueness",
-                f"COUNT({col}) - COUNT(DISTINCT {col})",
+                f"odcs_uniq_{table_slug}_{_safe_query_suffix(prop_name)}",
+                [prop_name],
                 f"Property {prop_name!r} must have no duplicate non-null values.",
             )
 
@@ -139,9 +213,65 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 f"Property {prop_name!r} must belong to its declared enum.",
             )
 
+        # String length & regex pattern options
+        min_len = opts.get("minLength")
+        if _is_int(min_len) and min_len > 0:
+            add_scalar_counter(
+                f"{prop_name}:minLength",
+                "length",
+                f"COUNT(CASE WHEN {col} IS NOT NULL AND character_length({col}) < {min_len} THEN 1 END)",
+                f"Property {prop_name!r} must have character length >= {min_len}.",
+            )
+        max_len = opts.get("maxLength")
+        if _is_int(max_len) and max_len >= 0:
+            add_scalar_counter(
+                f"{prop_name}:maxLength",
+                "length",
+                f"COUNT(CASE WHEN {col} IS NOT NULL AND character_length({col}) > {max_len} THEN 1 END)",
+                f"Property {prop_name!r} must have character length <= {max_len}.",
+            )
+        pattern = opts.get("pattern")
+        if isinstance(pattern, str) and pattern:
+            pat_lit = format_sql_literal(pattern)
+            add_scalar_counter(
+                f"{prop_name}:pattern",
+                "pattern",
+                f"COUNT(CASE WHEN {col} IS NOT NULL AND NOT regexp_like({col}, {pat_lit}) THEN 1 END)",
+                f"Property {prop_name!r} must match regex {pattern!r}.",
+            )
+
+        # Array cardinality & distinctness options
+        min_items = opts.get("minItems")
+        if _is_int(min_items) and min_items > 0:
+            add_scalar_counter(
+                f"{prop_name}:minItems",
+                "array_length",
+                f"COUNT(CASE WHEN {col} IS NOT NULL AND COALESCE(array_length({col}), 0) < {min_items} THEN 1 END)",
+                f"Property {prop_name!r} must contain at least {min_items} item(s).",
+            )
+        max_items = opts.get("maxItems")
+        if _is_int(max_items) and max_items >= 0:
+            add_scalar_counter(
+                f"{prop_name}:maxItems",
+                "array_length",
+                f"COUNT(CASE WHEN {col} IS NOT NULL AND COALESCE(array_length({col}), 0) > {max_items} THEN 1 END)",
+                f"Property {prop_name!r} must contain at most {max_items} item(s).",
+            )
+        if opts.get("uniqueItems") is True:
+            add_scalar_counter(
+                f"{prop_name}:uniqueItems",
+                "unique_items",
+                (
+                    f"COUNT(CASE WHEN {col} IS NOT NULL AND "
+                    f"COALESCE(array_length({col}), 0) <> COALESCE(array_length(array_distinct({col})), 0) "
+                    f"THEN 1 END)"
+                ),
+                f"Property {prop_name!r} must contain no duplicate array items.",
+            )
+
         # Range bounds in logicalTypeOptions
         exc_min = opts.get("exclusiveMinimum")
-        if isinstance(exc_min, (int, float)) and not isinstance(exc_min, bool):
+        if _is_number(exc_min):
             lit = format_sql_literal(exc_min, lt)
             add_scalar_counter(
                 f"{prop_name}:exclusiveMinimum",
@@ -149,7 +279,7 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 f"COUNT(CASE WHEN {col} IS NOT NULL AND {col} <= {lit} THEN 1 END)",
                 f"Property {prop_name!r} must be > {exc_min}.",
             )
-        elif "minimum" in opts and isinstance(opts["minimum"], (int, float)) and not isinstance(opts["minimum"], bool):
+        elif "minimum" in opts and _is_number(opts["minimum"]):
             bound = opts["minimum"]
             lit = format_sql_literal(bound, lt)
             if exc_min is True:
@@ -168,7 +298,7 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 )
 
         exc_max = opts.get("exclusiveMaximum")
-        if isinstance(exc_max, (int, float)) and not isinstance(exc_max, bool):
+        if _is_number(exc_max):
             lit = format_sql_literal(exc_max, lt)
             add_scalar_counter(
                 f"{prop_name}:exclusiveMaximum",
@@ -176,7 +306,7 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 f"COUNT(CASE WHEN {col} IS NOT NULL AND {col} >= {lit} THEN 1 END)",
                 f"Property {prop_name!r} must be < {exc_max}.",
             )
-        elif "maximum" in opts and isinstance(opts["maximum"], (int, float)) and not isinstance(opts["maximum"], bool):
+        elif "maximum" in opts and _is_number(opts["maximum"]):
             bound = opts["maximum"]
             lit = format_sql_literal(bound, lt)
             if exc_max is True:
@@ -206,10 +336,11 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
 
             if q_type == "sql" and isinstance(q.get("query"), str) and q["query"].strip():
                 rid = unique_id(raw_id)
-                q_name = q.get("id") or q.get("name") or f"odcs_sql_{_safe_query_suffix(rid)}"
-                rendered_sql = _substitute_template(q["query"], table_name, prop_name)
+                preferred_q_name = q.get("id") or q.get("name") or f"odcs_sql_{_safe_query_suffix(rid)}"
+                q_name = unique_query_name(preferred_q_name)
+                rendered_sql = _substitute_template(q["query"], quoted_table, prop_name)
                 must_be = q.get("mustBe", 0)
-                if not isinstance(must_be, int) or isinstance(must_be, bool):
+                if not _is_int(must_be):
                     unmapped.append({"id": rid, "reason": "SQL quality rule mustBe must be an integer counter target."})
                     continue
                 explicit_queries.append({"name": q_name, "sql": rendered_sql})
@@ -228,6 +359,12 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 add_scalar_counter(raw_id, "not_null", f"COUNT(CASE WHEN {col} IS NULL THEN 1 END)", desc)
                 continue
 
+            if metric in {"duplicateValues", "unique"} and (q.get("mustBe") is None or _is_int(q.get("mustBe"))):
+                must_be = 0 if q.get("mustBe") is None else q["mustBe"]
+                preferred = q.get("id") or q.get("name") or f"odcs_dup_{table_slug}_{_safe_query_suffix(raw_id)}"
+                add_uniqueness_query(raw_id, preferred, [prop_name], desc, must_be=must_be)
+                continue
+
             valid_vals = args.get("validValues") if isinstance(args.get("validValues"), list) else (
                 q.get("validValues") if isinstance(q.get("validValues"), list) else None
             )
@@ -237,6 +374,19 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                     raw_id,
                     "enum",
                     f"COUNT(CASE WHEN {col} IS NOT NULL AND {col} NOT IN ({in_list}) THEN 1 END)",
+                    desc,
+                )
+                continue
+
+            q_pattern = args.get("pattern") if isinstance(args.get("pattern"), str) else (
+                q.get("pattern") if isinstance(q.get("pattern"), str) else None
+            )
+            if q_pattern and q.get("mustBe") in (None, 0):
+                pat_lit = format_sql_literal(q_pattern)
+                add_scalar_counter(
+                    raw_id,
+                    "pattern",
+                    f"COUNT(CASE WHEN {col} IS NOT NULL AND NOT regexp_like({col}, {pat_lit}) THEN 1 END)",
                     desc,
                 )
                 continue
@@ -253,7 +403,7 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 ("exclusiveMaximum", ">="),
                 ("mustBeLessThan", ">="),
             ):
-                if key in q and isinstance(q[key], (int, float)) and not isinstance(q[key], bool):
+                if key in q and _is_number(q[key]):
                     range_clauses.append(f"{col} {op} {format_sql_literal(q[key], lt)}")
             if isinstance(q.get("mustBeBetween"), list) and len(q["mustBeBetween"]) == 2:
                 low_v, high_v = q["mustBeBetween"]
@@ -285,10 +435,11 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
 
         if q_type == "sql" and isinstance(q.get("query"), str) and q["query"].strip():
             rid = unique_id(raw_id)
-            q_name = q.get("id") or q.get("name") or f"odcs_sql_{_safe_query_suffix(rid)}"
-            rendered_sql = _substitute_template(q["query"], table_name)
+            preferred_q_name = q.get("id") or q.get("name") or f"odcs_sql_{_safe_query_suffix(rid)}"
+            q_name = unique_query_name(preferred_q_name)
+            rendered_sql = _substitute_template(q["query"], quoted_table)
             must_be = q.get("mustBe", 0)
-            if not isinstance(must_be, int) or isinstance(must_be, bool):
+            if not _is_int(must_be):
                 unmapped.append({"id": rid, "reason": "SQL quality rule mustBe must be an integer counter target."})
                 continue
             explicit_queries.append({"name": q_name, "sql": rendered_sql})
@@ -305,34 +456,49 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
 
         if metric == "duplicateValues" and isinstance(args.get("properties"), list) and args["properties"]:
             dup_props = [str(p) for p in args["properties"]]
-            if len(dup_props) == 1:
-                dup_col = quote_sql_ident(dup_props[0])
-                add_scalar_counter(
-                    raw_id,
-                    "uniqueness",
-                    f"COUNT({dup_col}) - COUNT(DISTINCT {dup_col})",
-                    desc,
-                )
-            else:
+            must_be = 0 if q.get("mustBe") is None else q.get("mustBe")
+            if not _is_int(must_be):
+                unmapped.append({"id": str(raw_id), "reason": "duplicateValues mustBe must be an integer counter target."})
+                continue
+            preferred = q.get("id") or q.get("name") or f"odcs_dup_{_safe_query_suffix(raw_id)}"
+            add_uniqueness_query(raw_id, preferred, dup_props, desc, must_be=must_be)
+            continue
+
+        if metric == "rowCount":
+            rc_conds = []
+            for key, op in (
+                ("mustBe", "="),
+                ("mustNotBe", "<>"),
+                ("mustBeGreaterThan", ">"),
+                ("mustBeGreaterOrEqualTo", ">="),
+                ("mustBeLessThan", "<"),
+                ("mustBeLessOrEqualTo", "<="),
+            ):
+                if key in q and _is_int(q[key]):
+                    rc_conds.append(f"COUNT(*) {op} {q[key]}")
+            if (
+                isinstance(q.get("mustBeBetween"), list)
+                and len(q["mustBeBetween"]) == 2
+                and all(_is_int(v) for v in q["mustBeBetween"])
+            ):
+                low_v, high_v = q["mustBeBetween"]
+                rc_conds.append(f"(COUNT(*) >= {low_v} AND COUNT(*) <= {high_v})")
+            if rc_conds:
                 rid = unique_id(raw_id)
-                q_name = q.get("id") or q.get("name") or f"odcs_dup_{_safe_query_suffix(rid)}"
-                cols_sql = ", ".join(quote_sql_ident(p) for p in dup_props)
-                nn_sql = " AND ".join(f"{quote_sql_ident(p)} IS NOT NULL" for p in dup_props)
-                dup_sql = (
-                    f"SELECT COUNT(*) FROM (SELECT {cols_sql} FROM {quoted_table} "
-                    f"WHERE {nn_sql} GROUP BY {cols_sql} HAVING COUNT(*) > 1) AS _dup"
-                )
-                explicit_queries.append({"name": q_name, "sql": dup_sql})
+                preferred = q.get("id") or q.get("name") or f"odcs_rowcount_{_safe_query_suffix(rid)}"
+                q_name = unique_query_name(preferred)
+                rc_sql = f"SELECT CASE WHEN {' AND '.join(rc_conds)} THEN 0 ELSE 1 END AS {quote_sql_ident(rid)} FROM {quoted_table}"
+                explicit_queries.append({"name": q_name, "sql": rc_sql})
                 rules.append({
                     "id": rid,
-                    "kind": "uniqueness",
+                    "kind": "row_count",
                     "query": q_name,
                     "column": None,
-                    "sql": dup_sql,
+                    "sql": rc_sql,
                     "mustBe": 0,
                     "description": desc,
                 })
-            continue
+                continue
 
         unmapped.append({"id": str(raw_id), "reason": f"Unsupported object quality rule {q_type}:{metric or 'unknown'}."})
 
@@ -351,35 +517,13 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
                 if isinstance(cp.get("value"), list) and all(isinstance(x, str) and x for x in cp["value"]):
                     pk_cols = list(cp["value"])
                     break
-    if pk_cols:
-        if len(pk_cols) == 1:
-            pk_col = quote_sql_ident(pk_cols[0])
-            if f"{pk_cols[0]}:unique" not in seen_rule_ids:
-                add_scalar_counter(
-                    "primary_key:unique",
-                    "uniqueness",
-                    f"COUNT({pk_col}) - COUNT(DISTINCT {pk_col})",
-                    f"Primary key ({pk_cols[0]}) must have no duplicate values.",
-                )
-        else:
-            rid = unique_id("primary_key:unique")
-            q_name = f"odcs_pk_{_safe_query_suffix(table_name)}"
-            cols_sql = ", ".join(quote_sql_ident(p) for p in pk_cols)
-            nn_sql = " AND ".join(f"{quote_sql_ident(p)} IS NOT NULL" for p in pk_cols)
-            pk_sql = (
-                f"SELECT COUNT(*) FROM (SELECT {cols_sql} FROM {quoted_table} "
-                f"WHERE {nn_sql} GROUP BY {cols_sql} HAVING COUNT(*) > 1) AS _dup"
-            )
-            explicit_queries.append({"name": q_name, "sql": pk_sql})
-            rules.append({
-                "id": rid,
-                "kind": "uniqueness",
-                "query": q_name,
-                "column": None,
-                "sql": pk_sql,
-                "mustBe": 0,
-                "description": f"Primary key ({', '.join(pk_cols)}) must have no duplicate values.",
-            })
+    if pk_cols and not (len(pk_cols) == 1 and f"{pk_cols[0]}:unique" in seen_rule_ids):
+        add_uniqueness_query(
+            "primary_key:unique",
+            f"odcs_pk_{table_slug}",
+            pk_cols,
+            f"Primary key ({', '.join(pk_cols)}) must have no duplicate values.",
+        )
 
     queries = []
     if scalar_projections:
@@ -390,9 +534,135 @@ def compile_odcs_quality_counters(schema_obj, table_name, *, query_name=None):
 
     return {
         "table": table_name,
+        "tableSchema": table_schema,
         "rules": rules,
         "queries": queries,
         "unmapped": unmapped,
+    }
+
+
+def compile_relationship_join_metrics_queries(catalog, *, table_schema="outputs", dataset_tables=None):
+    """Compile DataFusion SQL join-metrics queries for declared dataset-to-dataset relationships.
+
+    Every generated query places deduplicated target keys on the LEFT side of a ``RIGHT ANTI JOIN``
+    so DataFusion builds the hash table on the small target key domain and streams the source table
+    without ``COUNT(DISTINCT ...)`` sets or multi-reference CTE re-planning.
+
+    Returns a dictionary containing:
+      - ``relationships``: list of ``{"relationshipId", "query", "source", "target", "sql"}``
+      - ``queries``: list of ``{"name": ..., "sql": ...}`` DocSpec query objects
+      - ``skipped``: list of ``{"relationshipId", "reason"}`` for non-local/non-equality links
+    """
+    if not isinstance(catalog, dict):
+        raise ValueError("Expected an assembled DDK catalog dictionary.")
+
+    table_map = dict(dataset_tables or {})
+    known_aliases = set()
+    for ds in catalog.get("datasets", ()) or ():
+        if isinstance(ds, dict) and isinstance(ds.get("alias"), str):
+            alias = ds["alias"]
+            known_aliases.add(alias)
+            table_map.setdefault(alias, alias.rpartition("/")[2] or alias)
+
+    compiled_rels = []
+    queries = []
+    skipped = []
+    seen_q_names = set()
+
+    for rel in catalog.get("relationships", ()) or ():
+        if not isinstance(rel, dict) or not isinstance(rel.get("id"), str):
+            continue
+        rel_id = rel["id"]
+        if rel.get("match") == "project_rule":
+            skipped.append({"relationshipId": rel_id, "reason": "Relationship uses a project_rule match."})
+            continue
+        nulls = rel.get("nulls", "skip")
+        if nulls == "unknown":
+            skipped.append({"relationshipId": rel_id, "reason": "Relationship null handling is unknown."})
+            continue
+        source = rel.get("source") or {}
+        target = rel.get("target") or {}
+        if "catalog" in target or "dataset" not in target or "dataset" not in source:
+            skipped.append({"relationshipId": rel_id, "reason": "Relationship target is external or in a peer catalog."})
+            continue
+        src_alias = source["dataset"]
+        tgt_alias = target["dataset"]
+        if src_alias not in known_aliases or tgt_alias not in known_aliases:
+            skipped.append({"relationshipId": rel_id, "reason": "Source or target dataset is absent from catalog."})
+            continue
+        src_paths = source.get("paths") or ()
+        tgt_paths = target.get("paths") or ()
+        if (
+            not src_paths
+            or len(src_paths) != len(tgt_paths)
+            or not all(len(p) == 1 and "field" in p[0] for p in src_paths)
+            or not all(len(p) == 1 and "field" in p[0] for p in tgt_paths)
+        ):
+            skipped.append({"relationshipId": rel_id, "reason": "Relationship paths are nested or array-valued."})
+            continue
+
+        src_fields = [p[0]["field"] for p in src_paths]
+        tgt_fields = [p[0]["field"] for p in tgt_paths]
+        src_ref = _format_table_ref(table_map[src_alias], table_schema)
+        tgt_ref = _format_table_ref(table_map[tgt_alias], table_schema)
+
+        src_cols_sql = ", ".join(quote_sql_ident(f) for f in src_fields)
+        tgt_cols_sql = ", ".join(quote_sql_ident(f) for f in tgt_fields)
+        if nulls == "match":
+            eligible_pred = "TRUE"
+            tgt_where = ""
+            src_where = ""
+            join_cond = " AND ".join(
+                f"_tgt.{quote_sql_ident(tf)} IS NOT DISTINCT FROM _src.{quote_sql_ident(sf)}"
+                for sf, tf in zip(src_fields, tgt_fields)
+            )
+        else:
+            eligible_pred = " AND ".join(f"{quote_sql_ident(sf)} IS NOT NULL" for sf in src_fields)
+            tgt_nn = " AND ".join(f"{quote_sql_ident(tf)} IS NOT NULL" for tf in tgt_fields)
+            tgt_where = f" WHERE {tgt_nn}"
+            src_where = f" WHERE {eligible_pred}"
+            join_cond = " AND ".join(
+                f"_tgt.{quote_sql_ident(tf)} = _src.{quote_sql_ident(sf)}"
+                for sf, tf in zip(src_fields, tgt_fields)
+            )
+
+        base_q_name = f"ddk_join_metrics_{_safe_query_suffix(rel_id)}"
+        q_name = base_q_name
+        suffix = 2
+        while q_name in seen_q_names:
+            q_name = f"{base_q_name}_{suffix}"
+            suffix += 1
+        seen_q_names.add(q_name)
+
+        sql = (
+            "SELECT "
+            "s.source_row_count, "
+            "s.eligible_source_rows, "
+            "s.eligible_source_rows - u.unmatched_rows AS matched_rows, "
+            "u.unmatched_rows "
+            f"FROM (SELECT COUNT(*) AS source_row_count, "
+            f"COUNT(CASE WHEN {eligible_pred} THEN 1 END) AS eligible_source_rows "
+            f"FROM {src_ref}) AS s "
+            "CROSS JOIN ("
+            "SELECT COUNT(*) AS unmatched_rows "
+            f"FROM (SELECT {tgt_cols_sql} FROM {tgt_ref}{tgt_where} GROUP BY {tgt_cols_sql}) AS _tgt "
+            f"RIGHT ANTI JOIN (SELECT {src_cols_sql} FROM {src_ref}{src_where}) AS _src "
+            f"ON {join_cond}"
+            ") AS u"
+        )
+        queries.append({"name": q_name, "sql": sql})
+        compiled_rels.append({
+            "relationshipId": rel_id,
+            "query": q_name,
+            "source": src_alias,
+            "target": tgt_alias,
+            "sql": sql,
+        })
+
+    return {
+        "relationships": compiled_rels,
+        "queries": queries,
+        "skipped": skipped,
     }
 
 
@@ -427,16 +697,17 @@ def _normalize_sql(sql):
     return "".join(out).strip().rstrip(";").strip()
 
 
-def _expected_query_sql(selected_rules, table_name):
+def _expected_query_sql(selected_rules, table_name, *, table_schema="outputs"):
     """Return acceptable canonical SQL strings for ``selected_rules`` against ``table_name``."""
+    ref_variants = _table_ref_variants(table_name, table_schema)
     if all(rule["column"] is not None for rule in selected_rules):
         projections = ", ".join(f"{rule['sql']} AS {quote_sql_ident(rule['column'])}" for rule in selected_rules)
-        candidates = {f"SELECT {projections} FROM {quote_sql_ident(table_name)}"}
-        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", table_name):
-            candidates.add(f"SELECT {projections} FROM {table_name}")
-        return {_normalize_sql(candidate) for candidate in candidates}
+        return {_normalize_sql(f"SELECT {projections} FROM {ref}") for ref in ref_variants}
     if len(selected_rules) == 1 and selected_rules[0]["column"] is None:
-        return {_normalize_sql(selected_rules[0]["sql"])}
+        canonical_ref = _format_table_ref(table_name, table_schema)
+        base_sql = selected_rules[0]["sql"]
+        variants = {base_sql.replace(canonical_ref, ref) for ref in ref_variants}
+        return {_normalize_sql(v) for v in variants}
     return None
 
 
@@ -491,7 +762,16 @@ def evaluate_job_quality_queries(
             )
         observed = observed_queries.get(q_name)
         out_names = alias_to_output_names.get(ds_alias, [ds_art.effective["name"]])
-        compiled = compile_odcs_quality_counters(ds_art.effective, out_names[0], query_name=q_name)
+        default_compiled = compile_odcs_quality_counters(ds_art.effective, out_names[0])
+        explicit_matches = [
+            rule for rule in default_compiled["rules"]
+            if rule["column"] is None and (rule["query"] == q_name or rule["id"] == q_name)
+        ]
+        compiled = (
+            default_compiled
+            if explicit_matches
+            else compile_odcs_quality_counters(ds_art.effective, out_names[0], query_name=q_name)
+        )
         rules_by_id = {rule["id"]: rule for rule in compiled["rules"]}
 
         requested_rule_ids = binding.get("rules")
@@ -503,6 +783,8 @@ def evaluate_job_quality_queries(
                     f"Quality query {q_name!r} references unknown ODCS counter rule(s): {missing}.",
                 )
             selected_rules = [rules_by_id[rid] for rid in requested_rule_ids]
+        elif explicit_matches:
+            selected_rules = explicit_matches
         else:
             selected_rules = [
                 rule for rule in compiled["rules"]
@@ -514,16 +796,27 @@ def evaluate_job_quality_queries(
                     f"Quality query {q_name!r} matched no compiled ODCS zero-counter rules on {ds_alias!r}.",
                 )
 
+        if len(selected_rules) > 1 and any(rule["column"] is None for rule in selected_rules):
+            raise CatalogError(
+                "CATALOG-QUALITY-COVERAGE",
+                f"Quality query {q_name!r} mixes standalone table/SQL counter rule(s) with multi-rule projections; bind each standalone rule to its own query.",
+            )
+
         expected_sqls = set()
         for out_candidate in out_names:
-            candidate_compiled = compile_odcs_quality_counters(ds_art.effective, out_candidate, query_name=q_name)
+            candidate_compiled = compile_odcs_quality_counters(
+                ds_art.effective,
+                out_candidate,
+                query_name=None if explicit_matches else q_name,
+                table_schema="outputs",
+            )
             cand_by_id = {rule["id"]: rule for rule in candidate_compiled["rules"]}
             cand_rules = [cand_by_id[rule["id"]] for rule in selected_rules if rule["id"] in cand_by_id]
-            acceptable = _expected_query_sql(cand_rules, out_candidate)
+            acceptable = _expected_query_sql(cand_rules, out_candidate, table_schema="outputs")
             if acceptable:
                 expected_sqls.update(acceptable)
         actual_sql = spec_queries[q_name].get("sql")
-        if not isinstance(actual_sql, str) or (expected_sqls and _normalize_sql(actual_sql) not in expected_sqls):
+        if not isinstance(actual_sql, str) or not expected_sqls or _normalize_sql(actual_sql) not in expected_sqls:
             raise CatalogError(
                 "CATALOG-JOB-SPEC-MISMATCH",
                 f"DocSpec JobSpec query {q_name!r} SQL does not match compiled ODCS zero-counter SQL for {ds_alias!r}.",

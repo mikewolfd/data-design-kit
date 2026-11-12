@@ -249,6 +249,90 @@ class DocSpecAdapter:
             }
         return {"status": "succeeded", "ipc": ipc, **observed_result}
 
+    def export_nquads(self, input_path, output_path, *, column="nquad", new_process_group=None):
+        """Stream a Parquet string column to an atomic N-Quads (.nq) file in native Rust."""
+        input_resolved = Path(input_path).resolve(strict=True)
+        output_resolved = Path(output_path).resolve()
+        if not isinstance(column, str) or not column.strip():
+            raise ValueError("N-Quads export column name must be a non-empty string")
+        folder = Path(tempfile.mkdtemp(prefix="export-nquads-", dir=self.evidence_dir))
+        limits_path = folder / "limits.json"
+        write_json(limits_path, self.limits)
+        if _binary_identity(self.executable) != self._executable_stat:
+            raise ValueError("Selected DocSpec executable changed after adapter initialization")
+        started_at = _now()
+        started = monotonic()
+        transport = run_bounded(
+            [
+                str(self.executable),
+                "--limits",
+                str(limits_path),
+                "export-nquads",
+                "--input",
+                str(input_resolved),
+                "--output",
+                str(output_resolved),
+                "--column",
+                column,
+            ],
+            timeout=self.timeout,
+            limit=self.capture_bytes,
+            stop_on_stdout_limit=True,
+            new_process_group=self.new_process_group if new_process_group is None else new_process_group,
+        )
+        stdout = transport["stdout"]
+        (folder / "stdout.json").write_bytes(self.redaction.captured(stdout))
+        (folder / "stderr.log").write_bytes(self.redaction.captured(transport["stderr"]))
+        status = "unknown"
+        result = {}
+        error = None
+        if transport["timedOut"] or transport["stdoutTruncated"]:
+            error = _error("DOCSPEC-TIMEOUT", "Native N-Quads export exceeded time or receipt limit")
+        else:
+            try:
+                parsed = json.loads(stdout)
+            except (ValueError, UnicodeError):
+                parsed = None
+            if transport["exitCode"] == 0 and isinstance(parsed, dict):
+                status = "succeeded"
+                result = parsed
+            elif isinstance(parsed, dict) and isinstance(parsed.get("error"), dict):
+                status = "failed"
+                error = parsed["error"]
+            else:
+                error = _error("DOCSPEC-NO-RECEIPT", "Native N-Quads export returned no structured result")
+        receipt = {
+            "status": status,
+            "tool": self.tool,
+            "endpoint": str(self.executable),
+            "input": {"path": str(input_resolved), "sha256": file_sha256(input_resolved)},
+            "output": str(output_resolved),
+            "column": column,
+            "startedAt": started_at,
+            "endedAt": _now(),
+            "durationSeconds": monotonic() - started,
+            "result": result,
+            "exitCode": transport["exitCode"],
+        }
+        if error is not None:
+            receipt["error"] = error
+        receipt_path = folder / "receipt.json"
+        receipt_sha256 = write_json(receipt_path, receipt)["sha256"]
+        response = {
+            "status": status,
+            "result": result,
+            "receipt": receipt,
+            "evidence": {
+                "kind": "native-report",
+                "path": str(receipt_path),
+                "sha256": receipt_sha256,
+                "tool": RUNTIME,
+            },
+        }
+        if error is not None:
+            response["error"] = error
+        return response
+
     def _invoke(self, command, request, *, input_digests=None, prefix=(), operation_context=None,
                 prior=None, confirmation=None, original_request=None, identity_constraint=None,
                 refusal=None, semantic_profile=None, cancel_event=None, spec_path=None):

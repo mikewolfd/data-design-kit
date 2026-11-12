@@ -1,12 +1,20 @@
 """RML mappings (DDK-CATALOG-014): rows, values and links from the declarations, and match decisions."""
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
+from ddk.adapters.docspec import DocSpecAdapter
 from ddk.catalog import assemble_catalog
-from ddk.catalog_graph import VOCAB, rml_documents, rml_mappings
+from ddk.catalog_graph import (
+    VOCAB,
+    compile_graph_quads_job,
+    materialize_graph_quads,
+    rml_documents,
+    rml_mappings,
+)
 
 COMMERCE = Path(__file__).resolve().parents[2] / "examples" / "commerce"
 
@@ -594,5 +602,483 @@ def test_object_array_foreign_keys_iri_templates_and_zero_scan_peer_row_links():
     assert see_also in mappings["hearings#field:primary_bill_id"]["po"]
     assert see_also in mappings["hearings#array:related_bills"]["po"]
     assert see_also in mappings["hearings#item:bill_refs:bill_id"]["po"]
+
+
+def test_compile_graph_quads_job_selective_zero_scan_and_public_withholding(tmp_path):
+    nested = _nested_catalog()
+    compiled_all = compile_graph_quads_job(
+        nested,
+        scratch_dir=tmp_path / "scratch",
+        output_parquet_path=tmp_path / "quads.parquet",
+        job_id="urn:ex:job:quads",
+    )
+    spec_all = compiled_all["jobSpec"]
+    assert spec_all["id"] == "urn:ex:job:quads"
+    assert len(spec_all["inputs"]) == 4
+    # Keyless `logs` gets one materialized ROW_NUMBER() step; `stations.sensors` gets one materialized obj_arr step.
+    step_map = {s["name"]: s for s in spec_all["steps"]}
+    numbered_steps = [s for name, s in step_map.items() if name.endswith("_numbered")]
+    obj_arr_steps = [s for name, s in step_map.items() if name.startswith("obj_arr_")]
+    assert len(numbered_steps) == 1 and numbered_steps[0]["materialize"] is True
+    assert len(obj_arr_steps) == 1 and obj_arr_steps[0]["materialize"] is True
+    # Non-key equality join `visits` -> `stations` builds hash table on LEFT (`stations` AS `p`).
+    stations_ident = next(inp["name"] for inp in spec_all["inputs"] if inp["path"].endswith("stations.parquet"))
+    visits_ident = next(inp["name"] for inp in spec_all["inputs"] if inp["path"].endswith("visits.parquet"))
+    assert f"FROM {stations_ident} AS p INNER JOIN {visits_ident} AS c" in step_map["raw_quads"]["sql"]
+
+    # Selective `datasets=("logs",)` maps keyless logs + direct-key FK to `stations` WITHOUT scanning stations.parquet!
+    selective_logs = compile_graph_quads_job(
+        nested,
+        scratch_dir=tmp_path / "scratch-logs",
+        output_parquet_path=tmp_path / "logs.quads.parquet",
+        datasets=("logs",),
+    )
+    assert [Path(inp["path"]).name for inp in selective_logs["jobSpec"]["inputs"]] == ["logs.parquet"]
+    logs_sql = next(s["sql"] for s in selective_logs["jobSpec"]["steps"] if s["name"] == "raw_quads")
+    assert "urn:ex:relationship:log-station" in logs_sql
+    assert "urn:ex:dataset:stations:row" in logs_sql
+
+    # Selective `datasets=("visits",)` automatically pulls in `stations.parquet` because `visit-station` is a non-key join.
+    selective_visits = compile_graph_quads_job(
+        nested,
+        scratch_dir=tmp_path / "scratch-visits",
+        output_parquet_path=tmp_path / "visits.quads.parquet",
+        datasets=("visits",),
+    )
+    assert sorted(Path(inp["path"]).name for inp in selective_visits["jobSpec"]["inputs"]) == [
+        "stations.parquet",
+        "visits.parquet",
+    ]
+
+    # Public disclosure withholding skips datasets whose row keys are withheld.
+    public_cat = _nested_catalog()
+    public_cat["audience"] = "public"
+    public_cat["extensions"]["urn:ddk:catalog:assembly"]["disclosedDefinitionPaths"] = {
+        "stations": [[{"field": "station_code"}], [{"field": "name"}]],
+        "tags": [],
+    }
+    public_compiled = compile_graph_quads_job(
+        public_cat,
+        scratch_dir=tmp_path / "scratch-pub",
+        output_parquet_path=tmp_path / "pub.quads.parquet",
+    )
+    assert [Path(inp["path"]).name for inp in public_compiled["jobSpec"]["inputs"]] == ["stations.parquet"]
+    assert set(public_compiled["notes"]) >= {"logs", "tags", "visits"}
+
+
+def test_native_datafusion_and_rust_quad_materialization_and_federated_sql_join(tmp_path):
+    docspec_bin = (
+        os.environ.get("DDK_DOCSPEC_BIN")
+        or os.environ.get("DDK_DOCSPEC_BINARY")
+        or "/Users/mikewolfd/Work/artifacts/ddk-docspec-runtime-20261111/docspec"
+    )
+    if not Path(docspec_bin).is_file():
+        pytest.skip(f"docspec binary unavailable at {docspec_bin}")
+
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    rdflib = pytest.importorskip("rdflib")
+    from datetime import datetime, timezone
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Stack A (`legislative`): `bills` with special ID chars (`HR/42#1`), escaped quotes/newlines/emoji, and int64 > 2^53
+    bills_path = data_dir / "bills.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "bill_id": "hr4173-111",
+                    "title": 'Dodd-Frank "Wall Street" Reform\nLine 2 \\ 🏛️',
+                    "enacted": True,
+                    "appropriation_cents": 9007199254740993,
+                    "updated_at": datetime(2026, 1, 15, 14, 30, 0, tzinfo=timezone.utc),
+                },
+                {
+                    "bill_id": "HR/42#1",
+                    "title": "Special IRI Key Bill",
+                    "enacted": False,
+                    "appropriation_cents": 500,
+                    "updated_at": None,
+                },
+            ],
+            schema=pa.schema([
+                ("bill_id", pa.string()),
+                ("title", pa.string()),
+                ("enacted", pa.bool_()),
+                ("appropriation_cents", pa.int64()),
+                ("updated_at", pa.timestamp("us", tz="UTC")),
+            ]),
+        ),
+        bills_path,
+    )
+
+    s = lambda name, kind="string", **more: {"name": name, "logicalType": kind, **more}  # noqa: E731
+    stack_a_cat = {
+        "id": "urn:ex:legislative:catalog",
+        "datasets": [{"alias": "bills", "id": "urn:ex:legislative:dataset:bills", "role": "source_record"}],
+        "extensions": {
+            "urn:ddk:catalog:assembly": {
+                "datasetDefinitions": {
+                    "bills": {
+                        "properties": [
+                            s("bill_id"),
+                            s("title"),
+                            s("enacted", "boolean"),
+                            s("appropriation_cents", "integer", physicalType="BIGINT"),
+                            s("updated_at", "timestamp"),
+                        ]
+                    }
+                }
+            }
+        },
+        "identities": [{"dataset": "bills", "kind": "key", "fields": [{"path": [{"field": "bill_id"}], "virtual": False}]}],
+        "relationships": [],
+        "concepts": [{
+            "concept": "urn:ex:concept:bill-id",
+            "definition": "bill-id",
+            "conceptKind": "identifier",
+            "iriTemplate": "https://congress.example.org/bill/{value}",
+            "fields": [{"dataset": "bills", "path": [{"field": "bill_id"}]}],
+        }],
+        "versions": [{"id": "urn:ex:legislative:version:bills:1", "dataset": "bills"}],
+        "representations": [{
+            "id": "urn:ex:legislative:file:bills:1",
+            "version": "urn:ex:legislative:version:bills:1",
+            "kind": "file",
+            "availability": "available",
+            "mediaType": "application/vnd.apache.parquet",
+            "location": bills_path.as_uri(),
+        }],
+        "releases": [{"id": "urn:ex:legislative:release:1", "members": ["urn:ex:legislative:version:bills:1"]}],
+        "selections": [],
+    }
+
+    # Stack B (`oversight`): `hearings` (nested struct, scalar array, object array with intermediate None + peer/local FKs),
+    # `committees` (target of object-array FK & non-key join), `logs` (keyless bnode), `matches` (`matchDecisions`).
+    hearings_path = data_dir / "hearings.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "hearing_id": "H-1",
+                    "chamber_room": {"building": "Rayburn", "room": "2128"},
+                    "primary_bill_id": "hr4173-111",
+                    "related_bills": ["hr4173-111", None, "HR/42#1"],
+                    "bill_refs": [
+                        {"bill_id": "hr4173-111", "committee_code": "HSBA"},
+                        None,
+                        {"bill_id": "HR/42#1", "committee_code": "SSBK"},
+                    ],
+                    "committee_name": "Financial Services",
+                }
+            ],
+            schema=pa.schema([
+                ("hearing_id", pa.string()),
+                ("chamber_room", pa.struct([("building", pa.string()), ("room", pa.string())])),
+                ("primary_bill_id", pa.string()),
+                ("related_bills", pa.list_(pa.string())),
+                ("bill_refs", pa.list_(pa.struct([("bill_id", pa.string()), ("committee_code", pa.string())]))),
+                ("committee_name", pa.string()),
+            ]),
+        ),
+        hearings_path,
+    )
+    committees_path = data_dir / "committees.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {"committee_code": "HSBA", "name": "Financial Services"},
+                {"committee_code": "SSBK", "name": "Banking"},
+            ],
+            schema=pa.schema([("committee_code", pa.string()), ("name", pa.string())]),
+        ),
+        committees_path,
+    )
+    logs_path = data_dir / "logs.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [{"note": "ingested H-1"}, {"note": "verified H-1"}],
+            schema=pa.schema([("note", pa.string())]),
+        ),
+        logs_path,
+    )
+    matches_path = data_dir / "matches.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {"left_code": "HSBA", "right_code": "SSBK", "decision": "not_same"},
+                {"left_code": "HSBA", "right_code": "HSBA", "decision": "same"},
+            ],
+            schema=pa.schema([("left_code", pa.string()), ("right_code", pa.string()), ("decision", pa.string())]),
+        ),
+        matches_path,
+    )
+
+    stack_b_cat = {
+        "id": "urn:ex:oversight:catalog",
+        "imports": {
+            "legislative": {
+                "id": "urn:ex:legislative:catalog",
+                "audience": "local",
+                "lockSha256": "b" * 64,
+            }
+        },
+        "datasets": [
+            {"alias": "hearings", "id": "urn:ex:oversight:dataset:hearings", "role": "source_record"},
+            {"alias": "committees", "id": "urn:ex:oversight:dataset:committees", "role": "reference"},
+            {"alias": "logs", "id": "urn:ex:oversight:dataset:logs", "role": "evidence"},
+            {"alias": "matches", "id": "urn:ex:oversight:dataset:matches", "role": "evidence"},
+        ],
+        "extensions": {
+            "urn:ddk:catalog:assembly": {
+                "datasetDefinitions": {
+                    "hearings": {
+                        "properties": [
+                            s("hearing_id"),
+                            s("chamber_room", "object", properties=[s("building"), s("room")]),
+                            s("primary_bill_id"),
+                            s("related_bills", "array", items={"logicalType": "string"}),
+                            s("bill_refs", "array", items={
+                                "logicalType": "object",
+                                "properties": [s("bill_id"), s("committee_code")],
+                            }),
+                            s("committee_name"),
+                        ]
+                    },
+                    "committees": {"properties": [s("committee_code"), s("name")]},
+                    "logs": {"properties": [s("note")]},
+                    "matches": {
+                        "properties": [s("left_code"), s("right_code"), s("decision")],
+                        "customProperties": [{"vendor": "ddk", "property": "matchDecisions", "value": "decision"}],
+                    },
+                },
+                "peerCatalogs": {
+                    "legislative": {
+                        "id": "urn:ex:legislative:catalog",
+                        "audience": "local",
+                        "datasets": {"bills": "urn:ex:legislative:dataset:bills"},
+                        "identities": [{
+                            "dataset": "bills",
+                            "kind": "key",
+                            "fields": [{"path": [{"field": "bill_id"}], "virtual": False}],
+                        }],
+                        "datasetDefinitions": {"bills": {"properties": [s("bill_id")]}},
+                    }
+                },
+            }
+        },
+        "identities": [
+            {"dataset": "hearings", "kind": "key", "fields": [{"path": [{"field": "hearing_id"}], "virtual": False}]},
+            {"dataset": "committees", "kind": "key", "fields": [{"path": [{"field": "committee_code"}], "virtual": False}]},
+        ],
+        "relationships": [
+            {
+                "id": "urn:ex:oversight:relationship:primary-bill",
+                "match": "equal",
+                "scope": "version_pair",
+                "source": {"dataset": "hearings", "paths": [[{"field": "primary_bill_id"}]]},
+                "target": {"catalog": "legislative", "dataset": "bills", "paths": [[{"field": "bill_id"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:ref-bill",
+                "match": "equal",
+                "scope": "version_pair",
+                "source": {"dataset": "hearings", "paths": [[{"field": "bill_refs"}, {"each": True}, {"field": "bill_id"}]]},
+                "target": {"catalog": "legislative", "dataset": "bills", "paths": [[{"field": "bill_id"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:ref-committee",
+                "match": "equal",
+                "scope": "same_release",
+                "source": {"dataset": "hearings", "paths": [[{"field": "bill_refs"}, {"each": True}, {"field": "committee_code"}]]},
+                "target": {"dataset": "committees", "paths": [[{"field": "committee_code"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:hearing-committee-by-name",
+                "match": "equal",
+                "scope": "same_release",
+                "source": {"dataset": "hearings", "paths": [[{"field": "committee_name"}]]},
+                "target": {"dataset": "committees", "paths": [[{"field": "name"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:match-left",
+                "match": "equal",
+                "scope": "same_release",
+                "source": {"dataset": "matches", "paths": [[{"field": "left_code"}]]},
+                "target": {"dataset": "committees", "paths": [[{"field": "committee_code"}]]},
+            },
+            {
+                "id": "urn:ex:oversight:relationship:match-right",
+                "match": "equal",
+                "scope": "same_release",
+                "source": {"dataset": "matches", "paths": [[{"field": "right_code"}]]},
+                "target": {"dataset": "committees", "paths": [[{"field": "committee_code"}]]},
+            },
+        ],
+        "concepts": [{
+            "concept": "urn:ex:concept:bill-id",
+            "definition": "bill-id",
+            "conceptKind": "identifier",
+            "iriTemplate": "https://congress.example.org/bill/{value}",
+            "fields": [
+                {"dataset": "hearings", "path": [{"field": "primary_bill_id"}]},
+                {"dataset": "hearings", "path": [{"field": "related_bills"}, {"each": True}]},
+                {"dataset": "hearings", "path": [{"field": "bill_refs"}, {"each": True}, {"field": "bill_id"}]},
+            ],
+        }],
+        "versions": [
+            {"id": f"urn:ex:oversight:version:{alias}:1", "dataset": alias}
+            for alias in ("hearings", "committees", "logs", "matches")
+        ],
+        "representations": [
+            {
+                "id": f"urn:ex:oversight:file:{alias}:1",
+                "version": f"urn:ex:oversight:version:{alias}:1",
+                "kind": "file",
+                "availability": "available",
+                "mediaType": "application/vnd.apache.parquet",
+                "location": (data_dir / f"{alias}.parquet").as_uri(),
+            }
+            for alias in ("hearings", "committees", "logs", "matches")
+        ],
+        "releases": [{
+            "id": "urn:ex:oversight:release:1",
+            "members": [
+                f"urn:ex:oversight:version:{alias}:1"
+                for alias in ("hearings", "committees", "logs", "matches")
+            ],
+        }],
+        "selections": [],
+    }
+
+    limits = {
+        "compute_threads": 2,
+        "memory_bytes": 256 << 20,
+        "scratch_bytes": 128 << 20,
+        "batch_rows": 4096,
+        "max_batch_bytes": 8 << 20,
+        "max_metadata_bytes": 4 << 20,
+    }
+    adapter = DocSpecAdapter(docspec_bin, limits, evidence_dir=tmp_path / "evidence")
+
+    res_a = materialize_graph_quads(
+        stack_a_cat,
+        adapter,
+        work_dir=tmp_path / "work-a",
+        output_parquet_path=tmp_path / "out" / "legislative.quads.parquet",
+        output_nquads_path=tmp_path / "out" / "legislative.nq",
+    )
+    assert res_a["status"] == "succeeded", res_a
+    assert res_a["quadCount"] == res_a["job"]["result"]["outputs"][0]["rows"] > 0
+
+    res_b = materialize_graph_quads(
+        stack_b_cat,
+        adapter,
+        work_dir=tmp_path / "work-b",
+        output_parquet_path=tmp_path / "out" / "oversight.quads.parquet",
+        output_nquads_path=tmp_path / "out" / "oversight.nq",
+    )
+    assert res_b["status"] == "succeeded", res_b
+    assert res_b["quadCount"] == res_b["job"]["result"]["outputs"][0]["rows"] > 0
+    # Zero peer scan: Stack B never opens `bills.parquet`
+    assert "bills.parquet" not in {Path(i["path"]).name for i in res_b["compiled"]["jobSpec"]["inputs"]}
+
+    # Verify Rust-emitted `.nq` files parse cleanly as W3C N-Quads with exact escaped literals, >2^53 xsd:long,
+    # percent-encoded IRIs (`HR%2F42%231`), 1-based sparse object-array indices (`:1` and `:3`), bnodes, and matchDecisions.
+    ds = rdflib.Dataset(default_union=True)
+    ds.parse(data=(tmp_path / "out" / "legislative.nq").read_text(encoding="utf-8"), format="nquads")
+    ds.parse(data=(tmp_path / "out" / "oversight.nq").read_text(encoding="utf-8"), format="nquads")
+
+    bill_dodd = rdflib.URIRef("urn:ex:legislative:dataset:bills:row:hr4173-111")
+    bill_special = rdflib.URIRef("urn:ex:legislative:dataset:bills:row:HR%2F42%231")
+    hearing_h1 = rdflib.URIRef("urn:ex:oversight:dataset:hearings:row:H-1")
+    item_1 = rdflib.URIRef("urn:ex:oversight:dataset:hearings:row:H-1:bill_refs:1")
+    item_2 = rdflib.URIRef("urn:ex:oversight:dataset:hearings:row:H-1:bill_refs:2")
+    item_3 = rdflib.URIRef("urn:ex:oversight:dataset:hearings:row:H-1:bill_refs:3")
+
+    assert (
+        bill_dodd,
+        rdflib.URIRef("urn:ex:legislative:dataset:bills:field:title"),
+        rdflib.Literal('Dodd-Frank "Wall Street" Reform\nLine 2 \\ 🏛️'),
+    ) in ds
+    assert (
+        bill_dodd,
+        rdflib.URIRef("urn:ex:legislative:dataset:bills:field:appropriation_cents"),
+        rdflib.Literal("9007199254740993", datatype=rdflib.XSD.long),
+    ) in ds
+    assert (
+        bill_special,
+        rdflib.RDFS.seeAlso,
+        rdflib.URIRef("https://congress.example.org/bill/HR%2F42%231"),
+    ) in ds
+    # Null middle element at index 2 is skipped while preserving index 1 and index 3!
+    assert (hearing_h1, rdflib.URIRef("urn:ex:oversight:dataset:hearings:field:bill_refs"), item_1) in ds
+    assert (hearing_h1, rdflib.URIRef("urn:ex:oversight:dataset:hearings:field:bill_refs"), item_2) not in ds
+    assert (hearing_h1, rdflib.URIRef("urn:ex:oversight:dataset:hearings:field:bill_refs"), item_3) in ds
+    assert (item_3, rdflib.URIRef("urn:ex:oversight:relationship:ref-bill"), bill_special) in ds
+    assert (
+        hearing_h1,
+        rdflib.URIRef("urn:ex:oversight:relationship:hearing-committee-by-name"),
+        rdflib.URIRef("urn:ex:oversight:dataset:committees:row:HSBA"),
+    ) in ds
+    assert (
+        rdflib.URIRef("urn:ex:oversight:dataset:committees:row:HSBA"),
+        rdflib.URIRef(VOCAB + "noMatch"),
+        rdflib.URIRef("urn:ex:oversight:dataset:committees:row:SSBK"),
+    ) in ds
+
+    # Federated cross-stack graph traversal directly in DataFusion SQL over `[oversight.quads.parquet, legislative.quads.parquet]`!
+    pq_a = tmp_path / "out" / "legislative.quads.parquet"
+    pq_b = tmp_path / "out" / "oversight.quads.parquet"
+    fed_job = {
+        "scratch": str(tmp_path / "fed-scratch"),
+        "inputs": [
+            {"kind": "parquet", "name": "oversight_quads", "path": str(pq_b)},
+            {"kind": "parquet", "name": "legislative_quads", "path": str(pq_a)},
+        ],
+        "steps": [],
+        "outputs": [],
+        "queries": [
+            {
+                "name": "cross_stack_item_bill_traversal",
+                "sql": (
+                    "SELECT ref.subject AS item_iri, b_id.object_value AS bill_id, b_title.object_value AS title "
+                    "FROM (SELECT subject, object_value FROM oversight_quads "
+                    "      WHERE predicate = 'urn:ex:oversight:relationship:ref-bill') AS ref "
+                    "INNER JOIN (SELECT subject, object_value FROM legislative_quads "
+                    "            WHERE predicate = 'urn:ex:legislative:dataset:bills:field:bill_id') AS b_id "
+                    "  ON ref.object_value = b_id.subject "
+                    "INNER JOIN (SELECT subject, object_value FROM legislative_quads "
+                    "            WHERE predicate = 'urn:ex:legislative:dataset:bills:field:title') AS b_title "
+                    "  ON ref.object_value = b_title.subject "
+                    "ORDER BY item_iri"
+                ),
+            }
+        ],
+    }
+    fed_res = adapter.execute(
+        fed_job,
+        input_digests={
+            str(pq_b): res_b["job"]["result"]["outputs"][0]["sha256"],
+            str(pq_a): res_a["job"]["result"]["outputs"][0]["sha256"],
+        },
+    )
+    assert fed_res["status"] == "succeeded", fed_res
+    rows = fed_res["result"]["queries"][0]["data"]
+    assert rows == [
+        {
+            "item_iri": "urn:ex:oversight:dataset:hearings:row:H-1:bill_refs:1",
+            "bill_id": "hr4173-111",
+            "title": 'Dodd-Frank "Wall Street" Reform\nLine 2 \\ 🏛️',
+        },
+        {
+            "item_iri": "urn:ex:oversight:dataset:hearings:row:H-1:bill_refs:3",
+            "bill_id": "HR/42#1",
+            "title": "Special IRI Key Bill",
+        },
+    ]
+
 
 

@@ -32,7 +32,7 @@ DDK_VIEWER_APPLICATIONS=spicy-slice \
 npm run preview
 ```
 
-Each entry in `DDK_VIEWER_OWNER_CONFIG` pins `id`, `directory`, `lockSha256` (plus optional `pairedLocalDirectory` and `pairedLocalLockSha256` when `DDK_VIEWER_AUDIENCE=local`), `pythonPath`, `ddkSrcPath`, optional `docspecBinary` + `docspecSha256`, and `permittedRoots`. `createDocSpecCatalogOwner` (`src/server/docspec-owner.ts` + `scripts/docspec-owner-bridge.py`) verifies the Python environment, catalog lock, and `docspec` binary SHA-256 once at server startup, paginates single-file or multi-shard `members[]` Parquet representations via bounded PyArrow slice reads, executes checked recipes via `ddk.catalog_access.run_checked_query`, and serves digest-verified `RecordRef` evidence records.
+Each entry in `DDK_VIEWER_OWNER_CONFIG` pins `id`, `directory`, `lockSha256` (plus optional `pairedLocalDirectory` and `pairedLocalLockSha256` when `DDK_VIEWER_AUDIENCE=local`), optional `docspecBinary` + `docspecSha256` + `docspecLimits`, and `permittedRoots`. `createDocSpecCatalogOwner` (`src/server/docspec-owner.ts` + native Rust `docspec owner-worker`) verifies the catalog lock and `docspec` binary SHA-256 once at server startup, paginates single-file or multi-shard `members[]` Parquet representations via bounded Rust Arrow row-group slice reads, executes checked DataFusion SQL recipes directly in Rust without Python subprocesses, and serves digest-verified `RecordRef` evidence records.
 
 One retained owner-backed journey is also available from the pinned qualified commerce example:
 

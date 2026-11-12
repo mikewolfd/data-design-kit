@@ -674,6 +674,69 @@ def test_job_zero_counter_quality_queries_qualify_and_reject_violations_and_tamp
     tampered_codes = [d["code"] for c in res_tampered.report["checks"] for d in c["diagnostics"]]
     assert "CATALOG-JOB-SPEC-MISMATCH" in tampered_codes
 
+    # 4. Distinct step.name != output.name AND planted violation introduced inside output.sql (P1-1 regression)
+    distinct_dir = tmp_path / "distinct-step-out"
+    shutil.copytree(project_dir, distinct_dir)
+    d_decl = _load_mutable_json(distinct_dir / "jobs/daily-revenue.job.ddk.json")
+    d_decl["steps"] = {
+        "clean_orders": "urn:example:recipe:clean-orders",
+        "staged_revenue": "urn:example:recipe:daily-revenue",
+    }
+    (distinct_dir / "jobs/daily-revenue.job.ddk.json").write_text(json_dumps(d_decl))
+    d_spec = _load_mutable_json(distinct_dir / "jobs/daily-revenue.job.json")
+    d_spec["steps"][1]["name"] = "staged_revenue"
+    # Upstream step has valid amount_cents >= 0, while output.sql plants -50 in the exported Parquet!
+    d_spec["outputs"][0]["sql"] = "SELECT order_day, region, CAST(-50 AS BIGINT) AS amount_cents FROM staged_revenue"
+    (distinct_dir / "jobs/daily-revenue.job.json").write_text(json_dumps(d_spec))
+    run_distinct = _execute_real_job(distinct_dir, tmp_path / "run-distinct", docspec_bin, orders_ok, customers_ok)
+    meta_distinct = tmp_path / "meta-distinct.json"
+    meta_distinct.write_text(json_dumps({
+        "executions": [{"path": run_distinct["evidence"]["path"], "production": "daily-revenue-job"}]
+    }))
+    res_distinct = assemble_catalog(
+        distinct_dir / "project.ddk.json",
+        metadata=meta_distinct,
+        metadata_adapter="local",
+        required_groups=("catalog.jobs", "catalog.qualification"),
+        permitted_roots=(tmp_path,),
+        docspec=docspec_bin,
+        docspec_evidence_dir=tmp_path / "gate-distinct",
+    )
+    assert res_distinct.report["decision"] == "failed"
+    assert any(c["status"] == "failed" for c in res_distinct.catalog["checks"])
+
+    # 5. Mixing a scalar rule and a standalone table/SQL rule (column: None) in one binding fails closed (P1-2 regression)
+    mixed_dir = tmp_path / "mixed-binding"
+    shutil.copytree(project_dir, mixed_dir)
+    m_decl = _load_mutable_json(mixed_dir / "jobs/daily-revenue.job.ddk.json")
+    m_decl["qualityQueries"] = {
+        "revenue_counters": {
+            "dataset": "daily-revenue",
+            "rules": ["amount_cents:required", "nonnegative-total"],
+        }
+    }
+    (mixed_dir / "jobs/daily-revenue.job.ddk.json").write_text(json_dumps(m_decl))
+    m_spec = _load_mutable_json(mixed_dir / "jobs/daily-revenue.job.json")
+    m_spec["queries"] = [
+        {"name": "revenue_counters", "sql": 'SELECT 0 AS "amount_cents:required", 0 AS "nonnegative-total"'}
+    ]
+    (mixed_dir / "jobs/daily-revenue.job.json").write_text(json_dumps(m_spec))
+    run_mixed = _execute_real_job(mixed_dir, tmp_path / "run-mixed", docspec_bin, orders_ok, customers_ok)
+    meta_mixed = tmp_path / "meta-mixed.json"
+    meta_mixed.write_text(json_dumps({
+        "executions": [{"path": run_mixed["evidence"]["path"], "production": "daily-revenue-job"}]
+    }))
+    res_mixed = assemble_catalog(
+        mixed_dir / "project.ddk.json",
+        metadata=meta_mixed,
+        metadata_adapter="local",
+        required_groups=("catalog.jobs", "catalog.qualification"),
+        permitted_roots=(tmp_path,),
+    )
+    assert res_mixed.report["decision"] == "failed"
+    mixed_codes = [d["code"] for c in res_mixed.report["checks"] for d in c["diagnostics"]]
+    assert "CATALOG-QUALITY-COVERAGE" in mixed_codes
+
 
 def test_catalog_jobs_and_recipes_profiles_registered_independently():
     from ddk.conformance import PROFILES

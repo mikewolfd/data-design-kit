@@ -6,11 +6,15 @@ import type { EvidenceResult, RecordRef } from '../domain/types';
 import { fail, sha256, type CatalogRegistration } from './catalog-store';
 import {
   createDocSpecCatalogOwner,
+  DEFAULT_DOCSPEC_BINARY,
+  DEFAULT_DOCSPEC_SHA256,
   evidenceMapKey,
   readBoundedBytes,
   type DocSpecCatalogOwner,
   type EvidenceMapEntry,
 } from './docspec-owner';
+
+export { DEFAULT_DOCSPEC_BINARY, DEFAULT_DOCSPEC_SHA256 };
 
 const CAPTURE_SHA = '2b2dfa95deccf0c8240926bcb568d8e396bfdc6128034f6a704df7a7c1510834';
 const DATASET = 'urn:example:commerce:dataset:daily-revenue';
@@ -19,14 +23,6 @@ const RECIPE = 'urn:example:commerce:recipe:checked-revenue';
 const ROOT = resolve(process.cwd());
 const CAPTURE = resolve(ROOT, 'fixtures/applications/commerce-native');
 const WORK = resolve(ROOT, 'work/native-consumer');
-
-export const DEFAULT_PYTHON =
-  '/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/env-full/bin/python';
-export const DEFAULT_DDK_SRC = resolve(ROOT, '../src');
-export const DEFAULT_DOCSPEC_BINARY =
-  '/Users/mikewolfd/Work/artifacts/ddk-docspec-runtime-20261111/docspec';
-export const DEFAULT_DOCSPEC_SHA256 =
-  'ff09d9a8204ba19cf433f2cae492e80bfaedad03ec62d292e758b4406b36681e';
 
 export const commerceRegistration: CatalogRegistration = {
   id: 'commerce-native',
@@ -158,8 +154,6 @@ export async function readCommerceEvidence(
 
 /** Thin configuration wrapper around startup-pinned DocSpecCatalogOwner for commerce-native. */
 export async function createCommerceAdapter(options?: {
-  pythonPath?: string;
-  ddkSrcPath?: string;
   docspecBinary?: string;
   docspecSha256?: string;
   retainReceiptsDir?: string;
@@ -168,8 +162,6 @@ export async function createCommerceAdapter(options?: {
   return createDocSpecCatalogOwner({
     directory: CAPTURE,
     lockSha256: commerceRegistration.lockSha256,
-    pythonPath: options?.pythonPath ?? process.env.DDK_VIEWER_PYTHON ?? DEFAULT_PYTHON,
-    ddkSrcPath: options?.ddkSrcPath ?? process.env.DDK_VIEWER_DDK_SRC ?? DEFAULT_DDK_SRC,
     docspecBinary:
       options?.docspecBinary ?? process.env.DDK_VIEWER_DOCSPEC_BINARY ?? DEFAULT_DOCSPEC_BINARY,
     docspecSha256:

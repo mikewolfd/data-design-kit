@@ -11,10 +11,8 @@ import type { Catalog, CatalogSnapshot } from '../../src/domain/types';
 import { CatalogAccess } from '../../src/server/access';
 import { CatalogStore, sha256, type CatalogRegistration } from '../../src/server/catalog-store';
 import {
-  DEFAULT_DDK_SRC,
   DEFAULT_DOCSPEC_BINARY,
   DEFAULT_DOCSPEC_SHA256,
-  DEFAULT_PYTHON,
 } from '../../src/server/commerce-native';
 import {
   congressRegistration,
@@ -23,11 +21,15 @@ import {
 import {
   createDocSpecCatalogOwner,
   loadOperatorOwnerConfig,
-  resolveBridgeScriptPath,
 } from '../../src/server/docspec-owner';
 
-const DUCKDB_PYTHON = '/Users/mikewolfd/Work/congressional-tech/.venv/bin/python';
-const HAS_RUNTIME = existsSync(DEFAULT_PYTHON) && existsSync(DEFAULT_DOCSPEC_BINARY);
+const TEST_PARQUET_WRITER_PYTHON =
+  [
+    '/Users/mikewolfd/Work/artifacts/ddk-sdk4-20261111/env-sdk4/bin/python',
+    '/Users/mikewolfd/Work/artifacts/ddk-replacements-20261106/relationship-profiles/distribution/qualified-01/env-full/bin/python',
+    '/Users/mikewolfd/Work/congressional-tech/.venv/bin/python',
+  ].find((candidate) => existsSync(candidate)) ?? '';
+const HAS_RUNTIME = existsSync(DEFAULT_DOCSPEC_BINARY) && Boolean(TEST_PARQUET_WRITER_PYTHON);
 
 async function writeCatalogArtifacts(
   dir: string,
@@ -176,9 +178,9 @@ test(
       const catalogDir = join(tmp, 'catalog');
       execFileSync('mkdir', ['-p', dataDir, catalogDir]);
 
-      // Write single multi-row-group Parquet + 3 multi-shard Parquet files with PyArrow
+      // Write single multi-row-group Parquet + 3 multi-shard Parquet files for test fixture setup
       execFileSync(
-        DEFAULT_PYTHON,
+        TEST_PARQUET_WRITER_PYTHON,
         [
           '-c',
           `
@@ -407,11 +409,11 @@ single_bytes = single_path.read_bytes()
       const owner = await createDocSpecCatalogOwner({
         directory: catalogDir,
         lockSha256,
-        pythonPath: DEFAULT_PYTHON,
-        ddkSrcPath: DEFAULT_DDK_SRC,
         permittedRoots: [catalogDir, dataDir],
       });
       try {
+        assert.equal(owner.startup.runtime, 'docspec-native-rust');
+        assert.equal(owner.startup.docspecBinary, DEFAULT_DOCSPEC_BINARY);
         const access = new CatalogAccess(store, new Map([['synthetic-owner', owner]]));
 
         // 1. Single-file pagination across row groups (limit 2)
@@ -549,6 +551,39 @@ single_bytes = single_path.read_bytes()
           (err: any) => err?.code === 'integrity_mismatch',
         );
 
+        // 3b. Unreferenced JSON and CSV files inside permittedRoots are refused by default allowlist + extension guard
+        const unreferencedJsonPath = join(dataDir, 'unreferenced-secret.json');
+        const unreferencedJsonBytes = Buffer.from('{"secret":"not-in-catalog"}\n', 'utf8');
+        await writeFile(unreferencedJsonPath, unreferencedJsonBytes);
+        await assert.rejects(
+          () =>
+            owner.evidence!({
+              record: {
+                uri: pathToFileURL(unreferencedJsonPath).href,
+                sha256: sha256(unreferencedJsonBytes),
+              },
+              deadline: Date.now() + 5000,
+              signal: new AbortController().signal,
+            }),
+          (err: any) => err?.code === 'evidence_refused',
+        );
+
+        const unreferencedCsvPath = join(dataDir, 'raw-dump.csv');
+        const unreferencedCsvBytes = Buffer.from('id,amount\n1,100\n', 'utf8');
+        await writeFile(unreferencedCsvPath, unreferencedCsvBytes);
+        await assert.rejects(
+          () =>
+            owner.evidence!({
+              record: {
+                uri: pathToFileURL(unreferencedCsvPath).href,
+                sha256: sha256(unreferencedCsvBytes),
+              },
+              deadline: Date.now() + 5000,
+              signal: new AbortController().signal,
+            }),
+          (err: any) => err?.code === 'evidence_refused',
+        );
+
         // 4. Withheld dataset refuses before touching disk
         const withheldRead = await access.read({
           catalogId: 'synthetic-owner',
@@ -597,7 +632,7 @@ test(
 
       const ordersPath = join(dataDir, 'orders.parquet');
       execFileSync(
-        DEFAULT_PYTHON,
+        TEST_PARQUET_WRITER_PYTHON,
         [
           '-c',
           `
@@ -609,12 +644,13 @@ import pyarrow.parquet as pq
 schema = pa.schema([
     ("order_id", pa.int64()),
     ("region", pa.string()),
-    ("total", pa.decimal128(18, 4)),
+    ("total", pa.decimal128(24, 4)),
 ])
 rows = [
     {"order_id": 1001, "region": "us-east", "total": Decimal("250.7500")},
     {"order_id": 1002, "region": "us-west", "total": Decimal("80.0000")},
-    {"order_id": 9007199254740993, "region": "us-east", "total": Decimal("1200.5000")},
+    {"order_id": 9007199254740992, "region": "us-east", "total": Decimal("1234567890123456.7890")},
+    {"order_id": 9007199254740993, "region": "us-east", "total": Decimal("1234567890123456.7891")},
 ]
 pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
 `,
@@ -625,7 +661,7 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
       const ordersSha = sha256(await readFile(ordersPath));
 
       const positionalSql =
-        'SELECT order_id, region, total FROM orders WHERE region = ? AND total >= ? ORDER BY order_id;\n';
+        'SELECT order_id, region, total, CAST(total AS VARCHAR) AS total_lexeme FROM orders WHERE region = ? AND order_id >= ? AND total >= ? ORDER BY order_id;\n';
 
       const catBase: Omit<Catalog, 'files' | 'runs'> = {
         specVersion: '0.1',
@@ -658,13 +694,14 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
             dialect: 'datafusion',
             inputs: { orders: 'orders' },
             relationships: [],
-            parameterOrder: ['region', 'min_total'],
+            parameterOrder: ['region', 'min_order_id', 'min_total'],
             parameters: {
               type: 'object',
-              required: ['region', 'min_total'],
+              required: ['region', 'min_order_id', 'min_total'],
               additionalProperties: false,
               properties: {
                 region: { type: 'string' },
+                min_order_id: { type: 'integer' },
                 min_total: { type: 'number' },
               },
             },
@@ -737,8 +774,6 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
       const paramOwner = await createDocSpecCatalogOwner({
         directory: catDir,
         lockSha256,
-        pythonPath: DEFAULT_PYTHON,
-        ddkSrcPath: DEFAULT_DDK_SRC,
         docspecBinary: DEFAULT_DOCSPEC_BINARY,
         docspecSha256: DEFAULT_DOCSPEC_SHA256,
         permittedRoots: [catDir, dataDir],
@@ -763,7 +798,8 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
           },
           parameters: {
             region: 'us-east',
-            min_total: { $number: '300.0000' },
+            min_order_id: { $number: '9007199254740993' },
+            min_total: { $number: '1234567890123456.7891' },
           },
           limit: 10,
         });
@@ -774,8 +810,9 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
           $number: '9007199254740993',
         });
         assert.deepEqual(exactObjectField(queryRes.rows[0], 'total'), {
-          $number: '1200.5',
+          $number: '1234567890123456.7891',
         });
+        assert.equal(exactObjectField(queryRes.rows[0], 'total_lexeme'), '1234567890123456.7891');
         assert.ok(queryRes.execution);
         assert.equal(queryRes.execution.kind, 'owner');
         assert.equal(queryRes.execution.recipeId, 'urn:test:docspec:recipe:orders_by_region');
@@ -802,8 +839,8 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
     const snapshot = await store.snapshot(congressRegistration.id);
     const owner = await createCongressAdapter({
       snapshot,
-      pythonPath: DEFAULT_PYTHON,
-      ddkSrcPath: DEFAULT_DDK_SRC,
+      docspecBinary: DEFAULT_DOCSPEC_BINARY,
+      docspecSha256: DEFAULT_DOCSPEC_SHA256,
     });
 
     try {
@@ -838,8 +875,8 @@ pq.write_table(pa.Table.from_pylist(rows, schema=schema), sys.argv[1])
 );
 
 test(
-  'DocSpecCatalogOwner supports explicit DuckDB fallback engine and loadOperatorOwnerConfig handles public/paired-local switching',
-  { skip: !existsSync(DUCKDB_PYTHON) && 'DuckDB Python venv unavailable' },
+  'loadOperatorOwnerConfig handles public/paired-local switching and executes named-parameter DataFusion SQL via pure-Rust docspec owner-worker',
+  { skip: !HAS_RUNTIME && 'DocSpec runtime unavailable' },
   async () => {
     const tmp = await mkdtemp(join(tmpdir(), 'ddk-owner-config-'));
     try {
@@ -850,7 +887,7 @@ test(
 
       const parquetPath = join(dataDir, 'items.parquet');
       execFileSync(
-        DUCKDB_PYTHON,
+        TEST_PARQUET_WRITER_PYTHON,
         [
           '-c',
           `
@@ -904,7 +941,7 @@ pq.write_table(table, sys.argv[1])
                 {
                   id: 'urn:test:paired:recipe:by_code',
                   sql: 'recipes/by_code.sql',
-                  dialect: 'duckdb',
+                  dialect: 'datafusion',
                   inputs: { items: 'items' },
                   relationships: [],
                   parameters: {
@@ -974,9 +1011,8 @@ pq.write_table(table, sys.argv[1])
               lockSha256: pubLocks.lockSha256,
               pairedLocalDirectory: locDir,
               pairedLocalLockSha256: locLocks.lockSha256,
-              pythonPath: DUCKDB_PYTHON,
-              ddkSrcPath: DEFAULT_DDK_SRC,
-              fallbackEngine: 'duckdb',
+              docspecBinary: DEFAULT_DOCSPEC_BINARY,
+              docspecSha256: DEFAULT_DOCSPEC_SHA256,
               permittedRoots: [pubDir, locDir, dataDir],
             },
           ],
@@ -984,16 +1020,18 @@ pq.write_table(table, sys.argv[1])
         'utf8',
       );
 
-      // Public mode attaches no owner adapter
+      // Public mode attaches no owner adapter and auto-populates catalogId from catalog.ddk.json
       const pubLoaded = await loadOperatorOwnerConfig(configPath, 'public');
       assert.equal(pubLoaded.registrations.length, 1);
       assert.equal(pubLoaded.registrations[0].directory, pubDir);
+      assert.equal(pubLoaded.registrations[0].catalogId, 'urn:test:paired:catalog');
       assert.equal(pubLoaded.owners.size, 0);
 
-      // Local mode switches to pairedLocalDirectory + pairedLocalLockSha256 and attaches owner
+      // Local mode switches to pairedLocalDirectory + pairedLocalLockSha256 and attaches pure-Rust owner
       const locLoaded = await loadOperatorOwnerConfig(configPath, 'local');
       try {
         assert.equal(locLoaded.registrations[0].directory, locDir);
+        assert.equal(locLoaded.registrations[0].catalogId, 'urn:test:paired:catalog');
         assert.equal(locLoaded.owners.size, 1);
 
         const store = new CatalogStore(locLoaded.registrations, 'local');
@@ -1017,7 +1055,8 @@ pq.write_table(table, sys.argv[1])
         assert.equal(queryRes.returned, 1);
         assert.deepEqual(exactObjectField(queryRes.rows[0], 'code'), 'A1');
         assert.deepEqual(exactObjectField(queryRes.rows[0], 'amount'), { $number: '42.50' });
-        assert.equal(queryRes.execution?.engine?.id, 'duckdb');
+        assert.equal(queryRes.execution?.engine?.id, 'docspec');
+        assert.equal(queryRes.execution?.engine?.binarySha256, DEFAULT_DOCSPEC_SHA256);
       } finally {
         for (const owner of locLoaded.owners.values()) {
           await owner.close();
@@ -1029,26 +1068,14 @@ pq.write_table(table, sys.argv[1])
   },
 );
 
-test('resolveBridgeScriptPath locates docspec-owner-bridge.py from both source and Astro dist/server/chunks', () => {
-  const viewerRoot = resolve(process.cwd());
-  const expected = resolve(viewerRoot, 'scripts/docspec-owner-bridge.py');
-  assert.equal(existsSync(expected), true);
-
-  const fromSource = resolveBridgeScriptPath(
-    pathToFileURL(resolve(viewerRoot, 'src/server/docspec-owner.ts')).href,
-    '/nonexistent',
+test('DocSpecCatalogOwner refuses missing docspecBinary with owner_unavailable', async () => {
+  await assert.rejects(
+    createDocSpecCatalogOwner({
+      directory: congressRegistration.directory,
+      lockSha256: congressRegistration.lockSha256,
+      docspecBinary: '/nonexistent/docspec-binary',
+      permittedRoots: [congressRegistration.directory],
+    }),
+    (err: any) => err?.code === 'owner_unavailable',
   );
-  assert.equal(fromSource, expected);
-
-  const fromBundledChunk = resolveBridgeScriptPath(
-    pathToFileURL(resolve(viewerRoot, 'dist/server/chunks/docspec-owner_abc123.mjs')).href,
-    '/nonexistent',
-  );
-  assert.equal(fromBundledChunk, expected);
-
-  const fromCwdFallback = resolveBridgeScriptPath(
-    pathToFileURL('/nonexistent/deep/a/b/c/chunk.mjs').href,
-    viewerRoot,
-  );
-  assert.equal(fromCwdFallback, expected);
 });

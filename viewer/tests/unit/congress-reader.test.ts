@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolve } from 'node:path';
 import { CatalogStore } from '../../src/server/catalog-store';
 import { CatalogAccess } from '../../src/server/access';
 import {
@@ -11,7 +10,7 @@ import {
   loadCongressInputs,
 } from '../../src/server/congress-registration';
 import { createDocSpecCatalogOwner } from '../../src/server/docspec-owner';
-import { DEFAULT_DOCSPEC_BINARY, DEFAULT_PYTHON } from '../../src/server/commerce-native';
+import { DEFAULT_DOCSPEC_BINARY } from '../../src/server/commerce-native';
 import { exactStringify } from '../../src/domain/exact';
 
 const noMarkers = { isArchiveDateValue: () => false, isArchiveTimestampValue: () => false };
@@ -21,7 +20,6 @@ test('DocSpecCatalogOwner startup refuses mismatched lockSha256 or binarySha256 
     createDocSpecCatalogOwner({
       directory: congressRegistration.directory,
       lockSha256: '0'.repeat(64),
-      pythonPath: DEFAULT_PYTHON,
       permittedRoots: [congressRegistration.directory],
     }),
     (error: any) => error.code === 'integrity_mismatch',
@@ -30,8 +28,6 @@ test('DocSpecCatalogOwner startup refuses mismatched lockSha256 or binarySha256 
     createDocSpecCatalogOwner({
       directory: congressRegistration.directory,
       lockSha256: congressRegistration.lockSha256,
-      pythonPath: DEFAULT_PYTHON,
-      ddkSrcPath: resolve(process.cwd(), '../src'),
       docspecBinary: DEFAULT_DOCSPEC_BINARY,
       docspecSha256: '0'.repeat(64),
       permittedRoots: [congressRegistration.directory],

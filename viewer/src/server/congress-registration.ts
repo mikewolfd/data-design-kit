@@ -4,7 +4,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exactObjectField, isObject, parseMetadata } from '../domain/exact';
 import type { CatalogSnapshot, ExactBinding, ExactValue, RecordRef } from '../domain/types';
 import { fail, sha256, type CatalogRegistration } from './catalog-store';
-import { DEFAULT_DDK_SRC, DEFAULT_PYTHON } from './commerce-native';
 import {
   createDocSpecCatalogOwner,
   encodeExactOwnerValue,
@@ -247,8 +246,6 @@ export function encodeCongressValue(
 /** Thin configuration wrapper around startup-pinned DocSpecCatalogOwner for congress-authored. */
 export async function createCongressAdapter(options: {
   snapshot: CatalogSnapshot;
-  pythonPath?: string;
-  ddkSrcPath?: string;
   docspecBinary?: string;
   docspecSha256?: string;
   supportedDatasetIds?: readonly string[];
@@ -259,10 +256,9 @@ export async function createCongressAdapter(options: {
   return createDocSpecCatalogOwner({
     directory: DIRECTORY,
     lockSha256: congressRegistration.lockSha256,
-    pythonPath: options.pythonPath ?? process.env.DDK_VIEWER_PYTHON ?? DEFAULT_PYTHON,
-    ddkSrcPath: options.ddkSrcPath ?? process.env.DDK_VIEWER_DDK_SRC ?? DEFAULT_DDK_SRC,
     ...(options.docspecBinary ? { docspecBinary: options.docspecBinary } : {}),
     ...(options.docspecSha256 ? { docspecSha256: options.docspecSha256 } : {}),
+    enableQuery: false,
     permittedRoots: [DIRECTORY, manifestDir, ...dataDirs],
     supportedDatasetIds:
       options.supportedDatasetIds ?? congressSupportedDatasetIds(options.snapshot),
@@ -290,7 +286,7 @@ export async function createCongressAdapter(options: {
           originalManifest: inputs.originalManifestRecord,
           localCatalogHandoff: inputs.handoffRecord,
           ownerModule: {
-            entry: 'docspec-owner-bridge.py',
+            entry: 'docspec owner-worker',
             configuration: { sha256: congressRegistration.lockSha256 },
           },
         },

@@ -1224,3 +1224,959 @@ def rml_documents(catalog):
         limits.add(f"{templates} of {len(files)} RML documents are templates bound to no exact version; each "
                    "document's header says why.")
     return files, limits
+
+
+# Native DataFusion + Rust row-quad compiler & materializer.
+# Eliminates Python Pandas (`Morph-KGC`) and in-memory Python `rdflib` loops over scalable row data while preserving
+# identical W3C RDF / N-Quads semantics to `rml_mappings(catalog)` (`iri_encode`, `nquad_escape`, typed literals,
+# named version graphs, nested structs, scalar/object arrays, intra- & cross-catalog links, and `matchDecisions`).
+
+QUAD_COLUMNS = ("subject", "predicate", "object_kind", "object_value", "object_datatype", "graph", "nquad")
+XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema#"
+
+
+def _df_field(path, table=None):
+    expr = (f"{table}." if table else "") + _sql_name(path[0])
+    for part in path[1:]:
+        expr = f"get_field({expr}, {_sql_text(part)})"
+    return expr
+
+
+def _df_text(expression, prop):
+    lt = prop.get("logicalType")
+    if lt == "boolean":
+        return f"CASE WHEN {expression} THEN 'true' ELSE 'false' END"
+    if lt == "timestamp":
+        return f"regexp_replace(CAST({expression} AS VARCHAR), '^([0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}) ', '$1T')"
+    return f"CAST({expression} AS VARCHAR)"
+
+
+def _expand_datatype_iri(datatype):
+    if not datatype:
+        return None
+    if datatype.startswith("xsd:"):
+        return XSD_NAMESPACE + datatype[4:]
+    return datatype
+
+
+def _df_iri_expr(base, col_exprs):
+    if not col_exprs:
+        return _sql_text(base)
+    sep = ":" if base.startswith("urn:") else "/"
+    parts = [_sql_text(base)]
+    for ce in col_exprs:
+        parts.extend([_sql_text(sep), f"iri_encode({ce})"])
+    return f"concat({', '.join(parts)})"
+
+
+def _df_concept_iri_expr(template_str, val_expr):
+    chunks = template_str.split("{value}")
+    if len(chunks) == 1:
+        return _sql_text(template_str)
+    parts = []
+    for idx, chunk in enumerate(chunks):
+        if chunk:
+            parts.append(_sql_text(chunk))
+        if idx + 1 < len(chunks):
+            parts.append(f"iri_encode({val_expr})")
+    return parts[0] if len(parts) == 1 else f"concat({', '.join(parts)})"
+
+
+def _df_blank_expr(scope, col_exprs):
+    label = "_:b" + sha256(scope.encode()).hexdigest()[:20]
+    parts = [_sql_text(label)]
+    for ce in col_exprs:
+        parts.extend(["'_'", f"regexp_replace({ce}, '[^A-Za-z0-9_.-]', '_')"])
+    return f"concat({', '.join(parts)})"
+
+
+def _quad_branch(
+    *,
+    subj_expr,
+    subj_is_bnode,
+    pred_iri,
+    obj_kind,
+    obj_expr,
+    obj_datatype_iri=None,
+    graph_iri=None,
+    from_where_sql="",
+):
+    subj_sql = f"CAST({subj_expr} AS VARCHAR)"
+    pred_sql = f"CAST({_sql_text(pred_iri)} AS VARCHAR)"
+    kind_sql = f"CAST({_sql_text(obj_kind)} AS VARCHAR)"
+    val_sql = f"CAST({obj_expr} AS VARCHAR)"
+    dt_sql = f"CAST({_sql_text(obj_datatype_iri)} AS VARCHAR)" if obj_datatype_iri else "CAST(NULL AS VARCHAR)"
+    graph_sql = f"CAST({_sql_text(graph_iri)} AS VARCHAR)" if graph_iri else "CAST(NULL AS VARCHAR)"
+
+    subj_nt = subj_expr if subj_is_bnode else f"concat('<', {subj_expr}, '>')"
+    pred_nt = _sql_text(f"<{pred_iri}>")
+    if obj_kind in {"iri"}:
+        obj_nt = f"concat('<', {obj_expr}, '>')"
+    elif obj_kind == "bnode":
+        obj_nt = obj_expr
+    elif obj_datatype_iri:
+        obj_nt = f"concat('\"', nquad_escape({obj_expr}), {_sql_text(f'\"^^<{obj_datatype_iri}>')})"
+    else:
+        obj_nt = f"concat('\"', nquad_escape({obj_expr}), '\"')"
+    tail_nt = _sql_text(f" <{graph_iri}> .") if graph_iri else _sql_text(" .")
+    nquad_sql = f"CAST(concat({subj_nt}, ' ', {pred_nt}, ' ', {obj_nt}, {tail_nt}) AS VARCHAR)"
+
+    tail = f" {from_where_sql}" if from_where_sql else ""
+    return (
+        f"SELECT {subj_sql} AS subject, {pred_sql} AS predicate, {kind_sql} AS object_kind, "
+        f"{val_sql} AS object_value, {dt_sql} AS object_datatype, {graph_sql} AS graph, "
+        f"{nquad_sql} AS nquad{tail}"
+    )
+
+
+class _DfRows:
+    """DataFusion SQL row reader & subject builder for one bound Parquet dataset."""
+
+    def __init__(self, dataset, key, parquet_path, version, chosen_version, properties, table_ident, reader_ident):
+        self.dataset = dataset
+        self.key = key
+        self.path = parquet_path
+        self.version = version
+        self.chosen_version = chosen_version
+        self.properties = tuple(properties)
+        self.table_ident = table_ident
+        self.reader_ident = reader_ident
+        self.columns = key or [ROW]
+        self.key_aliases = [f"k{index}" for index in range(len(self.columns))]
+        specs = []
+        for index, column in enumerate(self.columns):
+            if key:
+                (phys,), prop = _resolve_field(self.properties, (column,))
+            else:
+                phys, prop = ROW, {"logicalType": "integer"}
+            specs.append((phys, prop, f"k{index}"))
+        self._key_specs = tuple(specs)
+
+    def select_keys(self, table=None):
+        return [f"{_df_text(_df_field((phys,), table), prop)} AS {alias}" for phys, prop, alias in self._key_specs]
+
+    def key_exprs(self, table=None):
+        return [_df_text(_df_field((phys,), table), prop) for phys, prop, _ in self._key_specs]
+
+    def projected_keys(self):
+        return ", ".join(self.key_aliases)
+
+    def key_not_null(self, table=None):
+        return [f"{_df_field((phys,), table)} IS NOT NULL" for phys, _, _ in self._key_specs]
+
+    def where(self, *extra, table=None):
+        clauses = list(dict.fromkeys([*self.key_not_null(table), *extra]))
+        return " AND ".join(clauses)
+
+    def subject_expr(self, key_col_exprs=None):
+        exprs = key_col_exprs if key_col_exprs is not None else self.key_aliases
+        if self.key:
+            return _df_iri_expr(child_iri(self.dataset["id"], "row"), exprs), False
+        return _df_blank_expr(f"{self.dataset['id']}\n{self.version or 'template'}", exprs), True
+
+
+def _catalog_parquet_digests(catalog):
+    """Extract already-verified SHA-256 digests from local file version references so inputs are not re-hashed."""
+    from pathlib import Path
+    from urllib.parse import urlparse
+    from urllib.request import url2pathname
+
+    known = {}
+    for ver in catalog.get("versions", ()):
+        ref = ver.get("reference")
+        if not isinstance(ref, dict) or ref.get("scheme") != "urn:ddk:version:local-file-sha256":
+            continue
+        val = ref.get("value")
+        if not isinstance(val, dict):
+            continue
+        loc, digest = val.get("location"), val.get("sha256")
+        if not isinstance(loc, str) or not isinstance(digest, str) or len(digest) != 64:
+            continue
+        try:
+            raw_path = url2pathname(urlparse(loc).path) if loc.startswith("file://") else loc
+            known[str(Path(raw_path).resolve())] = digest
+        except OSError:
+            continue
+    return known
+
+
+def compile_graph_quads_job(
+    catalog,
+    *,
+    scratch_dir,
+    output_parquet_path,
+    datasets=None,
+    file_overrides=None,
+    job_id=None,
+):
+    """Compile an admitted catalog's row-level RDF graph into a pure DataFusion DocSpec JobSpec.
+
+    Every referenced Parquet dataset becomes a ``JobInput``; multi-consumer intermediate tables (keyless row
+    numbering and object-array unnesting) materialize once as ``SqlStep``s; equality joins place the keyed
+    target dataset on the LEFT build side; and ``iri_encode`` / ``nquad_escape`` scalar UDFs build deterministic
+    W3C N-Quads columns exported to ``output_parquet_path``.
+    """
+    from pathlib import Path
+
+    public = catalog.get("audience") == "public"
+    assembly_ext = catalog.get("extensions", {}).get(DETAILS)
+    definitions = (assembly_ext or {}).get("datasetDefinitions", {})
+    if assembly_ext is None or (not definitions and not public):
+        raise CatalogError(
+            "ADAPTER-CAPABILITY-MISSING",
+            "Graph quad compilation needs the catalog's dataset definitions.",
+            status="not_run",
+        )
+
+    overrides = {alias: str(Path(p).resolve()) for alias, p in (file_overrides or {}).items()}
+    all_datasets = {item["alias"]: item for item in catalog["datasets"]}
+    selected_aliases = None
+    if datasets is not None:
+        selected_aliases = set(datasets)
+        unknown = sorted(selected_aliases - set(all_datasets))
+        if unknown:
+            raise CatalogError(
+                "CATALOG-DATASET-UNKNOWN",
+                f"Unknown dataset alias(es) for quad compilation: {', '.join(unknown)}.",
+            )
+
+    keys = _row_keys(catalog)
+    bound, unbound, chosen = _bindings(catalog)
+    disclosed_paths = (assembly_ext or {}).get("disclosedDefinitionPaths", {})
+
+    mappable = {}
+    notes = defaultdict(list)
+    for alias, dataset in sorted(all_datasets.items()):
+        if public:
+            allowed = disclosed_paths.get(alias, ())
+            key_fields = keys.get(alias)
+            if alias not in definitions or not key_fields or not all(
+                [{"field": name}] in allowed for name in key_fields
+            ):
+                if selected_aliases is None or alias in selected_aliases:
+                    notes[alias].append(
+                        f"{dataset['id']} is not mapped in public quads: its row key or field definitions are withheld."
+                    )
+                continue
+        mappable[alias] = dataset
+
+    df_rows = {}
+    local_unbound_targets = {}
+    for ds_idx, (alias, dataset) in enumerate(sorted(mappable.items())):
+        is_selected = selected_aliases is None or alias in selected_aliases
+        if alias in overrides:
+            version = bound[alias][0] if alias in bound else chosen.get(alias)
+            parquet_path = overrides[alias]
+        elif alias in bound:
+            version, parquet_path = bound[alias]
+        else:
+            if is_selected:
+                notes[alias].append(f"Skipped unbound dataset {alias!r}: {unbound.get(alias, 'no bound file')}.")
+            if keys.get(alias):
+                target_stub = _PeerRows(dataset, keys[alias], definitions.get(alias, {}).get("properties", ()))
+                target_stub.chosen_version = chosen.get(alias)
+                target_stub.is_peer = False
+                local_unbound_targets[alias] = target_stub
+            continue
+
+        if not parquet_path.lower().endswith(".parquet"):
+            if is_selected:
+                notes[alias].append(
+                    f"Skipped {alias!r}: native DataFusion quad materialization requires Parquet inputs (got {parquet_path!r})."
+                )
+            if keys.get(alias):
+                target_stub = _PeerRows(dataset, keys[alias], definitions.get(alias, {}).get("properties", ()))
+                target_stub.chosen_version = chosen.get(alias) or version
+                target_stub.is_peer = False
+                local_unbound_targets[alias] = target_stub
+            continue
+
+        resolved_path = str(Path(parquet_path).resolve())
+        table_ident = f"ds_{ds_idx}"
+        key_cols = keys.get(alias)
+        reader_ident = table_ident if key_cols else f"{table_ident}_numbered"
+        df_rows[alias] = _DfRows(
+            dataset,
+            key_cols,
+            resolved_path,
+            version,
+            chosen.get(alias) or version,
+            definitions.get(alias, {}).get("properties", ()),
+            table_ident,
+            reader_ident,
+        )
+
+    peer_rows = {}
+    for peer_alias, peer_info in sorted(_peer_catalogs(catalog).items()):
+        peer_keys = _row_keys({"identities": peer_info.get("identities", ())})
+        peer_defs = peer_info.get("datasetDefinitions", {})
+        peer_disclosed = peer_info.get("disclosedDefinitionPaths", {})
+        for peer_ds, peer_ds_id in sorted(peer_info.get("datasets", {}).items()):
+            key_fields = peer_keys.get(peer_ds)
+            if not key_fields:
+                continue
+            if peer_info.get("audience") == "public" and peer_ds in peer_disclosed:
+                if not all([{"field": name}] in peer_disclosed[peer_ds] for name in key_fields):
+                    continue
+            peer_rows[(peer_alias, peer_ds)] = _PeerRows(
+                {"id": peer_ds_id, "alias": peer_ds},
+                key_fields,
+                peer_defs.get(peer_ds, {}).get("properties", ()),
+            )
+
+    all_local_rows = {**local_unbound_targets, **df_rows}
+    context = _Context(
+        all_local_rows,
+        peer_rows,
+        _concepts(catalog),
+        _concept_templates(catalog),
+        _release_sharing(catalog),
+    )
+    outgoing = defaultdict(list)
+    for relationship in catalog["relationships"]:
+        source_alias = relationship["source"]["dataset"]
+        if source_alias not in df_rows:
+            continue
+        if selected_aliases is not None and source_alias not in selected_aliases:
+            continue
+        if public:
+            if not all(path in disclosed_paths.get(source_alias, ()) for path in relationship["source"]["paths"]):
+                continue
+            if "catalog" in relationship["target"]:
+                peer_target = (relationship["target"]["catalog"], relationship["target"].get("dataset"))
+                if peer_target not in peer_rows:
+                    continue
+            else:
+                target_alias = relationship["target"].get("dataset")
+                if target_alias is not None and (
+                    target_alias not in mappable
+                    or not all(path in disclosed_paths.get(target_alias, ()) for path in relationship["target"]["paths"])
+                ):
+                    continue
+        outgoing[source_alias].append(relationship)
+
+    used_aliases = set()
+    derived_steps = []
+    branches = []
+    step_counter = 0
+
+    active_rows = [
+        (alias, rows)
+        for alias, rows in sorted(df_rows.items())
+        if selected_aliases is None or alias in selected_aliases
+    ]
+    for alias, rows in active_rows:
+        used_aliases.add(alias)
+        dataset = rows.dataset
+        dataset_id = dataset["id"]
+        definition = definitions.get(alias, {})
+        graph_iri = rows.version
+        ds_notes = notes[alias]
+        ds_disclosed = disclosed_paths.get(alias, ())
+
+        scalars, arrays = [], []
+        for logical_path, phys_path, prop in _walk(definition.get("properties", ())):
+            kind = prop.get("logicalType")
+            (arrays if kind == "array" else scalars).append((logical_path, phys_path, prop))
+            if kind == "object":
+                ds_notes.append(f"{_column(logical_path)} is an object without declared fields, so it is not mapped.")
+
+        # 1. Scalar leaves
+        for logical_path, phys_path, prop in scalars:
+            if prop.get("logicalType") == "object":
+                continue
+            raw_expr = _df_field(phys_path)
+            val_expr = _df_text(raw_expr, prop)
+            subj_expr, subj_bnode = rows.subject_expr(rows.key_exprs())
+            from_where = f"FROM {rows.reader_ident} WHERE {rows.where(f'{raw_expr} IS NOT NULL')}"
+            dt_iri = _expand_datatype_iri(_datatype(prop))
+            branches.append(
+                _quad_branch(
+                    subj_expr=subj_expr,
+                    subj_is_bnode=subj_bnode,
+                    pred_iri=field_predicate(dataset_id, logical_path),
+                    obj_kind="literal",
+                    obj_expr=val_expr,
+                    obj_datatype_iri=dt_iri,
+                    graph_iri=graph_iri,
+                    from_where_sql=from_where,
+                )
+            )
+            if (alias, logical_path) in context.templates:
+                branches.append(
+                    _quad_branch(
+                        subj_expr=subj_expr,
+                        subj_is_bnode=subj_bnode,
+                        pred_iri=SEE_ALSO,
+                        obj_kind="iri",
+                        obj_expr=_df_concept_iri_expr(context.templates[(alias, logical_path)], val_expr),
+                        graph_iri=graph_iri,
+                        from_where_sql=from_where,
+                    )
+                )
+
+        # 2. Method attribution column
+        if dataset.get("methodColumn") and (not public or [{"field": dataset["methodColumn"]}] in ds_disclosed):
+            method_prop = next(
+                (prop for prop in definition.get("properties", ()) if prop["name"] == dataset["methodColumn"]),
+                None,
+            )
+            origins, reason = method_origins(method_prop) if method_prop is not None else ({}, "missing")
+            if reason is None and origins:
+                raw_expr = _df_field((_phys_name(method_prop),))
+                val_expr = _df_text(raw_expr, method_prop)
+                subj_expr, subj_bnode = rows.subject_expr(rows.key_exprs())
+                from_where = f"FROM {rows.reader_ident} WHERE {rows.where(f'{raw_expr} IS NOT NULL')}"
+                branches.append(
+                    _quad_branch(
+                        subj_expr=subj_expr,
+                        subj_is_bnode=subj_bnode,
+                        pred_iri=ATTRIBUTED,
+                        obj_kind="iri",
+                        obj_expr=_df_iri_expr(child_iri(dataset_id, "agent"), [val_expr]),
+                        graph_iri=graph_iri,
+                        from_where_sql=from_where,
+                    )
+                )
+
+        # 3. Relationships (direct key FKs, peer FKs, array links, and non-key joins)
+        each_links = defaultdict(list)
+        each_object_links = defaultdict(list)
+        for relationship in outgoing[alias]:
+            rel_id = relationship["id"]
+            if relationship.get("match") == "project_rule":
+                ds_notes.append(f"{rel_id} is not mapped: a project rule, not equal values, decides its matches.")
+                continue
+            if "dataset" not in relationship["target"]:
+                ds_notes.append(f"{rel_id} is not mapped: its target is external.")
+                continue
+            nulls = relationship.get("nulls", "skip")
+            if nulls == "unknown":
+                ds_notes.append(f"{rel_id} is not mapped: its null handling is unknown.")
+                continue
+            fields, target = _target(relationship, context)
+            if target is None:
+                ds_notes.append(f"{rel_id} is not mapped: its target has no top-level key to name its rows.")
+                continue
+            scope = relationship.get("scope", "version_pair")
+            source_paths = relationship["source"]["paths"]
+            flat = all(len(path) == 1 and "field" in path[0] for path in source_paths)
+            pairs = dict(zip(fields, source_paths))
+
+            if nulls != "match" and flat and set(fields) == set(target.key):
+                if not _scope_allows_key_link(rel_id, scope, rows, target, context, ds_notes):
+                    continue
+                tgt_exprs, not_nulls = [], []
+                for field in target.key:
+                    src_logical = pairs[field][0]["field"]
+                    (src_phys,), src_prop = _resolve_field(rows.properties, (src_logical,))
+                    _, tgt_prop = _resolve_field(target.properties, (field,))
+                    cast_prop = src_prop if src_prop.get("logicalType") in AS_TEXT else tgt_prop
+                    raw_fk = _df_field((src_phys,))
+                    tgt_exprs.append(_df_text(raw_fk, cast_prop))
+                    not_nulls.append(f"{raw_fk} IS NOT NULL")
+                subj_expr, subj_bnode = rows.subject_expr(rows.key_exprs())
+                from_where = f"FROM {rows.reader_ident} WHERE {rows.where(*not_nulls)}"
+                branches.append(
+                    _quad_branch(
+                        subj_expr=subj_expr,
+                        subj_is_bnode=subj_bnode,
+                        pred_iri=rel_id,
+                        obj_kind="iri",
+                        obj_expr=_df_iri_expr(child_iri(target.dataset["id"], "row"), tgt_exprs),
+                        graph_iri=graph_iri,
+                        from_where_sql=from_where,
+                    )
+                )
+                continue
+
+            eaches = [path for path in source_paths if path[-1].get("each")]
+            if (
+                nulls != "match"
+                and len(source_paths) == 1
+                and len(eaches) == 1
+                and set(fields) == set(target.key)
+                and all("field" in step for step in eaches[0][:-1])
+            ):
+                if not _scope_allows_key_link(rel_id, scope, rows, target, context, ds_notes):
+                    continue
+                arr_path = tuple(step["field"] for step in eaches[0][:-1])
+                each_links[arr_path].append((rel_id, target.dataset["id"]))
+                continue
+
+            object_array = _object_array_paths(source_paths)
+            if (
+                nulls != "match"
+                and object_array is not None
+                and len(fields) == len(source_paths)
+                and set(fields) == set(target.key)
+            ):
+                if not _scope_allows_key_link(rel_id, scope, rows, target, context, ds_notes):
+                    continue
+                item_fields = [
+                    (field, tuple(step["field"] for step in pairs[field][len(object_array) + 1 :]))
+                    for field in target.key
+                ]
+                each_object_links[object_array].append({"id": rel_id, "item_fields": item_fields, "target": target})
+                continue
+
+            if len(eaches) > 1 or any(
+                not all("field" in step for step in (path[:-1] if path in eaches else path))
+                for path in source_paths
+            ):
+                ds_notes.append(f"{rel_id} is not mapped: its source path is not fields with at most one array.")
+                continue
+            if getattr(target, "is_peer", False):
+                ds_notes.append(
+                    f"{rel_id} is not mapped: cross-catalog quad links project foreign keys to peer primary keys without scanning peer files."
+                )
+                continue
+            if not (rows.version and target.version) or not getattr(target, "reader_ident", None):
+                ds_notes.append(f"{rel_id} is not mapped: its join reads both exact versions, and one side is unbound.")
+                continue
+            if scope not in {"same_release", "version_pair"}:
+                ds_notes.append(f"{rel_id} is not mapped: its {scope} scope needs a project-specific resolver.")
+                continue
+            if scope == "same_release" and not context.same_release(rows.version, target.version):
+                ds_notes.append(
+                    f"{rel_id} is not mapped: its scope is the same release, and {rows.version} and {target.version} share none."
+                )
+                continue
+            used_aliases.add(target.dataset["alias"])
+
+            child_sql = rows.reader_ident
+            item_prop = {}
+            if eaches:
+                arr_logical = tuple(step["field"] for step in eaches[0][:-1])
+                arr_phys, arr_prop = _resolve_field(rows.properties, arr_logical)
+                item_prop = arr_prop.get("items") if isinstance(arr_prop.get("items"), dict) else {}
+                unnested = _df_text(f"UNNEST({_df_field(arr_phys)})", item_prop)
+                child_sql = (
+                    f"(SELECT *, {unnested} AS __ddk_each FROM {rows.reader_ident} "
+                    f"WHERE {rows.where(f'{_df_field(arr_phys)} IS NOT NULL')})"
+                )
+            operator = "IS NOT DISTINCT FROM" if nulls == "match" else "="
+            conditions, extra_where = [], []
+            for field, path in pairs.items():
+                (tgt_phys,), tgt_prop = _resolve_field(target.properties, (field,))
+                if path in eaches:
+                    right_expr = 'c."__ddk_each"'
+                    cast_prop = item_prop if item_prop.get("logicalType") in AS_TEXT else tgt_prop
+                    left_expr = _df_text(_df_field((tgt_phys,), "p"), cast_prop)
+                    if nulls != "match":
+                        extra_where.append('c."__ddk_each" IS NOT NULL')
+                else:
+                    src_logical = tuple(step["field"] for step in path)
+                    src_phys, src_prop = _resolve_field(rows.properties, src_logical)
+                    need_text = src_prop.get("logicalType") in AS_TEXT or tgt_prop.get("logicalType") in AS_TEXT
+                    cast_prop = {"logicalType": "integer"} if need_text else {}
+                    left_expr = _df_text(_df_field((tgt_phys,), "p"), cast_prop)
+                    right_expr = _df_text(_df_field(src_phys, "c"), cast_prop)
+                conditions.append(f"{left_expr} {operator} {right_expr}")
+            subj_expr, subj_bnode = rows.subject_expr(rows.key_exprs("c"))
+            tgt_key_exprs = target.key_exprs("p")
+            where_clause = rows.where(*target.key_not_null("p"), *extra_where, table="c")
+            # Build hash table on LEFT (`target.reader_ident AS p`) and probe with `child_sql AS c`
+            from_where = (
+                f"FROM {target.reader_ident} AS p INNER JOIN {child_sql} AS c "
+                f"ON {' AND '.join(conditions)} WHERE {where_clause}"
+            )
+            branches.append(
+                _quad_branch(
+                    subj_expr=subj_expr,
+                    subj_is_bnode=subj_bnode,
+                    pred_iri=rel_id,
+                    obj_kind="iri",
+                    obj_expr=_df_iri_expr(child_iri(target.dataset["id"], "row"), tgt_key_exprs),
+                    graph_iri=graph_iri,
+                    from_where_sql=from_where,
+                )
+            )
+
+        # 4. Scalar & object arrays
+        for logical_path, phys_path, prop in arrays:
+            label, key = _column(logical_path), _path_key(logical_path)
+            links = each_links.pop(logical_path, [])
+            object_links = each_object_links.pop(logical_path, [])
+            if not isinstance(prop.get("items"), dict):
+                ds_notes.append(f"{label} is not mapped: its array element definition is absent or withheld.")
+                continue
+            items = prop["items"]
+            raw_arr = _df_field(phys_path)
+            if items.get("logicalType") != "object":
+                if items.get("logicalType") == "array":
+                    ds_notes.append(f"{label} is not mapped: arrays of arrays need a view of their own.")
+                    continue
+                if object_links:
+                    ds_notes.append(f"Links through {label} are not mapped: its items are not objects.")
+                unnested = _df_text(f"UNNEST({raw_arr})", items)
+                step_counter += 1
+                arr_step = f"arr_{step_counter}"
+                inner_sql = (
+                    f"SELECT {rows.projected_keys()}, v0 FROM ("
+                    f"SELECT {', '.join([*rows.select_keys(), f'{unnested} AS v0'])} "
+                    f"FROM {rows.reader_ident} WHERE {rows.where(f'{raw_arr} IS NOT NULL')}"
+                    ") AS _u WHERE v0 IS NOT NULL"
+                )
+                need_materialize = bool(links) or ((alias, logical_path) in context.templates)
+                derived_steps.append({"name": arr_step, "sql": inner_sql, "materialize": need_materialize})
+                subj_expr, subj_bnode = rows.subject_expr(rows.key_aliases)
+                from_where = f"FROM {arr_step}"
+                branches.append(
+                    _quad_branch(
+                        subj_expr=subj_expr,
+                        subj_is_bnode=subj_bnode,
+                        pred_iri=field_predicate(dataset_id, logical_path),
+                        obj_kind="literal",
+                        obj_expr="v0",
+                        obj_datatype_iri=_expand_datatype_iri(_datatype(items)),
+                        graph_iri=graph_iri,
+                        from_where_sql=from_where,
+                    )
+                )
+                for link_pred, tgt_ds_id in links:
+                    branches.append(
+                        _quad_branch(
+                            subj_expr=subj_expr,
+                            subj_is_bnode=subj_bnode,
+                            pred_iri=link_pred,
+                            obj_kind="iri",
+                            obj_expr=_df_iri_expr(child_iri(tgt_ds_id, "row"), ["v0"]),
+                            graph_iri=graph_iri,
+                            from_where_sql=from_where,
+                        )
+                    )
+                if (alias, logical_path) in context.templates:
+                    branches.append(
+                        _quad_branch(
+                            subj_expr=subj_expr,
+                            subj_is_bnode=subj_bnode,
+                            pred_iri=SEE_ALSO,
+                            obj_kind="iri",
+                            obj_expr=_df_concept_iri_expr(context.templates[(alias, logical_path)], "v0"),
+                            graph_iri=graph_iri,
+                            from_where_sql=from_where,
+                        )
+                    )
+                continue
+
+            # Object array: materialize unnested 1-based indexed elements once
+            leaves = []
+            for leaf_logical, leaf_phys, child in _walk(items.get("properties", ())):
+                if child.get("logicalType") in {"array", "object"}:
+                    ds_notes.append(f"{label}.{_column(leaf_logical)} is not mapped: it nests inside an array element.")
+                else:
+                    leaves.append((leaf_logical, leaf_phys, child))
+            if links:
+                ds_notes.append(f"Links through {label} are not mapped: its items are objects.")
+            step_counter += 1
+            obj_step = f"obj_arr_{step_counter}"
+            obj_sql = (
+                f"SELECT {rows.projected_keys()}, CAST(i0 AS VARCHAR) AS i0_str, "
+                "array_element(__ddk_arr, i0) AS __ddk_item FROM ("
+                f"SELECT {', '.join([*rows.select_keys(), f'{raw_arr} AS __ddk_arr', f'UNNEST(generate_series(CAST(1 AS BIGINT), CAST(array_length({raw_arr}) AS BIGINT))) AS i0'])} "
+                f"FROM {rows.reader_ident} "
+                f"WHERE {rows.where(f'{raw_arr} IS NOT NULL', f'COALESCE(array_length({raw_arr}), 0) > 0')}"
+                ") AS _idx WHERE array_element(__ddk_arr, i0) IS NOT NULL"
+            )
+            derived_steps.append({"name": obj_step, "sql": obj_sql, "materialize": True})
+
+            parent_subj_expr, parent_bnode = rows.subject_expr(rows.key_aliases)
+            if rows.key:
+                sep = ":" if dataset_id.startswith("urn:") else "/"
+                elem_expr = f"concat({parent_subj_expr}, {_sql_text(sep + key + sep)}, i0_str)"
+                elem_bnode = False
+            else:
+                elem_expr = _df_blank_expr(
+                    f"{dataset_id}\n{rows.version or 'template'}\n{key}",
+                    [*rows.key_aliases, "i0_str"],
+                )
+                elem_bnode = True
+
+            branches.append(
+                _quad_branch(
+                    subj_expr=parent_subj_expr,
+                    subj_is_bnode=parent_bnode,
+                    pred_iri=field_predicate(dataset_id, logical_path),
+                    obj_kind="bnode" if elem_bnode else "iri",
+                    obj_expr=elem_expr,
+                    graph_iri=graph_iri,
+                    from_where_sql=f"FROM {obj_step}",
+                )
+            )
+            for leaf_logical, leaf_phys, child in leaves:
+                leaf_raw = _df_field(("__ddk_item", *leaf_phys))
+                leaf_val = _df_text(leaf_raw, child)
+                full_path = (*logical_path, *leaf_logical)
+                from_where = f"FROM {obj_step} WHERE {leaf_raw} IS NOT NULL"
+                branches.append(
+                    _quad_branch(
+                        subj_expr=elem_expr,
+                        subj_is_bnode=elem_bnode,
+                        pred_iri=field_predicate(dataset_id, full_path),
+                        obj_kind="literal",
+                        obj_expr=leaf_val,
+                        obj_datatype_iri=_expand_datatype_iri(_datatype(child)),
+                        graph_iri=graph_iri,
+                        from_where_sql=from_where,
+                    )
+                )
+                if (alias, full_path) in context.templates:
+                    branches.append(
+                        _quad_branch(
+                            subj_expr=elem_expr,
+                            subj_is_bnode=elem_bnode,
+                            pred_iri=SEE_ALSO,
+                            obj_kind="iri",
+                            obj_expr=_df_concept_iri_expr(context.templates[(alias, full_path)], leaf_val),
+                            graph_iri=graph_iri,
+                            from_where_sql=from_where,
+                        )
+                    )
+            item_props = items.get("properties", ())
+            for obj_link in object_links:
+                target = obj_link["target"]
+                tgt_exprs, not_nulls = [], []
+                for tgt_field, item_logical in obj_link["item_fields"]:
+                    item_phys, src_prop = _resolve_field(item_props, item_logical)
+                    _, tgt_prop = _resolve_field(target.properties, (tgt_field,))
+                    cast_prop = src_prop if src_prop.get("logicalType") in AS_TEXT else tgt_prop
+                    raw_fk = _df_field(("__ddk_item", *item_phys))
+                    tgt_exprs.append(_df_text(raw_fk, cast_prop))
+                    not_nulls.append(f"{raw_fk} IS NOT NULL")
+                from_where = f"FROM {obj_step} WHERE {' AND '.join(dict.fromkeys(not_nulls))}"
+                branches.append(
+                    _quad_branch(
+                        subj_expr=elem_expr,
+                        subj_is_bnode=elem_bnode,
+                        pred_iri=obj_link["id"],
+                        obj_kind="iri",
+                        obj_expr=_df_iri_expr(child_iri(target.dataset["id"], "row"), tgt_exprs),
+                        graph_iri=graph_iri,
+                        from_where_sql=from_where,
+                    )
+                )
+
+        for path in dict.fromkeys([*each_links, *each_object_links]):
+            ds_notes.append(f"Links through {_column(path)} are not mapped: it is not a declared array field.")
+
+        # 5. Concept subPropertyOf statements
+        for (owner, path), concept in sorted(context.concepts.items()):
+            if owner == alias:
+                branches.append(
+                    _quad_branch(
+                        subj_expr=_sql_text(field_predicate(dataset_id, path)),
+                        subj_is_bnode=False,
+                        pred_iri=SUBPROPERTY,
+                        obj_kind="iri",
+                        obj_expr=_sql_text(concept),
+                        graph_iri=graph_iri,
+                    )
+                )
+
+        # 6. Match decisions (`skos:exactMatch`, `skos:closeMatch`, `ddkv:noMatch`)
+        decisions = next(iter(ddk_annotations(definition, "matchDecisions")), None)
+        if decisions and not public:
+            col_name, pair_ids = _decision_spec(decisions)
+            by_name = {prop["name"]: prop for prop in definition.get("properties", ())}
+            candidates = {}
+            for relationship in sorted(outgoing[alias], key=lambda item: item["id"]):
+                fields, target = _target(relationship, context)
+                paths = relationship["source"]["paths"]
+                if (
+                    target is None
+                    or set(fields) != set(target.key)
+                    or not all(len(p) == 1 and "field" in p[0] for p in paths)
+                ):
+                    continue
+                scope = relationship.get("scope", "version_pair")
+                if not _scope_allows_key_link(relationship["id"], scope, rows, target, context, []):
+                    continue
+                pairs = dict(zip(fields, paths))
+                candidates[relationship["id"]] = (target, [pairs[f][0]["field"] for f in target.key])
+            if pair_ids is None:
+                chosen_pair = list(candidates.values()) if len(candidates) == 2 else []
+            elif len(pair_ids) == 2 and pair_ids[0] != pair_ids[1] and all(rid in candidates for rid in pair_ids):
+                chosen_pair = [candidates[pair_ids[0]], candidates[pair_ids[1]]]
+            else:
+                chosen_pair = []
+            if not col_name or col_name not in by_name or len(chosen_pair) != 2:
+                ds_notes.append(
+                    f"Match decisions are declared on {decisions!r} but need a declared decision column and two valid "
+                    "relationships to keyed rows, so they are not mapped."
+                )
+            else:
+                decision_phys = _phys_name(by_name[col_name])
+                not_nulls = []
+                side_exprs = []
+                for target, src_columns in chosen_pair:
+                    col_exprs = []
+                    for src_col, tgt_col in zip(src_columns, target.key):
+                        (src_phys,), src_prop = _resolve_field(rows.properties, (src_col,))
+                        _, tgt_prop = _resolve_field(target.properties, (tgt_col,))
+                        cast_prop = src_prop if src_prop.get("logicalType") in AS_TEXT else tgt_prop
+                        raw_col = _df_field((src_phys,))
+                        col_exprs.append(_df_text(raw_col, cast_prop))
+                        not_nulls.append(f"{raw_col} IS NOT NULL")
+                    side_exprs.append(_df_iri_expr(child_iri(target.dataset["id"], "row"), col_exprs))
+                nn_clause = " AND ".join(dict.fromkeys(not_nulls))
+                for decision_val, predicate_iri in MATCH_PREDICATES.items():
+                    from_where = (
+                        f"FROM {rows.reader_ident} "
+                        f"WHERE {_sql_name(decision_phys)} = {_sql_text(decision_val)} AND {nn_clause}"
+                    )
+                    branches.append(
+                        _quad_branch(
+                            subj_expr=side_exprs[0],
+                            subj_is_bnode=False,
+                            pred_iri=predicate_iri,
+                            obj_kind="iri",
+                            obj_expr=side_exprs[1],
+                            graph_iri=graph_iri,
+                            from_where_sql=from_where,
+                        )
+                    )
+
+    inputs = []
+    numbered_steps = []
+    bound_versions = {}
+    for alias in sorted(used_aliases):
+        rows = df_rows[alias]
+        inputs.append({"kind": "parquet", "name": rows.table_ident, "path": rows.path})
+        if not rows.key:
+            numbered_steps.append({
+                "name": rows.reader_ident,
+                "sql": f"SELECT ROW_NUMBER() OVER () AS {_sql_name(ROW)}, * FROM {rows.table_ident}",
+                "materialize": True,
+            })
+        bound_versions[alias] = rows.version
+
+    steps = [*numbered_steps, *derived_steps]
+    if branches:
+        steps.append({"name": "raw_quads", "sql": " UNION ALL ".join(branches), "materialize": False})
+        steps.append({
+            "name": "distinct_quads",
+            "sql": f"SELECT DISTINCT {', '.join(QUAD_COLUMNS)} FROM raw_quads",
+            "materialize": False,
+        })
+    else:
+        steps.append({
+            "name": "distinct_quads",
+            "sql": (
+                "SELECT CAST('' AS VARCHAR) AS subject, CAST('' AS VARCHAR) AS predicate, "
+                "CAST('' AS VARCHAR) AS object_kind, CAST('' AS VARCHAR) AS object_value, "
+                "CAST(NULL AS VARCHAR) AS object_datatype, CAST(NULL AS VARCHAR) AS graph, "
+                "CAST('' AS VARCHAR) AS nquad WHERE FALSE"
+            ),
+            "materialize": False,
+        })
+
+    out_path = str(Path(output_parquet_path).resolve())
+    job_spec = {
+        "scratch": str(Path(scratch_dir).resolve()),
+        "inputs": inputs,
+        "steps": steps,
+        "outputs": [
+            {
+                "name": "quads",
+                "path": out_path,
+                "sql": f"SELECT {', '.join(QUAD_COLUMNS)} FROM distinct_quads",
+                "settings": {
+                    "profile": "whole",
+                    "row_group_rows": 65536,
+                    "order_by": [
+                        {"field": "subject", "direction": "asc", "nulls": "nulls_last"},
+                        {"field": "predicate", "direction": "asc", "nulls": "nulls_last"},
+                        {"field": "nquad", "direction": "asc", "nulls": "nulls_last"},
+                    ],
+                    "columns": list(QUAD_COLUMNS),
+                    "dictionary_columns": ["predicate", "object_kind", "object_datatype", "graph"],
+                    "delta_columns": [],
+                    "key_column": None,
+                    "created_by": "ddk-catalog-graph",
+                    "footer_limit": 4 << 20,
+                },
+            }
+        ],
+        "queries": [],
+    }
+    if job_id is not None:
+        job_spec["id"] = str(job_id)
+
+    return {
+        "jobSpec": job_spec,
+        "boundVersions": bound_versions,
+        "branchCount": len(branches),
+        "notes": {alias: list(items) for alias, items in sorted(notes.items()) if items},
+    }
+
+
+def materialize_graph_quads(
+    catalog,
+    adapter,
+    *,
+    work_dir,
+    output_parquet_path,
+    output_nquads_path=None,
+    datasets=None,
+    file_overrides=None,
+    input_digests=None,
+    job_id=None,
+):
+    """Materialize row-level RDF quads in DataFusion (`quads.parquet`) and optionally stream `.nq` in Rust."""
+    from hashlib import file_digest
+    from pathlib import Path
+
+    work = Path(work_dir).resolve()
+    work.mkdir(parents=True, exist_ok=True)
+    out_parquet = Path(output_parquet_path).resolve()
+    out_parquet.parent.mkdir(parents=True, exist_ok=True)
+
+    compiled = compile_graph_quads_job(
+        catalog,
+        scratch_dir=work / "scratch",
+        output_parquet_path=out_parquet,
+        datasets=datasets,
+        file_overrides=file_overrides,
+        job_id=job_id,
+    )
+    known = _catalog_parquet_digests(catalog)
+    if input_digests:
+        for raw_p, dig in input_digests.items():
+            known[str(Path(raw_p).resolve())] = dig
+
+    digests = {}
+    for inp in compiled["jobSpec"]["inputs"]:
+        p = inp["path"]
+        if p in known:
+            digests[p] = known[p]
+        else:
+            with Path(p).open("rb") as fh:
+                digests[p] = file_digest(fh, "sha256").hexdigest()
+
+    job_response = adapter.execute(compiled["jobSpec"], input_digests=digests)
+    if job_response["status"] != "succeeded":
+        return {"status": job_response["status"], "job": job_response, "compiled": compiled}
+
+    parquet_quad_count = job_response["result"]["outputs"][0]["rows"]
+    if output_nquads_path is not None:
+        out_nq = Path(output_nquads_path).resolve()
+        out_nq.parent.mkdir(parents=True, exist_ok=True)
+        nq_response = adapter.export_nquads(out_parquet, out_nq)
+        out = {
+            "status": nq_response["status"],
+            "job": job_response,
+            "nquads": nq_response,
+            "compiled": compiled,
+        }
+        if nq_response["status"] == "succeeded":
+            out["quadCount"] = nq_response["result"]["output"]["quads"]
+        return out
+
+    return {
+        "status": "succeeded",
+        "quadCount": parquet_quad_count,
+        "job": job_response,
+        "compiled": compiled,
+    }
+

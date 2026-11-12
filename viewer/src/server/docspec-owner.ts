@@ -26,19 +26,11 @@ import type {
 import type { OwnerAdapters, OwnerEvidenceReader, OwnerQuery, OwnerReader } from './access';
 import { fail, LIMITS, sha256, ViewerError, type CatalogRegistration } from './catalog-store';
 
-export function resolveBridgeScriptPath(
-  moduleUrl: string = import.meta.url,
-  cwd: string = process.cwd(),
-): string {
-  const candidates = [
-    fileURLToPath(new URL('../../scripts/docspec-owner-bridge.py', moduleUrl)),
-    fileURLToPath(new URL('../../../scripts/docspec-owner-bridge.py', moduleUrl)),
-    resolve(cwd, 'scripts/docspec-owner-bridge.py'),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0]!;
-}
+export const DEFAULT_DOCSPEC_BINARY =
+  '/Users/mikewolfd/Work/artifacts/ddk-docspec-runtime-20261111/docspec';
+export const DEFAULT_DOCSPEC_SHA256 =
+  'de4abe4f6d5e36614bcfd15c541257ba6bca6a17e1f2273837287c05a686bfc1';
 
-const BRIDGE_SCRIPT = resolveBridgeScriptPath();
 const MAX_WORKER_STDOUT_LINE = 8 * 1024 * 1024;
 const DEFAULT_VERIFY_DIGEST_MAX_BYTES = 256 * 1024 * 1024;
 const FORBIDDEN_EVIDENCE_EXTENSIONS = new Set([
@@ -49,7 +41,32 @@ const FORBIDDEN_EVIDENCE_EXTENSIONS = new Set([
   '.duckdb',
   '.sqlite',
   '.db',
+  '.avro',
+  '.orc',
+  '.csv',
+  '.tsv',
+  '.jsonl',
+  '.ndjson',
 ]);
+
+function collectEvidenceRecordUris(node: unknown, out: Set<string>, depth = 0): void {
+  if (depth > 48 || !node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectEvidenceRecordUris(item, out, depth + 1);
+    return;
+  }
+  const obj = node as Record<string, unknown>;
+  if (
+    typeof obj.uri === 'string' &&
+    typeof obj.sha256 === 'string' &&
+    /^[a-f0-9]{64}$/.test(obj.sha256)
+  ) {
+    out.add(obj.uri);
+  }
+  for (const val of Object.values(obj)) {
+    collectEvidenceRecordUris(val, out, depth + 1);
+  }
+}
 
 export interface PinnedParquetShard {
   path: string;
@@ -63,9 +80,8 @@ export interface DocSpecStartupReceipt {
   verifiedAt: string;
   catalogDirectory: string;
   lockSha256: string;
-  pythonPath: string;
-  pythonVersion: string;
-  pyarrowVersion: string;
+  docspecBinary: string;
+  runtime: string;
   permittedRoots: readonly string[];
   engine?: QueryEngineProvenance;
 }
@@ -79,13 +95,10 @@ export interface EvidenceMapEntry {
 export interface DocSpecOwnerConfig {
   directory: string;
   lockSha256: string;
-  pythonPath: string;
-  ddkSrcPath?: string;
   docspecBinary?: string;
   docspecSha256?: string;
   docspecLimits?: Record<string, number>;
   docspecTimeoutSec?: number;
-  fallbackEngine?: 'none' | 'duckdb';
   permittedRoots: readonly string[];
   maxConcurrent?: number;
   verifyDigestMaxBytes?: number;
@@ -126,12 +139,9 @@ export interface OperatorCatalogOwnerEntry {
   lockSha256: string;
   pairedLocalDirectory?: string;
   pairedLocalLockSha256?: string;
-  pythonPath?: string;
-  ddkSrcPath?: string;
   docspecBinary?: string;
   docspecSha256?: string;
   docspecLimits?: Record<string, number>;
-  fallbackEngine?: 'none' | 'duckdb';
   permittedRoots?: string[];
   supportedDatasetIds?: string[];
   supportedRecipeIds?: string[];
@@ -407,7 +417,7 @@ function decodeQueryParameters(
   return { pyParams, rawNumericParameters };
 }
 
-class PythonBridgeWorker {
+class DocSpecNativeWorker {
   private child: ChildProcessWithoutNullStreams | null = null;
   private buffer = '';
   private nextId = 1;
@@ -422,7 +432,7 @@ class PythonBridgeWorker {
   private closed = false;
 
   constructor(
-    private readonly pythonPath: string,
+    private readonly docspecBinary: string,
     private readonly initParams: Record<string, unknown>,
   ) {}
 
@@ -464,7 +474,7 @@ class PythonBridgeWorker {
     if (this.closed) fail('owner_unavailable', 'DocSpecCatalogOwner is closed.', 503);
     if (this.child) return undefined;
 
-    const proc = spawn(this.pythonPath, ['-B', '-u', BRIDGE_SCRIPT], {
+    const proc = spawn(this.docspecBinary, ['owner-worker'], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.child = proc;
@@ -659,8 +669,8 @@ class PythonBridgeWorker {
 }
 
 /**
- * Create a generic, startup-pinned DDK catalog owner adapter backed by PyArrow Parquet
- * row-group pagination and optional DocSpec checked recipe execution.
+ * Create a generic, startup-pinned DDK catalog owner adapter backed by native Rust
+ * `docspec owner-worker` Parquet row-group pagination and DataFusion SQL recipe execution.
  */
 export async function createDocSpecCatalogOwner(
   config: DocSpecOwnerConfig,
@@ -669,8 +679,14 @@ export async function createDocSpecCatalogOwner(
     fail('invalid_registration', 'DocSpecCatalogOwner directory must be an absolute path.');
   if (!/^[a-f0-9]{64}$/.test(config.lockSha256))
     fail('invalid_registration', 'DocSpecCatalogOwner requires a 64-hex lockSha256.');
-  if (typeof config.pythonPath !== 'string' || !isAbsolute(config.pythonPath))
-    fail('invalid_registration', 'DocSpecCatalogOwner pythonPath must be an absolute path.');
+  const rawDocspecBinary =
+    config.docspecBinary ??
+    process.env.DDK_VIEWER_DOCSPEC_BINARY ??
+    process.env.DDK_DOCSPEC_BIN ??
+    process.env.DDK_DOCSPEC_BINARY ??
+    DEFAULT_DOCSPEC_BINARY;
+  if (typeof rawDocspecBinary !== 'string' || !isAbsolute(rawDocspecBinary))
+    fail('invalid_registration', 'DocSpecCatalogOwner docspecBinary must be an absolute path.');
   if (!Array.isArray(config.permittedRoots) || config.permittedRoots.length === 0)
     fail('invalid_registration', 'DocSpecCatalogOwner requires non-empty permittedRoots.');
   if (config.docspecSha256 !== undefined && !/^[a-f0-9]{64}$/.test(config.docspecSha256))
@@ -682,12 +698,16 @@ export async function createDocSpecCatalogOwner(
   } catch {
     fail('invalid_registration', `Catalog directory does not exist: ${config.directory}`);
   }
-  const pythonResolved = resolve(config.pythonPath);
+  const docspecResolved = resolve(rawDocspecBinary);
   try {
-    const pyStat = await stat(pythonResolved);
-    if (!pyStat.isFile()) throw new Error('not a file');
+    const binStat = await stat(docspecResolved);
+    if (!binStat.isFile()) throw new Error('not a file');
   } catch {
-    fail('owner_unavailable', `Configured Python interpreter not found: ${config.pythonPath}`, 503);
+    fail(
+      'owner_unavailable',
+      `Configured DocSpec executable not found: ${rawDocspecBinary}`,
+      503,
+    );
   }
 
   const permittedRoots: string[] = [];
@@ -721,34 +741,47 @@ export async function createDocSpecCatalogOwner(
   }
 
   const catalogPath = resolve(catalogDirectory, 'catalog.ddk.json');
+  const reportPath = resolve(catalogDirectory, 'catalog.report.json');
   const lockPath = resolve(catalogDirectory, 'catalog.lock.json');
   const lockBytes = await readBoundedBytes(lockPath, Date.now() + 5000, undefined, LIMITS.lockBytes);
   if (sha256(lockBytes) !== config.lockSha256)
     fail('integrity_mismatch', 'The catalog.lock.json digest differs from lockSha256.', 409);
 
-  const worker = new PythonBridgeWorker(pythonResolved, {
+  const catalogAllowlistUris = new Set<string>();
+  for (const metaPath of [catalogPath, reportPath]) {
+    const metaBytes = await readBoundedBytes(metaPath, Date.now() + 5000, undefined, LIMITS.fileBytes).catch(
+      () => null,
+    );
+    if (metaBytes) {
+      try {
+        collectEvidenceRecordUris(
+          parseMetadata(new TextDecoder('utf-8', { fatal: true }).decode(metaBytes)),
+          catalogAllowlistUris,
+        );
+      } catch {}
+    }
+  }
+
+  const worker = new DocSpecNativeWorker(docspecResolved, {
     catalogPath,
     lockPath,
     expectedLockSha256: config.lockSha256,
-    ...(config.ddkSrcPath ? { ddkSrcPath: resolve(config.ddkSrcPath) } : {}),
-    ...(config.docspecBinary ? { docspecBinary: config.docspecBinary } : {}),
+    docspecBinary: docspecResolved,
     ...(config.docspecSha256 ? { docspecSha256: config.docspecSha256 } : {}),
     ...(config.docspecLimits ? { docspecLimits: config.docspecLimits } : {}),
     ...(config.docspecTimeoutSec ? { docspecTimeoutSec: config.docspecTimeoutSec } : {}),
-    fallbackEngine: config.fallbackEngine ?? 'none',
     permittedRoots,
     ...(retainReceiptsDirReal ? { retainReceiptsDir: retainReceiptsDirReal } : {}),
   });
 
-  // Startup-once verification of Python + PyArrow + DDK + optional DocSpec binary SHA-256
+  // Startup-once verification of catalog lock + DocSpec native Rust binary SHA-256
   const initInfo = await worker.init(Date.now() + 30_000);
   const startup: DocSpecStartupReceipt = Object.freeze({
     verifiedAt: new Date().toISOString(),
     catalogDirectory,
     lockSha256: config.lockSha256,
-    pythonPath: pythonResolved,
-    pythonVersion: initInfo.pythonVersion,
-    pyarrowVersion: initInfo.pyarrowVersion,
+    docspecBinary: docspecResolved,
+    runtime: typeof initInfo.runtime === 'string' ? initInfo.runtime : 'docspec-native-rust',
     permittedRoots: Object.freeze([...permittedRoots]),
     ...(initInfo.engine ? { engine: Object.freeze({ ...initInfo.engine }) } : {}),
   });
@@ -777,8 +810,7 @@ export async function createDocSpecCatalogOwner(
   }
 
   const enableReader = config.enableReader ?? true;
-  const enableQuery =
-    config.enableQuery ?? Boolean(config.docspecBinary || config.fallbackEngine === 'duckdb');
+  const enableQuery = config.enableQuery ?? Boolean(config.docspecBinary);
   const enableEvidence = config.enableEvidence ?? true;
 
   const reader: OwnerReader | undefined = enableReader
@@ -1021,8 +1053,10 @@ export async function createDocSpecCatalogOwner(
         const mapped =
           dynamicEvidence.get(evidenceMapKey(record)) ??
           config.evidenceUriMap?.get(evidenceMapKey(record));
+        const allowlistOnly = config.evidenceAllowlistOnly ?? true;
+        const inCatalogAllowlist = !config.evidenceUriMap && catalogAllowlistUris.has(record.uri);
 
-        if (!mapped && config.evidenceAllowlistOnly) {
+        if (!mapped && allowlistOnly && !inCatalogAllowlist) {
           fail(
             'evidence_refused',
             'This record is outside the configured evidence allowlist.',
@@ -1128,9 +1162,25 @@ export async function loadOperatorOwnerConfig(
     if (!/^[a-f0-9]{64}$/.test(selectedLockSha))
       fail('invalid_registration', `Entry ${entry.id} requires a 64-hex lockSha256.`);
 
-    const selectedCatalogId = usePairedLocal
+    let selectedCatalogId = usePairedLocal
       ? (entry.pairedLocalCatalogId ?? entry.catalogId)
       : entry.catalogId;
+    if (!selectedCatalogId) {
+      const catBytes = await readBoundedBytes(
+        resolve(selectedDir, 'catalog.ddk.json'),
+        Date.now() + 3000,
+        undefined,
+        LIMITS.fileBytes,
+      ).catch(() => null);
+      if (catBytes) {
+        try {
+          const catHeader = parseMetadata(new TextDecoder('utf-8', { fatal: true }).decode(catBytes));
+          if (isObject(catHeader) && typeof catHeader.id === 'string' && catHeader.id) {
+            selectedCatalogId = catHeader.id;
+          }
+        } catch {}
+      }
+    }
 
     registrations.push({
       id: entry.id,
@@ -1143,16 +1193,25 @@ export async function loadOperatorOwnerConfig(
       lockSha256: selectedLockSha,
     });
 
-    if (audience === 'local' && entry.pythonPath && entry.permittedRoots?.length) {
+    const resolvedEntryBinary = entry.docspecBinary
+      ? resolve(entry.docspecBinary)
+      : resolve(
+          process.env.DDK_VIEWER_DOCSPEC_BINARY ??
+            process.env.DDK_DOCSPEC_BIN ??
+            process.env.DDK_DOCSPEC_BINARY ??
+            DEFAULT_DOCSPEC_BINARY,
+        );
+    if (
+      audience === 'local' &&
+      entry.permittedRoots?.length &&
+      (entry.docspecBinary || existsSync(resolvedEntryBinary))
+    ) {
       const owner = await createDocSpecCatalogOwner({
         directory: selectedDir,
         lockSha256: selectedLockSha,
-        pythonPath: resolve(entry.pythonPath),
-        ...(entry.ddkSrcPath ? { ddkSrcPath: resolve(entry.ddkSrcPath) } : {}),
-        ...(entry.docspecBinary ? { docspecBinary: resolve(entry.docspecBinary) } : {}),
+        docspecBinary: resolvedEntryBinary,
         ...(entry.docspecSha256 ? { docspecSha256: entry.docspecSha256 } : {}),
         ...(entry.docspecLimits ? { docspecLimits: entry.docspecLimits } : {}),
-        fallbackEngine: entry.fallbackEngine ?? 'none',
         permittedRoots: entry.permittedRoots.map((r) => resolve(r)),
         ...(entry.supportedDatasetIds ? { supportedDatasetIds: entry.supportedDatasetIds } : {}),
         ...(entry.supportedRecipeIds ? { supportedRecipeIds: entry.supportedRecipeIds } : {}),
