@@ -5,7 +5,7 @@ import heapq
 
 from .capabilities import discover_capabilities
 from .datasets import record_comparison
-from .documents import DocumentError, RegistryError, ResourceLimit, json_pointer, schema_registry
+from .documents import DocumentError, RegistryError, ResourceLimit, json_pointer, resolve_path, schema_registry
 from .interfaces import check_arguments, check_interface
 from .inventory import ProjectInventory
 from .policies import check_policy, record_definition_uses
@@ -26,6 +26,12 @@ def _reference_sites(artifact):
                 yield (group, name, "dataset"), binding["dataset"], "dataset"
         for name, step in sorted(value["steps"].items()):
             yield ("steps", name, "component"), step["component"], "component"
+    elif artifact.kind == "job":
+        for group in ("inputs", "outputs"):
+            for name, reference in sorted(value[group].items()):
+                yield (group, name), reference, "dataset"
+        for name, binding in sorted(value.get("qualityQueries", {}).items()):
+            yield ("qualityQueries", name, "dataset"), binding["dataset"], "dataset"
     elif artifact.kind == "policy":
         for index, rule in enumerate(value["rules"]):
             for key in ("artifact", "dataset"):
@@ -81,6 +87,25 @@ def _prepare_references(inventory):
                 inventory.report.add("DDK-REF-001", "core.references", f"{alias}{pointer}",
                                      "not_run" if invalid else "failed", reason=str(exc) if invalid else None,
                                      diagnostics=[diagnostic(exc.code, str(exc), path=inventory.display_path(artifact.path),
+                                                             pointer=pointer)])
+        if artifact.kind == "job":
+            pointer = "/jobSpec"
+            try:
+                spec_path = resolve_path(artifact.path, artifact.value["jobSpec"], inventory.permitted_roots)
+                spec_doc = inventory.read(spec_path)
+                if not isinstance(spec_doc.value, dict):
+                    raise DocumentError("DOC-SYNTAX-JSON", "DocSpec JobSpec must be a JSON object.", pointer)
+                inventory.add_file(spec_doc, "implementation", owner=alias)
+                inventory.dependency(alias, f"implementation:{inventory.display_path(spec_path)}", artifact.path, pointer)
+            except DocumentError as exc:
+                inventory.report.add("DDK-REF-001", "core.references", f"{alias}{pointer}", "failed",
+                                     diagnostics=[diagnostic(exc.code, str(exc), path=inventory.display_path(artifact.path),
+                                                             pointer=pointer)])
+            except OSError:
+                msg = "The referenced DocSpec JobSpec file could not be read."
+                inventory.report.error(diagnostic("DOC-UNREADABLE", msg, path=inventory.display_path(artifact.path), pointer=pointer))
+                inventory.report.add("DDK-REF-001", "core.references", f"{alias}{pointer}", "not_run", reason=msg,
+                                     diagnostics=[diagnostic("DOC-UNREADABLE", msg, path=inventory.display_path(artifact.path),
                                                              pointer=pointer)])
 
 

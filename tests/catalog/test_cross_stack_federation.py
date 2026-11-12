@@ -19,7 +19,6 @@ from ddk.catalog_graph import VOCAB
 from ddk.cli import main as cli_main
 from ddk.documents import validate_document
 from ddk.impact import compare_catalogs, impact_projects
-from ddk.adapters.native import NativeTools
 
 
 WIKIDATA_BILL_ID = "https://www.wikidata.org/entity/P1157"
@@ -635,18 +634,19 @@ def test_harmonized_cross_stack_federation_concepts_recipes_and_graph(tmp_path, 
     has_rdflib = importlib.util.find_spec("rdflib") is not None
     exports = ("dcat", "graph", "rml") if has_rdflib else ("rml",)
 
-    native_py = os.environ.get("DDK_NATIVE_PYTHON") or (
-        sys.executable if importlib.util.find_spec("sqlglot") is not None else None
-    )
-    tools = NativeTools(native_py, output=tmp_path / "native") if native_py else None
+    docspec_bin = os.environ.get("DDK_DOCSPEC_BIN") or os.environ.get("DDK_DOCSPEC_BINARY")
+    evidence_dir = tmp_path / "docspec-evidence"
+    if docspec_bin:
+        evidence_dir.mkdir(parents=True, exist_ok=True)
 
     result = assemble_catalog(
         stack_b_proj,
         metadata=stack_b_meta,
         metadata_adapter="example",
         exports=exports,
-        required_groups=("catalog.recipes",) if tools else (),
-        recipe_tools=tools,
+        required_groups=("catalog.recipes",) if docspec_bin else (),
+        docspec=docspec_bin,
+        docspec_evidence_dir=evidence_dir if docspec_bin else None,
         peer_catalogs={"legislative": stack_a_out},
     )
     assert result.report["decision"] == "passed", result.report
@@ -660,13 +660,13 @@ def test_harmonized_cross_stack_federation_concepts_recipes_and_graph(tmp_path, 
     assert concept_row["iriTemplate"] == "https://congress.example.org/bill/{value}"
     assert {"catalog": "legislative", "dataset": "bills", "path": [{"field": "bill_id"}]} in concept_row["fields"]
 
-    if tools is not None:
+    if docspec_bin is not None:
         recipe_check, = [
             c for c in result.report["checks"]
             if c["group"] == "catalog.recipes" and c["subject"] == "urn:example:oversight:recipe:hearing-bills"
         ]
         assert recipe_check["status"] == "passed"
-        # Plant a nonexistent peer column in the cross-catalog SQL recipe and verify static binder rejection.
+        # Plant a nonexistent peer column in the cross-catalog SQL recipe and verify DocSpec SQL gate rejection.
         (tmp_path / "stack-b" / "queries" / "hearing_bills.sql").write_text(
             "SELECT h.hearing_id, b.nonexistent_col FROM hearings AS h JOIN bills AS b ON h.primary_bill_id = b.bill_id\n",
             encoding="utf-8",
@@ -676,7 +676,8 @@ def test_harmonized_cross_stack_federation_concepts_recipes_and_graph(tmp_path, 
             metadata=stack_b_meta,
             metadata_adapter="example",
             required_groups=("catalog.recipes",),
-            recipe_tools=tools,
+            docspec=docspec_bin,
+            docspec_evidence_dir=evidence_dir,
             peer_catalogs={"legislative": stack_a_out},
         )
         assert bad_recipe.report["decision"] == "failed"

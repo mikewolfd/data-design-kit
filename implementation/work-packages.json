@@ -360,8 +360,8 @@
     },
     {
       "id": "WP-15",
-      "title": "Layered data-map extensions (specified, not implemented)",
-      "status": "specified",
+      "title": "Layered data-map extensions",
+      "status": "in-progress",
       "dependsOn": [
         "WP-13",
         "WP-14"
@@ -369,7 +369,7 @@
       "requirements": [
         "DDK-CATALOG-012"
       ],
-      "planSection": "WP-15 \u2014 Layered data-map extensions (specified, not implemented)",
+      "planSection": "WP-15 \u2014 Layered data-map extensions",
       "owners": [
         "DDK"
       ]

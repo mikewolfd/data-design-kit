@@ -23,7 +23,8 @@ FIRST_RELEASE_PROFILES = {
     "execute.docspec-job", "plan.datafusion", "test.fixtures",
 }
 PROFILES = FIRST_RELEASE_PROFILES | {
-    "catalog.graph", "catalog.rml", "files.frictionless", "ingest.dlt", "runtime.docspec-managed",
+    "catalog.graph", "catalog.jobs", "catalog.recipes", "catalog.rml",
+    "files.frictionless", "ingest.dlt", "runtime.docspec-managed",
     "plan.substrait-validator", "test.portability",
 }
 RELEASE_GROUPS = ("release.claims", "release.evidence", "release.profiles")

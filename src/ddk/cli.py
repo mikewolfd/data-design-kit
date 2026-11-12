@@ -54,9 +54,10 @@ def _parser():
         if name in ("check", "build", "test", "files", "stage", "quality", "managed", "catalog"):
             command.add_argument("--tool-python")
             command.add_argument("--timeout", type=float, default=120)
-        if name in ("check", "build", "test", "files", "stage", "quality", "managed"):
             command.add_argument("--docspec")
             command.add_argument("--limits")
+        if name == "catalog":
+            command.add_argument("--docspec-limits")
         if name == "build":
             command.add_argument("--component", required=True)
             command.add_argument("--export", action="append", default=[])
@@ -143,23 +144,25 @@ def _execute(args, secret_parameters=None):
         from .catalog import build_catalog
         if not args.output:
             raise UsageError("catalog requires --output")
-        tools = None
-        if args.tool_python:
-            from .adapters.native import NativeTools
-            evidence = Path(args.output).resolve()
-            evidence = evidence.with_name(evidence.name + ".evidence")
-            evidence.mkdir(parents=True, exist_ok=True)
-            tools = NativeTools(args.tool_python, output=Path(tempfile.mkdtemp(prefix="evidence-", dir=evidence)),
-                                timeout=args.timeout)
-        report = build_catalog(args.project, metadata=args.metadata, metadata_adapter=args.metadata_adapter,
-                               exports=args.export, output=args.output, current_selection=args.current_selection,
-                               disclosure_policy=args.disclosure_policy, recipe_tools=tools,
-                               peer_catalogs=_peer_catalogs(args) or None, **shared)
-        if tools is not None and not any(tools.output.iterdir()):
-            # No tool request ran; leave no empty evidence folders behind.
-            tools.output.rmdir()
-            if not any(tools.output.parent.iterdir()):
-                tools.output.parent.rmdir()
+        docspec_evidence = None
+        if args.docspec:
+            evidence_root = Path(args.output).resolve()
+            evidence_root = evidence_root.with_name(evidence_root.name + ".evidence")
+            evidence_root.mkdir(parents=True, exist_ok=True)
+            docspec_evidence = Path(tempfile.mkdtemp(prefix="evidence-", dir=evidence_root))
+        limits_arg = args.docspec_limits or args.limits
+        report = build_catalog(
+            args.project, metadata=args.metadata, metadata_adapter=args.metadata_adapter,
+            exports=args.export, output=args.output, current_selection=args.current_selection,
+            disclosure_policy=args.disclosure_policy, docspec=args.docspec,
+            docspec_limits=read_json(limits_arg).value if limits_arg else None,
+            docspec_evidence_dir=docspec_evidence, timeout=args.timeout,
+            peer_catalogs=_peer_catalogs(args) or None, **shared,
+        )
+        if docspec_evidence is not None and docspec_evidence.exists() and not any(docspec_evidence.iterdir()):
+            docspec_evidence.rmdir()
+            if not any(docspec_evidence.parent.iterdir()):
+                docspec_evidence.parent.rmdir()
         return report
     if args.command == "check" and not args.tool_python:
         return check_project(args.project, lock=args.lock, locked=args.locked, selection=args.select,
@@ -182,10 +185,24 @@ def _execute(args, secret_parameters=None):
         if "odcs.lint" in inventory.report.required_groups:
             if inventory.report.build()["decision"] in ("failed", "error"):
                 return inventory.report.build()
-            for alias, artifact in inventory.artifacts.items():
-                if artifact.kind == "dataset":
-                    result = tools.invoke("odcs-lint", dataset_rules(artifact))
-                    _record(inventory.report, "odcs.lint", alias, result, requirement="DDK-ADAPTER-003")
+            datasets = [(alias, artifact) for alias, artifact in inventory.artifacts.items() if artifact.kind == "dataset"]
+            if datasets:
+                batch = tools.invoke(
+                    "odcs-lint",
+                    {"documents": [{"alias": alias, **dataset_rules(artifact)} for alias, artifact in datasets]},
+                )
+                if batch.get("status") in {"passed", "failed", "unknown", "not_run"} and isinstance(batch.get("results"), dict):
+                    receipt = batch.get("receipt")
+                    for alias, _ in datasets:
+                        item = batch["results"][alias]
+                        _record(
+                            inventory.report, "odcs.lint", alias,
+                            {**item, **({"receipt": receipt} if receipt else {})},
+                            requirement="DDK-ADAPTER-003",
+                        )
+                else:
+                    for alias, _ in datasets:
+                        _record(inventory.report, "odcs.lint", alias, batch, requirement="DDK-ADAPTER-003")
         return inventory.report.build()
     if args.command == "build":
         from .execution import build_project

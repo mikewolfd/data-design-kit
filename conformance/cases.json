@@ -85,7 +85,7 @@
       ],
       "profile": "catalog",
       "runtimeStatus": "planned",
-      "scenario": "Known gap: a run record names its DocSpec job instead of a declared component or design. Until DocSpec job definitions are accepted as production declarations, the run cannot attach and assembly fails.",
+      "scenario": "A run record names a production alias that is not declared as a component, design, or DocSpec job in the loaded scope; assembly fails with CATALOG-PRODUCTION-MISSING (whereas declaring a DocSpec job production attaches the run under CASE-CATALOG-012-JOB-PRODUCTION).",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -377,12 +377,43 @@
       ],
       "profile": "catalog.jobs",
       "runtimeStatus": "planned",
-      "scenario": "A run names the job, but its pinned request reorders two steps. Only input bindings and scratch paths may differ, so the run stays unbound.",
+      "scenario": "A run names the job, but its pinned request reorders two steps. Only input bindings, output paths and scratch paths may differ, so the run stays unbound.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
         "exitCode": 1,
         "diagnostic": "CATALOG-NATIVE-RECEIPT"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-SPEC-DIGEST-DIFFERS",
+      "requirements": [
+        "DDK-CATALOG-012"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "A job's declared id disagrees with its JobSpec id, or a native receipt's job_spec_sha256 disagrees with the pinned request digest.",
+      "expected": {
+        "decision": "failed",
+        "checkStatus": "failed",
+        "exitCode": 1,
+        "diagnostic": "CATALOG-JOB-SPEC-MISMATCH"
+      }
+    },
+    {
+      "id": "CASE-CATALOG-012-QUALITY-COUNTERS",
+      "requirements": [
+        "DDK-CATALOG-012",
+        "DDK-CATALOG-005"
+      ],
+      "profile": "catalog.jobs",
+      "runtimeStatus": "planned",
+      "scenario": "ODCS required, unique, primary-key, enum, numeric-range and SQL zero-counter rules compile to DocSpec named queries, qualify a clean job output without re-scanning Parquet, and fail qualification or job binding when violations or SQL tampering occur.",
+      "expected": {
+        "decision": "passed",
+        "checkStatus": "passed",
+        "exitCode": 0,
+        "diagnostic": null
       }
     },
     {
@@ -4893,9 +4924,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "Recipes join declared inputs, read object fields and unnested array elements, bind ?, $n and :name parameters, and produce exactly the columns and types of their declared result dataset.",
+      "scenario": "Recipes join declared inputs, read nested object fields and unnested array elements, bind $n and $name parameters from the parameter schema, execute over 0-row typed Parquet inputs through DocSpec prepare-job and job, and produce the columns and recursive logical types of their declared result dataset.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
@@ -4908,9 +4939,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A recipe reads a table that is not one of its inputs, a schema-qualified table, or a non-recursive CTE from inside its own body.",
+      "scenario": "A recipe reads a table that is not one of its inputs, a schema-qualified table, or a non-recursive CTE out of scope.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4923,9 +4954,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A recipe reads an undeclared column, object field, or array-element field, reads a field of a string or indexes one, joins USING a missing column, or orders by a missing ordinal.",
+      "scenario": "A recipe reads an undeclared column, object field, or array-element field, joins USING a missing column, or orders by a missing ordinal.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4938,9 +4969,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A recipe mixes type families in a comparison, IN list or subquery, BETWEEN, IS DISTINCT FROM, CASE branches or UNION columns, compares a date with a non-ISO string, applies LIKE to a number or arithmetic to a string, or binds positional parameters in parse-tree rather than text order.",
+      "scenario": "A recipe relies on cross-family implicit casts refused by DocSpec (such as integer = string, bare string compared with a date, IN/BETWEEN/CASE/UNION mismatches, or invalid literal casts).",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4953,9 +4984,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A recipe uses more positional parameters than parameterOrder names.",
+      "scenario": "A DataFusion recipe uses more positional parameters than parameterOrder names, references an undeclared $name parameter, or uses unsupported ? or :name parameter syntax.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -4968,7 +4999,7 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
       "scenario": "A view's declared properties add a column and change a type that its recipe output does not match, or declare a nested object field type its recipe does not produce.",
       "expected": {
@@ -4983,9 +5014,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A recipe calls a function outside the parser profile and its signature table, extracts JSON with an operator, or names a dialect without a parser profile.",
+      "scenario": "A recipe names a SQL dialect outside the DocSpec DataFusion gate or declares an input schema shape outside the Arrow mapping.",
       "expected": {
         "decision": "incomplete",
         "checkStatus": "unknown",
@@ -4998,9 +5029,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A datafusion recipe calls regexp_match, regexp_like, the json_get family, make_array, unnest, array_length and to_date with argument types DataFusion 53.1 accepts. Each call is typed from the pinned signature table, and the output matches the declared result dataset.",
+      "scenario": "A datafusion recipe calls regexp_match, regexp_like, the json_get family, make_array, unnest, array_length and to_date with argument types DataFusion 53.1 accepts, plans and executes over 0-row inputs through DocSpec, and matches the declared result dataset.",
       "expected": {
         "decision": "passed",
         "checkStatus": "passed",
@@ -5013,9 +5044,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "A datafusion recipe passes a number to regexp_like, a string to array_has or unnest, a fractional JSON path, or the wrong number of arguments to regexp_match, or mixes number and string elements in make_array or array_has.",
+      "scenario": "A datafusion recipe calls a nonexistent function or passes incompatible argument counts or types to regexp_like, array_has, unnest, regexp_match, or make_array.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -5028,9 +5059,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "One projection of a datafusion recipe repeats an alias, or an identical unaliased expression in a UNION ALL branch. DataFusion refuses both.",
+      "scenario": "A datafusion recipe repeats an output column name in a projection or UNION ALL branch, or triggers a DataFusion optimizer fault during 0-row job execution.",
       "expected": {
         "decision": "failed",
         "checkStatus": "failed",
@@ -5043,9 +5074,9 @@
       "requirements": [
         "DDK-CATALOG-011"
       ],
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "runtimeStatus": "planned",
-      "scenario": "catalog.recipes is requested without a tool environment; separately it is not requested.",
+      "scenario": "catalog.recipes is requested without an explicitly selected --docspec executable; separately it is not requested.",
       "expected": {
         "decision": "incomplete",
         "checkStatus": "not_run",

@@ -237,6 +237,16 @@ def _layer_edges(inventory):
                 yield ("recipe input", f"recipe {item['id']} input {name}", namespace, target.alias,
                        site(document.path, ("catalog", "recipes", index, "inputs", name)))
     for alias, artifact in sorted(inventory.artifacts.items()):
+        if artifact.kind == "job":
+            for name, reference in sorted(artifact.value["inputs"].items()):
+                try:
+                    target = inventory.resolve(reference, artifact.namespace, "dataset")
+                except DocumentError as exc:
+                    yield f"Production {alias}: {exc}"
+                    continue
+                yield ("production input", f"job {alias} input {name}", artifact.namespace, target.alias,
+                       site(artifact.path, ("inputs", name)))
+            continue
         group = {"component": "inputs", "design": "sources"}.get(artifact.kind)
         for name, member in sorted(artifact.value.get(group, {}).items()) if group else ():
             try:

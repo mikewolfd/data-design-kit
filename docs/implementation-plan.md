@@ -337,34 +337,36 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Acceptance.** An independent reader can follow DCAT discovery to the selected access path. The lineage receiver shows the same job, run, and dataset identities when native and DDK events describe the same entities. The graph's counts equal the catalog's, and Morph-KGC lifts the commerce versions so a SPARQL query joins orders to customers. A run with partial input coverage exposes only known consumption and retains its limits.
 
-### WP-15 — Layered data-map extensions (specified, not implemented)
+<a id="wp-15--layered-data-map-extensions-specified-not-implemented"></a>
 
-**Dependencies:** WP-13 and WP-14. **Owners:** DDK. **Output:** requirements recorded from building a layered capture → source → resolved → product map; none is implemented or claimed. It owns [DDK-CATALOG-012](specification.md#DDK-CATALOG-012), which is specified but not implemented.
+### WP-15 — Layered data-map extensions
 
-The [layered example](../examples/layered/README.md) exercises the implemented parts: aggregator roots, shared imports, layer order, view sources, dataset origin and descriptive catalog facts. These requirements remain open:
+**Dependencies:** WP-13 and WP-14. **Owners:** DDK. **Output:** requirements recorded from building a layered capture → source → resolved → product map. Items 3 and 8 ([DDK-CATALOG-012](specification.md#DDK-CATALOG-012)) are implemented in source as of November 11, 2026; items 2, 5, 6 and 7 remain specified only.
+
+The [layered example](../examples/layered/README.md) exercises the implemented parts: aggregator roots, shared imports, layer order, view sources, dataset origin and descriptive catalog facts. Item status:
 
 1. **Judgement crosswalks: dropped November 9, 2026.** DDK will not learn match semantics. A match-decision table is an ordinary dataset with role `evidence` and an `origin` that follows its method column. *Rationale:* identity resolution is transformation work, and the knowledge-graph export (DDK-CATALOG-013) and mapping convention (DDK-CATALOG-014) make the decisions queryable without a second join engine in DDK.
 2. **Edition series.** Periodic editions of one logical dataset, such as two-year cycles or annual files, export as DCAT 3 `dcat:DatasetSeries` members with `dcat:inSeries` and `dcat:prev`/`dcat:previousVersion`, ordered by declared edition metadata rather than observation time. *Rationale:* consumers need the latest edition and its predecessors through standard terms.
-3. **DocSpec recipe gate.** Decided under ADR-015: each recipe must pass both the sqlglot binder (DDK-CATALOG-011) and this check.
-   - Given `--docspec` and `--limits`, `ddk catalog` plans each recipe with `job-plan`. Inputs are typed from their effective ODCS declarations and parameters from the parameter schema. The planned schema is compared with the `resultDataset`, and the recipe then runs once on empty typed inputs.
-   - The binder half is in place: its DataFusion signature table (DDK-CATALOG-011) types the map's view SQL, so both checks can pass.
-   - Each result records the DocSpec binary identity. Without the executable the check is `not_run`; an input DDK cannot map to Arrow makes it `unknown`. Either keeps a required `catalog.recipes` from passing.
+3. **DocSpec recipe gate: implemented in source November 11, 2026.** Decided under ADR-015 (Decision 1A): `docspec` is the single recipe SQL engine, retiring the `sqlglot` AST binder ([DDK-CATALOG-011](specification.md#DDK-CATALOG-011)).
+   - Given `--docspec` and `--docspec-limits` (or `--limits`), `ddk catalog` synthesizes 0-row typed Parquet inputs from effective ODCS declarations (including nested `object`/`array` columns), binds sample typed parameter values from the recipe's parameter schema, validates with `DocSpec` `prepare-job`, and runs one 0-row `docspec job` execution.
+   - When `resultDataset` is declared, inferred/0-row output columns and logical types are compared recursively against `resultDataset`'s ODCS schema (`CATALOG-RECIPE-OUTPUT-MISMATCH`).
+   - Each result records the native receipt and `DocSpec` binary identity in `report.metadata["recipeBindings"]` and `catalog.adapters`. Without `--docspec` the check is `not_run` (`ADAPTER-CAPABILITY-MISSING`); an input DDK cannot map to Arrow makes it `unknown`. Either keeps a required `catalog.recipes` from passing.
    - `datafusion` recipes number their parameters (`$n`), because DocSpec cannot bind `?`.
-   - Job productions (item 8) also get `prepare-job` and one empty-input run of the whole job.
+   - Job productions (item 8) also run whole-job `prepare-job` and one 0-row `docspec job` execution (`catalog.jobs`).
 
-   *Rationale:* in a trial on six SQL files, each checker caught 6 of 11 faults, different ones. A DataFusion optimizer failure in a query over a view appeared only when the whole job ran.
+   *Rationale:* a single real DataFusion planner and 0-row job execution catches syntax errors, missing columns, cross-family `implicit_cast` errors (`dr-kg49`), and whole-job optimizer failures (`dr-7uke`) without maintaining a duplicate Python function-signature table.
 4. **Nested compatibility.** Extend DDK-DATA-002 to ODCS objects and arrays: compare child properties by path, array element types and nullability at each level; unsupported shapes stay unknown. *Rationale:* source records keep publisher structure, which makes current compatibility results unknown. *Not built, decided under ADR-015:* its only consumers, design steps and exports and change impact, are frozen, and the recipe checks compare nested recipe outputs.
 5. **Pinned status vocabulary.** Recognize `proposed`, `draft`, `active`, `deprecated` and `retired`, the values ODCS and ODPS list as examples, with defined meanings; preserve other values and let a policy require the pinned set. *Rationale:* catalog records now surface status, and consumers need comparable meaning across contracts and products.
 6. **Definitions-only qualification.** A qualification profile that requires only core and catalog definition checks, so a designed but unbuilt map passes `--require` without version-bound evidence. It must not claim availability or data qualification. *Rationale:* requiring `catalog.qualification` without metadata now yields `not_run`.
 7. **One vendored ODCS 3.2.0 schema.** Replace the `3.2.0-release` copy with a recorded difference: the published tag uses `oneOf` where the pinned revision uses `anyOf` in `DataQualityOperators`. Keep the comparison test. *Rationale:* two 110 KB copies that differ in one keyword invite drift.
-8. **DocSpec job productions ([DDK-CATALOG-012](specification.md#DDK-CATALOG-012)).** Decided under ADR-015; implement after the DocSpec engine line lands.
-   - Add the `job` artifact kind to the project schema, and optional ordered `steps` to the catalog production record.
-   - `production_definitions` gains a job branch. The bounded and managed execution mappers accept a job production and compare the run's pinned request with the JobSpec.
-   - The planned cases use the placeholder profile `catalog.jobs`, so they do not block `catalog` qualification; they join `catalog` with their tests.
-   - Case `CASE-CONF-005-RUN-NEEDS-PRODUCTION` then expects a bound run.
-   - Job productions are also the natural successor to component and design edges for DDK-POLICY-006 layer order. That is a separate change.
+8. **DocSpec job productions ([DDK-CATALOG-012](specification.md#DDK-CATALOG-012)): implemented in source November 11, 2026.** Decided under ADR-015 and Decision 3A.
+   - `schemas/0.1/job.schema.json` and `schemas/0.1/project.schema.json` admit `kind: "job"` artifacts; `schemas/0.1/catalog.schema.json` adds `production.kind` (`"job"`) and ordered `production.steps` (`id`, `kind`, optional `sqlSha256`).
+   - `production_definitions` admits job productions, and bounded, direct `JobResult`, and managed execution mappers bind runs when `job_id`, `job_spec_sha256`, `inputs`, `steps`, and `outputs` match the declared `JobSpec` (`CATALOG-JOB-SPEC-MISMATCH`, `CATALOG-JOB-STEP-MISMATCH`, `CATALOG-NATIVE-RECEIPT`).
+   - ODCS quality rules compile to zero-counter `DocSpec` `JobSpec.queries` (`odcs_sql_counters.py`, Decision 3A), satisfying `catalog.qualification` from the job run without DuckDB Parquet re-scans.
+   - Cases use profile `catalog.jobs`, keeping base `catalog` independent, and `CASE-CONF-005-RUN-NEEDS-PRODUCTION` binds a job-only run without components or designs.
+   - `DDK-POLICY-006` `layer-order` also derives edges from `kind: "job"` inputs and outputs.
 
-   *Rationale:* a catalog without components, such as SpicyRegs, can then show each built table's job, inputs, time and check results.
+   *Rationale:* a catalog without components, such as SpicyRegs or congressional-tech, shows each built table's job, ordered steps, inputs, time and zero-counter quality check results.
 
 Deferred from the implemented set: property-level origin, DCAT mapping of the new descriptive fields, and output-port `context`.
 

@@ -43,10 +43,11 @@ METADATA_ADAPTERS = {"local": LOCAL_ADAPTER, "example": EXAMPLE_ADAPTER,
                      "example-commerce-metadata": EXAMPLE_ADAPTER}
 GROUPS = ("catalog.assembly", "catalog.imports", "catalog.relationships", "catalog.qualification")
 RECIPE_GROUP = "catalog.recipes"
+JOB_GROUP = "catalog.jobs"
 CHECK_IDS = {name: f"DDK-CATALOG-{number:03d}" for name, number in {
     "assembly": 7, "exports": 7, "metadata": 1, "products": 2, "datasets": 3, "concepts": 4,
-    "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9, "recipes": 11,
-    "catalog.graph": 13, "catalog.rml": 14, "federation": 15,
+    "relationships": 4, "qualification": 5, "catalog.dcat": 8, "lineage.openlineage": 9,
+    "recipes": 11, "jobs": 12, "catalog.graph": 13, "catalog.rml": 14, "federation": 15,
 }.items()}
 DETAILS = "urn:ddk:catalog:assembly"
 URL_CREDENTIAL_PATTERN = re.compile(r"https?://[^/\s:@\"']+:[^/\s@\"']+@")
@@ -196,6 +197,8 @@ class Assembly:
         self.concept_rules = {}
         self.recipe_sources = {}
         self.recipe_parser = None
+        self.job_specs = {}
+        self.job_parser = None
         self.imports = {}
         self.import_paths = {}
         self.peers = {}
@@ -311,7 +314,7 @@ class Assembly:
     def check(self, step, subject, error=None, *, path=None, required=None, evidence="inferred",
               related=(), evidence_records=(), severity=None):
         group = {"federation": "catalog.imports", "relationships": "catalog.relationships",
-                 "qualification": "catalog.qualification", "recipes": RECIPE_GROUP,
+                 "qualification": "catalog.qualification", "recipes": RECIPE_GROUP, "jobs": JOB_GROUP,
                  "catalog.dcat": "catalog.dcat", "lineage.openlineage": "lineage.openlineage",
                  "catalog.graph": "catalog.graph", "catalog.rml": "catalog.rml"}.get(step, "catalog.assembly")
         status = error.status if error is not None else "passed"
@@ -328,9 +331,17 @@ class Assembly:
 
     def project_records(self):
         projects = set(doc.path for doc in self.inventory.projects.values())
+        implementations = set()
+        for artifact in self.inventory.artifacts.values():
+            if artifact.kind == "job":
+                try:
+                    implementations.add(resolve_path(artifact.path, artifact.value["jobSpec"], self.inventory.permitted_roots))
+                except DocumentError:
+                    pass
         for path, document in self.inventory.documents.items():
             if not isinstance(document, Exception):
-                self.remember(owner_record(document), "project" if path in projects else "definition")
+                role = "project" if path in projects else ("implementation" if path in implementations else "definition")
+                self.remember(owner_record(document), role)
 
     def remember(self, record, role):
         self.records[(record["uri"], role)] = {**record, "role": role}
@@ -923,87 +934,136 @@ class Assembly:
         row["sql"] = "queries/" + sha256(row["id"].encode()).hexdigest() + ".sql"
         self.queries[row["id"]] = (row, data)
 
-    def bind_recipes(self, tools):
-        """Bind each recipe's SQL to its declared inputs and result through an explicitly selected tool.
+    def bind_recipes(self, docspec_adapter):
+        """Bind each recipe's SQL to its declared inputs and result through the DocSpec SQL gate."""
+        from .docspec_recipe_gate import bind_recipes_with_docspec
 
-        The tool parses and types the SQL offline; it never runs the query or reads data.
-        """
-        report = self.report
-        if not self.queries:
-            report.add(CHECK_IDS["recipes"], RECIPE_GROUP, "recipes", "not_run", applicable=False, evidence="inferred",
-                       reason="The loaded scope declares no recipes.")
+        bind_recipes_with_docspec(self, docspec_adapter)
+
+    def _admit_job_production(self, artifact):
+        in_map = {name: self.alias(ref, artifact.namespace) for name, ref in artifact.value["inputs"].items()}
+        out_map = {name: self.alias(ref, artifact.namespace) for name, ref in artifact.value["outputs"].items()}
+        for binding in artifact.value.get("qualityQueries", {}).values():
+            self.alias(binding["dataset"], artifact.namespace)
+        spec_path = resolve_path(artifact.path, artifact.value["jobSpec"], self.inventory.permitted_roots)
+        spec_doc = self.inventory.read(spec_path)
+        spec = spec_doc.value
+        if not isinstance(spec, dict):
+            raise CatalogError("CATALOG-JOB-SPEC-MISMATCH", "DocSpec JobSpec must be a JSON object.")
+        if "id" in spec and spec["id"] != artifact.identity:
+            raise CatalogError(
+                "CATALOG-JOB-SPEC-MISMATCH",
+                f"DocSpec JobSpec id {spec['id']!r} differs from job artifact id {artifact.identity!r}.",
+            )
+        for section in ("inputs", "steps", "outputs", "queries"):
+            items = spec.get(section, [])
+            if not isinstance(items, list) or any(not isinstance(row, dict) or not isinstance(row.get("name"), str) for row in items):
+                raise CatalogError("CATALOG-JOB-SPEC-MISMATCH", f"DocSpec JobSpec {section!r} must be a list of named objects.")
+            names = [row["name"] for row in items]
+            if len(names) != len(set(names)):
+                raise CatalogError("CATALOG-JOB-SPEC-MISMATCH", f"DocSpec JobSpec {section!r} repeats an entry name.")
+        for step in spec.get("steps", ()):
+            if not isinstance(step.get("sql"), str):
+                raise CatalogError("CATALOG-JOB-SPEC-MISMATCH", f"DocSpec JobSpec step {step['name']!r} lacks a SQL string.")
+        spec_inputs = {item["name"] for item in spec.get("inputs", ())}
+        out_of_cat_in = set(artifact.value.get("outOfCatalogInputs", ()))
+        if set(in_map) & out_of_cat_in or set(in_map) | out_of_cat_in != spec_inputs:
+            raise CatalogError(
+                "CATALOG-JOB-SPEC-MISMATCH",
+                f"Job {artifact.alias!r} inputs and outOfCatalogInputs must partition JobSpec inputs.",
+            )
+        spec_outputs = {item["name"] for item in spec.get("outputs", ())}
+        out_of_cat_out = set(artifact.value.get("outOfCatalogOutputs", ()))
+        if set(out_map) & out_of_cat_out or set(out_map) | out_of_cat_out != spec_outputs:
+            raise CatalogError(
+                "CATALOG-JOB-SPEC-MISMATCH",
+                f"Job {artifact.alias!r} outputs and outOfCatalogOutputs must partition JobSpec outputs.",
+            )
+        spec_steps_by_name = {step["name"]: step for step in spec.get("steps", ())}
+        for step_name, recipe_id in sorted((artifact.value.get("steps") or {}).items()):
+            if step_name not in spec_steps_by_name:
+                raise CatalogError("CATALOG-JOB-STEP-MISMATCH", f"Job {artifact.alias!r} step {step_name!r} is absent from JobSpec.")
+            if recipe_id not in self.queries:
+                raise CatalogError("CATALOG-JOB-STEP-MISMATCH", f"Job {artifact.alias!r} step {step_name!r} names undeclared recipe {recipe_id!r}.")
+            if spec_steps_by_name[step_name]["sql"].encode("utf-8") != self.queries[recipe_id][1]:
+                raise CatalogError("CATALOG-JOB-STEP-MISMATCH", f"Job {artifact.alias!r} step {step_name!r} SQL bytes differ from recipe {recipe_id!r}.")
+        steps_list = [
+            {
+                "id": step["name"],
+                "kind": "sql" if step.get("materialize") else "view",
+                "sqlSha256": sha256(step["sql"].encode("utf-8")).hexdigest(),
+            }
+            for step in spec.get("steps", ())
+        ]
+        self.job_specs[artifact.alias] = (artifact, spec_doc, in_map, out_map)
+        self.productions[artifact.alias] = {
+            "alias": artifact.alias,
+            "kind": "job",
+            "identity": {"id": artifact.identity, "version": artifact.version},
+            "definition": owner_record(spec_doc),
+            "inputs": sorted(set(in_map.values())),
+            "outputs": sorted(set(out_map.values())),
+            "steps": steps_list,
+        }
+        self.check("jobs", artifact.alias, None, path=artifact.path,
+                   required=JOB_GROUP in self.report.required_groups, evidence="declared")
+
+    def check_jobs(self, docspec_adapter):
+        """Run the whole-job DocSpec schema + 0-row SQL gate for declared job productions."""
+        from .docspec_recipe_gate import evaluate_job_spec
+
+        had_jobs = any(artifact.kind == "job" for artifact in self.inventory.artifacts.values())
+        if not had_jobs:
+            if JOB_GROUP in self.report.required_groups:
+                self.report.add(CHECK_IDS["jobs"], JOB_GROUP, "jobs", "not_run", applicable=False,
+                                evidence="declared", reason="The loaded scope declares no DocSpec job productions.")
             return
-        if tools is None:
-            report.missing_capabilities.add(RECIPE_GROUP)
-            for identifier in sorted(self.queries):
-                self.check("recipes", identifier, CatalogError(
-                    "ADAPTER-CAPABILITY-MISSING", "Recipe SQL binding needs an explicitly selected tool environment.",
-                    status="not_run"), path=self.recipe_sources[identifier], required=True)
-            return
-        bindable = []
-        for identifier, (row, data) in sorted(self.queries.items()):
-            input_schemas = {}
-            blocked = None
-            for name, ref in row["inputs"].items():
-                if isinstance(ref, str):
-                    input_schemas[name] = self.dataset_schemas[ref]
-                else:
-                    peer_alias, peer_ds = ref["catalog"], ref["dataset"]
-                    if peer_alias in self.unbound_peers:
-                        code = ("CATALOG-IMPORT-UNBOUND" if self.unbound_peers[peer_alias] == "unbound"
-                                else "CATALOG-IMPORT-MISMATCH")
-                        status = "not_run" if code == "CATALOG-IMPORT-UNBOUND" else "failed"
-                        blocked = CatalogError(code, f"Recipe {identifier!r} requires bound peer catalog {peer_alias!r}.",
-                                               status=status)
-                        break
-                    peer = self.peers[peer_alias]
-                    peer_defs = peer.catalog.get("extensions", {}).get(DETAILS, {}).get("datasetDefinitions", {})
-                    if peer_ds not in peer_defs:
-                        blocked = CatalogError(
-                            "CATALOG-PEER-FIELD-WITHHELD",
-                            f"Peer dataset {peer_alias}:{peer_ds} withholds datasetDefinitions needed for SQL binding.",
-                            status="unknown",
-                        )
-                        break
-                    input_schemas[name] = peer_defs[peer_ds]
-            if blocked is not None:
-                self.check("recipes", identifier, blocked, path=self.recipe_sources[identifier], required=True)
-                continue
-            bindable.append({
-                "id": identifier, "sql": data.decode("utf-8"), "dialect": row["dialect"],
-                "inputs": input_schemas,
-                "parameters": row["parameters"],
-                **({"parameterOrder": row["parameterOrder"]} if "parameterOrder" in row else {}),
-                "result": self.dataset_schemas.get(row.get("resultDataset")),
-            })
-        if not bindable:
-            return
-        response = tools.invoke("recipe-sql", {"recipes": bindable})
-        receipt = response.get("receipt")
-        evidence = ({"kind": "native-report", "path": receipt["path"], "sha256": receipt["sha256"]},) if receipt else ()
-        results = response.get("results", {}) if response.get("status") == "completed" else {}
-        if response.get("status") == "completed":
-            self.recipe_parser = {"id": response["parser"]["id"], "version": response["parser"]["version"]}
-        bindings = report.metadata.setdefault("recipeBindings", {})
-        for entry in bindable:
-            identifier = entry["id"]
-            path = self.inventory.display_path(self.recipe_sources[identifier])
-            result = results.get(identifier)
-            if result is None:
-                reason = response.get("reason") or "The recipe tool returned no result for this recipe."
-                report.add(CHECK_IDS["recipes"], RECIPE_GROUP, identifier, "not_run", required=True, evidence="inferred",
-                           reason=reason, evidence_records=evidence,
-                           diagnostics=[diagnostic("EXEC-NATIVE-UNAVAILABLE", reason, path=path)])
-                continue
-            report.add(CHECK_IDS["recipes"], RECIPE_GROUP, identifier, result["status"], required=True, evidence="inferred",
-                       reason=result.get("reason"), evidence_records=evidence, diagnostics=[
-                           diagnostic(item["code"], item["message"], path=path, severity=item["severity"])
-                           for item in result["diagnostics"]])
-            bindings[identifier] = {"parser": {**self.recipe_parser, **result.get("parser", {})},
-                                    **({"output": result["output"]} if "output" in result else {})}
+        for alias, (artifact, spec_doc, in_map, out_map) in sorted(self.job_specs.items()):
+            if docspec_adapter is not None:
+                res = evaluate_job_spec(
+                    artifact.identity,
+                    spec_doc,
+                    {name: self.dataset_schemas[ds_alias] for name, ds_alias in in_map.items()},
+                    {name: self.dataset_schemas[ds_alias] for name, ds_alias in out_map.items()},
+                    docspec_adapter,
+                    out_of_catalog_inputs=artifact.value.get("outOfCatalogInputs", ()),
+                    out_of_catalog_outputs=artifact.value.get("outOfCatalogOutputs", ()),
+                )
+                self.job_parser = deepcopy(docspec_adapter.tool)
+                evidence = res.get("evidence") or ()
+                path = self.inventory.display_path(spec_doc.path)
+                self.report.add(
+                    CHECK_IDS["jobs"], JOB_GROUP, f"{alias}/sql", res["status"],
+                    required=True, evidence="executed" if evidence else "inferred",
+                    reason=res.get("reason"), evidence_records=evidence,
+                    diagnostics=[
+                        diagnostic(item["code"], item["message"], path=path, severity=item["severity"])
+                        for item in res["diagnostics"]
+                    ],
+                )
+            elif JOB_GROUP in self.report.required_groups:
+                mapped_steps = artifact.value.get("steps") or {}
+                unmapped_steps = [step["name"] for step in spec_doc.value.get("steps", ()) if step["name"] not in mapped_steps]
+                if unmapped_steps:
+                    self.report.missing_capabilities.add(JOB_GROUP)
+                    self.check(
+                        "jobs", f"{alias}/sql",
+                        CatalogError(
+                            "ADAPTER-CAPABILITY-MISSING",
+                            "Job steps without mapped catalog recipes require an explicitly selected DocSpec executable (--docspec).",
+                            status="not_run",
+                        ),
+                        path=spec_doc.path, required=True, evidence="declared",
+                    )
 
     def production_definitions(self):
         for artifact in self.inventory.artifacts.values():
+            if artifact.kind == "job":
+                try:
+                    self._admit_job_production(artifact)
+                except CatalogError as err:
+                    self.check("jobs", artifact.alias, err, path=artifact.path, required=True, evidence="declared")
+                continue
             if artifact.kind == "component":
                 inputs, outputs = artifact.value["inputs"], artifact.value["outputs"]
             elif artifact.kind == "design":
@@ -1084,8 +1144,9 @@ class Assembly:
         yield {"id": "ddk.catalog", "version": VERSION}
         if self.relationship_profile is not None:
             yield deepcopy(self.relationship_profile.identity)
-        if self.recipe_parser is not None:
-            yield dict(self.recipe_parser)
+        parser = self.recipe_parser or self.job_parser
+        if parser is not None:
+            yield dict(parser)
         if self.native_rule_profile is not None:
             yield deepcopy(self.native_rule_profile.identity)
         if self.metadata:
@@ -1301,16 +1362,22 @@ class Assembly:
 def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                      current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
                      permitted_roots=(), limits=None, relationship_profile=None, native_rule_profile=None,
-                     include_private_artifacts=False, managed_schema_profiles=None, recipe_tools=None,
+                     include_private_artifacts=False, managed_schema_profiles=None, docspec=None,
+                     docspec_limits=None, docspec_evidence_dir=None, timeout=120, recipe_tools=None,
                      peer_catalogs=None):
     """Load once and return admitted metadata with its report and companions.
 
-    ``recipe_tools`` is an explicitly selected native tool environment; it binds
-    recipe SQL only when ``catalog.recipes`` is requested.
+    ``docspec`` selects the native DocSpec executable for zero-row SQL recipe
+    gating (``catalog.recipes``) and whole-job gating (``catalog.jobs``).
 
     An admitted view remains inspectable when qualification is incomplete or
     failed. Only a passed report permits atomic publication to ``output``.
     """
+    from .adapters.docspec import DocSpecAdapter
+    from .docspec_recipe_gate import make_docspec_gate_adapter
+
+    if docspec is None and isinstance(recipe_tools, DocSpecAdapter):
+        docspec = recipe_tools
     if isinstance(exports, str):
         exports = (exports,)
     profiles = sorted({EXPORTS.get(name, name) for name in exports})
@@ -1321,9 +1388,14 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     assembly = Assembly(inventory, profiles)
     assembly.graph_turtle = "graph.ttl" in exports  # the JSON-LD graph, also written as Turtle on request
     report = inventory.report
-    report.available_capabilities.update((*GROUPS, *EXPORTS.values(), *((RECIPE_GROUP,) if recipe_tools else ())))
+    has_jobs = any(artifact.kind == "job" for artifact in inventory.artifacts.values())
+    report.available_capabilities.update((
+        *GROUPS, *EXPORTS.values(),
+        *((RECIPE_GROUP,) if docspec is not None else ()),
+        *((JOB_GROUP,) if docspec is not None or has_jobs else ()),
+    ))
     core = check_inventory(inventory, (*required_groups, "catalog.assembly", *profiles),
-                           handled_groups=(*GROUPS, RECIPE_GROUP, *profiles))
+                           handled_groups=(*GROUPS, RECIPE_GROUP, JOB_GROUP, *profiles))
     if core["decision"] != "passed":
         return _result(core, public=public)
     for profile in profiles:
@@ -1341,6 +1413,11 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
     step = "products"
     failure_path = inventory.path
     try:
+        docspec_adapter = None
+        if docspec is not None and (RECIPE_GROUP in report.required_groups or JOB_GROUP in report.required_groups or has_jobs):
+            docspec_adapter = make_docspec_gate_adapter(
+                docspec, docspec_limits, evidence_dir=docspec_evidence_dir, timeout=timeout,
+            )
         assembly.project_records()
         products = assembly.definitions()
         if managed_schema_profiles is not None:
@@ -1362,7 +1439,9 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         assembly.select_relationship_profile(relationship_profile)
         assembly.declarations()
         if RECIPE_GROUP in report.required_groups:
-            assembly.bind_recipes(recipe_tools)
+            assembly.bind_recipes(docspec_adapter)
+        if JOB_GROUP in report.required_groups or (docspec_adapter is not None and has_jobs):
+            assembly.check_jobs(docspec_adapter)
         from .catalog_native_rules import select_native_rule_profile
 
         selected_native_rules = select_native_rule_profile(native_rule_profile, inventory)
@@ -1383,7 +1462,8 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                 assembly.metadata = LocalMetadata(document, inventory, METADATA_ADAPTERS[metadata_adapter],
                                                   assembly.datasets, assembly.productions, native_rule_profile=selected_native_rules,
                                                   schema_profiles=assembly.managed_schema_profiles,
-                                                  identities=[row for rows in assembly.identities.values() for row in rows]).read()
+                                                  identities=[row for rows in assembly.identities.values() for row in rows],
+                                                  job_specs=assembly.job_specs).read()
             except (KeyError, TypeError, AttributeError) as exc:
                 raise CatalogError("CATALOG-METADATA-SHAPE", "An owner record contains malformed fields.") from exc
             for document in assembly.metadata.records.values():
@@ -1423,6 +1503,10 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
         assembly.verify()
         assembly.check("assembly", "scope")
         report.completed_profiles.add("catalog")
+        for group_name in (RECIPE_GROUP, JOB_GROUP):
+            group_checks = [item for item in report.checks if item["group"] == group_name and item["applicable"]]
+            if group_checks and all(item["status"] == "passed" for item in group_checks):
+                report.completed_profiles.add(group_name)
         step = "qualification"
         assembly.qualify()
         local_admitted = assembly.catalog
@@ -1498,7 +1582,7 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                        local_artifacts=local_artifacts)
     except (CatalogError, DocumentError) as exc:
         error = exc if isinstance(exc, CatalogError) else CatalogError(exc.code, str(exc), exc.pointer)
-        assembly.check(step, "build", error, path=failure_path, required=True, related=error.related)
+        assembly.check(error.step or step, "build", error, path=failure_path, required=True, related=error.related)
     except (OSError, ResourceLimit) as exc:
         report.error(diagnostic("EXEC-RESOURCE-LIMIT" if isinstance(exc, ResourceLimit) else "CATALOG-IO",
                                 str(exc), path=failure_path))
@@ -1510,12 +1594,15 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
 
 def build_catalog(project_path, *, metadata=None, metadata_adapter=None, exports=(), output=None,
                   current_selection=None, disclosure_policy=None, audience=None, required_groups=(),
-                  permitted_roots=(), limits=None, relationship_profile=None, recipe_tools=None,
+                  permitted_roots=(), limits=None, relationship_profile=None, docspec=None,
+                  docspec_limits=None, docspec_evidence_dir=None, timeout=120, recipe_tools=None,
                   peer_catalogs=None):
     """Build and optionally publish a catalog; return its checking report."""
     return assemble_catalog(
         project_path, metadata=metadata, metadata_adapter=metadata_adapter, exports=exports, output=output,
         current_selection=current_selection, disclosure_policy=disclosure_policy, audience=audience,
         required_groups=required_groups, permitted_roots=permitted_roots, limits=limits,
-        relationship_profile=relationship_profile, recipe_tools=recipe_tools, peer_catalogs=peer_catalogs,
+        relationship_profile=relationship_profile, docspec=docspec, docspec_limits=docspec_limits,
+        docspec_evidence_dir=docspec_evidence_dir, timeout=timeout, recipe_tools=recipe_tools,
+        peer_catalogs=peer_catalogs,
     ).local_report

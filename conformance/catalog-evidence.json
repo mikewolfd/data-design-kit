@@ -55,8 +55,8 @@
         "scope": "Source-checkout layered-map catalog cases on branch codex/ddk-datamap-requirements-20261108: shared imports, product and dataset descriptive facts and origin, SLA applicability, public SLA/context/extension disclosure. No installed qualification."
       },
       {
-        "passedTests": 6,
-        "scope": "Source-checkout recipe SQL binding (DDK-CATALOG-011) through the quality tool environment's sqlglot 30.29.0, on branch codex/ddk-datamap-requirements-20261108. No installed qualification."
+        "passedTests": 16,
+        "scope": "Source-checkout single-engine DocSpec recipe SQL gate (DDK-CATALOG-011), DocSpec job productions (DDK-CATALOG-012), and ODCS-to-DocSpec zero-counter SQL lowering on branch codex/ddk-docspec-jobs-and-gate-20261111. No installed qualification."
       },
       {
         "passedTests": 489,
@@ -1654,63 +1654,64 @@
     },
     {
       "id": "CASE-RECIPE-SQL-BIND",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "passed",
       "expectedDiagnostic": null,
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations",
-        "tests/test_recipe_sql.py::test_example_recipes_bind_to_their_declared_inputs_and_results"
+        "tests/test_recipe_sql.py::test_example_recipes_bind_to_their_declared_inputs_and_results",
+        "tests/test_recipe_sql.py::test_cli_catalog_docspec_binds_recipes_and_records_adapter"
       ],
-      "evidence": "Commerce and layered recipes, and the passing binder cases, bind through the tool environment."
+      "evidence": "Commerce and layered recipes, plus nested Struct/List and parameterized SQL cases, plan and execute over 0-row typed Parquet inputs through DocSpec and record native receipts and binary identity."
     },
     {
       "id": "CASE-RECIPE-SQL-TABLE",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-TABLE",
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Both table cases fail before column binding."
+      "evidence": "Undeclared tables, schema-qualified tables, and out-of-scope CTE references fail through DocSpec prepare-job."
     },
     {
       "id": "CASE-RECIPE-SQL-COLUMN",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-COLUMN",
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Nested fields are checked against the declared object and element."
+      "evidence": "Undeclared top-level, struct, and unnested list-element fields fail against the synthesized Arrow schemas."
     },
     {
       "id": "CASE-RECIPE-SQL-TYPE",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-TYPE",
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "A string literal compared with a date column is permitted."
+      "evidence": "Cross-family implicit casts (including bare string vs date and integer vs string) are refused by DocSpec dr-kg49."
     },
     {
       "id": "CASE-RECIPE-SQL-PARAMETERS",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-PARAMETERS",
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Parameter counts are compared before typing."
+      "evidence": "Undeclared positional or named $ parameters and unsupported ? or :name placeholders fail before native execution."
     },
     {
       "id": "CASE-RECIPE-SQL-RESULT",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-RESULT",
@@ -1718,55 +1719,56 @@
         "tests/test_recipe_sql.py::test_view_dataset_must_match_its_recipe_output",
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Both mismatches are reported at the recipe SQL file."
+      "evidence": "Top-level and recursive nested struct/list output mismatches are reported at the recipe SQL file."
     },
     {
       "id": "CASE-RECIPE-SQL-UNSUPPORTED",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "incomplete",
       "expectedDiagnostic": "CATALOG-RECIPE-SQL-UNSUPPORTED",
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Each stays unknown rather than passing or failing."
+      "evidence": "Non-DataFusion dialects stay unknown rather than passing or failing."
     },
     {
       "id": "CASE-RECIPE-SQL-DATAFUSION-FUNCTIONS",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "passed",
       "expectedDiagnostic": null,
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Typed calls bind, and the recorded parser profile names the signature table."
+      "evidence": "DataFusion 53.1 and datafusion-functions-json calls plan and execute directly in DocSpec without a parallel Python signature table."
     },
     {
       "id": "CASE-RECIPE-SQL-DATAFUSION-ARGUMENTS",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-TYPE",
       "tests": [
         "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
       ],
-      "evidence": "Each refused or cross-family argument fails; the same SQL under the postgres profile stays unknown."
+      "evidence": "Invalid function names and incompatible argument types or arities fail directly in DocSpec."
     },
     {
       "id": "CASE-RECIPE-SQL-REPEATED-NAME",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "failed",
       "expectedDiagnostic": "CATALOG-RECIPE-SQL-SHAPE",
       "tests": [
-        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations"
+        "tests/test_recipe_sql.py::test_binder_cases_follow_their_declarations",
+        "tests/test_recipe_sql.py::test_zero_row_execution_catches_optimizer_faults_missed_by_prepare_job"
       ],
-      "evidence": "A repeated alias and a repeated unaliased expression in a UNION ALL branch both fail."
+      "evidence": "Repeated output column names fail in prepare-job, and 0-row execution catches DataFusion optimizer faults (such as dr-7uke) missed by schema-only planning."
     },
     {
       "id": "CASE-RECIPE-SQL-NO-TOOL",
-      "profile": "catalog",
+      "profile": "catalog.recipes",
       "status": "verified",
       "expectedDecision": "incomplete",
       "expectedDiagnostic": "ADAPTER-CAPABILITY-MISSING",
@@ -1774,7 +1776,7 @@
         "tests/test_recipe_sql.py::test_requested_binding_without_a_tool_environment_is_not_run",
         "tests/test_recipe_sql.py::test_binding_runs_only_when_requested"
       ],
-      "evidence": "A requested binding without a tool is not_run; an unrequested one adds no check."
+      "evidence": "A requested binding without --docspec is not_run; an unrequested one adds no check."
     },
     {
       "id": "CASE-CATALOG-004-KEY-FORMAT-CONFLICT",
@@ -1953,6 +1955,64 @@
         "tests/catalog/test_cross_stack_federation.py::test_public_disclosure_peer_audience_guard_and_paired_public_rewrite"
       ],
       "evidence": "Rewrites local peer imports with PAIRED_VIEW to the verified public peer lock and public dataset aliases, passing verify_catalog_pair."
+    },
+    {
+      "id": "CASE-CATALOG-012-JOB-PRODUCTION",
+      "profile": "catalog.jobs",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_docspec_jobs.py::test_job_production_binds_run_and_exports_openlineage",
+        "tests/catalog/test_docspec_jobs.py::test_whole_job_docspec_gate_catches_invalid_unmapped_step_and_missing_docspec_is_not_run"
+      ],
+      "evidence": "Admits a kind: job production without components or designs, binds bounded and direct DocSpec runs with rowCount and byteSize representations, and exports DCAT, RDF graph, and OpenLineage."
+    },
+    {
+      "id": "CASE-CATALOG-012-STEP-SQL-DIFFERS",
+      "profile": "catalog.jobs",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-JOB-STEP-MISMATCH",
+      "tests": [
+        "tests/catalog/test_docspec_jobs.py::test_job_step_sql_mismatch_with_recipe_fails"
+      ],
+      "evidence": "Fails with CATALOG-JOB-STEP-MISMATCH when a job step's SQL bytes differ from its mapped catalog recipe."
+    },
+    {
+      "id": "CASE-CATALOG-012-RUN-REQUEST-DIFFERS",
+      "profile": "catalog.jobs",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-NATIVE-RECEIPT",
+      "tests": [
+        "tests/catalog/test_docspec_jobs.py::test_job_run_request_reordering_or_drift_fails"
+      ],
+      "evidence": "Refuses a DocSpec run receipt whose pinned request reorders steps or alters step/output SQL."
+    },
+    {
+      "id": "CASE-CATALOG-012-SPEC-DIGEST-DIFFERS",
+      "profile": "catalog.jobs",
+      "status": "verified",
+      "expectedDecision": "failed",
+      "expectedDiagnostic": "CATALOG-JOB-SPEC-MISMATCH",
+      "tests": [
+        "tests/catalog/test_docspec_jobs.py::test_job_spec_digest_or_id_mismatch_fails_bounded_and_managed"
+      ],
+      "evidence": "Refuses mismatched job_id or job_spec_sha256 with CATALOG-JOB-SPEC-MISMATCH."
+    },
+    {
+      "id": "CASE-CATALOG-012-QUALITY-COUNTERS",
+      "profile": "catalog.jobs",
+      "status": "verified",
+      "expectedDecision": "passed",
+      "expectedDiagnostic": null,
+      "tests": [
+        "tests/catalog/test_docspec_jobs.py::test_job_zero_counter_quality_queries_qualify_and_reject_violations_and_tampered_sql",
+        "tests/test_odcs_sql_counters.py::test_compile_odcs_quality_counters_is_deterministic_and_tracks_unmapped",
+        "tests/test_odcs_sql_counters.py::test_compiled_zero_counters_return_zero_on_empty_and_clean_tables_and_flag_planted_violations"
+      ],
+      "evidence": "Compiles ODCS quality rules into deterministic DocSpec zero-counter SQL queries, qualifies clean job outputs with zero DuckDB scans, and rejects row violations and tampered query SQL."
     }
   ],
   "additionalReceiptTests": [

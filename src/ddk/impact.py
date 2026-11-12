@@ -212,7 +212,7 @@ def _non_weakening(report, old, new, base, candidate, identity):
 
 
 def _followed_file_changes(base, candidate):
-    roles = {"schema", "definition"}
+    roles = {"schema", "definition", "implementation"}
     old = {(entry.path, entry.role, entry.selection): entry.sha256 for entry in base.files if entry.role in roles}
     new = {(entry.path, entry.role, entry.selection): entry.sha256 for entry in candidate.files if entry.role in roles}
     for path, role, fragment in sorted(old.keys() | new.keys()):
@@ -352,7 +352,7 @@ def impact_projects(base, candidate, *, required_groups=(), permitted_roots=(), 
     for (path, role, fragment), kind in _followed_file_changes(base, candidate):
         suffix = f"#{fragment}" if fragment and role == "definition" else ""
         seeds.add(f"{role}:{path}{suffix}")
-        if role == "schema" or fragment or _urn("shared-definition", path) not in before.keys() | after.keys():
+        if role in {"schema", "implementation"} or fragment or _urn("shared-definition", path) not in before.keys() | after.keys():
             impact["changed"].append({"identity": _urn(f"followed-{role}", path, fragment), "kinds": [kind]})
     old_catalog, new_catalog = _catalog_items(base), _catalog_items(candidate)
     for identity in sorted(old_catalog.keys() | new_catalog.keys()):
@@ -424,7 +424,7 @@ def impact_projects(base, candidate, *, required_groups=(), permitted_roots=(), 
             obligations[alias] = "absent-from-candidate-scope"
         elif right.kind == "policy":
             obligations[alias] = "requalification"
-        elif right.kind in {"component", "design"}:
+        elif right.kind in {"component", "design", "job"}:
             obligations[alias] = "review-computation-and-requalification"
         else:
             obligations[alias] = "review-metadata-and-requalification"
