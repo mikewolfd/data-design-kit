@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-06]
 ---
 # Put human field meaning first while preserving native identity and values
 
-Requirements: PCR-06 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-06 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer field dictionary. Delivery phase: phase-1.
 

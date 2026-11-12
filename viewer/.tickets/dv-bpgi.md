@@ -12,7 +12,7 @@ tags: [viewer, portal-content, foundation, pcr-20]
 ---
 # Integrate supported pilot metadata and retain unresolved publisher questions
 
-Requirements: PCR-20 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-20 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher content and viewer catalog integration. Delivery phase: foundation.
 
@@ -24,7 +24,7 @@ Implementation scope:
 - For read-only external publisher checkouts, produce the exact proposed source patch and record the owner handoff; do not mutate those references. Integrate returned supported artifacts when available.
 - Update the exact-occurrence evidence ledger, retaining unknown facts and historical scope. Additional source facts remain owner dependencies.
 
-Example: The latest SpicyRegs review leaves 19 partial meanings and five unknown meanings. For `related_docs[].congressReceived`, a top-level treaty definition does not establish the meaning of the nested field. Keep that exact question open until an applicable source resolves it. [Current remaining questions](../outputs/spicy-resume-20261106/remaining-unknowns.md)
+Example: The latest SpicyRegs review leaves 19 partial meanings and five unknown meanings. For `related_docs[].congressReceived`, a top-level treaty definition does not establish the meaning of the nested field. Keep that exact question open until an applicable source resolves it. Current remaining questions (`outputs/spicy-resume-20261106/remaining-unknowns.md`)
 
 ## Design
 
@@ -33,7 +33,7 @@ Relevant implementation or evidence starting points:
 - [fixtures/applications/spicy-regs/catalog.ddk.json](../fixtures/applications/spicy-regs/catalog.ddk.json)
 - [fixtures/applications/spicy-regs/catalog.lock.json](../fixtures/applications/spicy-regs/catalog.lock.json)
 - [src/server/registry.ts](../src/server/registry.ts)
-- [outputs/spicy-resume-20261106/remaining-unknowns.md](../outputs/spicy-resume-20261106/remaining-unknowns.md)
+- `outputs/spicy-resume-20261106/remaining-unknowns.md`
 
 Preserve the parent epic's source ownership, explicit unknowns, exact values/identities, nested occurrences, disclosure and selection boundaries. Root coordinates shared component/lib/style edits. The listed paths are starting points, not permission to edit external read-only sources.
 

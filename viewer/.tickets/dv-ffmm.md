@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-10]
 ---
 # Explain source, processing and confirmed authorship in plain language
 
-Requirements: PCR-10 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-10 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher provenance and viewer evidence. Delivery phase: phase-1.
 

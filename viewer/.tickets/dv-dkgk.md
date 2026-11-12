@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2-acceptance, pcr-21]
 ---
 # Verify the complete P1 discovery-to-reuse journey and evidence
 
-Requirements: PCR-21 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-21 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer integration and product/content acceptance. Delivery phase: phase-2-acceptance.
 

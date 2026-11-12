@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2, pcr-13]
 ---
 # Explain supported next actions, destinations and access requirements
 
-Requirements: PCR-13 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-13 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer access and adapter integration. Delivery phase: phase-2.
 

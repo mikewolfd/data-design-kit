@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-02]
 ---
 # Distinguish dataset variants and search supplied former dataset names
 
-Requirements: PCR-02 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-02 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher content and viewer discovery. Delivery phase: phase-1.
 

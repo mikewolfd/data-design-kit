@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-11]
 ---
 # Summarize check results by subject and retain scope-first check cards
 
-Requirements: PCR-11 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-11 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer checks and evidence. Delivery phase: phase-1.
 

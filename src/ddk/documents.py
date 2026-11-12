@@ -170,18 +170,25 @@ def parse_json(data: bytes, *, max_nesting=DEFAULT_LIMITS["maxNesting"], preserv
         raise ResourceLimit("JSON integer exceeded parser capacity.") from exc
 
 
-def json_dumps(value, *, sort_keys=True):
-    """Serialize JSON without turning exact decimals into strings or floats."""
+def _json_dumps_decimal(value, *, sort_keys=True):
     if isinstance(value, Decimal):
         if not value.is_finite():
             raise ValueError("Non-finite JSON number")
         return str(value)
     if isinstance(value, dict):
         keys = sorted(value) if sort_keys else value
-        return "{" + ", ".join(json.dumps(key) + ": " + json_dumps(value[key], sort_keys=sort_keys) for key in keys) + "}"
+        return "{" + ", ".join(json.dumps(key) + ": " + _json_dumps_decimal(value[key], sort_keys=sort_keys) for key in keys) + "}"
     if isinstance(value, (list, tuple)):
-        return "[" + ", ".join(json_dumps(item, sort_keys=sort_keys) for item in value) + "]"
+        return "[" + ", ".join(_json_dumps_decimal(item, sort_keys=sort_keys) for item in value) + "]"
     return json.dumps(value, ensure_ascii=True, allow_nan=False)
+
+
+def json_dumps(value, *, sort_keys=True):
+    """Serialize JSON without turning exact decimals into strings or floats."""
+    try:
+        return json.dumps(value, ensure_ascii=True, allow_nan=False, sort_keys=sort_keys)
+    except TypeError:
+        return _json_dumps_decimal(value, sort_keys=sort_keys)
 
 
 @dataclass(frozen=True)

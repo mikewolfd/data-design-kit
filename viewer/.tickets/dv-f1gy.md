@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-19]
 ---
 # Explain recorded corrections and changes without inventing version authority
 
-Requirements: PCR-19 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-19 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher change records and viewer history. Delivery phase: phase-1.
 

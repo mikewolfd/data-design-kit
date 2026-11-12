@@ -55,7 +55,7 @@ The based correction and explicit deletion increment is qualified in dev5. Retai
 
 ## Decisions that constrain implementation
 
-**Guard every supported selection path.** In the inspected native source, Refresh leaves `select_prepared_with_policy` before the Build quality guard; Backfill has a separate selection path. This is a hazard when widening support, not a demonstrated bypass of the qualified Build profile. Reuse those operations, add the appropriate native guard, and test every promised branch before advertising it. [Native completion code](/Users/mikewolfd/Work/worktrees/docspec-ddk-runtime/src/engine/pipeline/completion.rs).
+**Guard every supported selection path.** In the inspected native source, Refresh leaves `select_prepared_with_policy` before the Build quality guard; Backfill has a separate selection path. This is a hazard when widening support, not a demonstrated bypass of the qualified Build profile. Reuse those operations, add the appropriate native guard, and test every promised branch before advertising it (`docspec-rs` `src/engine/pipeline/completion.rs`).
 
 **Bind qualification to the final composed candidate.** Backfill can combine retained work with a newer sibling state. The initial expanded profile must refuse a changed selection or composition while preserving useful native completions. Supporting that race later requires an explicit native transition that records the newly composed candidate, exposes its exact views, and obtains new qualification. Adding a guard alone is insufficient: the existing managed readback and policy cannot silently acquire a different candidate or expected selection.
 

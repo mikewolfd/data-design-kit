@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2, pcr-14]
 ---
 # Keep exact version, filter and page scope visible with record previews
 
-Requirements: PCR-14 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-14 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer records and reader integration. Delivery phase: phase-2.
 

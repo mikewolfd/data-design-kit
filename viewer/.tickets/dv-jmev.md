@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-3, pcr-17]
 ---
 # Add one useful prepared chart or map with exact scope and a table alternative
 
-Requirements: PCR-17 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-17 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer visualization and publisher interpretation. Delivery phase: phase-3.
 

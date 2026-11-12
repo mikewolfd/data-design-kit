@@ -999,9 +999,9 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
             )
             artifacts = MappingProxyType({name: data for name, (_, data) in prepared.items()})
             if include_private_artifacts:
-                if set(profiles) - {"catalog.dcat"}:
+                if set(profiles) - {"catalog.dcat", "catalog.graph", "catalog.rml"}:
                     raise CatalogError("CATALOG-PRIVATE-EXPORT-UNSUPPORTED",
-                                       "Paired private preparation supports the declared DCAT export only.")
+                                       "Paired private preparation supports the declared DCAT, graph and RML exports only.")
                 # Reuse the same admitted source and SQL bytes. No second load,
                 # row scan, public-to-private guess or publication takes place.
                 private_catalog = deepcopy(local_admitted)
@@ -1009,6 +1009,15 @@ def assemble_catalog(project_path, *, metadata=None, metadata_adapter=None, expo
                                  for recipe in private_catalog["recipes"]}
                 if "catalog.dcat" in profiles:
                     private_files["discovery.dcat.json"] = ("dcat", _bytes(dcat_document(private_catalog)))
+                if "catalog.graph" in profiles:
+                    document, parsed = graph_document(private_catalog)
+                    private_files["discovery.graph.jsonld"] = ("graph", _bytes(document))
+                    if assembly.graph_turtle:
+                        private_files["discovery.graph.ttl"] = ("graph", turtle_bytes(parsed))
+                if "catalog.rml" in profiles:
+                    rml_files, _ = rml_documents(private_catalog)
+                    for path, data in rml_files.items():
+                        private_files[path] = ("mapping", data)
                 private_prepared = prepare_output_set(
                     private_catalog, private_files, result, profiles,
                     assembly.metadata.adapter if assembly.metadata else None, inventory,

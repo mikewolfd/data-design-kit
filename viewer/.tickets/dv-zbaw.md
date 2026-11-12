@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-09]
 ---
 # Place interpretation cautions beside the affected field, result or action
 
-Requirements: PCR-09 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-09 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher interpretation and viewer context. Delivery phase: phase-1.
 

@@ -12,7 +12,7 @@ tags: [viewer, portal-content, foundation, pcr-21]
 ---
 # Prepare the mixed-audience pilot and measure the current viewer
 
-Requirements: PCR-21 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-21 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Product/content research. Delivery phase: foundation.
 
@@ -29,7 +29,7 @@ Example: Ask a visitor whether two “Public comments” entries represent inter
 
 Relevant implementation or evidence starting points:
 - [docs/design.md](../docs/design.md)
-- [outputs/public-catalog-research-20261107/product-requirements.md](../outputs/public-catalog-research-20261107/product-requirements.md)
+- `outputs/public-catalog-research-20261107/product-requirements.md`
 
 Preserve the parent epic's source ownership, explicit unknowns, exact values/identities, nested occurrences, disclosure and selection boundaries. Root coordinates shared component/lib/style edits. The listed paths are starting points, not permission to edit external read-only sources.
 

@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-3, pcr-04]
 ---
 # Publish one supported topic guide connecting a visitor question to datasets
 
-Requirements: PCR-04 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-04 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Product/content, publisher metadata and viewer navigation. Delivery phase: phase-3.
 

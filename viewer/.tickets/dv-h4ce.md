@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2, pcr-18]
 ---
 # Show resource-specific attribution, reuse terms and support links
 
-Requirements: PCR-18 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-18 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher rights/contact metadata and viewer. Delivery phase: phase-2.
 

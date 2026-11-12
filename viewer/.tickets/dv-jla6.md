@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-08]
 ---
 # Label observation, update, retrieval and expected-update dates separately
 
-Requirements: PCR-08 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-08 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher date semantics and viewer presentation. Delivery phase: phase-1.
 

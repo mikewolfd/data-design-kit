@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2, pcr-16]
 ---
 # Label related datasets and queries by purpose, inputs and result unit
 
-Requirements: PCR-16 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-16 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher relationships and viewer queries. Delivery phase: phase-2.
 

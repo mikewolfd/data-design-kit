@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-07]
 ---
 # Present population, period and geographic coverage at the correct scope
 
-Requirements: PCR-07 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-07 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer coverage and publisher metadata. Delivery phase: phase-1.
 

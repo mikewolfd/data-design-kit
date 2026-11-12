@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-3, pcr-03]
 ---
 # Add publisher-backed discovery facets with explicit unknown values
 
-Requirements: PCR-03 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-03 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher metadata and viewer discovery. Delivery phase: phase-3.
 

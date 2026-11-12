@@ -13,7 +13,7 @@ tags: [viewer, portal-content, product-requirements]
 
 Implement the public-catalog product requirements so nontechnical visitors can choose useful data, understand its limits, take a supported next step, and cite or revisit it while engineers retain exact identity and evidence.
 
-Source: [21 product requirements](../outputs/public-catalog-research-20261107/product-requirements.md) and [eight-catalog research](../outputs/public-catalog-research-20261107/report.md).
+Source: 21 product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`) and eight-catalog research (`outputs/public-catalog-research-20261107/report.md`).
 
 The baseline is da6214e plus the retained local catalog changes. Existing access states, scope-first checks, exact references, publisher selection, numeric precision, nested occurrences and public/private disclosure are behavior to preserve. Already shipped copy fixes are not new implementation work.
 

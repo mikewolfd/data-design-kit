@@ -225,6 +225,30 @@ def test_requested_dcat_is_present_in_both_complete_views(inputs, tmp_path):
         assert any(item["path"] == "discovery.dcat.json" and item["role"] == "dcat" for item in captured.catalog["files"])
 
 
+def test_requested_graph_and_rml_are_present_in_both_complete_views(inputs, tmp_path):
+    root, policy_path = inputs
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["definitionFields"]["urn:example:commerce:dataset:orders"] = [
+        [{"field": "order_id"}], [{"field": "amount_cents"}],
+    ]
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+    result = assemble(inputs, include_private_artifacts=True, exports=("dcat", "graph.ttl", "rml"))
+    assert result.report["decision"] == "passed", result.local_report
+    captured_views = {}
+    for label, artifacts in (("public", result.artifacts), ("local", result.local_artifacts)):
+        assert "discovery.dcat.json" in artifacts
+        assert "discovery.graph.jsonld" in artifacts
+        assert "discovery.graph.ttl" in artifacts
+        assert any(name.startswith("rml/") and name.endswith(".yarrrml.yml") for name in artifacts)
+        root_dir = tmp_path / label
+        pin = write(root_dir, artifacts)
+        captured_views[label] = load_catalog_artifacts(root_dir, expected_lock_sha256=pin)
+    assert verify_catalog_pair(captured_views["public"], captured_views["local"])
+    public_rml = [name for name in captured_views["public"].companions if name.startswith("rml/")]
+    local_rml = [name for name in captured_views["local"].companions if name.startswith("rml/")]
+    assert len(public_rml) == 1 and len(local_rml) > len(public_rml)
+
+
 def test_unsupported_public_lineage_cannot_leave_a_partial_private_set(inputs):
     result = assemble(inputs, include_private_artifacts=True, exports=("catalog.dcat", "lineage.openlineage"))
     assert result.report["decision"] != "passed"

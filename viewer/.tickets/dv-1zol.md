@@ -12,7 +12,7 @@ tags: [viewer, portal-content, foundation, pcr-20]
 ---
 # Map product content requirements to supported publisher metadata
 
-Requirements: PCR-20 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-20 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher metadata and viewer integration. Delivery phase: foundation.
 
@@ -31,7 +31,7 @@ Relevant implementation or evidence starting points:
 - [docs/content-guide.md](../docs/content-guide.md)
 - [src/domain/types.ts](../src/domain/types.ts)
 - [src/server/catalog-store.ts](../src/server/catalog-store.ts)
-- [outputs/public-catalog-research-20261107/product-requirements.md](../outputs/public-catalog-research-20261107/product-requirements.md)
+- `outputs/public-catalog-research-20261107/product-requirements.md`
 
 Preserve the parent epic's source ownership, explicit unknowns, exact values/identities, nested occurrences, disclosure and selection boundaries. Root coordinates shared component/lib/style edits. The listed paths are starting points, not permission to edit external read-only sources.
 

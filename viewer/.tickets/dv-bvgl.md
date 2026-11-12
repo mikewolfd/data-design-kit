@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2, pcr-12]
 ---
 # Describe each file, table and service in the resource chooser
 
-Requirements: PCR-12 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-12 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer resources and publisher metadata. Delivery phase: phase-2.
 

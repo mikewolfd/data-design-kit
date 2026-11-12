@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1-acceptance, pcr-21]
 ---
 # Evaluate the first-encounter improvements with both audiences
 
-Requirements: PCR-21 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-21 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Product/content research and viewer acceptance. Delivery phase: phase-1-acceptance.
 
@@ -30,7 +30,7 @@ Example: A nontechnical visitor chooses between two similarly titled datasets an
 Relevant implementation or evidence starting points:
 - [docs/design.md](../docs/design.md)
 - [tests/browser/copy-discovery.spec.ts](../tests/browser/copy-discovery.spec.ts)
-- [outputs/public-catalog-research-20261107/product-requirements.md](../outputs/public-catalog-research-20261107/product-requirements.md)
+- `outputs/public-catalog-research-20261107/product-requirements.md`
 
 Preserve the parent epic's source ownership, explicit unknowns, exact values/identities, nested occurrences, disclosure and selection boundaries. Root coordinates shared component/lib/style edits. The listed paths are starting points, not permission to edit external read-only sources.
 

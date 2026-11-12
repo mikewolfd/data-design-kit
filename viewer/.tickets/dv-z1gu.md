@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-1, pcr-01]
 ---
 # Show purpose, distinguishing scope and access in dataset results
 
-Requirements: PCR-01 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-01 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Viewer discovery. Delivery phase: phase-1.
 

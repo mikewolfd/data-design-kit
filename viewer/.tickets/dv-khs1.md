@@ -12,7 +12,7 @@ tags: [viewer, portal-content, phase-2, pcr-15]
 ---
 # Link matching metadata companions and accurate reuse instructions
 
-Requirements: PCR-15 — [product requirements](../outputs/public-catalog-research-20261107/product-requirements.md).
+Requirements: PCR-15 — product requirements (`outputs/public-catalog-research-20261107/product-requirements.md`).
 
 Owner role: Publisher access documentation and viewer reuse. Delivery phase: phase-2.
 
