@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type {
   CatalogDataset,
   CatalogSnapshot,
@@ -12,7 +12,7 @@ import { downloadJson, jsonInput, releaseFor } from '../lib/display';
 import { Badge, Notice, Raw, Section, Value, BlankValuesHelp } from './Primitives';
 import { EvidenceRecord } from './EvidenceRecord';
 import { representationChoices } from '../lib/choice-labels';
-import { exactObjectField } from '../domain/exact';
+import { exactObjectEntries, exactObjectField, isExactNumber, isObject } from '../domain/exact';
 import {
   ResourceDetails,
   ResultContext,
@@ -26,6 +26,15 @@ import { AttributionContext, Cautions, DateContext } from '../features/dataset-c
 import { PreparedViews } from '../features/prepared-view';
 import { publisherMetadata } from '../features/publisher-metadata';
 
+/** Search scalar values without changing exact numbers, source keys or nested occurrences. */
+function searchableValues(value: unknown): string[] {
+  if (isExactNumber(value)) return [value.$number.toLowerCase()];
+  if (Array.isArray(value)) return value.flatMap(searchableValues);
+  if (isObject(value))
+    return exactObjectEntries(value).flatMap(([, item]) => searchableValues(item));
+  return value === null || value === undefined ? [] : [String(value).toLowerCase()];
+}
+
 export function ResultTable({
   rows,
   columns,
@@ -37,10 +46,23 @@ export function ResultTable({
   positions?: number[];
   caption?: string;
 }) {
+  const searchId = useId();
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number | undefined>();
+  const searchInput = useRef<HTMLInputElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  useEffect(() => setSelected(undefined), [rows]);
+  const searchable = useMemo(() => rows.map((row) => searchableValues(row)), [rows]);
+  const query = search.trim().toLowerCase();
+  const matching = rows
+    .map((row, index) => ({ row, index }))
+    .filter(({ index }) => !query || searchable[index].some((value) => value.includes(query)));
+  const selectionOutsideSearch =
+    selected !== undefined && !matching.some(({ index }) => index === selected);
+  useEffect(() => {
+    setSelected(undefined);
+    setSearch('');
+  }, [rows]);
   function inspect(index: number, button: HTMLButtonElement) {
     trigger.current = button;
     setSelected(selected === index ? undefined : index);
@@ -48,9 +70,39 @@ export function ResultTable({
   }
   return (
     <div className={`result-workspace${selected !== undefined ? ' has-selection' : ''}`}>
-      <p className="muted table-reading-help">
-        Select a record number to read every field. Long values are shortened in this table.
-      </p>
+      <div className="result-table-tools">
+        <div className="result-search">
+          <label className="stack-label" htmlFor={searchId}>
+            Search this page
+            <input
+              id={searchId}
+              ref={searchInput}
+              type="search"
+              placeholder="Find text or exact values…"
+              value={search}
+              aria-describedby={`${searchId}-help ${searchId}-count`}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+          <span id={`${searchId}-count`} className="muted result-search-count" role="status">
+            {matching.length} of {rows.length} records on this page
+          </span>
+          {search && (
+            <button
+              onClick={() => {
+                setSearch('');
+                searchInput.current?.focus();
+              }}
+            >
+              Clear page search
+            </button>
+          )}
+        </div>
+        <p id={`${searchId}-help`} className="muted table-reading-help">
+          Matches values in the returned page. Downloads keep every returned record. Select a record
+          number to read every field; long values are shortened in this table.
+        </p>
+      </div>
       <div
         className="table-scroll"
         tabIndex={0}
@@ -70,7 +122,7 @@ export function ResultTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {matching.map(({ row, index: i }) => (
               <tr key={positions?.[i] ?? i} className={selected === i ? 'selected-row' : ''}>
                 <td>
                   <button
@@ -94,6 +146,7 @@ export function ResultTable({
             ))}
           </tbody>
         </table>
+        {!matching.length && <p className="muted">No records on this page match the search.</p>}
       </div>
       {selected !== undefined && rows[selected] && (
         <section className="record-inspector" aria-label="Record detail">
@@ -104,12 +157,16 @@ export function ResultTable({
             <button
               onClick={() => {
                 setSelected(undefined);
-                trigger.current?.focus();
+                if (trigger.current?.isConnected) trigger.current.focus();
+                else searchInput.current?.focus();
               }}
             >
               Close detail
             </button>
           </div>
+          {selectionOutsideSearch && (
+            <p className="muted">The selected record is outside these page search results.</p>
+          )}
           <div className="record-navigation" role="group" aria-label="Browse returned records">
             <span className="muted">
               {selected + 1} of {rows.length} returned records

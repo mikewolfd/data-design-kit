@@ -56,6 +56,68 @@ test('discovery opens no rows; exact numbers, missing, null and empty survive pa
   await expect(page.getByRole('cell', { name: '9007199254740993', exact: true })).toBeVisible();
 });
 
+test('page search preserves original positions, exact values and the selected record without fetching more rows', async ({
+  page,
+}) => {
+  let reads = 0;
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/read')) reads++;
+  });
+  await open(page, 'Data');
+  await page.getByRole('button', { name: 'Open records', exact: true }).click();
+  await page.getByRole('button', { name: 'Next →', exact: true }).click();
+  const search = page.getByRole('searchbox', { name: 'Search this page', exact: true });
+  const count = page.locator('.result-search-count');
+  await expect(count).toHaveText('4 of 4 records on this page');
+  expect(reads).toBe(2);
+
+  await search.fill('SOURCE LITERAL');
+  await expect(count).toHaveText('1 of 4 records on this page');
+  await expect(page.locator('.data-table tbody tr')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Inspect record 13', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '9007199254741021', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect record 13', exact: true }).click();
+  const detail = page.getByRole('region', { name: 'Record detail', exact: true });
+  await expect(detail).toContainText('source literal');
+
+  await search.fill('9007199254741023');
+  await expect(count).toHaveText('1 of 4 records on this page');
+  await expect(page.getByRole('button', { name: 'Inspect record 14', exact: true })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: 'Record 13', exact: true })).toBeVisible();
+  await expect(detail).toContainText('The selected record is outside these page search results.');
+  await page.getByRole('button', { name: 'Close detail', exact: true }).click();
+  await expect(search).toBeFocused();
+
+  await search.fill('END');
+  await expect(count).toHaveText('1 of 4 records on this page');
+  await page.getByRole('button', { name: 'Inspect record 14', exact: true }).click();
+  await expect(detail).toContainText('3.000000000000000001');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download this page (JSON) ↓', exact: true }).click();
+  const file = await (await download).path();
+  const fs = await import('node:fs/promises');
+  const saved = JSON.parse(await fs.readFile(file!, 'utf8'));
+  expect(saved.result.rows).toHaveLength(4);
+  expect(saved.result.rows[3].id).toEqual({ $number: '9007199254741023' });
+
+  await search.fill('not present in these records');
+  await expect(count).toHaveText('0 of 4 records on this page');
+  await expect(
+    page.getByText('No records on this page match the search.', { exact: true }),
+  ).toBeVisible();
+  await expect(detail.getByRole('heading', { name: 'Record 14', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear page search', exact: true }).click();
+  await expect(count).toHaveText('4 of 4 records on this page');
+  await expect(detail.getByRole('heading', { name: 'Record 14', exact: true })).toBeVisible();
+  expect(reads).toBe(2);
+
+  await search.fill('source literal');
+  await page.getByRole('button', { name: '← Previous', exact: true }).click();
+  await expect(search).toHaveValue('');
+  await expect(count).toHaveText('10 of 10 records on this page');
+  await expect(detail).toHaveCount(0);
+});
+
 test('exact decimal filtering and error retry keep request context', async ({ page }) => {
   await open(page, 'Data');
   await page.getByRole('button', { name: 'Open records', exact: true }).click();
