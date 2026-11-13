@@ -670,7 +670,7 @@ def test_native_datafusion_and_rust_quad_materialization_and_federated_sql_join(
     docspec_bin = (
         os.environ.get("DDK_DOCSPEC_BIN")
         or os.environ.get("DDK_DOCSPEC_BINARY")
-        or "/Users/mikewolfd/Work/artifacts/ddk-docspec-runtime-20261111/docspec"
+        or "/Users/mikewolfd/Work/artifacts/docspec-runtime/darwin-arm64/b3a5d49dc951f4cb2826df10f5bd5eeff5c3f7526f553858ffcd6be09ed09a47/docspec"
     )
     if not Path(docspec_bin).is_file():
         pytest.skip(f"docspec binary unavailable at {docspec_bin}")

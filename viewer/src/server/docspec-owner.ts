@@ -27,9 +27,9 @@ import type { OwnerAdapters, OwnerEvidenceReader, OwnerQuery, OwnerReader } from
 import { fail, LIMITS, sha256, ViewerError, type CatalogRegistration } from './catalog-store';
 
 export const DEFAULT_DOCSPEC_BINARY =
-  '/Users/mikewolfd/Work/artifacts/ddk-docspec-runtime-20261111/docspec';
+  '/Users/mikewolfd/Work/artifacts/docspec-runtime/darwin-arm64/b3a5d49dc951f4cb2826df10f5bd5eeff5c3f7526f553858ffcd6be09ed09a47/docspec';
 export const DEFAULT_DOCSPEC_SHA256 =
-  'de4abe4f6d5e36614bcfd15c541257ba6bca6a17e1f2273837287c05a686bfc1';
+  'b3a5d49dc951f4cb2826df10f5bd5eeff5c3f7526f553858ffcd6be09ed09a47';
 
 const MAX_WORKER_STDOUT_LINE = 8 * 1024 * 1024;
 const DEFAULT_VERIFY_DIGEST_MAX_BYTES = 256 * 1024 * 1024;
