@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import type { CatalogSnapshot } from '../../src/domain/types';
 
 async function queryCatalog(page: any, request: any) {
@@ -152,10 +153,48 @@ test('source inventory inspects only the pinned original and rejects a mismatche
     page.getByRole('heading', { name: 'Captured sources in this catalog' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Inspect retained original', exact: true }).click();
-  await expect(
-    page.getByText('The returned file identity does not match the requested record.', {
-      exact: true,
-    }),
-  ).toBeVisible();
+  const rejection = page.getByRole('alert');
+  await expect(rejection).toBeVisible();
+  await expect(rejection).toContainText(
+    'The returned file identity does not match the requested record.',
+  );
   await expect(page.getByText('Unmatched source document', { exact: true })).toHaveCount(0);
+});
+
+test('dataset and reading panels keep readable contrast throughout their entrance motion', async ({
+  page,
+}) => {
+  await page.goto('/?catalog=watershed&tab=Overview');
+  await expect(
+    page.getByRole('heading', { name: 'Watershed observations', exact: true }),
+  ).toBeVisible();
+  // Freeze a real intermediate frame; timing alone must not hide a contrast failure.
+  await page.addStyleTag({
+    content: '.tab-content, .record-inspector { animation-duration: 10s !important; }',
+  });
+  await page.getByRole('tab', { name: 'View data', exact: true }).click();
+  await page.getByRole('tabpanel').evaluate((element) => {
+    for (const animation of element.getAnimations()) {
+      animation.pause();
+      animation.currentTime = 5000;
+    }
+  });
+  await page.getByRole('button', { name: 'Open records', exact: true }).click();
+  await page.getByRole('button', { name: 'Inspect record 01', exact: true }).click();
+  const detail = page.getByRole('region', { name: 'Record detail', exact: true });
+  await detail.evaluate((element) => {
+    for (const animation of element.getAnimations()) {
+      animation.pause();
+      animation.currentTime = 5000;
+    }
+  });
+  await expect(page.getByRole('tabpanel')).toHaveCSS('opacity', '1');
+  await expect(detail).toHaveCSS('opacity', '1');
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
 });

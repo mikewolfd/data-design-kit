@@ -50,7 +50,18 @@ test('Commerce shows publisher check meanings and named source captures with exa
   await expect(page.locator('.evidence-row strong', { hasText: 'title not supplied' })).toHaveCount(0);
   const orders = source.catalog.versions.find((v: any) => v.dataset === 'orders' && v.sources.length);
   await page.goto(`/?catalog=commerce-native&dataset=orders&version=${encodeURIComponent(orders.id)}&tab=Evidence`);
-  await expect(page.getByText('Example orders: orders.csv. Source file recorded for this data load.', { exact: true })).toBeVisible();
+  const selectedVersionSources = page.locator('.context-scope').filter({
+    has: page.getByRole('heading', {
+      name: 'Recorded source observations for this version',
+      exact: true,
+    }),
+  });
+  await expect(
+    selectedVersionSources.getByText(
+      'Example orders: orders.csv. Source file recorded for this data load.',
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(page.getByText('No checks are recorded for this data version', { exact: true })).toBeVisible();
 });
 
