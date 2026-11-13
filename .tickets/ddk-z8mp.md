@@ -39,3 +39,7 @@ Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-re
 ## November 13 vertical slice checkpoint
 
 The fresh application is `/Users/mikewolfd/Work/spicygov`. [Local vertical scope and evidence](../docs/local-spicygov-slice.md) cover one historical docket, one rule and two comments, exact multi-file query access, source links, quality checks and the local browser. The user requested a pause after vertical validation to review the site. Horizontal source implementation has not started. This epic remains open for its full selected scope and release acceptance.
+
+## Generic viewer handoff
+
+The duplicate application server/web files were removed. SpicyGov now supplies source choices, definitions, SQL, operator configuration and a reusable theme to the generic DDK viewer. Shared page search, reading, originals and SQL are available for the vertical handoff. Next application usability work should enrich dataset titles, field meanings, coverage descriptions and source-linked row actions in maintained metadata. The user-directed pause still precedes horizontal work.

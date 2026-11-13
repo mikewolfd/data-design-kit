@@ -36,3 +36,7 @@ Priority and greenfield scope: [work backlog](../docs/work-backlog.md#greenfield
 ## November 13 bounded vertical progress
 
 Implemented the bounded local flat-file/directory path in `ddk.catalog_query.execute_catalog_sql` and exercised it through a real local SpicyGov browser. Exact member binding, joins, filtering/order/paging, valid-empty and changed-member refusals are covered. Nested directories now refuse explicitly after an independent case showed the retained native reader omitting nested rows. Complete nested/native/remote/public HTTP/MCP/viewer behavior and the performance criteria remain open. [Scope and evidence](../docs/local-spicygov-slice.md).
+
+## Generic viewer handoff
+
+The generic DDK viewer now serves the local cohort through explicit operator configuration: complete flat-directory paging, parameter-free recipes, authored SQL, and original inspection. Query order and large integers are preserved. Native output-type preparation refuses decimals, floats, temporal, binary and nested SQL outputs before execution because the retained native JSON serializer can round decimals and turn non-finite floats into null. Follow up in the native owner for complete exact typed SQL; do not remove this refusal until independently proven. Remote/public HTTP, MCP, native versions and nested directories remain open.

@@ -1,6 +1,6 @@
 # Connecting a catalog owner
 
-The application composition root selects local catalog registrations and explicitly supported owner readers. A registration supplies a stable navigation ID, an allowlisted directory, an exact external `catalog.lock.json` SHA-256, and fixture/application mode. It does not supply replacement dataset definitions. Never accept directories, URLs, SQL, or a runtime executable from an HTTP request.
+The application composition root selects local catalog registrations and explicitly supported owner readers. A registration supplies a stable navigation ID, an allowlisted directory, an exact external `catalog.lock.json` SHA-256, and fixture/application mode. It does not supply replacement dataset definitions. Never accept filesystem paths, source URLs or a runtime executable from an HTTP request. Custom SQL is accepted only by an explicitly registered local adapter, against exact admitted catalog inputs.
 
 Application metadata snapshots under `fixtures/applications/` retain their exact standard bytes and capture receipts; no application payload files are included. The navigation list reads no catalog bytes. The top-level snapshot API omits a duplicate copy of effective definitions: React resolves those directly from the assembly extension.
 
@@ -36,6 +36,7 @@ The generic startup-pinned `DocSpecCatalogOwner` (`src/server/docspec-owner.ts` 
 | `GET /api/catalogs/:id` | One exact admitted snapshot with definitions, report, lock and explicit reader capabilities |
 | `POST /api/read` | Bounded page for exact catalog/dataset/version/representation and optional release/filter/cursor |
 | `POST /api/query` | Explicit recipe, exact execution inputs, parameter values and optional complete release |
+| `POST /api/sql` | Authored read-only SQL and exact catalog input bindings, only when the local owner exposes SQL capability |
 | `GET /api/companion` | Requested admitted companion bytes, verified against exact inventory; no arbitrary path traversal |
 | `POST /api/evidence` | Exact registered owner record, verified against its retained digest |
 | `GET /api/impact` | Registered owner analysis bound to exact base/candidate/report; explicit unavailable otherwise |
@@ -43,6 +44,32 @@ The generic startup-pinned `DocSpecCatalogOwner` (`src/server/docspec-owner.ts` 
 POST input/output types are exported from `src/domain/types.ts`. Numeric parameter values use exact numeric tags or the declared string type. The recipe form supports either one complete release or explicit exact versions, and asks for a representation when more than one is available. Unsupported required external/declared relationship resolution remains unknown before owner execution. `parameterOrder` determines presentation order; never infer positional order from `required`. `contextualRelationships` remain explanatory and never add unread endpoints to `bindings`.
 
 Selection records are not sorted by time to choose “latest.” Only one applicable authority/purpose selection and one dataset version permit an automatic default. Explicit historical versions retain their original release context. Same-release relationships and queries resolve complete exact membership before use. Disjoint selections under one selector are valid; competing selections for the same dataset are ambiguous.
+
+## Local SQL and originals
+
+The optional `localSql` field on an operator owner registration enables `OwnerSql` and the generic Query lab. A configuration fragment is:
+
+```json
+{
+  "localSql": {
+    "python": "/absolute/path/to/environment/bin/python",
+    "pythonPath": ["/absolute/path/to/data-design-kit/src"],
+    "evidenceDirectory": "/absolute/path/to/query-evidence",
+    "maxInputBytes": 16777216,
+    "maxMembers": 128
+  }
+}
+```
+
+The Python environment needs DDK's native adapter dependencies, including PyArrow. The bridge preserves the configured virtual environment launcher. All paths come from the operator file; browser requests contain only catalog identity, named exact dataset/version/representation bindings, SQL and a limit. Quote aliases containing hyphens in SQL. Public audience mode does not expose this local SQL path. Loopback Host and same-origin checks apply to local requests.
+
+The bridge starts one Python worker per admitted attempt and uses the pinned DocSpec binary. It verifies all input members and their digests, reads bounded Arrow schemas, and requires identical schemas and metadata across directory members. Native preparation determines the output schema before execution. Scalar text, integer, boolean and null output fields are supported. Decimal, floating-point, nested, binary and temporal output fields refuse with `stage: output_type_admission` and preparation `execution: not_run`; these are not successful empty results. Authored casts to text preserve exact decimal text. Record paging retains its separate native typed-value path.
+
+The request's SQL remains unchanged, including ordering; the answer limit is enforced after bounded native collection. Input defaults and ceilings are 16 MiB and 128 members. HTTP requests default to 25 rows and allow at most 100. Flat directories only are admitted; unexpected or nested members refuse before payload hashing. Reading exact schemas adds work before execution; this is a bounded local acceptance path, not a measured cold-read performance claim.
+
+The bridge retains the submitted request, worker output, preparation and execution evidence in the external attempt directory. Preparation and execution remain distinct. Cancellation or timeout terminates the worker process group, retains uncertain native outcomes, and occupies one of two active slots until reaped. Parameter-free recipes use this bridge when configured; parameterized recipes keep the existing native worker route.
+
+The generic source inspector reads only original URI/digest pairs declared by the pinned catalog, within permitted roots and byte limits. A known URI with a different digest refuses. Catalog-wide captured originals do not imply a link to every displayed row or version; missing version-level lineage stays explicit.
 
 ## Work and retention limits
 

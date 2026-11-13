@@ -1,5 +1,11 @@
 # DDK verification
 
+## November 13, 2026 SpicyGov generic viewer slice
+
+The [bounded local slice](local-spicygov-slice.md) uses the existing generic viewer with an operator-selected theme, page search, a reading pane, original inspection and exact-input local SQL. SpicyGov's duplicate web implementation was removed. [Acceptance and source identities](/Users/mikewolfd/Work/artifacts/spicyregs-fresh-slice-20261113/ACCEPTANCE.md) retain 217 unchanged native/catalog test passes, 32 current query passes, 54 core traceability passes, 40 application passes, 124 viewer unit passes, 74 browser passes and three independent schema-admission passes, all with zero skips. Independent source and backend probes add 32 and 34 passing checks. Type checking and build passed. Historical Commerce replay is separate from fresh SpicyGov native/HTTP execution.
+
+The browser checks cover the generic presentation; a separate actual SpicyGov browser journey verifies records, page search, original identity, SQL and mobile layout. The retained native serializer cannot preserve all SQL output types, so native preparation explicitly refuses unsupported types before execution. Scalar text, integer, boolean and null outputs pass; explicit decimal-to-text casts retain exact text. This bounded acceptance does not close remote serving, complete typed SQL, managed recovery or application release work. Horizontal implementation remains paused for the user's site review.
+
 ## November 13, 2026 user-value review integration
 
 The [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) is integrated into nine existing DDK tickets and the current implementation/runtime plans. Shared whole-table serving and cold-read work move to P0. Focused date/field availability is active in ddk-251s; its former Stack proposal now redirects as merged, with the earlier deferral and original request retained. This changes planning and ticket metadata only; the new consumer scenarios remain open implementation and acceptance work.

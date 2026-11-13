@@ -38,3 +38,7 @@ Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-re
 ## November 13 bounded vertical progress
 
 The local SpicyGov probe uses explicit source/member/native/result limits and records source/receipt bytes, retained bytes and stage timings. These are measured small-cohort costs and chosen probe limits; production p95, physical I/O, aggregate process memory, freshness and remote costs remain unmeasured. See the vertical evidence; do not close performance acceptance from the local result. [Scope and evidence](../docs/local-spicygov-slice.md).
+
+## Generic viewer handoff
+
+The shared SQL path now reads bounded pinned Parquet bytes to obtain actual member schemas, then retains native preparation separately from execution. This closes silent numeric-output corruption through explicit type refusal but adds schema-read/planning cost. Do not treat this small local path as accepted cold-read or production-scale performance. Keep exact final measurements and resource limits in the vertical acceptance record.

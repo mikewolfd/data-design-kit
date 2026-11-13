@@ -471,3 +471,5 @@ These deferrals do not weaken declared conformance requirements. A requested def
 ## 11. Requirement coverage
 
 Every normative requirement is assigned to a primary work package in [work-packages.json](../implementation/work-packages.json). Individual conformance cases name their requirement IDs. Documentation checks verify that every requirement has an owner and at least one named case. The executed case evidence determines which profile claims are supported.
+
+The vertical site uses the generic DDK viewer with a reusable SpicyGov theme, page search, reading pane, source inspection and bounded local SQL. Its original standalone web server has been removed. Final evidence and native output-type limits are recorded in [the vertical scope](local-spicygov-slice.md). Horizontal work remains paused.

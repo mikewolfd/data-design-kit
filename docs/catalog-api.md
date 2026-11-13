@@ -211,3 +211,8 @@ Public assembly requires an explicit identifier grant for the selected native-ru
 These APIs passed installed metadata/translation qualification in the [dev6 catalog package](local-release-dev6.md). The retained native workflow, concrete application generators and their release tuples require separate qualification; the [verification record](verification.md) identifies their focused development evidence and remaining gaps.
 
 Static relationship support and executed data checks answer different questions. A native invariant does not make an unsupported comparison rule interpretable. Missing rule support and missing candidate evidence remain separate incomplete results. The [replacement plan](replacement-runtime-plan.md) tracks the additional relationship and multi-output profiles needed by the applications.
+
+
+The local SQL consumer also prepares the query schema natively from exact selected Parquet member schemas. Every member must share the same Arrow schema. The current JSON query output profile admits scalar text, integer, boolean and null fields; decimal, floating-point, temporal, binary and nested outputs refuse before execution. The retained native serializer loses decimal precision and non-finite float distinctions. An explicit authored cast to `VARCHAR` is available when exact text is the intended result. Preparation evidence stays separate from execution evidence.
+
+The generic viewer can opt into this consumer with operator `localSql` configuration. Its `/api/sql` route binds the displayed catalog digest and explicit input versions. Branding and layout use an independent [theme configuration](../viewer/docs/themes.md); domain-specific HTTP servers are unnecessary.

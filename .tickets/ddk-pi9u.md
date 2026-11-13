@@ -33,3 +33,7 @@ Delivery order: source identity and locator mapping accompany the first real jou
 ## November 13 bounded vertical progress
 
 The local SpicyGov cohort now follows each selected comment through exact rule/docket keys and original JSON, preserving source version, digest and receipt pointer. Independent review added changed-version, changed-receipt and changed-inventory refusals. Generic configured row actions and the other selected application journeys remain open. [Scope and evidence](../docs/local-spicygov-slice.md).
+
+## Generic viewer handoff
+
+Retained original inspection moved into the generic viewer and admits only catalog-pinned URI/digest pairs under permitted roots. Source versions and receipt locators remain visible. Catalog-wide originals and selected-version lineage remain distinct; raw observations are not yet linked to normalized versions. Configured row actions and complete source-to-derived lineage remain open.
