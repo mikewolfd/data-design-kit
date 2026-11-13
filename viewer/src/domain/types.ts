@@ -365,6 +365,7 @@ export type CatalogSnapshot = CatalogSummary & {
   capabilities: {
     read: boolean;
     query: boolean;
+    sql?: boolean;
     evidence?: boolean;
     readDatasetIds?: readonly string[];
     queryRecipeIds?: readonly string[];
@@ -394,6 +395,13 @@ export type QueryRequest = {
   parameters: Record<string, ExactValue>;
   limit?: number;
   releaseId?: string;
+};
+export type SqlRequest = {
+  catalogId: string;
+  catalogSha256: string;
+  bindings: Record<string, ExactBinding>;
+  sql: string;
+  limit?: number;
 };
 export type ReadResult = {
   status: 'ok' | 'refused' | 'unknown';

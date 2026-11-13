@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { opendir, readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
@@ -25,11 +25,19 @@ import type {
 } from '../domain/types';
 import type { OwnerAdapters, OwnerEvidenceReader, OwnerQuery, OwnerReader } from './access';
 import { fail, LIMITS, sha256, ViewerError, type CatalogRegistration } from './catalog-store';
+import { createLocalCatalogSql, type LocalSqlConfig } from './local-sql';
 
 export const DEFAULT_DOCSPEC_BINARY =
   '/Users/mikewolfd/Work/artifacts/docspec-runtime/darwin-arm64/b3a5d49dc951f4cb2826df10f5bd5eeff5c3f7526f553858ffcd6be09ed09a47/docspec';
 export const DEFAULT_DOCSPEC_SHA256 =
   'b3a5d49dc951f4cb2826df10f5bd5eeff5c3f7526f553858ffcd6be09ed09a47';
+
+/** Native paths sort by UTF-8 bytes, including non-BMP Unicode names. */
+export function parquetMemberInventorySha256(inventory: readonly [string, string, number][]): string {
+  const ordered = [...inventory].sort((left, right) =>
+    Buffer.compare(Buffer.from(left[0], 'utf8'), Buffer.from(right[0], 'utf8')));
+  return sha256(JSON.stringify(ordered));
+}
 
 const MAX_WORKER_STDOUT_LINE = 8 * 1024 * 1024;
 const DEFAULT_VERIFY_DIGEST_MAX_BYTES = 256 * 1024 * 1024;
@@ -61,7 +69,7 @@ function collectEvidenceRecordUris(node: unknown, out: Set<string>, depth = 0): 
     typeof obj.sha256 === 'string' &&
     /^[a-f0-9]{64}$/.test(obj.sha256)
   ) {
-    out.add(obj.uri);
+    out.add(evidenceMapKey({ uri: obj.uri, sha256: obj.sha256 }));
   }
   for (const val of Object.values(obj)) {
     collectEvidenceRecordUris(val, out, depth + 1);
@@ -147,6 +155,7 @@ export interface OperatorCatalogOwnerEntry {
   supportedRecipeIds?: string[];
   description?: string;
   enableEvidence?: boolean;
+  localSql?: LocalSqlConfig;
 }
 
 export interface TemporalValueGuards {
@@ -334,6 +343,44 @@ async function defaultResolveShards(
       } else {
         baseDir = resolve(catalogDirectory, representation.location);
       }
+    }
+    if (version.reference?.scheme === 'urn:ddk:version:docspec-parquet-directory-sha256') {
+      const reference = version.reference.value;
+      if (!isObject(reference))
+        fail('binding_mismatch', 'The directory reference requires exact location and digest fields.', 409);
+      const location = exactObjectField(reference, 'location');
+      const digest = exactObjectField(reference, 'sha256');
+      if (location !== representation.location || typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest))
+        fail('binding_mismatch', 'Directory representation differs from its exact native reference.', 409);
+      const expected = new Map<string, number>();
+      const inventory: [string, string, number][] = [];
+      for (const member of representation.members) {
+        if (!/^[^/\\]+\.parquet$/.test(member.path) || expected.has(member.path) ||
+            typeof member.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(member.sha256) ||
+            !Number.isSafeInteger(member.byteSize) || (member.byteSize ?? 0) <= 0)
+          fail('native_scope_refused', 'The directory requires complete flat Parquet members.', 409);
+        expected.set(member.path, member.byteSize!);
+        inventory.push([member.path, member.sha256, member.byteSize!]);
+      }
+      if (parquetMemberInventorySha256(inventory) !== digest)
+        fail('integrity_mismatch', 'Directory member metadata differs from its native inventory digest.', 409);
+      const observed = new Set<string>();
+      const physical = await realpath(baseDir);
+      if (physical !== baseDir || !isWithinRoots(physical, permittedRoots))
+        fail('native_scope_refused', 'The directory must be an unlinked permitted physical path.', 409);
+      let entries = 0;
+      for await (const entry of await opendir(physical)) {
+        if (++entries > 2048 || entry.isSymbolicLink() || entry.isDirectory())
+          fail('native_scope_refused', 'The directory exceeds its flat member scope.', 409);
+        if (entry.name.toLowerCase().endsWith('.parquet')) {
+          if (!entry.isFile() || !expected.has(entry.name) ||
+              (await stat(resolve(physical, entry.name))).size !== expected.get(entry.name))
+            fail('integrity_mismatch', 'The directory contains an unexpected or changed member.', 409);
+          observed.add(entry.name);
+        }
+      }
+      if (observed.size !== expected.size)
+        fail('integrity_mismatch', 'The directory is missing selected members.', 409);
     }
     const shards: PinnedParquetShard[] = [];
     for (const member of representation.members) {
@@ -748,17 +795,36 @@ export async function createDocSpecCatalogOwner(
     fail('integrity_mismatch', 'The catalog.lock.json digest differs from lockSha256.', 409);
 
   const catalogAllowlistUris = new Set<string>();
+  const lockMetadata = parseMetadata(lockBytes.toString('utf8'));
+  const outputPins = lockMetadata.extensions?.['urn:ddk:catalog:output-set'] ?? [];
   for (const metaPath of [catalogPath, reportPath]) {
     const metaBytes = await readBoundedBytes(metaPath, Date.now() + 5000, undefined, LIMITS.fileBytes).catch(
       () => null,
     );
     if (metaBytes) {
       try {
+        const name = metaPath === catalogPath ? 'catalog.ddk.json' : 'catalog.report.json';
+        const pin = outputPins.find((row: any) => row.path === name);
+        if (!pin || sha256(metaBytes) !== pin.sha256)
+          fail('integrity_mismatch', 'Evidence metadata differs from its catalog lock.', 409);
+        const metadata = parseMetadata(new TextDecoder('utf-8', { fatal: true }).decode(metaBytes));
         collectEvidenceRecordUris(
-          parseMetadata(new TextDecoder('utf-8', { fatal: true }).decode(metaBytes)),
+          metadata,
           catalogAllowlistUris,
         );
-      } catch {}
+        if (metaPath === catalogPath) {
+          for (const source of metadata.sources ?? []) {
+            const content = source.content;
+            if (content?.scheme === 'urn:ddk:version:local-file-sha256' &&
+                typeof content.value?.location === 'string' && content.value.location.startsWith('file://') &&
+                typeof content.value.sha256 === 'string' && /^[a-f0-9]{64}$/.test(content.value.sha256))
+              catalogAllowlistUris.add(evidenceMapKey({ uri: content.value.location, sha256: content.value.sha256 }));
+          }
+        }
+      } catch (error) {
+        if (error instanceof ViewerError) throw error;
+        fail('invalid_registration', 'Evidence metadata could not be read safely.', 409);
+      }
     }
   }
 
@@ -1054,9 +1120,11 @@ export async function createDocSpecCatalogOwner(
           dynamicEvidence.get(evidenceMapKey(record)) ??
           config.evidenceUriMap?.get(evidenceMapKey(record));
         const allowlistOnly = config.evidenceAllowlistOnly ?? true;
-        const inCatalogAllowlist = !config.evidenceUriMap && catalogAllowlistUris.has(record.uri);
+        const inCatalogAllowlist = !config.evidenceUriMap && catalogAllowlistUris.has(evidenceMapKey(record));
 
         if (!mapped && allowlistOnly && !inCatalogAllowlist) {
+          if ([...catalogAllowlistUris].some(pin => pin.startsWith(`${record.uri}\0`)))
+            fail('integrity_mismatch', 'The requested evidence digest differs from its catalog pin.', 409);
           fail(
             'evidence_refused',
             'This record is outside the configured evidence allowlist.',
@@ -1218,6 +1286,27 @@ export async function loadOperatorOwnerConfig(
         ...(entry.description ? { description: entry.description } : {}),
         enableEvidence: entry.enableEvidence ?? true,
       });
+      if (entry.localSql) {
+        const local = await createLocalCatalogSql(entry.localSql, {
+          directory: selectedDir, lockSha256: selectedLockSha, docspecBinary: resolvedEntryBinary,
+          docspecSha256: entry.docspecSha256 ?? DEFAULT_DOCSPEC_SHA256,
+          docspecLimits: entry.docspecLimits ?? { compute_threads: 2, memory_bytes: 268435456,
+            scratch_bytes: 67108864, batch_rows: 8192, max_batch_bytes: 8388608, max_metadata_bytes: 4194304 },
+          permittedRoots: entry.permittedRoots.map(r => resolve(r)),
+        });
+        const originalQuery = owner.query;
+        const originalEvidence = owner.evidence;
+        owner.sql = local.sql;
+        owner.query = { ...originalQuery, query: input => Object.keys(input.parameters).length && originalQuery
+          ? originalQuery.query(input) : local.query.query(input) };
+        owner.evidence = async input => {
+          try { return await local.evidence(input); } catch (error) {
+            if (error instanceof ViewerError && error.code === 'evidence_refused' && originalEvidence)
+              return originalEvidence(input);
+            throw error;
+          }
+        };
+      }
       owners.set(entry.id, owner);
     }
   }

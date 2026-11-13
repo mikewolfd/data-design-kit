@@ -56,8 +56,8 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
     catalog = captured.catalog
     inputs, pins, total, members_count = [], {}, 0, 0
     for name, version_id in bindings.items():
-        _require(isinstance(name, str) and bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name)),
-                 "SQL input names must be simple identifiers")
+        _require(isinstance(name, str) and len(name) <= 128 and bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", name)),
+                 "SQL input names require letters, digits, underscores or hyphens; quote hyphenated names in SQL")
         versions = [v for v in catalog["versions"] if v["id"] == version_id]
         _require(len(versions) == 1, "Each binding must resolve to one exact catalog version")
         version = versions[0]

@@ -69,7 +69,7 @@ if (
 
 export const store = new CatalogStore(
   [
-    ...fixturePins.map((row) => ({
+    ...(process.env.DDK_VIEWER_INCLUDE_EXAMPLES === '0' ? [] : fixturePins).map((row) => ({
       ...row,
       navigationLabel: row.id === 'watershed' ? 'Watershed observatory' : 'Public-service grants',
       directory: resolve(process.cwd(), 'fixtures', row.id),

@@ -158,7 +158,7 @@ def test_admission_refuses_before_native_invocation(local_catalog, fault):
     elif fault == "root": options["permitted_roots"] = (options["directory"],)
     elif fault == "bytes": options["max_input_bytes"] = 1
     elif fault == "members": options["max_members"] = 1
-    else: options["bindings"] = {"not-a-name": "urn:test:version:items"}
+    else: options["bindings"] = {"not a name": "urn:test:version:items"}
     with pytest.raises(CatalogError):
         execute_catalog_sql(**options, adapter=NeverExecute(), sql="SELECT * FROM items")
 
@@ -177,3 +177,10 @@ def test_changed_member_cannot_produce_a_successful_answer(local_catalog, adapte
     except (CatalogError, FileNotFoundError):
         return
     assert answer["status"] != "succeeded" and "rows" not in answer
+
+
+def test_hyphenated_catalog_alias_is_an_exact_quoted_sql_table(local_catalog, adapter):
+    options = {**local_catalog, "bindings": {"line-items": local_catalog["bindings"]["items"]}}
+    answer = execute_catalog_sql(**options, adapter=adapter, sql='SELECT id FROM "line-items" ORDER BY id')
+    assert answer["status"] == "succeeded", answer
+    assert answer["rows"] == [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}]

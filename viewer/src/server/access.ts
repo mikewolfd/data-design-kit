@@ -19,6 +19,7 @@ import type {
   FieldPath,
   QueryRequest,
   QueryResult,
+  SqlRequest,
   ReadRequest,
   ReadResult,
   RecordRef,
@@ -79,7 +80,19 @@ export type OwnerAdapters = {
   reader?: OwnerReader;
   query?: OwnerQuery;
   evidence?: OwnerEvidenceReader;
+  sql?: OwnerSql;
 };
+export interface OwnerSql {
+  query(input: {
+    snapshot: CatalogSnapshot;
+    bindings: Record<string, ExactBinding>;
+    sql: Uint8Array;
+    limit: number;
+    deadline: number;
+    signal: AbortSignal;
+    onAttempt?: (record: RecordRef) => void;
+  }): Promise<QueryResult>;
+}
 const TRANSPORT = 'ddk-exact-json-v1' as const;
 const empty = (
   binding: ExactBinding,
@@ -470,6 +483,7 @@ export class CatalogAccess {
       capabilities: {
         read: Boolean(owner?.reader),
         query: Boolean(owner?.query),
+        ...(owner?.sql ? { sql: true } : {}),
         ...(owner?.evidence ? { evidence: true } : {}),
         ...(owner?.reader?.supportedDatasetIds
           ? { readDatasetIds: owner.reader.supportedDatasetIds }
@@ -750,6 +764,47 @@ export class CatalogAccess {
       },
       ...(checked.release ? { release: checked.release } : {}),
     });
+  }
+  async sql(request: SqlRequest): Promise<QueryResult> {
+    const deadline = Date.now() + this.deadlineMs;
+    if (!isObject(request) || !isObject(request.bindings) ||
+        typeof request.sql !== 'string' || !request.sql.trim() ||
+        Buffer.byteLength(request.sql) > LIMITS.requestBytes)
+      fail('invalid_request', 'Supply bounded SQL and explicit input versions.');
+    const { snapshot } = await this.selected(request.catalogId, request.catalogSha256, deadline);
+    const names = Object.keys(request.bindings);
+    if (!names.length || names.length > 32 || names.some(name => name.length > 128 || !/^[A-Za-z_][A-Za-z0-9_-]*$/.test(name)))
+      fail('invalid_binding', 'Bind between 1 and 32 SQL table names.');
+    for (const binding of Object.values(request.bindings)) {
+      const checked = checkedBinding(snapshot, binding);
+      if (checked.refusal) return { ...checked.refusal, bindings: request.bindings };
+    }
+    const limit = pageLimit(request.limit), sql = Buffer.from(request.sql, 'utf8');
+    const owner = this.adapters.get(snapshot.id)?.sql;
+    const refusal = (status: 'refused' | 'unknown', reason: string): QueryResult => ({
+      status, reason, bindings: request.bindings, rows: [], columns: [], returned: 0, transport: TRANSPORT,
+    });
+    if (!owner) return refusal('refused', 'Local SQL is not connected to this catalog.');
+    let attempt: RecordRef | undefined;
+    let answer: QueryResult;
+    try {
+      answer = await this.callOwner(signal => owner.query({ snapshot, bindings: request.bindings,
+        sql, limit, deadline, signal, onAttempt: record => { attempt = record; } }), deadline);
+    } catch (error) {
+      if (error instanceof ViewerError && ['owner_deadline', 'owner_busy', 'native_read_unknown'].includes(error.code))
+        return { ...refusal('unknown', error.message), ...(attempt ? { attempt } : {}) };
+      throw error;
+    }
+    if (!isObject(answer) || !['ok', 'unknown', 'refused'].includes(answer.status) ||
+        answer.transport !== TRANSPORT || !isObject(answer.bindings) ||
+        Object.keys(answer.bindings).length !== names.length ||
+        names.some(name => !sameBinding(answer.bindings[name], request.bindings[name])))
+      fail('adapter_binding', 'The SQL receipt differs from the selected inputs.', 409);
+    validatePage({ ...answer, rowPositions: answer.rowPositions ?? [] }, limit);
+    if (answer.returned !== answer.rows.length || (answer.status !== 'ok' && answer.rows.length) ||
+        (answer.status === 'ok' && (answer.execution?.kind !== 'owner' || answer.execution.sqlSha256 !== sha256(sql))))
+      fail('adapter_receipt', 'The SQL result lacks an exact execution receipt.', 409);
+    return resultBudget(answer);
   }
   async query(request: QueryRequest): Promise<QueryResult> {
     const deadline = Date.now() + this.deadlineMs;
