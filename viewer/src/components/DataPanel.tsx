@@ -39,13 +39,18 @@ export function ResultTable({
 }) {
   const [selected, setSelected] = useState<number | undefined>();
   const heading = useRef<HTMLHeadingElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => setSelected(undefined), [rows]);
-  function inspect(index: number) {
+  function inspect(index: number, button: HTMLButtonElement) {
+    trigger.current = button;
     setSelected(selected === index ? undefined : index);
     setTimeout(() => heading.current?.focus(), 0);
   }
   return (
-    <>
+    <div className={`result-workspace${selected !== undefined ? ' has-selection' : ''}`}>
+      <p className="muted table-reading-help">
+        Select a record number to read every field. Long values are shortened in this table.
+      </p>
       <div
         className="table-scroll"
         tabIndex={0}
@@ -72,7 +77,7 @@ export function ResultTable({
                     className="row-button"
                     aria-label={`Inspect record ${String((positions?.[i] ?? i) + 1).padStart(2, '0')}`}
                     aria-expanded={selected === i}
-                    onClick={() => inspect(i)}
+                    onClick={(event) => inspect(i, event.currentTarget)}
                   >
                     {String((positions?.[i] ?? i) + 1).padStart(2, '0')}
                     <span aria-hidden="true">↗</span>
@@ -80,7 +85,9 @@ export function ResultTable({
                 </td>
                 {columns.map((c) => (
                   <td key={c}>
-                    <Value value={exactObjectField(row, c)} />
+                    <div className="cell-value">
+                      <Value value={exactObjectField(row, c)} />
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -97,19 +104,38 @@ export function ResultTable({
             <button
               onClick={() => {
                 setSelected(undefined);
-                document
-                  .querySelector<HTMLButtonElement>(`.row-button[aria-expanded="true"]`)
-                  ?.focus();
+                trigger.current?.focus();
               }}
             >
               Close detail
             </button>
           </div>
+          <div className="record-navigation" aria-label="Browse returned records">
+            <span className="muted">
+              {selected + 1} of {rows.length} returned records
+            </span>
+            <div>
+              <button
+                aria-label="Previous record"
+                disabled={selected === 0}
+                onClick={() => setSelected(selected - 1)}
+              >
+                ←
+              </button>
+              <button
+                aria-label="Next record"
+                disabled={selected === rows.length - 1}
+                onClick={() => setSelected(selected + 1)}
+              >
+                →
+              </button>
+            </div>
+          </div>
           <p className="muted">Each listed item is kept separately, including repeated values.</p>
           <Value value={rows[selected]} full />
         </section>
       )}
-    </>
+    </div>
   );
 }
 export function DataPanel({

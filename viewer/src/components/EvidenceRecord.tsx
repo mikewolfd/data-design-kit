@@ -8,10 +8,12 @@ export function EvidenceRecord({
   snapshot,
   record,
   label = 'View publisher evidence',
+  purpose = 'evidence',
 }: {
   snapshot: CatalogSnapshot;
   record?: RecordRef;
   label?: string;
+  purpose?: 'evidence' | 'original';
 }) {
   const [result, setResult] = useState<EvidenceResult>();
   const [error, setError] = useState('');
@@ -38,7 +40,11 @@ export function EvidenceRecord({
         catalogSha256: snapshot.identity.catalogSha256,
         record,
       });
-      if (!abort.signal.aborted) setResult(value);
+      if (!abort.signal.aborted) {
+        if (value.record?.uri !== record?.uri || value.record?.sha256 !== record?.sha256)
+          throw new Error('The returned file identity does not match the requested record.');
+        setResult(value);
+      }
     } catch (e) {
       if (!abort.signal.aborted) {
         const failure = e as Error & { code?: string; technicalMessage?: string };
@@ -65,7 +71,13 @@ export function EvidenceRecord({
       {snapshot.capabilities.evidence && record?.sha256 && (
         <>
           <button className="text-button" disabled={loading} onClick={() => void inspect()}>
-            {loading ? 'Opening evidence file…' : result ? 'Reload publisher evidence' : label}
+            {loading
+              ? 'Opening evidence file…'
+              : result
+                ? purpose === 'original'
+                  ? 'Reload retained original'
+                  : 'Reload publisher evidence'
+                : label}
           </button>
           {error && (
             <Notice title="Evidence could not be loaded" kind="error">
@@ -76,10 +88,15 @@ export function EvidenceRecord({
           {result && (
             <>
               <p role="status">
-                Evidence file matches its recorded fingerprint. This confirms the file’s identity;
-                its contents describe what was checked. {result.scope}
+                {purpose === 'original'
+                  ? 'Original file matches its recorded fingerprint. This confirms file identity; it does not establish source completeness or current publisher state.'
+                  : 'Evidence file matches its recorded fingerprint. This confirms the file’s identity; its contents describe what was checked.'}{' '}
+                {result.scope}
               </p>
-              <Raw value={result.document} label="View evidence document" />
+              <Raw
+                value={result.document}
+                label={purpose === 'original' ? 'View retained original' : 'View evidence document'}
+              />
             </>
           )}
         </>

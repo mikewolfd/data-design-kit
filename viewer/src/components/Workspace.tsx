@@ -11,6 +11,9 @@ import { Connections } from './Connections';
 import { Guides } from './Guides';
 import { publisherMetadata } from '../features/publisher-metadata';
 import { PublisherMetadataNotice } from '../features/dataset-context';
+import { parseViewerTheme, type ViewerTheme } from '../lib/theme';
+import { ViewerBrand } from './ViewerBrand';
+import { QueryLab } from './QueryLab';
 import {
   discoveryItems,
   facetLabels,
@@ -24,6 +27,7 @@ const tabs = [
   'Overview',
   'Data',
   'Connections',
+  'Query',
   'Evidence',
   'Activity',
   'Compare',
@@ -34,6 +38,7 @@ const tabLabels: Record<Tab, string> = {
   Overview: 'Overview',
   Data: 'View data',
   Connections: 'Related data',
+  Query: 'Query lab',
   Evidence: 'Checks & sources',
   Activity: 'History',
   Compare: 'Compare versions',
@@ -67,7 +72,7 @@ function routeFromUrl(): Route {
     guide: q.get('guide') || '',
   };
 }
-export default function Workspace() {
+export default function Workspace({ theme = parseViewerTheme() }: { theme?: ViewerTheme }) {
   const [route, setRoute] = useState<Route>(routeFromUrl);
   const [catalogs, setCatalogs] = useState<CatalogSummary[]>([]);
   const [snapshot, setSnapshot] = useState<CatalogSnapshot>();
@@ -224,11 +229,11 @@ export default function Workspace() {
   useEffect(() => {
     document.title =
       dataset && snapshot
-        ? `${titleOf(dataset)} · ${snapshot.title} · DDK`
+        ? `${titleOf(dataset)} · ${snapshot.title} · ${theme.brand.name}`
         : snapshot
-          ? `${snapshot.title} · DDK`
-          : 'Data catalog · DDK';
-  }, [dataset, snapshot]);
+          ? `${snapshot.title} · ${theme.brand.name}`
+          : `${theme.brand.name} · ${theme.brand.tagline}`;
+  }, [dataset, snapshot, theme.brand.name, theme.brand.tagline]);
   function chooseDataset(id: string, versionId?: string, releaseId?: string) {
     navigate({
       dataset: id,
@@ -314,29 +319,9 @@ export default function Workspace() {
       <a className="skip-link" href="#workspace">
         Skip to dataset
       </a>
-      <header className="app-header">
-        <a className="brand" href="/" aria-label="Data catalog home">
-          <span className="brand-mark">
-            <svg aria-hidden="true" width="35" height="28" viewBox="0 0 40 28">
-              <path
-                d="M11 3v20H7a6 6 0 1 1 4-10M25 3v20h-4a6 6 0 1 1 4-10M31 3v20m0-7 7-7m-7 7 7 7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3.5"
-              />
-            </svg>
-          </span>
-          <span>Data catalog</span>
-        </a>
-        <div className="header-context">
-          <span className="header-dot" aria-hidden="true" />
-          <span>Local preview</span>
-          <span className="header-divider" />
-          <span>Data Design Kit</span>
-        </div>
-      </header>
       <div className="app-layout">
         <aside className="sidebar" aria-label="Dataset discovery">
+          <ViewerBrand theme={theme} />
           <div className="sidebar-top">
             <p className="eyebrow">Explore data</p>
             <label className="eyebrow" htmlFor="catalog-choice">
@@ -367,9 +352,8 @@ export default function Workspace() {
               ))}
             </select>
             <p className="catalog-description">
-              {snapshot?.description ||
-                'Find datasets, understand what they contain, and see how you can use them.'}{' '}
-              A dataset is a collection of related records.
+              {excerpt(snapshot?.description, 150) ||
+                'Find datasets, understand what they contain, and see how you can use them.'}
             </p>
             {snapshot && (
               <details>
@@ -407,10 +391,13 @@ export default function Workspace() {
                 }}
               />
             </div>
-            <p id="dataset-search-help" className="muted">
-              Search dataset titles, descriptions, supplied alternate names and identifiers. Exact
-              identifiers appear first. Field names and other catalogs are not searched.
-            </p>
+            <details className="search-help">
+              <summary>Search scope</summary>
+              <p id="dataset-search-help" className="muted">
+                Search dataset titles, descriptions, supplied alternate names and identifiers. Exact
+                identifiers appear first. Field names and other catalogs are not searched.
+              </p>
+            </details>
             <label className="filter-label">
               Can I view records here?
               <select
@@ -594,12 +581,20 @@ export default function Workspace() {
               ◇
             </span>
             <div>
-              <strong>Catalog & evidence</strong>
+              <strong>{theme.brand.tagline}</strong>
               <span>References stay with each dataset and result.</span>
             </div>
           </footer>
         </aside>
         <main id="workspace" tabIndex={-1} className="workspace">
+          <header className="workspace-topbar">
+            <div className="breadcrumb">
+              <span>{snapshot?.title || theme.brand.name}</span>
+              <span aria-hidden="true">/</span>
+              <span>Datasets</span>
+            </div>
+            <span className="header-context">Local preview</span>
+          </header>
           {catalogError && (
             <Notice
               title="Catalog list unavailable"
@@ -646,11 +641,6 @@ export default function Workspace() {
                   you choose another result.
                 </Notice>
               )}
-              <div className="breadcrumb">
-                <span>{snapshot.title}</span>
-                <span aria-hidden="true">/</span>
-                <span>Datasets</span>
-              </div>
               <div className="dataset-heading">
                 <div>
                   <p className="eyebrow" title={dataset.role}>
@@ -680,7 +670,7 @@ export default function Workspace() {
                     </Badge>
                   )}
                   {coverageNote && (
-                    <p className="dataset-subtitle">
+                    <p className="dataset-subtitle coverage-note">
                       <strong>Coverage and important limits: </strong>
                       {coverageNote}
                     </p>
@@ -895,6 +885,7 @@ export default function Workspace() {
                     focusedRecipeId={route.recipe}
                   />
                 )}
+                {route.tab === 'Query' && <QueryLab snapshot={snapshot} />}
                 {route.tab === 'Evidence' && (
                   <Evidence snapshot={snapshot} dataset={dataset} version={version} />
                 )}

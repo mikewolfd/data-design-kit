@@ -6,6 +6,7 @@ import { Badge, FieldTree, Facts, Notice, Raw, RecordLink, Section } from './Pri
 import { objectOf, safeLink, shortId, textValue, titleOf, versionsOf, words } from '../lib/display';
 import { datasetIntroduction, enumLabel, recordAccess } from '../lib/content';
 import { publisherMetadata } from '../features/publisher-metadata';
+import { CapturedSources } from '../features/dataset-context/CapturedSources';
 import {
   CoverageContext,
   DateContext,
@@ -61,8 +62,12 @@ export function Overview({
         <Facts
           items={[
             ['View records here', access.label],
-            ...(dataset.origin ? ([['Dataset origin', enumLabel(dataset.origin)]] as [string, ReactNode][]) : []),
-            ...(dataset.status ? ([['Dataset status', enumLabel(dataset.status)]] as [string, ReactNode][]) : []),
+            ...(dataset.origin
+              ? ([['Dataset origin', enumLabel(dataset.origin)]] as [string, ReactNode][])
+              : []),
+            ...(dataset.status
+              ? ([['Dataset status', enumLabel(dataset.status)]] as [string, ReactNode][])
+              : []),
             ...(dataset.model
               ? ([
                   [
@@ -268,6 +273,9 @@ export function Evidence({ snapshot, dataset, version }: Context) {
       </Section>
       <Section title="Coverage and remaining unknowns">
         <CoverageContext snapshot={snapshot} dataset={dataset} version={version} />
+      </Section>
+      <Section title="Captured sources in this catalog">
+        <CapturedSources snapshot={snapshot} />
       </Section>
       <Section title="Checks for this data version">
         <p>
@@ -553,10 +561,7 @@ export function Activity({ snapshot, dataset, version }: Context) {
         <Section title="Processing plans & saved results">
           {productions.map((p) => (
             <div key={p.alias}>
-              <Raw
-                value={p}
-                label={`${p.alias} · ${p.kind ? `${p.kind} ` : ''}processing plan`}
-              />
+              <Raw value={p} label={`${p.alias} · ${p.kind ? `${p.kind} ` : ''}processing plan`} />
               {p.steps && p.steps.length > 0 && (
                 <p className="muted">
                   Steps:{' '}

@@ -158,7 +158,19 @@ export function Value({
     );
   }
   return (
-    <span className={typeof value === 'number' ? 'numeric' : undefined}>{textValue(value)}</span>
+    <span
+      className={
+        typeof value === 'number'
+          ? 'numeric'
+          : full && typeof value === 'string'
+            ? value.length > 160
+              ? 'prose-value'
+              : 'text-value'
+            : undefined
+      }
+    >
+      {textValue(value)}
+    </span>
   );
 }
 export { FieldTree } from '../features/field-dictionary/FieldTree';

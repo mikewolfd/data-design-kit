@@ -60,6 +60,8 @@ The shared runtime has no universal data-reader service in the qualified dev4 pa
 
 ## Reuse and integration
 
+Operator-selected [themes](docs/themes.md) supply branding, colors, local font preferences and sidebar width through `DDK_VIEWER_THEME_CONFIG`. The generic interface also offers a selected-record reading pane, a catalog-wide captured-source inventory, and a Query lab when the registered adapter supports custom SQL. These controls preserve exact versions and original source references; appearance settings do not change catalog facts or adapter capabilities.
+
 The React UI in `src/components/` consumes `CatalogSnapshot` and the bounded interfaces in `src/domain/types.ts`. Astro routes are thin transport adapters. `src/server/registry.ts` is the composition root; it chooses permitted sources and optional owner adapters. Domain code contains no congressional or regulatory table registries.
 
 Read [the adapter guide](docs/adapters.md) before registering an owner. Actual producer definitions and standard output files remain authoritative. Adapter capability disclosure must match the concrete registered adapter. An available representation does not imply a configured reader, and a reader result does not establish data qualification.

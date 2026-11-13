@@ -17,7 +17,7 @@ test('discovery preserves route IDs with visitor labels, document identity and s
 }) => {
   await capturedCatalog(page, request);
   await page.goto('/?catalog=watershed');
-  await expect(page).toHaveTitle('Watershed observations · Watershed observatory · DDK');
+  await expect(page).toHaveTitle('Watershed observations · Watershed observatory · Data catalog');
   await expect(page.getByRole('link', { name: 'Data catalog home' })).toBeVisible();
   for (const name of [
     'View data',

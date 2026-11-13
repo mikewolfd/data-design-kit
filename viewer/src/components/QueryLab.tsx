@@ -1,0 +1,345 @@
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import type { CatalogSnapshot, ExactBinding, QueryResult, SqlRequest } from '../domain/types';
+import { request } from '../lib/client';
+import { downloadJson, titleOf, versionsOf } from '../lib/display';
+import { representationChoices, versionChoices } from '../lib/choice-labels';
+import { quotedSqlTable, sqlResultExport, sqlResultMatches } from '../lib/sql-results';
+import { BlankValuesHelp, Notice, Raw } from './Primitives';
+import { ResultTable } from './DataPanel';
+import { EvidenceRecord } from './EvidenceRecord';
+
+type Selection = { versionId: string; representationId: string };
+
+export function QueryLab({ snapshot }: { snapshot: CatalogSnapshot }) {
+  const [sql, setSql] = useState('');
+  const [limit, setLimit] = useState(25);
+  const [selections, setSelections] = useState<Record<string, Selection>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [received, setReceived] = useState<{
+    request: SqlRequest;
+    result: QueryResult;
+    sqlSha256: string;
+  }>();
+  const controller = useRef<AbortController>(null);
+  const editor = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => () => controller.current?.abort(), []);
+  const tables = snapshot.catalog.datasets.filter(
+    (dataset) => versionsOf(snapshot, dataset).length,
+  );
+  const bindings: Record<string, ExactBinding> = {};
+  for (const dataset of tables) {
+    const selection = selections[dataset.id];
+    if (selection?.versionId && selection.representationId)
+      bindings[dataset.alias] = { datasetId: dataset.id, ...selection };
+  }
+  const current: SqlRequest = {
+    catalogId: snapshot.id,
+    catalogSha256: snapshot.identity.catalogSha256,
+    sql,
+    bindings,
+    limit,
+  };
+  const incomplete = Object.values(selections).some(
+    (item) => item.versionId && !item.representationId,
+  );
+  const result =
+    received && JSON.stringify(received.request) === JSON.stringify(current)
+      ? received.result
+      : undefined;
+
+  function edit() {
+    setError('');
+    setReceived(undefined);
+  }
+  async function run(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (
+      !snapshot.capabilities.sql ||
+      !sql.trim() ||
+      !Object.keys(bindings).length ||
+      incomplete ||
+      loading
+    )
+      return;
+    const abort = new AbortController();
+    controller.current?.abort();
+    controller.current = abort;
+    setLoading(true);
+    setError('');
+    setReceived(undefined);
+    try {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sql));
+      const sqlSha256 = [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+      const value = await request<QueryResult>('/api/sql', abort.signal, current);
+      if (abort.signal.aborted) return;
+      if (!sqlResultMatches(snapshot, current, value, sqlSha256))
+        throw new Error(
+          'The response does not match the submitted SQL and selected inputs. Run the query again to retry.',
+        );
+      setReceived({ request: current, result: value, sqlSha256 });
+    } catch (cause) {
+      if (!abort.signal.aborted) setError((cause as Error).message);
+    } finally {
+      if (!abort.signal.aborted) setLoading(false);
+    }
+  }
+
+  if (!snapshot.capabilities.sql)
+    return (
+      <Notice title="Query lab is not connected">
+        This catalog has no adapter for custom SQL. Publisher-authored queries remain under Related
+        data.
+      </Notice>
+    );
+
+  return (
+    <section className="query-lab" aria-label="Query lab">
+      <div className="section-heading">
+        <h2>Query lab</h2>
+        <span className="muted">Read-only · up to 100 rows</span>
+      </div>
+      <p className="muted">
+        Choose a data version for each table you need, then query those exact inputs.
+      </p>
+      <form onSubmit={run} className="query-workspace">
+        <div className="query-editor">
+          <label htmlFor="catalog-sql">SQL query</label>
+          <textarea
+            id="catalog-sql"
+            ref={editor}
+            value={sql}
+            placeholder={'SELECT *\nFROM "table_name"\nLIMIT 25'}
+            maxLength={32768}
+            spellCheck={false}
+            aria-describedby="sql-query-help"
+            disabled={loading}
+            onChange={(event) => {
+              edit();
+              setSql(event.target.value);
+            }}
+          />
+          <div className="query-actions">
+            <button
+              className="button primary"
+              type="submit"
+              disabled={loading || !sql.trim() || !Object.keys(bindings).length || incomplete}
+            >
+              {loading ? 'Running query…' : 'Run SQL query'} <span aria-hidden="true">↗</span>
+            </button>
+            <label className="query-limit">
+              Row limit
+              <input
+                type="number"
+                min={1}
+                max={100}
+                step={1}
+                value={limit}
+                disabled={loading}
+                onChange={(event) => {
+                  edit();
+                  setLimit(event.currentTarget.valueAsNumber);
+                }}
+              />
+            </label>
+          </div>
+          <p id="sql-query-help" className="muted">
+            Empty results are valid. A refusal or an unknown outcome stays visible. Choosing a table
+            here does not establish source completeness.
+          </p>
+          <p className="muted">
+            {Object.keys(bindings).length} tables selected
+            {incomplete ? ' · Choose a resource for every included version.' : '.'}
+          </p>
+        </div>
+        <aside className="query-tables" aria-label="Query tables">
+          <p className="eyebrow">Available tables</p>
+          {tables.length ? (
+            tables.map((dataset) => {
+              const versions = versionsOf(snapshot, dataset);
+              const selection = selections[dataset.id];
+              const representations = snapshot.catalog.representations.filter(
+                (item) => item.version === selection?.versionId,
+              );
+              return (
+                <div className="query-table" key={dataset.id}>
+                  <h3>{titleOf(dataset)}</h3>
+                  <code>{dataset.alias}</code>
+                  <label>
+                    Data version for {dataset.alias}
+                    <select
+                      value={selection?.versionId ?? ''}
+                      disabled={loading}
+                      onChange={(event) => {
+                        edit();
+                        const versionId = event.target.value;
+                        const resources = snapshot.catalog.representations.filter(
+                          (item) => item.version === versionId,
+                        );
+                        setSelections((old) => ({
+                          ...old,
+                          [dataset.id]: {
+                            versionId,
+                            representationId: resources.length === 1 ? resources[0].id : '',
+                          },
+                        }));
+                      }}
+                    >
+                      <option value="">Not included</option>
+                      {versionChoices(snapshot, dataset, versions).map((option) => (
+                        <option value={option.id} key={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {selection?.versionId && (
+                    <label>
+                      Resource for {dataset.alias}
+                      <select
+                        value={selection.representationId}
+                        disabled={loading}
+                        onChange={(event) => {
+                          edit();
+                          setSelections((old) => ({
+                            ...old,
+                            [dataset.id]: { ...selection, representationId: event.target.value },
+                          }));
+                        }}
+                      >
+                        <option value="">Choose a resource</option>
+                        {representationChoices(dataset, representations).map((option) => (
+                          <option value={option.id} key={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={loading}
+                    onClick={() => {
+                      edit();
+                      setSql(`SELECT *\nFROM ${quotedSqlTable(dataset.alias)}\nLIMIT 25`);
+                      editor.current?.focus();
+                    }}
+                  >
+                    Use in query
+                  </button>
+                  <details>
+                    <summary>Fields and exact choices</summary>
+                    <p className="muted">
+                      Fields:{' '}
+                      {(snapshot.definitions[dataset.alias]?.properties ?? [])
+                        .map((field) => field.name)
+                        .join(', ') || 'Not supplied'}
+                    </p>
+                    <Raw
+                      value={{
+                        datasetId: dataset.id,
+                        versionId: selection?.versionId || null,
+                        representationId: selection?.representationId || null,
+                      }}
+                      label="Exact input identifiers"
+                    />
+                  </details>
+                </div>
+              );
+            })
+          ) : (
+            <p className="muted">No data versions are listed in this catalog.</p>
+          )}
+        </aside>
+      </form>
+      {error && (
+        <Notice title="Query needs attention" kind="error">
+          {error}
+        </Notice>
+      )}
+      <div role="status" aria-live="polite">
+        {loading
+          ? 'Running the submitted query…'
+          : result?.status === 'ok'
+            ? `${result.returned} query results`
+            : ''}
+      </div>
+      {result && result.status !== 'ok' && (
+        <Notice
+          title={
+            result.status === 'unknown'
+              ? 'Query request outcome is unknown'
+              : 'Query results were not loaded'
+          }
+        >
+          {result.reason ||
+            (result.status === 'unknown'
+              ? 'The request did not establish an outcome.'
+              : 'The connected reader refused this request.')}
+          <Raw
+            value={{ status: result.status, reason: result.reason, attempt: result.attempt }}
+            label="Query outcome details"
+          />
+        </Notice>
+      )}
+      {result?.attempt && (
+        <EvidenceRecord
+          snapshot={snapshot}
+          record={result.attempt}
+          label="Inspect viewer query request"
+        />
+      )}
+      {result?.status === 'ok' && received && (
+        <section className="query-results" aria-label="SQL query results">
+          <div className="result-bar">
+            <span>Results for the selected inputs</span>
+            <button
+              onClick={() => {
+                try {
+                  downloadJson(
+                    'ddk-sql-result.json',
+                    sqlResultExport(snapshot, received.request, result, received.sqlSha256),
+                  );
+                } catch (cause) {
+                  setError((cause as Error).message);
+                }
+              }}
+            >
+              Download SQL and results (JSON) ↓
+            </button>
+          </div>
+          <BlankValuesHelp />
+          {result.rows.length ? (
+            <ResultTable
+              rows={result.rows}
+              columns={result.columns}
+              caption="Results of the submitted SQL against the selected exact inputs"
+            />
+          ) : (
+            <Notice title="No matching results">
+              This query completed with no matches for the selected inputs.
+            </Notice>
+          )}
+          <Raw
+            value={{
+              catalog: snapshot.identity,
+              request: received.request,
+              execution: result.execution,
+            }}
+            label="SQL, input versions and execution evidence"
+          />
+          {result.execution?.kind === 'owner' && result.execution.record && (
+            <EvidenceRecord
+              snapshot={snapshot}
+              record={result.execution.record}
+              label="Inspect native SQL query receipt"
+            />
+          )}
+        </section>
+      )}
+    </section>
+  );
+}
