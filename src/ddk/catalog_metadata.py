@@ -7,6 +7,7 @@ import re
 
 from .catalog_access import CatalogError
 from .documents import FORMAT_CHECKER, json_dumps, resolve_path
+from .docspec_file_inputs import DIRECTORY_SCHEME, parquet_directory_members
 from .quality import dataset_rules
 
 SECTIONS = ("versions", "sources", "representations", "releases", "selections", "runs", "checks")
@@ -215,12 +216,22 @@ class LocalMetadata:
         if alias not in self.datasets:
             raise CatalogError("CATALOG-VERSION-MISMATCH", f"The receipt maps to unknown dataset {alias!r}.")
         uri, digest = _artifact_uri(item)
+        directory_members = None
+        if "files" in item:
+            try:
+                directory_members = parquet_directory_members(item)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise CatalogError("CATALOG-NATIVE-RECEIPT", str(exc)) from exc
         dataset = self.datasets[alias]
-        version = stable_id("file-version", dataset["id"], dataset["definition"], uri, digest)
-        reference = {"scheme": FILE_SCHEME, "authority": "urn:ddk:local-file",
+        scheme = DIRECTORY_SCHEME if directory_members is not None else FILE_SCHEME
+        version_parts = (dataset["id"], dataset["definition"], uri, digest)
+        version = stable_id("file-version", *version_parts, *([scheme] if directory_members is not None else []))
+        reference = {"scheme": scheme, "authority": "urn:ddk:local-file",
                      "value": {"location": uri, "sha256": digest}}
         version_record = {"id": version, "dataset": alias, "reference": reference, "retention": "present",
-                          "scope": "Exact local file named by its owner receipt.", "record": record, "sources": []}
+                          "scope": ("Exact local Parquet directory inventory named by its DocSpec receipt."
+                                    if directory_members is not None else "Exact local file named by its owner receipt."),
+                          "record": record, "sources": []}
         attrs = item.get("attributes") if isinstance(item.get("attributes"), dict) else {}
         byte_size = (item["size"] if type(item.get("size")) is int else (
             item["bytes"] if type(item.get("bytes")) is int else (
@@ -239,7 +250,9 @@ class LocalMetadata:
             representation["byteSize"] = byte_size
         if row_count is not None and row_count >= 0:
             representation["rowCount"] = row_count
-        if isinstance(item.get("members"), list) and item["members"]:
+        if directory_members is not None:
+            representation["members"] = directory_members
+        elif isinstance(item.get("members"), list) and item["members"]:
             representation["members"] = deepcopy(item["members"])
         old = self.version_facts.get(version)
         if old is None:
@@ -409,6 +422,8 @@ class LocalMetadata:
             if item["kind"] != "parquet" or name not in input_mapping:
                 continue
             _need(item, {"path", "sha256"}, "DocSpec JobResult parquet input")
+            if spec_inputs[name].get("kind") != "parquet" or item["path"] != spec_inputs[name].get("path"):
+                raise CatalogError("CATALOG-NATIVE-RECEIPT", "Native input path differs from the exact JobSpec.")
             version = self._file_version(input_mapping[name], item, record)
             if name in bound_inputs:
                 raise CatalogError("CATALOG-NATIVE-RECEIPT", "The job repeats an exact input binding.", step="jobs")

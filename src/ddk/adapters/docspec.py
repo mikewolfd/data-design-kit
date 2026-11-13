@@ -18,6 +18,7 @@ from ddk.adapters.native import SecretRedaction, file_sha256, request_transport,
 from ddk.adapters.docspec_schema import (
     PRIMITIVE_PROFILE, RECURSIVE_PROFILE, source_native_read, validate_physical_snapshot,
 )
+from ddk.docspec_file_inputs import parquet_directory_identity, parquet_directory_members
 
 
 RUNTIME = "docspec"
@@ -118,7 +119,12 @@ class DocSpecAdapter:
         return self._invoke("prepare-job", request)
 
     def execute(self, request, *, input_digests=None, semantic_profile=None, cancel_event=None, spec_path=None):
-        """Run a bounded job and preserve exact source and partial output identities."""
+        """Run a bounded job and preserve exact source and partial output identities.
+
+        Flat Parquet directories require a named job. Pin their native inventory
+        digest through ``input_digests[directory]`` or supply every member's
+        absolute path and SHA-256. Both pins may be supplied together.
+        """
         return self._invoke("job", request, input_digests=input_digests, semantic_profile=semantic_profile,
                             cancel_event=cancel_event, spec_path=spec_path)
 
@@ -375,7 +381,7 @@ class DocSpecAdapter:
             if _binary_identity(self.executable) != self._executable_stat:
                 raise ValueError("Selected DocSpec executable changed after adapter initialization")
             known_inputs = (
-                _file_inputs(request, input_digests)
+                _file_inputs(request, input_digests, metadata_bytes=self.metadata_bytes)
                 if bounded or command == "job-plan" else []
             )
             calculation = request.get("calculation", {})
@@ -447,10 +453,15 @@ class DocSpecAdapter:
                     unverified_result, result = result or None, {}
                     status = "unknown"
                     error = _error("DOCSPEC-INVALID-RECEIPT", "Native publication refusal conflicts with its protocol")
-            for path, digest in {item["path"]: item["sha256"] for item in known_inputs}.items():
+            for path, digest in {item["path"]: item["sha256"] for item in known_inputs if "files" not in item}.items():
                 if file_sha256(path) != digest:
                     status = "unknown"
                     error = _error("DOCSPEC-INPUT-CHANGED", "Input bytes changed during the invocation")
+            try:
+                _verify_directory_inputs(known_inputs, result, status, metadata_bytes=self.metadata_bytes)
+            except (ValueError, KeyError, TypeError, OSError):
+                unverified_result, result = result or None, {}
+                raise
             try:
                 observed_names = set()
                 observations = result.get("native_versions", [])
@@ -646,7 +657,7 @@ class DocSpecAdapter:
         return response
 
 
-def _file_inputs(request, input_digests):
+def _file_inputs(request, input_digests, *, metadata_bytes=DEFAULT_CAPTURE_BYTES):
     paths = {}
     for binding in request.get("inputs", []):
         kind = binding.get("kind")
@@ -671,18 +682,98 @@ def _file_inputs(request, input_digests):
         if plan["path"] in expected and expected[plan["path"]] != plan["sha256"]:
             raise ValueError("Conflicting saved plan digests")
         expected[plan["path"]] = plan["sha256"]
-    if set(expected) - set(paths):
-        raise ValueError("Expected input digest supplied for an unbound path")
     inventory = []
+    admitted_paths = set(paths)
     for path, (name, kind) in paths.items():
         file = Path(path)
+        if kind == "parquet" and file.is_absolute() and file.is_dir():
+            if not isinstance(request.get("id"), str) or not request["id"]:
+                raise ValueError("A Parquet directory requires an explicit job id for native member digests")
+            observed = _directory_input(name, file, metadata_bytes=metadata_bytes)
+            members = {item["path"]: item["sha256"] for item in observed["files"]}
+            supplied_members = {key for key in expected if Path(key).is_relative_to(file) and key != path}
+            if supplied_members and supplied_members != set(members):
+                raise ValueError(f"Expected Parquet directory members differ from the complete inventory for {name}")
+            admitted_paths.update(members)
+            if path in expected and expected[path] != observed["sha256"]:
+                raise ValueError(f"SHA-256 mismatch for {name}")
+            if any(expected[member] != members[member] for member in supplied_members):
+                raise ValueError(f"SHA-256 mismatch for a Parquet directory member of {name}")
+            inventory.append(observed)
+            continue
         if not file.is_absolute() or not file.is_file():
             raise ValueError(f"DocSpec {kind} binding requires one explicit absolute file path")
         digest = file_sha256(file)
         if path in expected and expected[path] != digest:
             raise ValueError(f"SHA-256 mismatch for {name}")
         inventory.append({"name": name, "format": kind, "path": path, "sha256": digest})
+    if set(expected) - admitted_paths:
+        raise ValueError("Expected input digest supplied for an unbound path")
     return inventory
+
+
+def _directory_input(name, root, *, metadata_bytes):
+    """Capture bounded local custody using the native directory hash algorithm."""
+    if root.is_symlink() or root.resolve() != root:
+        raise ValueError("A Parquet directory must use its absolute physical path without links")
+    files = []
+    observed_bytes = 0
+
+    with os.scandir(root) as entries:
+        for entry in entries:
+            path = Path(entry.path)
+            if entry.is_symlink():
+                raise ValueError("Parquet directory members must not be links")
+            if entry.is_dir(follow_symlinks=False):
+                # The retained native build inventories nested members but does
+                # not scan them. Refuse that scope before it can claim success.
+                raise BindingRefusal("DOCSPEC-PARQUET-DIRECTORY-SCOPE",
+                                     "Only flat Parquet directories are supported; nested directories are not admitted")
+            if path.suffix.lower() == ".parquet":
+                if path.suffix != ".parquet" or not entry.is_file(follow_symlinks=False):
+                    raise ValueError("Parquet directory members require regular .parquet files")
+                before = _binary_identity(path)
+                if before[2] <= 0:
+                    raise ValueError("A Parquet directory member must contain a nonempty file")
+                item = {"path": str(path), "sha256": file_sha256(path), "bytes": before[2]}
+                if _binary_identity(path) != before:
+                    raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet member changed during admission")
+                observed_bytes += len(json.dumps(item, ensure_ascii=False).encode())
+                if observed_bytes > metadata_bytes:
+                    raise ValueError("Parquet directory inventory exceeds the adapter metadata byte limit")
+                files.append(item)
+    if not files:
+        raise ValueError("A Parquet directory requires at least one retained Parquet member")
+    files.sort(key=lambda item: item["path"])
+    observed = {"name": name, "format": "parquet", "path": str(root), "files": files,
+                **parquet_directory_identity(root, files)}
+    parquet_directory_members(observed)
+    return observed
+
+
+def _verify_directory_inputs(inventory, result, status, *, metadata_bytes):
+    for expected in inventory:
+        if "files" not in expected:
+            continue
+        try:
+            current = _directory_input(expected["name"], Path(expected["path"]), metadata_bytes=metadata_bytes)
+        except (OSError, ValueError) as exc:
+            raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet directory changed during the invocation") from exc
+        if current != expected:
+            raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet directory changed during the invocation")
+        inputs = result.get("inputs", [])
+        if not isinstance(inputs, list):
+            raise ValueError("Native input observations must be an array")
+        matches = [item for item in inputs if isinstance(item, dict) and item.get("name") == expected["name"]]
+        if not matches and status != "succeeded":
+            continue  # A known failure may precede this input's native admission.
+        if len(matches) != 1 or matches[0].get("kind") != "parquet":
+            raise ValueError("Native job returned incomplete or duplicate Parquet directory observations")
+        observed = matches[0]
+        if observed.get("path") != expected["path"]:
+            raise ValueError("Native Parquet directory path disagrees with the admitted binding")
+        if parquet_directory_members(observed) != parquet_directory_members(expected):
+            raise ValueError("Native Parquet directory members disagree with the admitted inventory")
 
 
 def _observed_outputs(request, result):

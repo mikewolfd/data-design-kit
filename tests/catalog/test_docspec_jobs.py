@@ -751,3 +751,111 @@ def test_catalog_jobs_and_recipes_profiles_registered_independently():
     assert len(recipe_cases) >= 8 and all(by_id[cid] == "catalog.recipes" for cid in recipe_cases)
     assert by_id["CASE-CONF-005-RUN-NEEDS-PRODUCTION"] == "catalog"
 
+
+@pytest.fixture
+def directory_execution(tmp_path, docspec_bin):
+    project_dir = tmp_path / "project"
+    project_path = _make_job_project(project_dir)
+    orders, customers = _write_input_parquets(tmp_path / "data")
+    parts = tmp_path / "order-parts"
+    parts.mkdir()
+    rows = pq.read_table(orders)
+    pq.write_table(rows.slice(0, 2), parts / "first.parquet")
+    pq.write_table(rows.slice(2), parts / "second.parquet")
+    spec_path = project_dir / "jobs/daily-revenue.job.json"
+    spec = _load_mutable_json(spec_path)
+    spec["scratch"] = str(tmp_path / "scratch")
+    spec["inputs"][0]["path"] = str(parts)
+    spec["inputs"][1]["path"] = str(customers)
+    spec["outputs"][0]["path"] = str(tmp_path / "revenue.parquet")
+    spec_path.write_text(json_dumps(spec))
+    adapter = DocSpecAdapter(docspec_bin, dict(DEFAULT_DOCSPEC_GATE_LIMITS), evidence_dir=tmp_path / "evidence")
+    pins = {str(path): sha256(path.read_bytes()).hexdigest() for path in parts.iterdir()}
+    pins[str(customers)] = sha256(customers.read_bytes()).hexdigest()
+    response = adapter.execute(spec, input_digests=pins, spec_path=spec_path)
+    assert response["status"] == "succeeded", response
+    return project_path, spec, response
+
+
+@pytest.mark.parametrize("receipt_kind", ["bounded", "direct"])
+def test_directory_job_catalog_preserves_native_members_without_payload_reads(
+    tmp_path, docspec_bin, directory_execution, monkeypatch, receipt_kind,
+):
+    project_path, spec, response = directory_execution
+    assert pq.read_table(spec["outputs"][0]["path"]).to_pylist() == [
+        {"order_day": date(2026, 2, 1), "region": "EU", "amount_cents": 800},
+        {"order_day": date(2026, 2, 1), "region": "NA", "amount_cents": 1200},
+    ]
+    receipt = response["receipt"] if receipt_kind == "bounded" else response["result"]
+    receipt_path = tmp_path / f"{receipt_kind}-receipt.json"
+    receipt_path.write_text(json_dumps(receipt))
+    metadata_path = tmp_path / "metadata.json"
+    metadata_path.write_text(json_dumps({"executions": [{
+        "path": str(receipt_path), "production": "daily-revenue-job",
+        "startedAt": response["receipt"]["startedAt"], "endedAt": response["receipt"]["endedAt"],
+    }]}))
+    production_paths = {
+        *(Path(item["path"]) for item in response["result"]["inputs"][0]["files"]),
+        Path(spec["inputs"][1]["path"]), Path(spec["outputs"][0]["path"]),
+    }
+    path_open = Path.open
+
+    def no_payload_open(path, *args, **kwargs):
+        assert path not in production_paths, "Catalog assembly opened a production data payload"
+        return path_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", no_payload_open)
+    output = tmp_path / "catalog"
+    report = build_catalog(
+        project_path, metadata=metadata_path, metadata_adapter="local",
+        required_groups=("catalog.jobs", "catalog.recipes"), exports=("dcat", "openlineage"),
+        output=output, permitted_roots=(tmp_path,), docspec=docspec_bin,
+    )
+    assert report["decision"] == "passed", report
+    catalog = read_json(output / "catalog.ddk.json").value
+    version = next(item for item in catalog["versions"] if item["dataset"] == "orders")
+    native_input = response["result"]["inputs"][0]
+    assert version["reference"] == {
+        "scheme": "urn:ddk:version:docspec-parquet-directory-sha256", "authority": "urn:ddk:local-file",
+        "value": {"location": Path(spec["inputs"][0]["path"]).as_uri(), "sha256": native_input["sha256"]},
+    }
+    representation = next(item for item in catalog["representations"] if item["version"] == version["id"])
+    assert representation["members"] == [
+        {"path": Path(item["path"]).name, "sha256": item["sha256"], "byteSize": item["bytes"]}
+        for item in native_input["files"]
+    ]
+    assert representation["byteSize"] == sum(item["bytes"] for item in native_input["files"])
+    assert catalog["runs"][0]["inputCoverage"]["status"] == "complete"
+    assert version["id"] in catalog["runs"][0]["inputs"]
+
+
+def test_directory_catalog_rejects_incomplete_or_mismatched_native_members(tmp_path, directory_execution):
+    project_path, _spec, response = directory_execution
+    for fault in ("missing", "extra", "changed", "rehashed", "omitted", "duplicate", "total", "nested"):
+        receipt = deepcopy(response["receipt"])
+        observed = receipt["result"]["inputs"][0]
+        if fault == "missing":
+            observed["files"].pop()
+        elif fault == "extra":
+            observed["files"].append({**observed["files"][0], "path": observed["path"] + "/third.parquet"})
+        elif fault in {"changed", "rehashed"}:
+            observed["files"][0]["sha256"] = "0" * 64
+            if fault == "rehashed":
+                tuples = [[Path(item["path"]).name, item["sha256"], item["bytes"]] for item in observed["files"]]
+                observed["sha256"] = sha256(json.dumps(tuples, separators=(",", ":")).encode()).hexdigest()
+        elif fault == "omitted":
+            observed.pop("files")
+        elif fault == "duplicate":
+            observed["files"].append(deepcopy(observed["files"][0]))
+        elif fault == "total":
+            observed["bytes"] += 1
+        elif fault == "nested":
+            observed["files"][0]["path"] = observed["path"] + "/nested/first.parquet"
+        receipt_path = tmp_path / f"{fault}-receipt.json"
+        receipt_path.write_text(json_dumps(receipt))
+        metadata_path = tmp_path / f"{fault}-metadata.json"
+        metadata_path.write_text(json_dumps({"executions": [{"path": str(receipt_path), "production": "daily-revenue-job"}]}))
+        result = assemble_catalog(project_path, metadata=metadata_path, metadata_adapter="local", permitted_roots=(tmp_path,))
+        assert result.report["decision"] == "failed", (fault, result.report)
+        assert "CATALOG-NATIVE-RECEIPT" in [d["code"] for c in result.report["checks"] for d in c["diagnostics"]], fault
+
