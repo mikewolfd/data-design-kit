@@ -427,7 +427,7 @@ class DocSpecAdapter:
                 error = _error("DOCSPEC-RECEIPT-LIMIT", "Native result exceeded the captured output limit")
             else:
                 try:
-                    response = parse_json(stdout)
+                    response = parse_json(stdout, preserve_integral_decimals=True)
                 except (ValueError, UnicodeError, ResourceLimit):
                     response = None
                 if (response is None and command == "job-plan" and calculation.get("save_substrait")
