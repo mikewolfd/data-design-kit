@@ -2,7 +2,7 @@
 id: ddk-zxlb
 status: open
 deps: []
-links: [ddk-arnm, ddk-eu0k, ddk-5svu, ddk-citj, ddk-p6kl]
+links: [ddk-arnm, ddk-eu0k, ddk-5svu, ddk-citj, ddk-p6kl, ddk-251s, ddk-pi9u]
 created: 2026-11-13T19:03:50Z
 type: task
 priority: 1
@@ -28,3 +28,9 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - Measure required quality paths with complete rule/row coverage, a last-batch violation and wrong-candidate/truncation refusals; correctness and uncertainty remain explicit.
 - Investigate incidental evaluator fingerprint invalidation from ss-sv2r only against measured repeated work. Any semantic reuse key still binds exact candidate, effective rules, relevant implementation/runtime dependencies and accepted evidence; unchanged semantic labels alone cannot authorize reuse.
 - Retain raw measurements, failed attempts and source/input/tool identities outside the repository; report unsupported limits and total shared-plus-application cost without claiming a speedup from deleted code alone.
+
+- Benchmark exact compound-key lookup, filtered/ordered paging, whole-table queries across partitions and an unprepared cross-table question on exact remote release members. Include ties, empty results, missing members and interruption; separate returned rows from files/pages/bytes scanned and enforce planning/execution limits.
+- Measure compact availability/inventory reads and summary computation/refresh against a page-open corpus scan. For repeatedly consumed answers such as docket/day comment counts, compare a small SQL-derived output before adding stored layouts or indexes.
+- For selected record-content search, compare a bounded SQL route with the maintained search owner using independently selected relevance examples, exact hit identities, cold/warm latency, client bytes, indexing/refresh time and retained disk. Record actual evidence before selecting infrastructure.
+
+Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.

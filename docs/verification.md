@@ -1,5 +1,15 @@
 # DDK verification
 
+## November 13, 2026 user-value review integration
+
+The [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) is integrated into nine existing DDK tickets and the current implementation/runtime plans. Shared whole-table serving and cold-read work move to P0. Focused date/field availability is active in ddk-251s; its former Stack proposal now redirects as merged, with the earlier deferral and original request retained. This changes planning and ticket metadata only; the new consumer scenarios remain open implementation and acceptance work.
+
+Fresh `tests/core/test_conformance.py`, `tests/catalog/test_catalog_delivery.py` and `tests/catalog/test_release_disclosure.py` checks passed: **75 tests, zero failures, errors or skips**. The [result](/Users/mikewolfd/Work/artifacts/ddk-zero-skip-20261113T183211Z/user-value-backlog/result.json) records base `bfc562ef77aba7714c4010b57503d53571f14c9e`, the tested patch, installed environment and exact native identities. Seven upstream `rdflib` deprecation warnings remain in the retained log. These existing tests verify current conformance/delivery/disclosure behavior; they do not establish the newly planned remote-query, summary or navigation capabilities.
+
+The [ticket audit](/Users/mikewolfd/Work/artifacts/ddk-user-value-integration-20261113/ticket-audit.json) passed identity/history, links, canonical ownership and dependency checks. No tickets were duplicated: 24 remain open, with 19 ready and five dependency-blocked. Root and viewer `tk` results agree, and there are no cycles. All 41 untouched DDK tickets, including the 26 closed viewer tickets, are byte-identical; 259 pre-existing unrelated dirty files retain their contents. The Stack search index was refreshed and its file map regenerated.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-user-value-integration-20261113/document-audit.json) passed schema-shape, adapter, upstream-digest, local-link and requirement/test-traceability checks: 17 schemas, five adapters, nine upstream identities, 103 requirements with one work-package owner each, 334 cases and 446 maintained test selectors. Normative requirements, schemas, implementation and test code are unchanged. WP-13's stale sqlglot instruction now names the already-maintained DocSpec recipe gate. These checks establish planning consistency, not application acceptance or measured performance.
+
 ## November 13, 2026 greenfield feedback integration
 
 The [backlog](work-backlog.md) integrates the shared-stack review around fresh applications and performance, quality and transparency. This change edits tickets and planning/status documents; it implements no runtime features and grants no new release qualification.

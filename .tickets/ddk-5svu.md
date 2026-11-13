@@ -2,7 +2,7 @@
 id: ddk-5svu
 status: open
 deps: []
-links: [ddk-arnm, ddk-zxlb]
+links: [ddk-arnm, ddk-zxlb, ddk-citj]
 created: 2026-11-13T19:44:54Z
 type: task
 priority: 1
@@ -27,3 +27,7 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - Faults before/after transfer and selection, lost acknowledgement and cold recovery reuse completed work without re-uploading unchanged objects.
 - An intervening successor survives stale retries; uncertain historical outcomes stay unknown. An intentional restore is a new guarded operation against current authority.
 - Actual shared readers return the selected data/catalog combination; retain independent wrong-member, wrong-token and readback checks plus measured transfer/resource costs.
+
+- Freeze complete logical-table partition/member membership alongside related-table membership. Verify that shared queries and disclosed immutable downloads consume the same selected member set; a missing required partition cannot appear as a complete published answer.
+
+Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.

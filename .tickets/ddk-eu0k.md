@@ -2,10 +2,10 @@
 id: ddk-eu0k
 status: open
 deps: []
-links: [ddk-arnm, ddk-zxlb]
+links: [ddk-arnm, ddk-zxlb, ddk-citj]
 created: 2026-11-13T19:44:54Z
 type: bug
-priority: 1
+priority: 0
 tags: [ddk, greenfield, lessons-review]
 ---
 # Open admitted data without a full-file digest pass on every cold reader
@@ -27,3 +27,7 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - Already-admitted immutable versions open without repeating whole-file verification; external admission, changed-file and wrong-version refusals remain effective.
 - A one-page read does not verify every unrelated shard or decode every preceding row; prove actual I/O rather than returned-row counts.
 - Verify cancellation and concurrency limits through the actual configured viewer/query consumer.
+
+- Exercise point lookup and filtered/ordered paging on the whole-table path in ddk-citj. Measure candidate-file pruning, requests, bytes and decoded pages separately; removing the viewer single-file guard alone is insufficient because native recipe inputs also bind one path.
+
+Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.

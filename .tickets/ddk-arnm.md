@@ -27,3 +27,9 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - For each gap name one owner, current evidence and whether it needs implementation, integration, measurement or acceptance. Link the canonical ticket instead of duplicating work.
 - Define a numerical performance/freshness/resource target set with ddk-zxlb before consequential experiments. Treat the review order as performance, quality, transparency.
 - Keep valid retained originals and independently expected results; distinguish full application acceptance from a working early family and from shared package qualification.
+
+- Include whole-table public browsing, an unprepared cross-table analytical question, date/field usability, source-gap discovery and record-to-related-record/original navigation in the selected fresh-product journeys. Existing screens and endpoints are examples, not parity requirements.
+- Make an explicit product decision on record-content search for dockets/comments or other selected text. Catalog-name discovery does not satisfy it. For selected search scope, name the maintained search owner or bounded SQL route, required result quality, release/disclosure context and exact-hit navigation; avoid a second index or engine without measured need.
+- Assess source-specific user tasks such as official passages, comment deadlines/submission links, OIRA review history and financial/legislative interpretation against current product scope. Keep selected meanings in maintained source libraries, reference data and SQL with independent checks; unavailable or malformed deadlines remain unknown.
+
+Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.

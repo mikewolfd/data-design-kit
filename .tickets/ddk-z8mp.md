@@ -28,3 +28,10 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - Finish the shared capability and performance obligations linked below and application publication acceptance in ddk-x3uy; required unknown/not_run or skipped checks prevent closure.
 - Use one selected release across the required API/MCP/browser/index consumers; exercise correction, deletion, cold recovery, lost responses and concurrent successors.
 - The new repository contains no copied legacy controller, receipt reconstruction, schema registry, product-specific publisher or generic-server branches. Measure total shared-plus-application complexity and operating cost; optional historical readers remain outside ordinary use.
+
+- On real selected SpicyRegs data, find a known docket and its comments, page filtered/ordered results and query a logical table across its required partitions. Independently verify complete rows, missing-member outcomes, cold/warm latency, requests and bytes; exercise the disclosed immutable download route.
+- Ask an unprepared cross-table question through shared read-only access; verify exact results and consumed versions, disclosure and resource bounds. A prepared-query-only demo does not satisfy this journey.
+- Explain an acquisition gap, retained-but-unpublished content, an unusable date/field and an unknown denominator. Show release-wide availability by period and selected field from bounded precomputed results, without scanning the corpus on page open.
+- Follow a current row through a configured recipe action to related records and an original locator, retaining complete keys/release context and ambiguous/unresolved outcomes. Where record-content search is selected in ddk-arnm, prove relevant exact-version hits through its maintained owner.
+
+Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.
