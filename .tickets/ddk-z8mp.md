@@ -8,7 +8,7 @@ type: epic
 priority: 1
 tags: [ddk, backlog, 2026-11-13]
 ---
-# Build and accept the fresh SpicyRegs application through complete real user journeys
+# Build and accept the fresh SpicyGov application through complete real user journeys
 
 Owner role: SpicyRegs application owner, with shared DDK/DocSpec/source owners.
 
@@ -35,3 +35,7 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - Follow a current row through a configured recipe action to related records and an original locator, retaining complete keys/release context and ambiguous/unresolved outcomes. Where record-content search is selected in ddk-arnm, prove relevant exact-version hits through its maintained owner.
 
 Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.
+
+## November 13 vertical slice checkpoint
+
+The fresh application is `/Users/mikewolfd/Work/spicygov`. [Local vertical scope and evidence](../docs/local-spicygov-slice.md) cover one historical docket, one rule and two comments, exact multi-file query access, source links, quality checks and the local browser. The user requested a pause after vertical validation to review the site. Horizontal source implementation has not started. This epic remains open for its full selected scope and release acceptance.

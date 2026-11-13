@@ -34,3 +34,7 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - For selected record-content search, compare a bounded SQL route with the maintained search owner using independently selected relevance examples, exact hit identities, cold/warm latency, client bytes, indexing/refresh time and retained disk. Record actual evidence before selecting infrastructure.
 
 Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.
+
+## November 13 bounded vertical progress
+
+The local SpicyGov probe uses explicit source/member/native/result limits and records source/receipt bytes, retained bytes and stage timings. These are measured small-cohort costs and chosen probe limits; production p95, physical I/O, aggregate process memory, freshness and remote costs remain unmeasured. See the vertical evidence; do not close performance acceptance from the local result. [Scope and evidence](../docs/local-spicygov-slice.md).

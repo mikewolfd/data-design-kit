@@ -31,6 +31,14 @@ For a service that must keep native storage references private, request `include
 
 `ddk.catalog_delivery.load_catalog_artifacts` captures a complete standard set under byte and file limits, checks its schemas and digests, and rejects mixed, missing, extra, linked or special files. It never follows source-inventory locations or reads data payloads. `verify_catalog_pair(public, local)` requires both external pins and the private lock's exact public association; it also checks version, representation, release membership, selection, recipe-input and SQL meaning. It returns the assembly's explicit alias mapping. Consumers must authorize client IDs from the public view and compare the observed native field tree against the public disclosed definition. The full private definition does not grant access to withheld fields. Partial field disclosure requires provider-level projection before unrestricted SQL can be offered.
 
+## Bounded local SQL consumers
+
+`ddk.catalog_query.execute_catalog_sql` reads explicitly bound versions from one externally pinned local catalog. Callers supply `expected_lock_sha256`, a mapping of SQL table names to exact version IDs, SQL, an injected `DocSpecAdapter`, an owned scratch path and permitted data roots. The local profile admits single Parquet files and exact flat Parquet directories. It checks the available representation, selected paths, file sizes, member limits and byte allocation, then asks DocSpec to execute read-only SQL with exact digest pins. It never resolves an implicit latest version.
+
+The response preserves the catalog pin, version bindings, SQL digest and native receipt. A successful empty result has `rows: []`. More than the configured result limit produces an explicit refusal with no admitted `rows`; missing, changed or uncertain inputs cannot produce a successful answer. The default admission is 16 MiB, 128 members and 100 rows; native memory, scratch, metadata and timeout limits remain the adapter's responsibility.
+
+This is a trusted local composition API. Public/partially disclosed catalogs, remote services, protected native-version references and managed release selection require their maintained profiles and are refused here. It grants no publication or data-quality claim. Its file hashing is not a cold-read optimization. The [SpicyGov slice](local-spicygov-slice.md) supplies an actual browser consumer and the remaining scope.
+
 ## Recipes and definitions
 
 Recipes preserve `title`, ordered `notes`, and explicit `parameterOrder`. The order must name each parameter property once. `contextualRelationships` links explanatory relationships without adding their endpoints to the query's actual inputs. Consumers can show the context without claiming that the query read those datasets.

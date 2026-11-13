@@ -32,3 +32,7 @@ Sources: [User-value recommendations](/Users/mikewolfd/Work/artifacts/ddk-user-v
 - [ddk-251s](ddk-251s.md) owns source-gap and availability views; [ddk-pi9u](ddk-pi9u.md) owns row-context navigation. Reuse their shared access path. Optional agent.md/WebMCP helpers remain deferred.
 
 Priority and greenfield scope: [work backlog](../docs/work-backlog.md#greenfield-delivery).
+
+## November 13 bounded vertical progress
+
+Implemented the bounded local flat-file/directory path in `ddk.catalog_query.execute_catalog_sql` and exercised it through a real local SpicyGov browser. Exact member binding, joins, filtering/order/paging, valid-empty and changed-member refusals are covered. Nested directories now refuse explicitly after an independent case showed the retained native reader omitting nested rows. Complete nested/native/remote/public HTTP/MCP/viewer behavior and the performance criteria remain open. [Scope and evidence](../docs/local-spicygov-slice.md).

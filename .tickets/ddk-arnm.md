@@ -33,3 +33,7 @@ Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/
 - Assess source-specific user tasks such as official passages, comment deadlines/submission links, OIRA review history and financial/legislative interpretation against current product scope. Keep selected meanings in maintained source libraries, reference data and SQL with independent checks; unavailable or malformed deadlines remain unknown.
 
 Integrated [user-value review](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-2026-11-13/REPORT.md) on November 13, 2026. These are planned acceptance requirements; the static review supplies no runtime or performance qualification.
+
+## November 13 bounded vertical progress
+
+The fresh regulatory application is named SpicyGov. Its initial selected journey is one historical docket, one rule and two comments with browser reading, source inspection, bounded content search and exploratory SQL. Pause after vertical validation for user review; the complete required family/mode/consumer inventory remains open. [Scope and evidence](../docs/local-spicygov-slice.md).

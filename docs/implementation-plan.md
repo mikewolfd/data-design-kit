@@ -20,6 +20,8 @@ The adopted [build strategy without pilots](build-strategy-without-pilots.md) re
 
 ### 1.1 Current user journeys and delivery order
 
+**Current stop: validate the vertical slice, then show the site.** The fresh application is now named **SpicyGov**. Its [local slice](local-spicygov-slice.md) follows exact retained Regulations.gov originals through native jobs, required output checks, a pinned catalog, browser reading and exploratory SQL. Finish zero-skip checks and independent review before handing it to the user. Horizontal source implementation is paused at the user's request; retained Federal Register discovery is not an implemented second family. The broader acceptance requirements below stay open.
+
 Start the fresh application and workload targets together. Give shared whole-table reading and query access the first implementation priority, alongside cold-read and owner-isolation fixes. Develop against exact retained or published inputs while acquisition and publication proceed. Final application acceptance still requires the complete selected pipeline and every required source mode. The [backlog](work-backlog.md#active-work-in-user-value-order) owns detailed order and dependencies.
 
 | User task | Implementation boundary and canonical owner | Required independent evidence |

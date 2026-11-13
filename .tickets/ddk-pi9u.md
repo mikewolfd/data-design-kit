@@ -29,3 +29,7 @@ Sources: [Record actions](/Users/mikewolfd/Work/artifacts/ddk-user-value-review-
 - Verify the fresh consumer directly, including key/parameter binding and stale-context negatives. Historical proof and existing artifact pins receive credit only for their demonstrated scope.
 
 Delivery order: source identity and locator mapping accompany the first real journey; shared row actions follow the working table/query path in [ddk-citj](ddk-citj.md). This task stays ready for that independent work. [Work backlog](../docs/work-backlog.md#greenfield-delivery).
+
+## November 13 bounded vertical progress
+
+The local SpicyGov cohort now follows each selected comment through exact rule/docket keys and original JSON, preserving source version, digest and receipt pointer. Independent review added changed-version, changed-receipt and changed-inventory refusals. Generic configured row actions and the other selected application journeys remain open. [Scope and evidence](../docs/local-spicygov-slice.md).
