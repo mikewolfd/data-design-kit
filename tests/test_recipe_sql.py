@@ -277,13 +277,47 @@ def test_zero_row_execution_catches_optimizer_faults_missed_by_prepare_job(tmp_p
     )
     # Both phases ran either way: prepare-job accepted the view, then the 0-row job executed it.
     assert len(result["evidence"]) == 2, result
+    prepared, executed = [read_json(item["path"]).value for item in result["evidence"]]
+    assert prepared["status"] == "succeeded"
+    assert prepared["result"]["execution"] == "not_run"
     if result["status"] == "passed":
-        # DataFusion 55 fixed dr-7uke (apache/datafusion#22971), so this engine plans and runs the
-        # view. The gate still executed it, which is the behaviour under test; the fault is gone.
-        pytest.skip("selected docspec engine no longer has the dr-7uke leaf-pushdown fault")
-    assert result["status"] == "failed", result
-    assert any("__datafusion_extracted" in d["message"] or "push_down_leaf_projections" in d["message"]
-               for d in result["diagnostics"]), result["diagnostics"]
+        # A repaired engine must execute the query and retain its independently expected empty result.
+        assert result["diagnostics"] == []
+        assert executed["status"] == executed["operation"]["execution"] == "succeeded"
+        assert executed["result"]["queries"] == [{
+            "name": "history", "columns": ["event_date", "event", "title", "fr_document_number"], "data": [],
+        }]
+    else:
+        assert result["status"] == "failed", result
+        assert executed["status"] == "failed"
+        assert any("__datafusion_extracted" in d["message"] or "push_down_leaf_projections" in d["message"]
+                   for d in result["diagnostics"]), result["diagnostics"]
+
+
+def test_zero_row_execution_failure_cannot_pass_from_preparation_alone(tmp_path):
+    """Simulate an execution-only fault even when the selected native engine has been repaired."""
+    calls = []
+
+    class FailingExecution:
+        evidence_dir = tmp_path
+
+        def prepare_job(self, request):
+            calls.append("prepare")
+            return {"status": "succeeded", "result": {"outputs": []}}
+
+        def execute(self, job, *, spec_path):
+            calls.append("execute")
+            return {"status": "failed", "error": {
+                "code": "sql", "message": "Optimizer rule 'push_down_leaf_projections' failed in execution",
+            }}
+
+    spec_path = tmp_path / "job.json"
+    spec_path.write_text(json.dumps({"inputs": [], "steps": [], "outputs": [],
+                                     "queries": [{"name": "probe", "sql": "SELECT 1"}]}))
+    result = evaluate_job_spec("urn:test:execution-fault", read_json(spec_path), {}, {}, FailingExecution())
+    assert calls == ["prepare", "execute"]
+    assert result["status"] == "failed"
+    assert [item["code"] for item in result["diagnostics"]] == ["CATALOG-RECIPE-SQL-SHAPE"]
 
 
 def test_cli_catalog_docspec_binds_recipes_and_records_adapter(tmp_path, docspec_bin, capsys):
