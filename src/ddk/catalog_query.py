@@ -40,7 +40,7 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
     """Return native evidence and at most max_rows, refusing truncated answers.
 
     bindings maps SQL table names to exact catalog version IDs. No latest lookup,
-    implicit release selection, query rewriting beyond a result limit, or data
+    implicit release selection, query rewriting, or data
     quality assertion occurs. Empty results remain successful empty results.
     The native adapter must provide bounded execution and exact input admission.
     """
@@ -100,11 +100,13 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
         inputs.append({"kind": "parquet", "name": name, "path": str(path)})
     query_identity = sha256(json_dumps({"lock": captured.lock_sha256, "bindings": bindings, "sql": sql,
                                        "max_rows": max_rows}).encode()).hexdigest()
-    # DocSpec's planner enforces the read-only SQL boundary. The outer limit
-    # bounds returned rows; memory, scratch, metadata and time remain adapter limits.
+    # Preserve authored top-level ordering. Wrapping SQL in another SELECT can
+    # discard ORDER BY semantics, especially across UNION or multiple members.
+    # DocSpec bounds collection by metadata/memory/capture/time allocations; the
+    # result row allowance is checked before admitting any rows to the caller.
     request = {"id": f"urn:ddk:local-query:{query_identity}", "scratch": str(Path(scratch).resolve()),
                "inputs": inputs, "steps": [], "outputs": [],
-               "queries": [{"name": "answer", "sql": f"SELECT * FROM ({sql.rstrip().removesuffix(';')}) AS ddk_answer LIMIT {max_rows + 1}"}]}
+               "queries": [{"name": "answer", "sql": sql}]}
     response = adapter.execute(request, input_digests=pins)
     result = {"status": response["status"], "catalogLockSha256": captured.lock_sha256,
               "bindings": dict(bindings), "sqlSha256": sha256(sql.encode()).hexdigest(),

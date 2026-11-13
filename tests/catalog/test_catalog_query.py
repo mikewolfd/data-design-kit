@@ -1,6 +1,7 @@
 """Real local consumers of exact multi-file catalog versions."""
 
 from hashlib import sha256
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -86,6 +87,51 @@ def test_unprepared_join_filter_order_and_page_reads_both_members(local_catalog,
 def test_valid_empty_is_success_not_missing_input(local_catalog, adapter):
     answer = execute_catalog_sql(**local_catalog, adapter=adapter, sql="SELECT id FROM items WHERE id = 99")
     assert answer["status"] == "succeeded" and answer["rows"] == []
+
+
+def test_numbers_survive_native_json_without_float_rounding(local_catalog, adapter):
+    answer = execute_catalog_sql(**local_catalog, adapter=adapter,
+        sql="SELECT CAST('1.23' AS DECIMAL(3,2)) AS amount, CAST(9007199254740993 AS BIGINT) AS identity")
+    assert answer["status"] == "succeeded", answer
+    assert answer["rows"] == [{"amount": Decimal("1.23"), "identity": 9007199254740993}]
+
+
+def test_unexpected_member_refuses_before_hashing_payloads(local_catalog, adapter, monkeypatch):
+    import ddk.adapters.docspec as native
+    root = local_catalog["directory"].parent / "parts"
+    (root / "unexpected.parquet").write_bytes(b"x" * 8192)
+    hashed = []
+    original = native.file_sha256
+    def observed(path):
+        hashed.append(str(path))
+        return original(path)
+    monkeypatch.setattr(native, "file_sha256", observed)
+    answer = execute_catalog_sql(**local_catalog, adapter=adapter, sql="SELECT id FROM items", max_input_bytes=4096)
+    assert answer["status"] == "not_submitted", answer
+    assert hashed == []
+
+
+@pytest.mark.parametrize("payload", [b"[" * 80 + b"0" + b"]" * 80, b'{"value":1e10001}'])
+def test_oversized_native_json_retains_unknown_receipt(local_catalog, adapter, monkeypatch, payload):
+    import ddk.adapters.docspec as native
+    monkeypatch.setattr(native, "run_bounded", lambda *a, **kw: {
+        "stdout": payload, "stderr": b"", "exitCode": 0, "cancelled": False,
+        "timedOut": False, "stdoutTruncated": False, "stderrTruncated": False, "drainIncomplete": False})
+    answer = execute_catalog_sql(**local_catalog, adapter=adapter, sql="SELECT id FROM items")
+    assert answer["status"] == "unknown" and "rows" not in answer
+    assert Path(answer["receipt"]["evidence"]["path"]).is_file()
+
+
+@pytest.mark.parametrize("sql,expected", [
+    ("SELECT id FROM items ORDER BY id", [1, 2, 3, 4]),
+    ("SELECT id FROM items ORDER BY id DESC", [4, 3, 2, 1]),
+    ("SELECT id FROM items ORDER BY amount * -1", [4, 3, 1, 2]),
+    ("SELECT id FROM items WHERE id < 3 UNION ALL SELECT id FROM items WHERE id >= 3 ORDER BY id", [1, 2, 3, 4]),
+])
+def test_authored_top_level_order_is_preserved_without_an_inner_limit(local_catalog, adapter, sql, expected):
+    answer = execute_catalog_sql(**local_catalog, adapter=adapter, sql=sql)
+    assert answer["status"] == "succeeded", answer
+    assert [row["id"] for row in answer["rows"]] == expected
 
 
 def test_row_overflow_refuses_instead_of_returning_a_truncated_answer(local_catalog, adapter):

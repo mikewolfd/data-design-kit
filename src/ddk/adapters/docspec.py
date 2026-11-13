@@ -19,6 +19,7 @@ from ddk.adapters.docspec_schema import (
     PRIMITIVE_PROFILE, RECURSIVE_PROFILE, source_native_read, validate_physical_snapshot,
 )
 from ddk.docspec_file_inputs import parquet_directory_identity, parquet_directory_members
+from ddk.documents import ResourceLimit, parse_json
 
 
 RUNTIME = "docspec"
@@ -426,8 +427,8 @@ class DocSpecAdapter:
                 error = _error("DOCSPEC-RECEIPT-LIMIT", "Native result exceeded the captured output limit")
             else:
                 try:
-                    response = json.loads(stdout)
-                except (ValueError, UnicodeError):
+                    response = parse_json(stdout)
+                except (ValueError, UnicodeError, ResourceLimit):
                     response = None
                 if (response is None and command == "job-plan" and calculation.get("save_substrait")
                         and transport["exitCode"] == 1
@@ -689,9 +690,10 @@ def _file_inputs(request, input_digests, *, metadata_bytes=DEFAULT_CAPTURE_BYTES
         if kind == "parquet" and file.is_absolute() and file.is_dir():
             if not isinstance(request.get("id"), str) or not request["id"]:
                 raise ValueError("A Parquet directory requires an explicit job id for native member digests")
-            observed = _directory_input(name, file, metadata_bytes=metadata_bytes)
-            members = {item["path"]: item["sha256"] for item in observed["files"]}
             supplied_members = {key for key in expected if Path(key).is_relative_to(file) and key != path}
+            observed = _directory_input(name, file, metadata_bytes=metadata_bytes,
+                                        expected_members=supplied_members or None)
+            members = {item["path"]: item["sha256"] for item in observed["files"]}
             if supplied_members and supplied_members != set(members):
                 raise ValueError(f"Expected Parquet directory members differ from the complete inventory for {name}")
             admitted_paths.update(members)
@@ -712,11 +714,11 @@ def _file_inputs(request, input_digests, *, metadata_bytes=DEFAULT_CAPTURE_BYTES
     return inventory
 
 
-def _directory_input(name, root, *, metadata_bytes):
+def _directory_input(name, root, *, metadata_bytes, expected_members=None):
     """Capture bounded local custody using the native directory hash algorithm."""
     if root.is_symlink() or root.resolve() != root:
         raise ValueError("A Parquet directory must use its absolute physical path without links")
-    files = []
+    files, candidates = [], []
     observed_bytes = 0
 
     with os.scandir(root) as entries:
@@ -735,15 +737,26 @@ def _directory_input(name, root, *, metadata_bytes):
                 before = _binary_identity(path)
                 if before[2] <= 0:
                     raise ValueError("A Parquet directory member must contain a nonempty file")
-                item = {"path": str(path), "sha256": file_sha256(path), "bytes": before[2]}
-                if _binary_identity(path) != before:
-                    raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet member changed during admission")
+                # Admit the whole member set before reading payload bytes. An
+                # unexpected large file must not consume the pinned allocation.
+                if expected_members is not None and str(path) not in expected_members:
+                    raise ValueError(f"Unexpected Parquet directory member for {name}")
+                item = {"path": str(path), "sha256": "0" * 64, "bytes": before[2]}
                 observed_bytes += len(json.dumps(item, ensure_ascii=False).encode())
                 if observed_bytes > metadata_bytes:
                     raise ValueError("Parquet directory inventory exceeds the adapter metadata byte limit")
-                files.append(item)
-    if not files:
+                candidates.append((path, before, item))
+    if expected_members is not None and {str(path) for path, _, _ in candidates} != expected_members:
+        raise ValueError(f"Expected Parquet directory members differ from the complete inventory for {name}")
+    if not candidates:
         raise ValueError("A Parquet directory requires at least one retained Parquet member")
+    for path, before, item in candidates:
+        if _binary_identity(path) != before:
+            raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet member changed before admission")
+        item["sha256"] = file_sha256(path)
+        if _binary_identity(path) != before:
+            raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet member changed during admission")
+        files.append(item)
     files.sort(key=lambda item: item["path"])
     observed = {"name": name, "format": "parquet", "path": str(root), "files": files,
                 **parquet_directory_identity(root, files)}
@@ -756,7 +769,8 @@ def _verify_directory_inputs(inventory, result, status, *, metadata_bytes):
         if "files" not in expected:
             continue
         try:
-            current = _directory_input(expected["name"], Path(expected["path"]), metadata_bytes=metadata_bytes)
+            current = _directory_input(expected["name"], Path(expected["path"]), metadata_bytes=metadata_bytes,
+                                       expected_members={item["path"] for item in expected["files"]})
         except (OSError, ValueError) as exc:
             raise BindingRefusal("DOCSPEC-INPUT-CHANGED", "Parquet directory changed during the invocation") from exc
         if current != expected:
