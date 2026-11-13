@@ -1,7 +1,6 @@
 """Real local consumers of exact multi-file catalog versions."""
 
 from hashlib import sha256
-from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -89,11 +88,25 @@ def test_valid_empty_is_success_not_missing_input(local_catalog, adapter):
     assert answer["status"] == "succeeded" and answer["rows"] == []
 
 
-def test_numbers_survive_native_json_without_float_rounding(local_catalog, adapter):
+def test_exact_integer_and_explicit_decimal_text_survive_native_json(local_catalog, adapter):
     answer = execute_catalog_sql(**local_catalog, adapter=adapter,
-        sql="SELECT CAST('1.23' AS DECIMAL(3,2)) AS amount, CAST(9007199254740993 AS BIGINT) AS identity")
+        sql="SELECT CAST(CAST('123456789012345678.12345678901234567890' AS DECIMAL(38,20)) AS VARCHAR) AS amount, CAST(9007199254740993 AS BIGINT) AS identity")
     assert answer["status"] == "succeeded", answer
-    assert answer["rows"] == [{"amount": Decimal("1.23"), "identity": 9007199254740993}]
+    assert answer["rows"] == [{"amount": "123456789012345678.12345678901234567890", "identity": 9007199254740993}]
+
+
+@pytest.mark.parametrize("expression", [
+    "CAST('123456789012345678.12345678901234567890' AS DECIMAL(38,20))",
+    "CAST('NaN' AS DOUBLE)", "CAST('Infinity' AS DOUBLE)",
+    "make_array(CAST('1.23' AS DECIMAL(3,2)))", "named_struct('amount',CAST('1.23' AS DECIMAL(3,2)))",
+    "TIMESTAMP '2026-11-13 12:34:56.123456789'",
+])
+def test_unsupported_query_output_refuses_before_row_execution(local_catalog, adapter, expression, monkeypatch):
+    monkeypatch.setattr(adapter, "execute", lambda *a, **kw: pytest.fail("Unsupported output reached row execution"))
+    answer = execute_catalog_sql(**local_catalog, adapter=adapter, sql=f"SELECT {expression} AS value")
+    assert answer["status"] == "refused" and answer["stage"] == "output_type_admission", answer
+    assert "rows" not in answer
+    assert answer["receipt"]["result"]["execution"] == "not_run"
 
 
 def test_unexpected_member_refuses_before_hashing_payloads(local_catalog, adapter, monkeypatch):
@@ -106,8 +119,8 @@ def test_unexpected_member_refuses_before_hashing_payloads(local_catalog, adapte
         hashed.append(str(path))
         return original(path)
     monkeypatch.setattr(native, "file_sha256", observed)
-    answer = execute_catalog_sql(**local_catalog, adapter=adapter, sql="SELECT id FROM items", max_input_bytes=4096)
-    assert answer["status"] == "not_submitted", answer
+    with pytest.raises(CatalogError, match="Unexpected directory member"):
+        execute_catalog_sql(**local_catalog, adapter=adapter, sql="SELECT id FROM items", max_input_bytes=4096)
     assert hashed == []
 
 

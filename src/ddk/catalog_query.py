@@ -8,7 +8,9 @@ their own maintained reader profiles; this API refuses those boundaries.
 
 from hashlib import sha256
 from pathlib import Path, PurePosixPath
+import os
 import re
+import tempfile
 from urllib.parse import unquote, urlsplit
 
 from .catalog_access import CatalogError
@@ -54,7 +56,7 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
     _require(bool(roots), "Explicit data roots are required")
     captured = load_catalog_artifacts(directory, expected_lock_sha256=expected_lock_sha256, audience="local")
     catalog = captured.catalog
-    inputs, pins, total, members_count = [], {}, 0, 0
+    inputs, pins, total, members_count, schema_files = [], {}, 0, 0, {}
     for name, version_id in bindings.items():
         _require(isinstance(name, str) and len(name) <= 128 and bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", name)),
                  "SQL input names require letters, digits, underscores or hyphens; quote hyphenated names in SQL")
@@ -74,8 +76,20 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
                  "Representation must match the exact available Parquet reference")
         path = _local_path(value["location"], roots)
         members = representation.get("members", ())
+        schema_files[name] = []
         if reference["scheme"] == DIRECTORY_SCHEME:
             _require(path.is_dir() and bool(members), "Directory input needs complete member metadata")
+            names = {member["path"] for member in members}
+            _require(len(names) == len(members) and len(names) <= max_members, "Invalid member inventory")
+            observed = set()
+            with os.scandir(path) as entries:
+                for index, entry in enumerate(entries, 1):
+                    _require(index <= 2048, "Directory entry count exceeds the local query allocation")
+                    _require(not entry.is_symlink() and not entry.is_dir(follow_symlinks=False), "Only flat unlinked directories are admitted")
+                    if entry.name.lower().endswith(".parquet"):
+                        _require(entry.name in names and entry.is_file(follow_symlinks=False), "Unexpected directory member")
+                        observed.add(entry.name)
+            _require(observed == names, "The complete directory membership differs from the catalog")
             for member in members:
                 relative = PurePosixPath(member["path"])
                 _require(not relative.is_absolute() and relative.as_posix() == member["path"]
@@ -87,6 +101,7 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
                          "Member byte size differs from the selected version")
                 _require(str(member_path) not in pins, "Duplicate input member")
                 pins[str(member_path)] = member["sha256"]
+                schema_files[name].append((member_path, member["byteSize"]))
                 total += member["byteSize"]
                 members_count += 1
         else:
@@ -95,6 +110,7 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
             _require(size == representation.get("byteSize"), "File byte size differs from its selected version")
             total += size
             members_count += 1
+            schema_files[name].append((path, size))
         _require(total <= max_input_bytes and members_count <= max_members, "Input exceeds the admitted query allocation")
         pins[str(path)] = value["sha256"]
         inputs.append({"kind": "parquet", "name": name, "path": str(path)})
@@ -107,10 +123,47 @@ def execute_catalog_sql(directory, *, expected_lock_sha256, bindings, sql, adapt
     request = {"id": f"urn:ddk:local-query:{query_identity}", "scratch": str(Path(scratch).resolve()),
                "inputs": inputs, "steps": [], "outputs": [],
                "queries": [{"name": "answer", "sql": sql}]}
+    common = {"catalogLockSha256": captured.lock_sha256, "bindings": dict(bindings),
+              "sqlSha256": sha256(sql.encode()).hexdigest(), "admittedInputBytes": total,
+              "admittedInputMembers": members_count}
+    # The retained native job JSON path narrows decimal values and writes
+    # non-finite floats as null. Infer output types from exact selected Parquet
+    # schemas and refuse unsupported outputs before executing the query.
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    from .docspec_recipe_gate import encode_ipc_schema_base64, decode_ipc_schema_base64
+    declared = []
+    for name, files in schema_files.items():
+        schemas = []
+        for file, size in files:
+            with file.open("rb") as stream:
+                data = stream.read(size + 1)
+            _require(len(data) == size and sha256(data).hexdigest() == pins[str(file)], "Input bytes changed before schema admission")
+            schemas.append(pq.read_schema(pa.BufferReader(data)))
+        _require(all(schema.equals(schemas[0], check_metadata=True) for schema in schemas),
+                 "All members require the same exact Arrow schema for local query admission")
+        declared.append({"name": name, "schema_ipc_base64": encode_ipc_schema_base64(schemas[0])})
+    folder = Path(tempfile.mkdtemp(prefix="catalog-query-schema-", dir=adapter.evidence_dir))
+    job_path = folder / "job.json"
+    job_bytes = json_dumps(request).encode()
+    job_path.write_bytes(job_bytes)
+    preparation = adapter.prepare_job({"job": {"path": str(job_path), "sha256": sha256(job_bytes).hexdigest()}, "inputs": declared})
+    if preparation["status"] != "succeeded":
+        return {**common, "status": preparation["status"], "stage": "schema_preparation", "receipt": preparation}
+    prepared = preparation["result"]
+    queries = prepared.get("queries", ())
+    _require(len(queries) == 1 and queries[0]["name"] == "answer", "Native preparation omitted the query schema")
+    output_schema = decode_ipc_schema_base64(prepared["schemas"][queries[0]["schema_sha256"]])
+    unsupported = [field.name for field in output_schema if not (
+        pa.types.is_integer(field.type) or pa.types.is_boolean(field.type) or pa.types.is_null(field.type)
+        or pa.types.is_string(field.type) or pa.types.is_large_string(field.type) or pa.types.is_string_view(field.type))]
+    if unsupported:
+        return {**common, "status": "refused", "stage": "output_type_admission", "receipt": preparation,
+                "reason": "Local SQL currently returns only scalar text, integers, booleans and nulls. "
+                          "Unsupported output fields: " + ", ".join(unsupported) +
+                          ". Select decimal or temporal values explicitly as VARCHAR to preserve their text."}
     response = adapter.execute(request, input_digests=pins)
-    result = {"status": response["status"], "catalogLockSha256": captured.lock_sha256,
-              "bindings": dict(bindings), "sqlSha256": sha256(sql.encode()).hexdigest(),
-              "admittedInputBytes": total, "admittedInputMembers": members_count, "receipt": response}
+    result = {**common, "status": response["status"], "receipt": response, "preparation": preparation}
     if response["status"] == "succeeded":
         queries = response.get("result", {}).get("queries", ())
         _require(len(queries) == 1 and queries[0]["name"] == "answer" and isinstance(queries[0]["data"], list),
