@@ -110,7 +110,7 @@ export function ResultTable({
               Close detail
             </button>
           </div>
-          <div className="record-navigation" aria-label="Browse returned records">
+          <div className="record-navigation" role="group" aria-label="Browse returned records">
             <span className="muted">
               {selected + 1} of {rows.length} returned records
             </span>
