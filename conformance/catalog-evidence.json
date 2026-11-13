@@ -2009,7 +2009,7 @@
       "expectedDiagnostic": null,
       "tests": [
         "tests/catalog/test_docspec_jobs.py::test_job_zero_counter_quality_queries_qualify_and_reject_violations_and_tampered_sql",
-        "tests/test_odcs_sql_counters.py::test_compile_odcs_quality_counters_is_deterministic_and_tracks_unmapped",
+        "tests/test_odcs_sql_counters.py::test_compile_odcs_quality_counters_is_deterministic_memory_bounded_and_tracks_unmapped",
         "tests/test_odcs_sql_counters.py::test_compiled_zero_counters_return_zero_on_empty_and_clean_tables_and_flag_planted_violations"
       ],
       "evidence": "Compiles ODCS quality rules into deterministic DocSpec zero-counter SQL queries, qualifies clean job outputs with zero DuckDB scans, and rejects row violations and tampered query SQL."

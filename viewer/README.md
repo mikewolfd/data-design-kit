@@ -2,6 +2,8 @@
 
 A data catalog for finding datasets, understanding their fields and limits, and exploring available records. The React interface is served by Astro and reads standard Data Design Kit catalogs. Engineers can inspect exact identifiers, source definitions, checks and publisher selections in technical details.
 
+**November 13, 2026 verification:** 112 unit tests, 65 browser tests and two additional historical replay checks passed with zero skips; type checking and build passed. [Exact source and native identities](../docs/verification.md#november-13-2026-zero-skip-installed-and-viewer-checks). Work is tracked in the repository-root [.tickets](../.tickets/) store and [prioritized backlog](../docs/work-backlog.md); `tk` finds that store from this directory. Historical owner-guide details are being reconciled through the [current portable handoff](../.tickets/ddk-c7v1.md).
+
 ## Run locally
 
 ```sh
@@ -98,4 +100,4 @@ In the evidence archive, `outputs/handoff.md` links exact source/catalog identit
 
 ## Evidence archive
 
-This viewer was built in a standalone repository and moved into the Data Design Kit without its `outputs/` folder, because the kit keeps generated research and run evidence outside the repository. The original repository at `~/Documents/Codex/2026-11-06/ddk-viewer` is the evidence archive. `outputs/` paths in these docs refer to it, and commit IDs cited in `.tickets/` resolve there; the import commit maps them to their new IDs. Retained captures under `fixtures/applications/` record absolute paths into it as provenance.
+This viewer was built in a standalone repository and moved into the Data Design Kit without its `outputs/` folder, because the kit keeps generated research and run evidence outside the repository. The original repository at `~/Documents/Codex/2026-11-06/ddk-viewer` is the evidence archive. `outputs/` paths in these docs refer to it, and historical commit IDs in the `dv-*` tickets now under root `.tickets/` resolve there; the import commit maps them to their new IDs. Retained captures under `fixtures/applications/` record absolute paths into it as provenance. Ticket IDs, closed status and historical notes survived the November 13 consolidation.

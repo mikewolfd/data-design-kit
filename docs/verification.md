@@ -1,5 +1,29 @@
 # DDK verification
 
+## November 13, 2026 backlog reconciliation
+
+The [prioritized backlog](work-backlog.md) consolidates 27 viewer tickets into the root store, preserves all 26 closed tickets, refines the existing query bug and adds 14 scoped work items. The [preservation audit](/Users/mikewolfd/Work/artifacts/ddk-backlog-20261113/backlog-audit.json) verified unchanged closed-ticket text and metadata apart from links to the same relocated targets, valid references, no dependency cycles and identical `tk` results from the root and viewer directories: 15 open, seven ready and eight dependency-blocked.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-backlog-20261113/document-audit.json) passed schema-shape, adapter-manifest, upstream-digest, local-link and requirement/test-traceability checks: 17 schemas, five adapters, nine upstream identities, 103 requirements with one work-package owner each, 334 registered cases and 446 maintained test selectors. It found one stale selector after an ODCS counter test was renamed; `catalog-evidence.json` now points to that maintained test without changing its case or expected result.
+
+All [32 conformance tests](/Users/mikewolfd/Work/artifacts/ddk-backlog-20261113/conformance-result.json) and [four affected quality-counter/job tests](/Users/mikewolfd/Work/artifacts/ddk-zero-skip-20261113T183211Z/backlog-counter-traceability/result.json) passed with zero failures, errors or skips. The latter used the same pinned native executable and installed SDK4 environment as the suite below. No implementation or test code changed in this reconciliation; these new checks cover the backlog and traceability changes without expanding historical runtime or release claims.
+
+## November 13, 2026 zero-skip installed and viewer checks
+
+The [verification summary](/Users/mikewolfd/Work/artifacts/ddk-zero-skip-20261113T183211Z/verification.json) records passing checks for tested main `93bfd2e58baf2871611df1c56b06caf2f05f617c`. Missing test dependencies, the SQL-only native negative control, Morph-KGC, the pinned ODCS resolver and retained recursive/catalog evidence were supplied. The optimizer regression now asserts repaired-engine success and refusal of execution failure after preparation. Commerce browser checks distinguish direct native Parquet read details from historical job receipts; replay verifies the original receipt digest before serving its recorded response.
+
+| Executed check | Result and exact scope |
+| --- | --- |
+| Installed Python suite | 1,242 passed, zero failures/errors/skips at `9f8717c`. The retained SDK4 wheel is `0.1.0.dev6+sdk4`, SHA-256 `bdae59c98eed58ca8926d451002f26f143d8616013bb9d8dd374345f18155c2e`, built from `b0299b7`. All 144 installed wheel members and 134 current Python/resource members matched their expected bytes. |
+| Viewer unit suite | 112 passed, zero failures/skips/todos at `9f8717c`, with the exact retained Spicy pair and Commerce journey supplied. |
+| Complete browser suite | 65 passed, zero failures/skips at `93bfd2e`, including fresh native Commerce execution and retained Congress reads. All 449 tracked files in its external checkout matched that source commit. |
+| Historical Commerce replay | Two additional checks passed with zero skips on the browser-test patch before formatting. They replay retained responses and do not requalify the old native execution. |
+| Type checking and build | Final type checking reported zero errors/warnings/hints. The build passed at `9f8717c`; the only later source change was the Commerce browser test. |
+
+Fresh native tests used the immutable DocSpec executable with SHA-256 `b3a5d49dc951f4cb2826df10f5bd5eeff5c3f7526f553858ffcd6be09ed09a47`, from source `98a2d54077390a70703af0277a9ac2df9ce14cef`. The runner records the separate SQL-only binary identity and all tool/fixture paths. Python, unit and build evidence is reused at `93bfd2e` because the only intervening change was the browser test; the [summary and linked records](/Users/mikewolfd/Work/artifacts/ddk-zero-skip-20261113T183211Z/verification.json) retain source and patch identities.
+
+These results establish the executed suite and its supported cases. They do not replace the SDK3 profile/portable claims, convert registered profiles into qualified profiles, or establish complete authentic-source application acceptance or publication. The [current backlog](work-backlog.md) separates those obligations. Environments, logs, browser artifacts and validation controls remain outside the repository.
+
 ## November 9, 2026 knowledge-graph and RML exports
 
 Commits on `codex/ddk-knowledge-graph-20261109` add `--export graph` (DDK-CATALOG-013) and `--export rml` (DDK-CATALOG-014). These are source-checkout results only. [Records](/Users/mikewolfd/Work/artifacts/ddk-knowledge-graph-20261109/acceptance/).

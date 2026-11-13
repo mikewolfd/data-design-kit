@@ -1,14 +1,22 @@
 # DDK implementation status
 
-**November 7, 2026. The integrated SDK3 package passes the complete local installed profile qualification.** All 266 required case/profile checks passed across 249 distinct cases and 13 supported profiles. One fresh installed run passed 703 tests with zero failures, errors or skips. Earlier SDK2 skips and supplemental results remain unchanged. [Package identities, evidence and use](local-release-integrated-3.md).
+**Current source check, November 13, 2026.** The tested main commit is `93bfd2e`: 1,242 installed Python tests, 112 viewer unit tests, 65 browser tests and two additional historical replay checks passed with zero skips. Type checking and the viewer build passed. Python/resource bytes at that commit match the retained SDK4 wheel; the viewer uses the pinned current DocSpec executable. [Exact evidence and reuse](verification.md#november-13-2026-zero-skip-installed-and-viewer-checks).
+
+The [prioritized backlog](work-backlog.md) owns current implementation and acceptance work. Its release tickets reconcile the current profile matrix, portable handoff and publication; the November 13 suite does not restamp older profile claims or establish full application acceptance.
+
+## Historical SDK3 qualification
+
+**November 7, 2026.** The integrated SDK3 package passed complete local installed profile qualification: 266 required case/profile checks across 249 distinct cases and 13 supported profiles, and 703 tests with zero failures, errors or skips. Earlier SDK2 skips and supplemental results remain unchanged. [Package identities, evidence and use](local-release-integrated-3.md).
 
 The connected workflow passes ODPS/ODCS resolution, file staging, SQL and saved Substrait execution, exact-output quality checks, DCAT/OpenLineage generation and a catalog-bound read. Five generated adapter manifests match the exact captured support declarations. The offline core remains separately installed and checked. The [portable SDK3 package](local-release-integrated-3.md#portable-package) also passes fresh installations, evidence relocation and four fresh workflow cases on macOS arm64. Its copied 703-test qualification remains distinct from these new distribution checks; the dev2 archive retains its earlier scope.
 
 ## Layered data-map source work
 
-A November 8–11 source branch lets a capture → source → resolved → product map live in pure DDK. Aggregator roots, shared imports, `layer-order`, `view-sources`, primary-key row identity, dataset origin, remote definition references, the single-engine `DocSpec` recipe SQL gate (DDK-CATALOG-011), `kind: "job"` catalog productions with zero-counter ODCS SQL quality lowering (DDK-CATALOG-012), and catalog descriptive fields pass source-checkout tests, the [layered example](../examples/layered/README.md) and a copy of the 194-dataset SpicyRegs map. They have no installed qualification. [WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) tracks the implemented and remaining open extensions. [Source checks](verification.md#november-8-2026-layered-data-map-source-checks). [ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog) keeps DDK to that catalog and freezes components, designs, dataset compatibility, impact, locks, file intake, saved plans, fixtures, bundles, bindings and the `build` and `test` commands. The catalog lock (DDK-CATALOG-007) and managed qualification stay live. Run evidence binds to `kind: "job"` productions (DDK-CATALOG-012) as well as frozen components or designs.
+Main includes the November 8–11 layered-map work: aggregator roots, shared imports, `layer-order`, `view-sources`, primary-key row identity, dataset origin, remote definition references, the DocSpec recipe SQL gate (DDK-CATALOG-011), job productions and ODCS SQL counters (DDK-CATALOG-012), and descriptive catalog fields. The original [source checks](verification.md#november-8-2026-layered-data-map-source-checks) retain their scope; the November 13 installed suite covers the current implementation. [WP-15](implementation-plan.md#wp-15--layered-data-map-extensions-specified-not-implemented) links its four remaining specified-only features to canonical tickets. [ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog) freezes the earlier interface/design/compatibility/impact/intake paths and related commands. Catalog locks and managed qualification stay live. Run evidence binds to jobs as well as frozen components or designs.
 
-## Successor work
+<a id="successor-work"></a>
+
+## Historical SDK3 successor and application evidence
 
 SDK3, from source `cc9c44297fb78a6b061951462cd42541e98182bf`, combines captured catalog queries, recursive native types, public release membership, retained jobs, native input custody, producer proof/model prerequisites and publication-intent recovery. It adds optional host-owned process groups, covered by nine installed POSIX stand-in probes. The unchanged DocSpec implementation `255c18489d224d095d4bd1d1edbdef5f5538bb3e` passed 1,011 Rust and 31 Dagster tests; 17 ignored Rust cases remain explicit. Both installed and native results retain their exact source and dependency identities. [Complete local qualification](verification.md#november-7-2026-sdk3-complete-installed-qualification).
 
@@ -28,6 +36,8 @@ Separate greybeard and ETL reviewers cover this runtime, the viewer and both app
 
 ## Working paths
 
+This table summarizes the recorded SDK3 qualification. Its native versions and limits are historical; the current source and November 13 test scope are described above.
+
 | Capability | What is implemented | Evidence boundary |
 | --- | --- | --- |
 | Offline checker | Strict JSON, local definitions, interfaces, dataset checks, graphs, policies, locks, and directional impact | Imports no native engines and reads no production rows |
@@ -39,7 +49,7 @@ Separate greybeard and ETL reviewers cover this runtime, the viewer and both app
 
 The commerce workflow validates and stages the CSV inputs, executes SQL and the saved Substrait bytes, compares the exact exported files with independently authored expected rows, checks quality, generates discovery and lineage, and runs a catalog-bound query against the checked saved-plan output. Changing a shared quality definition identifies the affected consumer and its requalification requirements. The independent nested fixture exercises scoped identities and relationship paths. Native managed tests use a separate retained candidate.
 
-The current [SDK3 guide](local-release-integrated-3.md) binds the installed claims to source `cc9c442`, wheel `bd3218fb…` and native executable `e2ed2646…`. The [SDK2 guide](local-release-integrated-2.md) and [dev5 guide](local-release-dev5.md) retain their earlier source and runtime tuples. Documentation updates do not rebuild these packages or expand their recorded tests.
+The [SDK3 guide](local-release-integrated-3.md) binds its installed claims to source `cc9c442`, wheel `bd3218fb…` and native executable `e2ed2646…`. The [SDK2 guide](local-release-integrated-2.md) and [dev5 guide](local-release-dev5.md) retain their earlier source and runtime tuples. Documentation updates do not rebuild these packages or expand their recorded tests.
 
 ## Commands
 

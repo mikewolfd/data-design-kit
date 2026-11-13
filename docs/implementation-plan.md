@@ -1,6 +1,8 @@
 # Data Design Kit — Implementation Plan
 
-**Updated November 7, 2026. Status: integrated SDK3 passed all 13 local installed profiles and 266 required case/profile checks against the current DocSpec executable. All 703 installed tests passed with zero skips. Both full application replacements remain incomplete. Publication awaits a destination.**
+**Updated November 13, 2026.** Main has passing zero-skip installed and viewer checks: 1,242 Python tests, 112 viewer unit tests, 65 browser tests and two additional historical replay checks. [Verification](verification.md#november-13-2026-zero-skip-installed-and-viewer-checks) records exact identities and reuse. SDK3's 13-profile qualification remains historical; these test counts do not replace its release claim. Application acceptance, current release handoff and publication have separate open work.
+
+The [prioritized work backlog](work-backlog.md) and its root tickets own active scope, dependencies and completion criteria. This plan retains work-package requirements and historical qualification. Repeated gaps below point to that backlog rather than creating independent work lists.
 
 ## 1. Delivery decision
 
@@ -281,7 +283,7 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Dependencies:** WP-06, WP-10, and WP-14. **Output:** reproducible first product release with the complete DDK-VERSION-003 profile set. WP-08 and WP-12 qualify separate claims.
 
-**Current result:** integrated SDK3 passes all 13 local installed profiles and 266 required case/profile checks, including its connected workflow and managed profile. All 703 fresh installed tests passed with zero skips. Portable installation, relocation and archive verification retain their separate `0.1.0-dev.2` result. Publication awaits a destination. These results qualify the recorded source and native macOS arm64 tuple; the SQL-only executable's separate feature-specific software bill of materials remains `not_run`.
+**Historical result:** integrated SDK3 passed all 13 local installed profiles and 266 required case/profile checks, including its connected workflow and managed profile, with 703 installed test passes and zero skips. Its portable installation and relocation evidence and the older dev2 archive retain their separate identities. These results qualify their recorded source/native macOS arm64 tuples. Current work is [release qualification](../.tickets/ddk-b2tk.md), [portable handoff and inventories](../.tickets/ddk-c7v1.md), then [destination, naming and publication](../.tickets/ddk-or08.md). The SQL-only feature-specific software bill of materials remains part of the portable-handoff gap.
 
 - Package the offline checker and adapters with explicit installation and invocation boundaries. Verify the core-only installation and the complete first release workflow.
 - Run the required conformance and CLI cases across supported platforms. Test paths outside the source checkout.
@@ -343,6 +345,8 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Dependencies:** WP-13 and WP-14. **Owners:** DDK. **Output:** requirements recorded from building a layered capture → source → resolved → product map. Items 3 and 8 ([DDK-CATALOG-012](specification.md#DDK-CATALOG-012)) are implemented in source as of November 11, 2026; items 2, 5, 6 and 7 remain specified only.
 
+Canonical active tickets: [edition series](../.tickets/ddk-ucoh.md) (item 2), [status vocabulary](../.tickets/ddk-i3g8.md) (item 5), [definitions-only qualification](../.tickets/ddk-nqut.md) (item 6), and [ODCS deduplication](../.tickets/ddk-sf5m.md) (item 7). The [backlog](work-backlog.md) supplies their user-value order and owns the deferred metadata decisions.
+
 The [layered example](../examples/layered/README.md) exercises the implemented parts: aggregator roots, shared imports, layer order, view sources, dataset origin and descriptive catalog facts. Item status:
 
 1. **Judgement crosswalks: dropped November 9, 2026.** DDK will not learn match semantics. A match-decision table is an ordinary dataset with role `evidence` and an `origin` that follows its method column. *Rationale:* identity resolution is transformation work, and the knowledge-graph export (DDK-CATALOG-013) and mapping convention (DDK-CATALOG-014) make the decisions queryable without a second join engine in DDK.
@@ -396,6 +400,8 @@ Property-based tests are useful for containment boundaries, alias resolution, re
 
 ## 8. Performance and resource acceptance
 
+[ddk-zxlb](../.tickets/ddk-zxlb.md) owns measurement and supported-limit work. Reconcile the original impact targets below with ADR-015 before selecting experiments; this work adds no new behavior to frozen impact/design paths.
+
 The [local release measurements](local-release.md#measured-resources) establish small-fixture loading, impact, and metadata-refresh behavior. The larger-scale targets below remain proposed and unmeasured; local qualification does not claim they have been met.
 
 - Generate a public synthetic design library with 1,000 artifacts, 10,000 step relationships, shared definitions, and several changed interfaces.
@@ -419,7 +425,9 @@ The [local release measurements](local-release.md#measured-resources) establish 
 
 ## 10. Decisions intentionally deferred
 
-- Public package and executable name availability.
+The [deferred register](work-backlog.md#other-optional-or-frozen-work) records owners, entry conditions and required evidence. Public naming and destination selection now belong to the active release-publication ticket; the remaining entries stay deferred until a concrete need is selected.
+
+- Public package and executable name availability: [active publication decision](../.tickets/ddk-or08.md).
 - Hosted registry, remote dependency fetching, and organization-wide discovery.
 - Generic reusable quality-set templating beyond ODCS property definitions.
 - General nested-schema compatibility reasoning, generic SQL dependency inference, and arbitrary schema containment. The first release preserves and validates supported nested references.
