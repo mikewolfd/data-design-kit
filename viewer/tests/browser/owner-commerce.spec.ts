@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { parseExactData } from '../../src/domain/exact';
+import { DEFAULT_DOCSPEC_SHA256 } from '../../src/server/commerce-native';
 
 const versionId =
   'urn:ddk:file-version:667e1cdb71e36ebef8639a894100bcc50d3ab83bc4c02f18ab2e3f9a6f71eb24';
@@ -37,6 +41,20 @@ test(`${runNative ? 'real DocSpec execution' : 'retained DocSpec responses'}: re
   if (replayPath) {
     const retained = JSON.parse(await readFile(replayPath, 'utf8'));
     expect(retained.catalog.catalogSha256).toBe(snapshot.identity.catalogSha256);
+    const nativeReceipt = retained.nativeReadReceipt;
+    expect(nativeReceipt.record).toEqual(retained.read.readEvidence.record);
+    const receiptBytes = await readFile(fileURLToPath(nativeReceipt.record.uri));
+    expect(createHash('sha256').update(receiptBytes).digest('hex')).toBe(
+      nativeReceipt.record.sha256,
+    );
+    expect(parseExactData(receiptBytes.toString('utf8'))).toEqual(nativeReceipt.document);
+    // Replay the verified historical receipt without granting the preview access to its archive.
+    await page.route('**/api/evidence', async (route) => {
+      const body = route.request().postDataJSON();
+      if (body.record.uri !== nativeReceipt.record.uri) return route.continue();
+      expect(body.record).toEqual(nativeReceipt.record);
+      await route.fulfill({ json: nativeReceipt });
+    });
     await page.route('**/api/read', async (route) => {
       const body = route.request().postDataJSON();
       expect(body.datasetId).toBe(retained.read.binding.datasetId);
@@ -72,7 +90,8 @@ test(`${runNative ? 'real DocSpec execution' : 'retained DocSpec responses'}: re
   expect(read.status).toBe('ok');
   expect(read.binding.versionId).toBe(versionId);
   expect(read.readEvidence.kind).toBe('owner');
-  expect(read.rowOrder).toBe('query-result');
+  expect(read.rowOrder).toBe(runNative ? 'source-row' : 'query-result');
+  expect(read.readEvidence.consumed).toEqual(read.binding);
   expect(read.release.id).toBe('urn:example:commerce:release:copy-refresh-20261106');
   expect(Object.hasOwn(read.release, 'selected')).toBe(false);
   expect(read.continuation).toBe('complete');
@@ -83,29 +102,62 @@ test(`${runNative ? 'real DocSpec execution' : 'retained DocSpec responses'}: re
   ]);
   await expect(page.locator('.data-table tbody tr')).toHaveCount(3);
   await expect(
-    page.getByText('All records in this saved result returned · query result order', {
-      exact: true,
-    }),
+    page.getByText(
+      runNative
+        ? '10 records per page · source-reported positions'
+        : 'All records in this saved result returned · query result order',
+      { exact: true },
+    ),
   ).toBeVisible();
   await page.screenshot({ path: `${captures}/viewer-native-desktop.png` });
-  const inspecting = page.waitForResponse((r) => r.url().endsWith('/api/evidence'));
-  await page.getByRole('button', { name: 'Inspect native read receipt', exact: true }).click();
-  const receipt = await (await inspecting).json();
-  expect(receipt.record).toEqual(read.readEvidence.record);
-  expect(receipt.document.inputs).toHaveLength(1);
-  expect(receipt.document.inputs[0].sha256).toBe(resultSha);
-  expect(receipt.document.operation.execution).toBe('succeeded');
-  expect(receipt.document.operation.selection).toBe('not_requested');
-  expect(receipt.document.operation.requestIdentity.value).toMatch(/^[a-f0-9]{64}$/);
-  await expect(
-    page.getByRole('status').filter({ hasText: 'Evidence file matches its recorded fingerprint.' }),
-  ).toBeVisible();
+  let receipt;
+  if (runNative) {
+    // Direct Parquet reads supply response-bound details, not a job execution receipt.
+    expect(read.readEvidence.record).toBeUndefined();
+    expect(read.rowPositions).toEqual([0, 1, 2]);
+    expect(read.readEvidence.details).toMatchObject({
+      kind: 'owner-page',
+      consumed: read.binding,
+      offset: { $number: '0' },
+      totalRows: { $number: '3' },
+      rowPositions: [{ $number: '0' }, { $number: '1' }, { $number: '2' }],
+      shardCount: { $number: '1' },
+    });
+    expect(read.readEvidence.details.shards).toHaveLength(1);
+    expect(read.readEvidence.details.shards[0].sha256).toBe(resultSha);
+    expect(read.readEvidence.details.shards[0].uri).toBe(
+      snapshot.catalog.versions.find((version: any) => version.id === versionId).reference.value
+        .location,
+    );
+    await page.getByText('Read details', { exact: true }).click();
+    await expect(page.locator('.raw[open]').filter({ hasText: 'Read details' })).toContainText(
+      resultSha,
+    );
+    await expect(
+      page.getByRole('button', { name: 'Inspect native read receipt', exact: true }),
+    ).toHaveCount(0);
+  } else {
+    const inspecting = page.waitForResponse((r) => r.url().endsWith('/api/evidence'));
+    await page.getByRole('button', { name: 'Inspect native read receipt', exact: true }).click();
+    receipt = await (await inspecting).json();
+    expect(receipt.record).toEqual(read.readEvidence.record);
+    expect(receipt.document.inputs).toHaveLength(1);
+    expect(receipt.document.inputs[0].sha256).toBe(resultSha);
+    expect(receipt.document.operation.execution).toBe('succeeded');
+    expect(receipt.document.operation.selection).toBe('not_requested');
+    expect(receipt.document.operation.requestIdentity.value).toMatch(/^[a-f0-9]{64}$/);
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: 'Evidence file matches its recorded fingerprint.' }),
+    ).toBeVisible();
+  }
   const pageDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download this page (JSON) ↓', exact: true }).click();
   const pageFile = await (await pageDownload).path();
   const exportedPage = JSON.parse(await readFile(pageFile!, 'utf8'));
   expect(exportedPage.result.binding.versionId).toBe(versionId);
-  expect(exportedPage.result.readEvidence.record).toEqual(read.readEvidence.record);
+  expect(exportedPage.result.readEvidence).toEqual(read.readEvidence);
   await page.getByRole('tab', { name: 'Related data', exact: true }).click();
   const recipe = page
     .locator('.recipe')
@@ -121,6 +173,13 @@ test(`${runNative ? 'real DocSpec execution' : 'retained DocSpec responses'}: re
   expect(query.execution.kind).toBe('owner');
   expect(query.execution.sqlSha256).toBe(sqlSha);
   expect(query.execution.inputs).toEqual(['daily_revenue']);
+  if (runNative) {
+    expect(query.execution.engine).toMatchObject({
+      id: 'docspec',
+      binarySha256: DEFAULT_DOCSPEC_SHA256,
+    });
+    expect(query.execution.consumedBindings).toEqual(query.bindings);
+  }
   expect(byGrain(query.rows)).toEqual(byGrain(read.rows));
   const queryDownload = page.waitForEvent('download');
   await recipe
@@ -128,7 +187,7 @@ test(`${runNative ? 'real DocSpec execution' : 'retained DocSpec responses'}: re
     .click();
   const queryFile = await (await queryDownload).path();
   const exportedQuery = JSON.parse(await readFile(queryFile!, 'utf8'));
-  expect(exportedQuery.result.execution.record).toEqual(query.execution.record);
+  expect(exportedQuery.result.execution).toEqual(query.execution);
   expect(byGrain(exportedQuery.result.rows).map((row: any) => row.amount_cents.$number)).toEqual([
     '1700',
     '500',
