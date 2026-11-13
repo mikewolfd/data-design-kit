@@ -2,7 +2,7 @@
 
 **Current source check, November 13, 2026.** The tested main commit is `93bfd2e`: 1,242 installed Python tests, 112 viewer unit tests, 65 browser tests and two additional historical replay checks passed with zero skips. Type checking and the viewer build passed. Python/resource bytes at that commit match the retained SDK4 wheel; the viewer uses the pinned current DocSpec executable. [Exact evidence and reuse](verification.md#november-13-2026-zero-skip-installed-and-viewer-checks).
 
-The [prioritized backlog](work-backlog.md) owns current implementation and acceptance work. Its release tickets reconcile the current profile matrix, portable handoff and publication; the November 13 suite does not restamp older profile claims or establish full application acceptance.
+The [prioritized backlog](work-backlog.md) owns current implementation and acceptance work. Greenfield applications develop alongside shared cold-read, isolation, acquisition, remote publication and serving work; coverage and original-source proof accompany real consumer journeys. Its release tickets reconcile the selected normative surface, current profile matrix, portable handoff and publication. These are planned outcomes: the November 13 suite does not establish their acceptance or restamp older profile claims.
 
 ## Historical SDK3 qualification
 

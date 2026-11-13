@@ -2,7 +2,7 @@
 id: dv-dnke
 status: open
 deps: []
-links: []
+links: [ddk-eu0k, ddk-p3mc]
 created: 2026-11-13T15:23:34Z
 type: bug
 priority: 1
@@ -27,3 +27,6 @@ Use the resolved, startup-verified runtime state already owned by [DocSpecCatalo
 ## Notes
 
 November 13, 2026: retained the existing ID, assignee and original finding; classified it as a bug and raised delivery priority to P1. Implementation remains open.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.

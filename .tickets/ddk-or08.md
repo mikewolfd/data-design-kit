@@ -5,7 +5,7 @@ deps: [ddk-c7v1]
 links: []
 created: 2026-11-13T19:03:50Z
 type: task
-priority: 1
+priority: 2
 tags: [ddk, backlog, 2026-11-13]
 ---
 # Choose the public package destination and publish the qualified release
@@ -26,3 +26,6 @@ Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
 - Publish the exact qualified artifacts, inventories, notices, supported-profile manifest and installation guide through that owner workflow.
 - Verify a clean consumer install from the published destination against the expected digests and supported commands.
 - Keep package publication, application publication and hosted-service deployment as separate recorded outcomes.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.

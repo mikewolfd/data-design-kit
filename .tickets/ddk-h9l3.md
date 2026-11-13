@@ -1,29 +1,30 @@
 ---
 id: ddk-h9l3
 status: open
-deps: [ddk-arnm]
-links: []
+deps: []
+links: [ddk-arnm, ddk-zxlb, ddk-v2x8, ddk-8ror, ddk-eu0k, ddk-p3mc, ddk-5svu, ddk-citj, ddk-p6kl, ddk-251s, ddk-pi9u]
 created: 2026-11-13T19:03:49Z
-type: task
+type: epic
 priority: 1
 tags: [ddk, backlog, 2026-11-13]
 ---
-# Close Congress acceptance from selected sources through the complete model and readers
+# Build and accept the fresh Congress application through complete real user journeys
 
-Owner role: Congressional-tech application owner; DDK integration coordinates shared gaps.
+Owner role: Congress application owner, with shared DDK/DocSpec/source owners.
 
-User outcome: Users can rely on the complete congressional model and its real reader outputs.
+User outcome: Users obtain fresh, useful Congress answers through a small application built on maintained shared capabilities.
 
-Reconcile the selected source and recovery requirements with the current model inventory before running the full producer. Preserve original rules, observed native field identities and explicit source-check times. Cover the required additional workflows in the application inventory rather than treating the small authored reader fixture as whole-application acceptance.
+Create the fresh implementation from source selections, definitions, domain SQL, source-specific checks and product configuration. Reconcile required congressional model/export/reader behaviors and source checks; earlier G01-G10 and the old table inventory supply evidence, not a mandatory old layout. Work alongside shared capability owners; never wait for a complete generic platform before beginning. Reuse qualified components and exact source evidence without resuming the stopped replacement architecture. This epic stays ready while linked implementation work proceeds.
 
-Sources: [Full replacement acceptance](../docs/replacement-runtime-plan.md#independent-acceptance-examples). Existing G01-G10 requirements remain with congressional-tech.
+Sources: [Greenfield requirements](/Users/mikewolfd/Work/artifacts/ddk-lessons-review-2026-11-13/REVIEW.md), [independent examples](../docs/replacement-runtime-plan.md#independent-acceptance-examples).
 
-Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
+Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/data-design-kit/docs/work-backlog.md#greenfield-delivery).
 
 ## Acceptance Criteria
 
-- Bind selected authentic inputs, producer prerequisites and recovery requirements to their exact original identities.
-- Verify the required full model, all exports/reports and independently expected values, including nested occurrences and exact numeric/temporal interpretation.
-- Record fresh official-source checks separately from recovered originals and historical proof; unavailable observations remain unknown.
-- Exercise all required API/MCP/browser/index consumers and additional workflow branches against the same complete catalog/release.
-- Verify cold recovery and retained work at admitted limits; keep source acceptance, model acceptance and public activation distinct.
+- Start with a real source family and actual consumer; complete acquisition, normalization, linking, checks, publication, query, update and intentional restore, then repeat for materially different selected modes.
+- Close every required scope in ddk-arnm with independent expected values, exact source/runtime/package identities and bounded original-source visual review when accepting a source.
+- Demonstrate original-to-answer lineage and missing/unassessed coverage, including zero-acquisition sources, incomplete crawls and unknown relationships.
+- Finish the shared capability and performance obligations linked below and application publication acceptance in ddk-8ror; required unknown/not_run or skipped checks prevent closure.
+- Use one selected release across the required API/MCP/browser/index consumers; exercise correction, deletion, cold recovery, lost responses and concurrent successors.
+- The new repository contains no copied legacy controller, receipt reconstruction, schema registry, product-specific publisher or generic-server branches. Measure total shared-plus-application complexity and operating cost; optional historical readers remain outside ordinary use.

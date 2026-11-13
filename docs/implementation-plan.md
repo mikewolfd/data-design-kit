@@ -4,6 +4,8 @@
 
 The [prioritized work backlog](work-backlog.md) and its root tickets own active scope, dependencies and completion criteria. This plan retains work-package requirements and historical qualification. Repeated gaps below point to that backlog rather than creating independent work lists.
 
+**Greenfield feedback integration.** Build fresh applications alongside the shared capabilities their real consumers need, prioritizing performance, quality and transparency. Old branches, applications, APIs and intermediate formats provide evidence without creating compatibility obligations. The backlog now names cold-read cost, owner failure isolation, shared acquisition/publication/serving, missing-source coverage and answer-to-original proof. [ddk-aw0v](../.tickets/ddk-aw0v.md) owns explicit revision of superseded release requirements; this planning update does not silently remove DDK-CONF-005 or DDK-VERSION-003 obligations.
+
 ## 1. Delivery decision
 
 Build an independently authored Python checker and catalog generator. Use one set of maintained definitions for catalog discovery and evidence. Attach observed versions, releases, runs, and check results from their native owners. Under [ADR-015](architecture-decisions.md#adr-015--keep-ddk-to-the-evidence-bound-catalog), transformations are SQL files that run as DocSpec job steps. The interface, design-graph, dataset-compatibility, impact, lock, file-intake, saved-plan, fixture, bundle and binding requirements and the `build` and `test` commands are frozen at their current qualification: WP-03, WP-08 and the frozen requirements in WP-04, WP-06, WP-09B and WP-10 take no new work. The catalog lock stays live under DDK-CATALOG-007.
@@ -12,7 +14,7 @@ The first DDK product release includes ODPS product definitions, ODCS dataset de
 
 The first connected workflow uses independently authored local commerce inputs, real staging and execution receipts, exact-output quality checks, and a generated catalog that binds a checked query. A companion nested-data fixture checks scoped relationships. A separate typed managed operation qualifies native quality acceptance and recovery. Project pilots are outside the build scope. This plan implements the [engineering specification](specification.md). The [work-package registry](../implementation/work-packages.json) and [conformance cases](../conformance/cases.json) track the normative requirements.
 
-The adopted [build strategy without pilots](build-strategy-without-pilots.md) organizes four parallel tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve that original scope. The separately requested full SpicyRegs and congressional-tech replacements are greenfield: their producers and readers update together. Both remain incomplete. Their [shared runtime plan](replacement-runtime-plan.md) identifies the extensions, owners, dependency order, and independent acceptance cases. Local application work can use the qualified [integrated SDK3 package](local-release-integrated-3.md); its native claims retain the exact tested executable and dependency tuple. Application inputs and publication still need their own acceptance.
+The adopted [build strategy without pilots](build-strategy-without-pilots.md) records the original parallel build tracks. [Deferred pilot notes](pilot-adoption-notes.md) preserve that scope. Current SpicyRegs and Congress work builds fresh products; their [shared runtime plan](replacement-runtime-plan.md) and [backlog](work-backlog.md) identify current scope and owners. Start real application work alongside shared development, then accept the complete selected scope. SDK3 and later results supply evidence only for matching capabilities and exact identities; they do not prescribe the new application's package or architecture. Source acquisition, remote publication and actual consumers still need their own acceptance.
 
 ## 2. Completed local deliverables
 
@@ -285,6 +287,8 @@ WP-11 retains the first-release profiles in DDK-VERSION-003. Completing this bui
 
 **Historical result:** integrated SDK3 passed all 13 local installed profiles and 266 required case/profile checks, including its connected workflow and managed profile, with 703 installed test passes and zero skips. Its portable installation and relocation evidence and the older dev2 archive retain their separate identities. These results qualify their recorded source/native macOS arm64 tuples. Current work is [release qualification](../.tickets/ddk-b2tk.md), [portable handoff and inventories](../.tickets/ddk-c7v1.md), then [destination, naming and publication](../.tickets/ddk-or08.md). The SQL-only feature-specific software bill of materials remains part of the portable-handoff gap.
 
+Before current qualification, [ddk-aw0v](../.tickets/ddk-aw0v.md) reconciles the greenfield release surface across requirements, implementation and profiles. [ddk-w3df](../.tickets/ddk-w3df.md) adds the independent job-input layer-order example and traceability missing from the earlier feature ticket; the traversal itself already exists. Package qualification does not wait for both complete applications or optional extensions.
+
 - Package the offline checker and adapters with explicit installation and invocation boundaries. Verify the core-only installation and the complete first release workflow.
 - Run the required conformance and CLI cases across supported platforms. Test paths outside the source checkout.
 - Publish the supported profiles, dependency lock, upstream references, notices, and software bill of materials.
@@ -400,7 +404,9 @@ Property-based tests are useful for containment boundaries, alias resolution, re
 
 ## 8. Performance and resource acceptance
 
-[ddk-zxlb](../.tickets/ddk-zxlb.md) owns measurement and supported-limit work. Reconcile the original impact targets below with ADR-015 before selecting experiments; this work adds no new behavior to frozen impact/design paths.
+[ddk-zxlb](../.tickets/ddk-zxlb.md) owns numerical targets and measurements for acquisition, unchanged/small/full refresh, quality, remote transfer, startup and cold/warm queries. Bind a real fresh-application workload and machine/storage tuple before experiments. Measure bytes, requests, latency, freshness, aggregate memory, disk and concurrency; preserve independent correctness and refusal checks. [ddk-eu0k](../.tickets/ddk-eu0k.md) coordinates full-file verification, shard selection and native page decoding. A returned page limit alone does not demonstrate bounded work.
+
+The original impact targets below are historical proposals. Reconcile them with ADR-015 and the selected release surface before use; they do not substitute for data-serving targets or authorize new frozen-framework work.
 
 The [local release measurements](local-release.md#measured-resources) establish small-fixture loading, impact, and metadata-refresh behavior. The larger-scale targets below remain proposed and unmeasured; local qualification does not claim they have been met.
 
@@ -425,16 +431,16 @@ The [local release measurements](local-release.md#measured-resources) establish 
 
 ## 10. Decisions intentionally deferred
 
-The [deferred register](work-backlog.md#other-optional-or-frozen-work) records owners, entry conditions and required evidence. Public naming and destination selection now belong to the active release-publication ticket; the remaining entries stay deferred until a concrete need is selected.
+The [deferred register](work-backlog.md#other-optional-or-frozen-work) records owners, entry conditions and required evidence. Public naming/destination selection and shared acquisition, remote publication and HTTP/MCP/viewer serving are active work. Broader infrastructure below stays deferred until a concrete additional need is selected.
 
 - Public package and executable name availability: [active publication decision](../.tickets/ddk-or08.md).
 - Hosted registry, remote dependency fetching, and organization-wide discovery.
 - Generic reusable quality-set templating beyond ODCS property definitions.
 - General nested-schema compatibility reasoning, generic SQL dependency inference, and arbitrary schema containment. The first release preserves and validates supported nested references.
 - CUE policy execution and non-Python implementations.
-- Production scheduling, deployment, automatic publication, and credential management services.
+- New scheduling, deployment and credential frameworks beyond maintained services used by the selected applications. Required shared remote publication is active in [ddk-5svu](../.tickets/ddk-5svu.md).
 - Arbitrary managed SQL, automatic incremental planning, broad backend coverage, and a general quality-rule framework.
-- A server or Python binding without a concrete use case; speculative plugin systems and a universal calculation representation.
+- Additional servers/bindings beyond the required shared serving path; speculative plugin systems and a universal calculation representation.
 
 These deferrals do not weaken declared conformance requirements. A requested deferred capability must remain unknown or not-run. They prevent a first implementation from becoming a replacement for all of its dependencies.
 

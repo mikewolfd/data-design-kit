@@ -5,7 +5,7 @@ deps: []
 links: []
 created: 2026-11-13T19:03:50Z
 type: feature
-priority: 2
+priority: 3
 tags: [ddk, backlog, 2026-11-13]
 ---
 # Define comparable dataset and product statuses with optional enforcement
@@ -26,3 +26,6 @@ Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
 - Without enforcement, custom and absent values remain preserved and distinguishable; with enforcement, unsupported values yield the documented policy result.
 - Independent cases demonstrate that active status alone grants no read/query/selection or qualification capability.
 - Update the normative definitions/policy shape, examples and traceability without rewriting publisher facts.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.

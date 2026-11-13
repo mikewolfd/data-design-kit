@@ -26,3 +26,6 @@ Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
 - Verify reconstructed bytes/identities against the recorded upstream digests and update affected references/provenance atomically.
 - Independent cases keep the release-tag versus pinned-revision behavior distinct, including the affected quality-operator case.
 - Run shape, resolver/comparison, provenance, link and requirement-traceability checks; keep the declared ODCS API version unchanged.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.

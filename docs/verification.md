@@ -1,5 +1,17 @@
 # DDK verification
 
+## November 13, 2026 greenfield feedback integration
+
+The [backlog](work-backlog.md) integrates the shared-stack review around fresh applications and performance, quality and transparency. This change edits tickets and planning/status documents; it implements no runtime features and grants no new release qualification.
+
+Fresh focused checks ran `tests/core/test_conformance.py` and `tests/core/test_layered_imports.py`: **61 passed, zero failures, errors or skips**. The [result](/Users/mikewolfd/Work/artifacts/ddk-zero-skip-20261113T183211Z/greenfield-backlog/result.json) records base commit `48e524274dd725109b27495ec526de0c53f93850`, the tested patch and installed environment. The earlier full-suite evidence below remains bound to its original identities; this focused run does not establish the newly planned job-specific layer-order case.
+
+The [ticket audit](/Users/mikewolfd/Work/artifacts/ddk-greenfield-backlog-20261113/ticket-audit.json) passed: nine new DDK tickets, 15 existing DDK tickets refined, and 26 closed viewer tickets byte-for-byte unchanged. DDK now has 24 open tickets: 19 ready and five dependency-blocked. Root and viewer `tk` results agree, the graph has no cycles, and a disposable-store probe confirms that completing both shared prerequisites makes the two application release tasks ready.
+
+Nineteen Spicy Stack requests retain their original bodies and redirect with explicit resolutions: 11 merged, four superseded and four deferred. None is closed as implemented or accepted. Native page reading and decimal accuracy now have separate tasks; the large-witness task has bounded-consumer acceptance criteria. The audit verified ticket identities/dates/assignees/parents, new cross-repository links and unchanged contents of 268 pre-existing unrelated dirty files. The local Stack search index was refreshed after ticket edits.
+
+The [document audit](/Users/mikewolfd/Work/artifacts/ddk-greenfield-backlog-20261113/document-audit.json) passed schema shapes, adapter manifests, upstream digests, local links and requirement/test traceability: 17 schemas, five adapters, nine upstream identities, 103 requirements with one work-package owner each, 334 registered cases and 446 maintained test selectors. Normative schemas, requirements, cases and implementation code are unchanged. These checks establish backlog consistency, not remote publication, application acceptance or a measured performance improvement.
+
 ## November 13, 2026 backlog reconciliation
 
 The [prioritized backlog](work-backlog.md) consolidates 27 viewer tickets into the root store, preserves all 26 closed tickets, refines the existing query bug and adds 14 scoped work items. The [preservation audit](/Users/mikewolfd/Work/artifacts/ddk-backlog-20261113/backlog-audit.json) verified unchanged closed-ticket text and metadata apart from links to the same relocated targets, valid references, no dependency cycles and identical `tk` results from the root and viewer directories: 15 open, seven ready and eight dependency-blocked.

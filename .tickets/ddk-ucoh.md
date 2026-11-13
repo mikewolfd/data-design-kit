@@ -5,7 +5,7 @@ deps: []
 links: []
 created: 2026-11-13T19:03:50Z
 type: feature
-priority: 2
+priority: 3
 tags: [ddk, backlog, 2026-11-13]
 ---
 # Represent periodic dataset editions as ordered DCAT series
@@ -26,3 +26,6 @@ Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
 - Missing, tied or contradictory edition metadata does not invent an order or publisher selection.
 - Independent graph-reader checks verify membership and predecessor links, including disclosed/public views.
 - Update normative shape/semantics, case traceability and user documentation together.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.

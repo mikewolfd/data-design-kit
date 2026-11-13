@@ -1,28 +1,29 @@
 ---
 id: ddk-8ror
 status: open
-deps: [ddk-h9l3]
-links: []
+deps: [ddk-5svu, ddk-citj]
+links: [ddk-h9l3]
 created: 2026-11-13T19:03:49Z
 type: task
 priority: 1
 tags: [ddk, backlog, 2026-11-13]
 ---
-# Qualify Congress publisher activation and recovery with complete release membership
+# Accept the fresh Congress release through the shared publisher and actual consumers
 
-Owner role: Congressional-tech publisher owner, with DocSpec lifecycle and DDK evidence owners.
+Owner role: Congress product/release owner using the shared DocSpec publication path.
 
-User outcome: Congress readers receive one coherent release and recover safely from publication failures.
+User outcome: Congress users see coherent releases and dependable recovery without a product-specific publishing implementation.
 
-Close actual publisher authority, conditional activation and consumer readback for the accepted full model. Preserve the existing restore/permission fence. Shared native intent support is reused and retains its own evidence boundary.
+Validate the configured new-product destination, authority and complete required membership through [ddk-5svu](/Users/mikewolfd/Work/data-design-kit/.tickets/ddk-5svu.md). This is fresh application acceptance, not an instruction to retain an old publisher or migrate its journals. Preserve useful source evidence and valid release guarantees. Implementation can proceed with the application epic; final acceptance needs the shared path and exact candidate ready.
 
-Sources: [Publication and readback obligations](../docs/replacement-runtime-plan.md#independent-acceptance-examples). Application G05/G10 remain owner-maintained.
+Sources: [Shared publisher](/Users/mikewolfd/Work/data-design-kit/.tickets/ddk-5svu.md), [application](ddk-h9l3.md).
 
-Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
+Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/data-design-kit/docs/work-backlog.md#greenfield-delivery).
 
 ## Acceptance Criteria
 
-- Bind every required public table and artifact to the accepted model and one frozen release inventory.
-- Exercise original-token refusal, lost acknowledgement, cold reconciliation and an intervening successor activation.
-- Keep uncertain historical outcomes unknown, preserve prior readable releases and never reactivate a stale attempt.
-- Verify API/MCP/browser/index readback of the selected release through the real publisher-owned workflow, retaining authorization and restore-fence evidence.
+- Bind the accepted candidate, frozen data/catalog inventory, destination, original attempt and expected authority token before effects.
+- Exercise failure before/after activation, lost acknowledgement, fresh-process reconciliation and an intervening successor; stale retries never overwrite it.
+- Verify new-product API/MCP/browser/index reads of exact selected members, appropriate disclosure and a deliberate guarded restore.
+- Keep uncertain historical outcomes explicit, protect required retained evidence, and record publication observations separately from frozen release bytes.
+- Prove the application supplies configuration and domain outputs, not a second publisher or mutable selection authority.

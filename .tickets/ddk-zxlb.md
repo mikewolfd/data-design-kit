@@ -2,28 +2,29 @@
 id: ddk-zxlb
 status: open
 deps: []
-links: []
+links: [ddk-arnm, ddk-eu0k, ddk-5svu, ddk-citj, ddk-p6kl]
 created: 2026-11-13T19:03:50Z
 type: task
 priority: 1
 tags: [ddk, backlog, 2026-11-13]
 ---
-# Measure catalog and quality workloads at useful scale within explicit limits
+# Set and measure greenfield workload budgets from acquisition through user queries
 
-Owner role: DDK performance owner, with DocSpec and application owners for native workloads.
+Owner role: Product/performance owner with DDK, DocSpec, source and serving owners.
 
-User outcome: Users can choose safe catalog and dataset sizes with predictable time, memory and disk costs.
+User outcome: Users get predictable query latency, refresh freshness and resource costs at the selected product scale.
 
-Reconcile the original performance targets with ADR-015, preserving frozen impact behavior. Measure a representative 1,000-artifact/10,000-relationship library and required actual quality paths. Keep the five-second/256-MiB cold target explicitly proposed until measured; extend no frozen capability through a benchmark task.
+Choose workloads and numerical targets before consequential experiments; measure the real fresh application while it is built. Cover acquisition, unchanged/small/full refresh, native checks, remote transfer, startup and cold/warm queries. Keep the old 1,000-artifact/10,000-relationship and five-second/256-MiB catalog targets as historical proposals until selected and measured. They do not stand in for data-serving performance.
 
-Sources: [Performance and resource acceptance](../docs/implementation-plan.md#8-performance-and-resource-acceptance).
+Sources: [Review priorities](/Users/mikewolfd/Work/artifacts/ddk-lessons-review-2026-11-13/REVIEW.md#governing-intent-performance-quality-transparency), [performance acceptance](../docs/implementation-plan.md#8-performance-and-resource-acceptance).
 
-Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
+Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/data-design-kit/docs/work-backlog.md#greenfield-delivery).
 
 ## Acceptance Criteria
 
-- Record input identities, machine/runtime tuple, wall time, parsing/schema/reference phases, aggregate process memory, scratch and total retained/output demand.
-- Verify parse-once behavior by byte identity, unchanged-input reuse, bounded logs, cancellation, oversized graphs and per-document limits.
-- Increase native quality population at fixed limits; include a last-batch violation, complete row/check coverage and refusal of truncated or wrong-candidate evidence.
-- Report measured failures and supported limits; revise proposed targets with evidence instead of counting small-fixture tests as scale acceptance.
-- Retain the controls and results outside the repository; reuse unchanged source and immutable inputs.
+- Record target first-page/query latency (including p95 where a repeated workload supports it), freshness lag, bytes/requests, aggregate memory, peak scratch/output/retained disk and allowed concurrency with the chosen machine/storage tuple.
+- At fixed update size, grow population, files and history; measure unchanged refresh, corrections/deletions, backfill, rebuild and interruption/resume. Admit available capacity before running.
+- Measure cold and warm file/shard/page reads through the actual serving adapter, separating digest, metadata, decode, query and network costs.
+- Measure required quality paths with complete rule/row coverage, a last-batch violation and wrong-candidate/truncation refusals; correctness and uncertainty remain explicit.
+- Investigate incidental evaluator fingerprint invalidation from ss-sv2r only against measured repeated work. Any semantic reuse key still binds exact candidate, effective rules, relevant implementation/runtime dependencies and accepted evidence; unchanged semantic labels alone cannot authorize reuse.
+- Retain raw measurements, failed attempts and source/input/tool identities outside the repository; report unsupported limits and total shared-plus-application cost without claiming a speedup from deleted code alone.

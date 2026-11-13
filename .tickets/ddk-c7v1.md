@@ -5,7 +5,7 @@ deps: [ddk-b2tk]
 links: []
 created: 2026-11-13T19:03:50Z
 type: task
-priority: 1
+priority: 2
 tags: [ddk, backlog, 2026-11-13]
 ---
 # Complete the current portable handoff, inventories and operator guides
@@ -26,3 +26,6 @@ Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
 - Supply exact dependency locks, upstream provenance, notices and validated software bills of materials, including the missing SQL-only feature inventory.
 - Test installation and invocation instructions against the actual current package/runtime; update README, release and Commerce/Congress owner guides.
 - Publish a capability/limitation manifest and evidence index that distinguish this portable result from SDK3 and earlier native tuples.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.

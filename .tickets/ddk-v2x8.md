@@ -1,28 +1,29 @@
 ---
 id: ddk-v2x8
 status: open
-deps: [ddk-arnm]
-links: []
+deps: []
+links: [ddk-arnm, ddk-pi9u, ddk-251s]
 created: 2026-11-13T19:03:50Z
 type: task
 priority: 2
 tags: [ddk, backlog, 2026-11-13]
 ---
-# Resolve remaining publisher field meanings and integrate regenerated catalogs
+# Define source meanings and scoped cross-product keys for the fresh applications
 
-Owner role: SpicyRegs and congressional-tech definition owners; viewer owner integrates returned artifacts.
+Owner role: Source/definition owners for SpicyRegs and Congress; DDK and viewer owners consume generated facts.
 
-User outcome: Users can interpret fields, units, coverage and limitations without invented descriptions.
+User outcome: Users understand values and joins without invented meanings or duplicated key registries.
 
-Reconcile the existing source-question ledger, including unresolved nested occurrences, against current publisher definitions. This continues external fact ownership; the closed viewer presentation tickets and accepted simulated study remain closed.
+Continue evidence-backed field research and consolidate ss-k7jw here. Choose fresh shared identities from publisher-native identifiers and declared scope; old spellings, Parquet copies and schema patches need no compatibility layer. Reuse valid research but recheck its applicable source/version. Required question-specific meanings belong in application acceptance; unresolved long-tail meanings remain explicit.
 
-Sources: [Existing publisher handoff](dv-bpgi.md), [viewer content guide](../viewer/docs/content-guide.md), [closed acceptance decision](dv-9p5v.md).
+Sources: [Prior field handoff](dv-bpgi.md), [key task](/Users/mikewolfd/Work/spicy-stack/.tickets/ss-k7jw.md), [content guide](../viewer/docs/content-guide.md).
 
-Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
+Greenfield scope, priorities and evidence: [work backlog](/Users/mikewolfd/Work/data-design-kit/docs/work-backlog.md#greenfield-delivery).
 
 ## Acceptance Criteria
 
-- List each remaining question by exact dataset, field occurrence, source/version and unresolved meaning; credit already-resolved entries.
-- Support each added fact with applicable publisher evidence, or preserve explicit partial/unknown status and a precise outstanding question.
-- Update the maintained owner definitions and regenerate pinned catalog artifacts; add no viewer-owned shadow metadata registry.
-- Verify the integrated display and exact identities; retain pre-change evidence and close each question only for its supported scope.
+- Track each field/relationship question by dataset, occurrence, source/version, units and unresolved meaning; credit supported existing work.
+- Define scoped bill, roll-call, Bioguide, GovInfo and FEC relationships with explicit namespace, date/session context and cardinality where relevant.
+- Keep native identities and contributing records; independent collision/mismatch/join examples verify chosen normalization and linkage rules.
+- Author facts once in maintained source/product definitions and generate both catalogs/readers; add no viewer shadow registry or legacy table-copy obligation.
+- Verify exact displayed values and source meanings, retaining unknown/partial outcomes and unresolved conflicts. Closed historical viewer presentation work stays closed.

@@ -5,7 +5,7 @@ deps: []
 links: []
 created: 2026-11-13T19:03:50Z
 type: feature
-priority: 1
+priority: 2
 tags: [ddk, backlog, 2026-11-13]
 ---
 # Qualify designed data maps without claiming materialized or checked data
@@ -26,3 +26,6 @@ Priority order and deferred scope: [work backlog](../docs/work-backlog.md).
 - Malformed definitions, references, policies and declared relationships still fail their applicable checks.
 - Missing version-bound execution/quality evidence stays unknown or not_run under existing qualification; the new profile creates no data availability, acceptance or publication claim.
 - Independent positive/negative examples, installed CLI/API checks and profile documentation distinguish design validity from data qualification.
+## Reconciliation
+
+November 13, 2026: Greenfield reprioritization: working data paths and meaningful quality/coverage come first. This task preserves its ID and acceptance scope; it is not an application-build prerequisite.
