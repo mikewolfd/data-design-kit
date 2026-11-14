@@ -25,7 +25,7 @@ The native grant also requires the correct base DDK disclosure of each reference
 
 ## Payload and binding
 
-The [runtime schema](../src/features/publisher-metadata/schema.ts) is the executable v1 profile. The top-level object has `schemaVersion:1`, optional `records`, and optional `guides`. It accepts up to 512 KiB of UTF-8 JSON, 1,024 records, and 32 guides. Nested lists are bounded to 20 by default. The schema closes every object. Each supported field is optional unless explicitly required in its type. Dates and timestamps retain the supplied value, including time zone and fractional seconds. External links are absolute HTTP(S) URLs with no embedded credentials. Support may also specify one plain `mailto:` address without headers.
+The [runtime schema](../src/features/publisher-metadata/schema.ts) is the executable v1 profile. The top-level object has `schemaVersion:1` and optional `records`, `guides`, and `workflows`. It accepts up to 512 KiB of UTF-8 JSON, 1,024 records, 32 guides, and 16 workflows. Nested lists are bounded to 20 by default. The schema closes every object. Each supported field is optional unless explicitly required in its type. Dates and timestamps retain the supplied value, including time zone and fractional seconds. External links are absolute HTTP(S) URLs with no embedded credentials. Support may also specify one plain `mailto:` address without headers.
 
 | Target | Required identity |
 | --- | --- |
@@ -46,7 +46,84 @@ Records use `target` plus the following supplied facts:
 
 A guide requires `id`, `title`, `question`, `summary`, `author:{name,url?}`, `reviewedOn`, `links:[{label,purpose,target}]`, and `evidence`. It may supply structured coverage and a `reviewTrigger` describing consequential changes that require a new review. Evidence takes `{label,url,sourceVersion?}` or `{label,record:{uri,sha256},sourceVersion?}`. A record must exactly match a disclosed source inventory, dataset/product/production definition, or standard evidence record. Display a record URI as a technical reference and use existing allowlisted evidence readers if available. Give each link a task and disclose what can be done at its destination. A recipe link requires at least one disclosed dataset context where the viewer can show that recipe. The pilot guide should give two or three useful data choices.
 
-Reject duplicate root declarations, target records, guide IDs, dates of the same kind, topic IDs per record, unknown fact keys per record, wrong cross-record bindings, invalid date periods, unsafe links, and unadmitted record evidence. A malformed or unsupported extension refuses the whole value. The viewer keeps the standard catalog available and shows the distinct refusal. An absent key, omitted optional fact, explicit unknown, valid zero, and valid empty list remain separate. The viewer caches the parsed result by its immutable snapshot object. [Typed extraction](../src/features/publisher-metadata/index.ts) · [Focused tests](../tests/unit/publisher-metadata.test.ts)
+Reject duplicate root declarations, target records, guide IDs, workflow IDs, dates of the same kind, topic IDs per record, unknown fact keys per record, wrong cross-record bindings, invalid date periods, unsafe links, and unadmitted record evidence. A malformed or unsupported extension refuses the whole value. The viewer keeps the standard catalog available and shows the distinct refusal. An absent key, omitted optional fact, explicit unknown, valid zero, and valid empty list remain separate. The viewer caches the parsed result by its immutable snapshot object. [Typed extraction](../src/features/publisher-metadata/index.ts) · [Focused tests](../tests/unit/publisher-metadata.test.ts)
+
+## Record lookups and follow-up actions
+
+`workflows` presents publisher-authored questions at the catalog entry. Each workflow requires `id`, `title`, `summary`, `recipeId`, and `bindings`. The recipe remains the maintained owner of SQL, parameter meaning and matching rules. Each binding is keyed by the recipe's input name and contains exactly `datasetId`, `versionId`, and `representationId`; it must match a disclosed input and the complete dataset/version/resource chain. One to sixteen inputs are supported. This profile does not accept `releaseId`, choose a latest version, or establish publisher selection.
+
+The small lookup form supports recipes whose declared parameter properties all have JSON Schema `type:"string"`. Optional `defaults` maps up to sixteen declared parameter names to strings of at most 4,096 characters; optional `emptyMessage` describes a completed no-match within these exact inputs. A missing required key prevents submission. Other parameter types retain their existing recipe UI and API; this profile does not convert numeric or compound native identities into text. The connected owner must support the recipe before the viewer enables execution. A catalog-search miss can lead to these lookups and explicitly copy the searched identifier into a single-key form; catalog search itself still searches metadata.
+
+Version-targeted records may supply up to eight `rowActions` and eight unique `readableFields`. Every referenced row field must resolve to one top-level disclosed ODCS field with `logicalType:"string"`, without nested properties or array items. Action IDs are unique within the record.
+
+| Action | Required configuration | Runtime meaning |
+| --- | --- | --- |
+| `kind:"recipe"` | `id`, `label`, `workflowId`, and `parameters:{parameterName:rowFieldName}` | Fill the referenced workflow from the selected row. Map every required recipe parameter and use only declared names, with one to sixteen mappings. Every mapped row value must be a nonblank string. Missing keys disable the action; the viewer never broadens the query. Multiple text keys are supported, but arbitrary typed or nested compound-key actions remain outside this profile. |
+| `kind:"original"` | `id`, `label`, `fields:{uri,sha256,version}`, and `sourceReference:{scheme,uriPath,versionPath}` | Read the publisher URI, retained-content digest and source version from the named row fields. Match the exact source-reference scheme and the two paths within `source.reference.value`, plus the digest of its supported retained content. Each path has one to eight object-field steps. Exactly one catalog source observation must match; missing, ambiguous or changed keys disable the action. |
+
+An original action opens the matched source's digest-pinned `urn:ddk:version:local-file-sha256` content through the existing evidence reader. Publisher-native URI/version identity and the retained file's URI/digest serve different purposes. The source owner supplies their mapping. Matching these explicit keys enables the action; it does not create normalized-version lineage or establish source completeness.
+
+For query results, row actions apply only when the recipe declares `resultDataset` and that dataset has exactly one matching exact input binding in the workflow. The viewer does not infer a result's origin from its column names. Related lookups retain the starting record, offer a return action, and stop opening further nested lookups after four levels.
+
+`readableFields` lists the publisher's plain-text presentation fields. The viewer renders their values as text, uses an ODCS business name when supplied, and keeps every returned field available under **All fields, including original source text**. Publishers own decoding and normalization and must retain original text separately when they derive a readable field. The declaration never authorizes HTML execution or replacement of the source value.
+
+This example shows the profile shape. Its recipes, field names and exact identities must exist in the generated catalog before it can be admitted:
+
+```json
+{
+  "schemaVersion": 1,
+  "workflows": [
+    {
+      "id": "rule-by-key",
+      "title": "Find the related rule",
+      "summary": "Find a rule by its complete docket and rule identifiers in the retained version.",
+      "recipeId": "urn:example:recipe:rule-by-key",
+      "bindings": {
+        "rules": {
+          "datasetId": "urn:example:dataset:rules",
+          "versionId": "urn:example:version:rules:1",
+          "representationId": "urn:example:resource:rules:1"
+        }
+      },
+      "emptyMessage": "No rule matches these keys in the selected retained version."
+    }
+  ],
+  "records": [
+    {
+      "target": {
+        "kind": "version",
+        "datasetId": "urn:example:dataset:comments",
+        "versionId": "urn:example:version:comments:1"
+      },
+      "readableFields": ["comment_text"],
+      "rowActions": [
+        {
+          "id": "related-rule",
+          "label": "View the related rule",
+          "kind": "recipe",
+          "workflowId": "rule-by-key",
+          "parameters": {"docket_id": "docket_id", "rule_id": "document_id"}
+        },
+        {
+          "id": "original",
+          "label": "Inspect this comment's original",
+          "kind": "original",
+          "fields": {"uri": "source_uri", "sha256": "source_sha256", "version": "source_version"},
+          "sourceReference": {
+            "scheme": "urn:example:publisher-source-version",
+            "uriPath": ["uri"],
+            "versionPath": ["version"]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The workspace retains the six most recent data/query/related-data views for the current session, including drafts, exact input choices, returned pages, page search and selected records. Metadata tabs do not consume that budget. Catalog entry separately retains six recent publisher lookups. Eviction is explained; page refresh clears this in-memory state. A catalog ID or catalog/report/lock digest change invalidates the retained tasks. Leaving an active request stops waiting and rejects late replies; native completion may remain unknown.
+
+In Query lab, **Insert table name** preserves the authored draft and prior bindings. **Start query**, or **Replace with new query** for a nonempty draft, replaces it explicitly and offers **Undo query edit**. A relevant explicitly chosen version/resource is retained; otherwise the viewer requests an exact choice. Results sit below the editor, the table picker is bounded and collapsible, and completion receives focus. [Workflow regressions](../tests/browser/workflow-state.spec.ts) · [Publisher journey examples](../tests/browser/publisher-workflows.spec.ts) · [SpicyGov workflow acceptance](/Users/mikewolfd/Work/artifacts/spicygov-workflow-fixes-20261113/ACCEPTANCE.md)
 
 ## Regeneration and review
 

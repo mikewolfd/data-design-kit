@@ -10,9 +10,9 @@ tags: [ddk, backlog, 2026-11-13]
 ---
 # Build and accept the fresh SpicyGov application through complete real user journeys
 
-Owner role: SpicyRegs application owner, with shared DDK/DocSpec/source owners.
+Owner role: SpicyGov application owner, with shared DDK/DocSpec/source owners.
 
-User outcome: Users obtain fresh, useful SpicyRegs answers through a small application built on maintained shared capabilities.
+User outcome: Users obtain fresh, useful regulatory-data answers through SpicyGov, a small application built on maintained shared capabilities.
 
 Create the fresh implementation from source selections, definitions, domain SQL, source-specific checks and product configuration. Reconcile required regulatory/federal families and consumer questions from publisher and upstream evidence. Work alongside shared capability owners; never wait for a complete generic platform before beginning. Reuse qualified components and exact source evidence without resuming the stopped replacement architecture. This epic stays ready while linked implementation work proceeds.
 
@@ -42,4 +42,6 @@ The fresh application is `/Users/mikewolfd/Work/spicygov`. [Local vertical scope
 
 ## Generic viewer handoff
 
-The duplicate application server/web files were removed. SpicyGov now supplies source choices, definitions, SQL, operator configuration and a reusable theme to the generic DDK viewer. Shared page search, reading, originals and SQL are available for the vertical handoff. Next application usability work should enrich dataset titles, field meanings, coverage descriptions and source-linked row actions in maintained metadata. The user-directed pause still precedes horizontal work.
+The duplicate application server/web files were removed. SpicyGov now supplies source choices, definitions, SQL, operator configuration and a reusable theme to the generic DDK viewer. Maintained metadata supplies useful titles and field meanings, a cohort guide, a root docket lookup and version-scoped actions to the related rule and exact original. The shared UI preserves research state within bounded session views, keeps raw text beside a safe readable presentation, and separates SQL insertion from replacement with undo. The original catalog-wide capture observations still do not establish normalized-version lineage.
+
+The [workflow repair acceptance record](/Users/mikewolfd/Work/artifacts/spicygov-workflow-fixes-20261113/ACCEPTANCE.md) records the exact publisher/shared sources, final combined checks, native receipt access and actual browser journeys. Its local text-key lookup/action scope leaves broader typed keys, complete source families, updates, publication, recovery, remote consumers and performance acceptance open. Preserve earlier vertical evidence separately. The user-directed pause remains: show this repaired slice before any horizontal source implementation.
