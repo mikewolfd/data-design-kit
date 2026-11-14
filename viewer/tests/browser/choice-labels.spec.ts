@@ -55,7 +55,7 @@ test('descriptive choices retain exact version and representation request bindin
   );
   await page.getByText('Data version identifiers', { exact: true }).click();
   await expect(page.locator('.context-bar')).toContainText(version.id);
-  await page.getByText('File, table or service identifiers', { exact: true }).click();
+  await page.getByRole('tabpanel').getByText('File, table or service identifiers', { exact: true }).click();
   await expect(page.getByRole('tabpanel').locator('.data-toolbar')).toContainText(representation.id);
 });
 
