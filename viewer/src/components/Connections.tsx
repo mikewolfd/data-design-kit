@@ -121,7 +121,9 @@ function Recipe({
   dataset,
   catalogs,
   onNavigateCatalog,
+  active = true,
 }: {
+  active?: boolean;
   recipe: CatalogRecipe;
   snapshot: CatalogSnapshot;
   version?: CatalogVersion;
@@ -165,6 +167,22 @@ function Recipe({
     },
     [],
   );
+  useEffect(() => {
+    if (!active) {
+      if (loading) {
+        controller.current?.abort();
+        setLoading(false);
+        setError(
+          'The viewer stopped waiting when you left this view. The native outcome may be unknown. Run it again to retry.',
+        );
+      }
+      if (sqlLoading) {
+        sqlController.current?.abort();
+        setSqlLoading(false);
+        setSqlError('SQL loading was cancelled. Close and reopen View SQL to retry.');
+      }
+    }
+  }, [active, loading, sqlLoading]);
   const bindings: Record<string, ExactBinding> = {};
   const representationChoices: {
     input: string;
@@ -176,10 +194,7 @@ function Recipe({
   const requiresRelease = relationships.some((r) => r.scope === 'same_release');
   const unsupportedRelationship = relationships.some(
     (r) =>
-      r.scope === 'declared' ||
-      r.scope === 'external' ||
-      !!r.target.external ||
-      !!r.target.catalog,
+      r.scope === 'declared' || r.scope === 'external' || !!r.target.external || !!r.target.catalog,
   );
   let bindingProblem = '';
   const release = snapshot.catalog.releases.find((r) => r.id === releaseId);
@@ -310,7 +325,7 @@ function Recipe({
     }
   }
   return (
-    <article className="recipe" id={`recipe-${recipe.id}`}>
+    <article className="recipe" data-recipe-id={recipe.id}>
       <h3>{recipe.title || 'Query title not supplied'}</h3>
       {recipe.notes?.map((n, i) => (
         <p key={i}>{n}</p>
@@ -643,8 +658,7 @@ function Recipe({
             </Badge>
             {result.execution?.engine && (
               <span className="muted">
-                Engine: <code>{result.execution.engine.id}</code>{' '}
-                {result.execution.engine.version}
+                Engine: <code>{result.execution.engine.id}</code> {result.execution.engine.version}
                 {result.execution.engine.binarySha256
                   ? ` (${result.execution.engine.binarySha256.slice(0, 12)}…)`
                   : ''}
@@ -703,6 +717,7 @@ function Recipe({
             <EvidenceRecord
               snapshot={snapshot}
               record={result.execution.record}
+              active={active}
               label="Inspect native query receipt"
             />
           )}
@@ -720,6 +735,7 @@ export function Connections({
   onNavigateCatalog,
   releaseId,
   focusedRecipeId,
+  active = true,
 }: {
   snapshot: CatalogSnapshot;
   dataset: CatalogDataset;
@@ -729,11 +745,16 @@ export function Connections({
   onNavigateCatalog?: (catalogId: string, datasetId: string) => void;
   releaseId?: string;
   focusedRecipeId?: string;
+  active?: boolean;
 }) {
   useEffect(() => {
-    if (focusedRecipeId)
-      document.getElementById(`recipe-${focusedRecipeId}`)?.scrollIntoView({ block: 'start' });
-  }, [focusedRecipeId]);
+    if (active && focusedRecipeId)
+      document
+        .querySelector(
+          `[role=tabpanel]:not([hidden]) [data-recipe-id="${CSS.escape(focusedRecipeId)}"]`,
+        )
+        ?.scrollIntoView({ block: 'start' });
+  }, [focusedRecipeId, active]);
   const relationships = snapshot.catalog.relationships.filter(
     (r) =>
       r.source.dataset === dataset.alias ||
@@ -1117,6 +1138,7 @@ export function Connections({
             <Recipe
               key={`${r.id}:${version?.id}`}
               recipe={r}
+              active={active}
               snapshot={snapshot}
               version={version}
               dataset={dataset}

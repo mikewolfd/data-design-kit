@@ -1,0 +1,105 @@
+.catalog-start {
+  padding: 32px 0;
+}
+.catalog-start > h1 {
+  margin-bottom: 12px;
+}
+.workflow-choices,
+.workflow-parameters,
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.workflow-choices {
+  margin: 28px 0;
+}
+.workflow-choices [aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--soft);
+}
+.workflow-query {
+  min-width: 0;
+  margin: 24px 0;
+}
+.workflow-query > p {
+  max-width: 72ch;
+}
+.workflow-parameters {
+  align-items: end;
+  margin: 24px 0 16px;
+}
+.workflow-parameters label {
+  flex: 1 1 240px;
+  max-width: 520px;
+}
+.workflow-parameters input {
+  width: 100%;
+}
+.workflow-parameters button {
+  min-height: 42px;
+}
+.workflow-inputs {
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.workflow-completion {
+  min-width: 0;
+  scroll-margin-top: 24px;
+}
+.workflow-completion:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 8px;
+}
+.workflow-completion .section-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.readable-record {
+  max-width: 78ch;
+}
+.readable-record p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.record-actions {
+  margin: 24px 0;
+}
+.record-actions > div {
+  max-width: 100%;
+}
+.record-original-fields {
+  margin-top: 24px;
+}
+.related-lookup {
+  border-left: 3px solid var(--accent);
+  padding-left: 20px;
+  margin: 24px 0;
+}
+.catalog-guidance {
+  border-top: 1px solid var(--line);
+  padding: 24px 0;
+  margin-top: 32px;
+}
+.catalog-start .lookup-search-help {
+  overflow-wrap: anywhere;
+}
+.catalog-start .lookup-search-help button {
+  white-space: normal;
+}
+@media (max-width: 700px) {
+  .workflow-choices {
+    display: grid;
+  }
+  .workflow-parameters {
+    display: grid;
+  }
+  .workflow-parameters label {
+    max-width: 100%;
+  }
+  .related-lookup {
+    padding-left: 12px;
+  }
+}

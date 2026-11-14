@@ -1,5 +1,5 @@
 import Ajv from 'ajv';
-import type { CatalogDataset, FieldPath } from '../../domain/types';
+import type { CatalogDataset, ExactBinding, FieldPath } from '../../domain/types';
 
 export const PUBLISHER_DISCOVERY = 'urn:ddk:publisher:discovery';
 
@@ -44,6 +44,23 @@ export type PublisherPreparedView = {
   kind: 'valueCounts';
   field: FieldPath;
 };
+export type PublisherWorkflow = {
+  id: string;
+  title: string;
+  summary: string;
+  recipeId: string;
+  bindings: Record<string, Omit<ExactBinding, 'releaseId'>>;
+  defaults?: Record<string, string>;
+  emptyMessage?: string;
+};
+export type PublisherRowAction = { id: string; label: string } & (
+  | { kind: 'recipe'; workflowId: string; parameters: Record<string, string> }
+  | {
+      kind: 'original';
+      fields: { uri: string; sha256: string; version: string };
+      sourceReference: { scheme: string; uriPath: string[]; versionPath: string[] };
+    }
+);
 export type PublisherRecord = {
   target: PublisherTarget;
   alternateNames?: { name: string; kind: 'former' | 'alternate' }[];
@@ -76,6 +93,8 @@ export type PublisherRecord = {
   };
   reuse?: PublisherLink[];
   preparedViews?: PublisherPreparedView[];
+  rowActions?: PublisherRowAction[];
+  readableFields?: string[];
   unknowns?: { fact: string; reason?: string }[];
 };
 export type PublisherGuide = {
@@ -94,6 +113,7 @@ type PublisherExtension = {
   schemaVersion: 1;
   records?: PublisherRecord[];
   guides?: PublisherGuide[];
+  workflows?: PublisherWorkflow[];
 };
 
 const ajv = new Ajv({ allErrors: false });
@@ -215,6 +235,66 @@ const coverage = object({
   inclusion: detail,
   exclusions: detail,
 });
+const namedFields = {
+  type: 'object',
+  additionalProperties: short,
+  maxProperties: 16,
+  minProperties: 1,
+};
+const path = { ...list(short, 8), minItems: 1 };
+const rowAction = {
+  oneOf: [
+    object(
+      {
+        id: short,
+        label: short,
+        kind: choice('recipe'),
+        workflowId: short,
+        parameters: namedFields,
+      },
+      ['id', 'label', 'kind', 'workflowId', 'parameters'],
+    ),
+    object(
+      {
+        id: short,
+        label: short,
+        kind: choice('original'),
+        fields: object({ uri: short, sha256: short, version: short }, ['uri', 'sha256', 'version']),
+        sourceReference: object({ scheme: identity, uriPath: path, versionPath: path }, [
+          'scheme',
+          'uriPath',
+          'versionPath',
+        ]),
+      },
+      ['id', 'label', 'kind', 'fields', 'sourceReference'],
+    ),
+  ],
+};
+const workflow = object(
+  {
+    id: short,
+    title: short,
+    summary: detail,
+    recipeId: identity,
+    bindings: {
+      type: 'object',
+      minProperties: 1,
+      maxProperties: 16,
+      additionalProperties: object({ ...versionProps, representationId: identity }, [
+        'datasetId',
+        'versionId',
+        'representationId',
+      ]),
+    },
+    defaults: {
+      type: 'object',
+      maxProperties: 16,
+      additionalProperties: { type: 'string', maxLength: 4096 },
+    },
+    emptyMessage: detail,
+  },
+  ['id', 'title', 'summary', 'recipeId', 'bindings'],
+);
 const record = object(
   {
     target,
@@ -289,6 +369,8 @@ const record = object(
       minProperties: 1,
     },
     reuse: list(link),
+    rowActions: list(rowAction, 8),
+    readableFields: { ...list(short, 8), uniqueItems: true },
     preparedViews: list(
       object(
         {
@@ -327,6 +409,7 @@ export const validatePublisherExtension = ajv.compile<PublisherExtension>(
       schemaVersion: { type: 'integer', const: 1 },
       records: list(record, 1024),
       guides: list(guide, 32),
+      workflows: list(workflow, 16),
     },
     ['schemaVersion'],
   ),

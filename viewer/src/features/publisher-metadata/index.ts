@@ -1,5 +1,6 @@
 import type { CatalogDataset, CatalogField, CatalogSnapshot, FieldPath } from '../../domain/types';
 import type { DocumentedFieldValues } from '../field-dictionary/FieldValues';
+import { validWorkflows } from './workflows';
 import {
   calendarDate,
   PUBLISHER_DISCOVERY,
@@ -9,6 +10,7 @@ import {
   type PublisherGuide,
   type PublisherRecord,
   type PublisherTarget,
+  type PublisherWorkflow,
 } from './schema';
 
 export type {
@@ -19,6 +21,8 @@ export type {
   PublisherPreparedView,
   PublisherRecord,
   PublisherTarget,
+  PublisherWorkflow,
+  PublisherRowAction,
 } from './schema';
 export { PUBLISHER_DISCOVERY } from './schema';
 
@@ -67,6 +71,7 @@ type PublisherMetadata = {
   representations: ReadonlyMap<string, PublisherRecord>;
   recipes: ReadonlyMap<string, PublisherRecord>;
   guides: readonly PublisherGuide[];
+  workflows: readonly PublisherWorkflow[];
   contextualRelations: readonly ContextualRelation[];
   refusals: readonly ExtensionRefusal[];
 };
@@ -470,7 +475,9 @@ function validateBindings(
         if (target.kind !== 'recipe') return false;
         const recipe = snapshot.catalog.recipes.find((item) => item.id === target.recipeId);
         const localInputs = recipe
-          ? Object.values(recipe.inputs).filter((entry): entry is string => typeof entry === 'string')
+          ? Object.values(recipe.inputs).filter(
+              (entry): entry is string => typeof entry === 'string',
+            )
           : [];
         return (
           !recipe ||
@@ -499,6 +506,7 @@ export function publisherMetadata(snapshot: CatalogSnapshot): PublisherMetadata 
   const recipes = new Map<string, PublisherRecord>();
   const refusals: ExtensionRefusal[] = [];
   let guides: PublisherGuide[] = [];
+  let workflows: PublisherWorkflow[] = [];
   let contextualRelations: ContextualRelation[] = [];
   function consume(key: string, versioned: boolean, read: (value: unknown) => void) {
     const values = extensionValues(snapshot, key);
@@ -550,7 +558,11 @@ export function publisherMetadata(snapshot: CatalogSnapshot): PublisherMetadata 
       throw new Error('Publisher metadata has an invalid field, date, link, or size.');
     const records = value.records ?? [];
     const suppliedGuides = value.guides ?? [];
-    if (!validateBindings(records, suppliedGuides, snapshot))
+    const suppliedWorkflows = value.workflows ?? [];
+    if (
+      !validateBindings(records, suppliedGuides, snapshot) ||
+      !validWorkflows(suppliedWorkflows, records, snapshot)
+    )
       throw new Error(
         'Publisher metadata contains a duplicate or mismatched target, or an invalid scope.',
       );
@@ -572,6 +584,7 @@ export function publisherMetadata(snapshot: CatalogSnapshot): PublisherMetadata 
       }
     }
     guides = suppliedGuides;
+    workflows = suppliedWorkflows;
   });
   const result = {
     datasets,
@@ -579,6 +592,7 @@ export function publisherMetadata(snapshot: CatalogSnapshot): PublisherMetadata 
     representations,
     recipes,
     guides,
+    workflows,
     contextualRelations,
     refusals,
   };

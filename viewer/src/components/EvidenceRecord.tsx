@@ -9,11 +9,15 @@ export function EvidenceRecord({
   record,
   label = 'View publisher evidence',
   purpose = 'evidence',
+  compact = false,
+  active = true,
 }: {
   snapshot: CatalogSnapshot;
   record?: RecordRef;
   label?: string;
   purpose?: 'evidence' | 'original';
+  compact?: boolean;
+  active?: boolean;
 }) {
   const [result, setResult] = useState<EvidenceResult>();
   const [error, setError] = useState('');
@@ -26,6 +30,13 @@ export function EvidenceRecord({
     setLoading(false);
     return () => controller.current?.abort();
   }, [snapshot.identity.catalogSha256, record?.uri, record?.sha256]);
+  useEffect(() => {
+    if (!active && loading) {
+      controller.current?.abort();
+      setLoading(false);
+      setError('The viewer stopped waiting for this evidence file. Open it again to retry.');
+    }
+  }, [active, loading]);
   async function inspect() {
     controller.current?.abort();
     const abort = new AbortController();
@@ -60,7 +71,14 @@ export function EvidenceRecord({
   }
   return (
     <div className="owner-evidence">
-      <RecordLink record={record} />
+      {compact ? (
+        <details>
+          <summary>Exact source reference</summary>
+          <RecordLink record={record} />
+        </details>
+      ) : (
+        <RecordLink record={record} />
+      )}
       {record && (!snapshot.capabilities.evidence || !record.sha256) && (
         <p className="muted">
           {!snapshot.capabilities.evidence

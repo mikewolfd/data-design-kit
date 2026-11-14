@@ -280,8 +280,10 @@ test('connected commerce preserves unsupported controls and all-view accessibili
         })
         .click();
       if (tab === 'Data') {
-        await page.getByRole('button', { name: 'Open records', exact: true }).click();
-        await expect(page.locator('.data-table tbody tr')).toHaveCount(3);
+        // Returning from other views retains the accepted page; only the first visit reads it.
+        if (width === 1440)
+          await page.getByRole('button', { name: 'Open records', exact: true }).click();
+        await expect(page.getByRole('tabpanel').locator('.data-table tbody tr')).toHaveCount(3);
       }
       if (width === 390 && tab === 'Data')
         await page.screenshot({ path: `${captures}/viewer-native-mobile.png` });

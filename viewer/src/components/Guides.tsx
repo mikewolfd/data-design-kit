@@ -29,7 +29,15 @@ export function guideHref(snapshot: CatalogSnapshot, target: PublisherLink['targ
   return `?${query}`;
 }
 
-export function Guides({ snapshot, guideId }: { snapshot: CatalogSnapshot; guideId?: string }) {
+export function Guides({
+  snapshot,
+  guideId,
+  onNavigate,
+}: {
+  snapshot: CatalogSnapshot;
+  guideId?: string;
+  onNavigate?: (href: string) => void;
+}) {
   const guides = publisherMetadata(snapshot).guides;
   useEffect(() => {
     if (guideId) document.getElementById(`guide-title-${guideId}`)?.focus();
@@ -98,6 +106,20 @@ export function Guides({ snapshot, guideId }: { snapshot: CatalogSnapshot; guide
               <li key={index}>
                 <a
                   href={guideHref(snapshot, link.target)}
+                  onClick={(event) => {
+                    if (
+                      onNavigate &&
+                      link.target.kind !== 'external' &&
+                      !event.ctrlKey &&
+                      !event.metaKey &&
+                      !event.shiftKey &&
+                      !event.altKey &&
+                      event.button === 0
+                    ) {
+                      event.preventDefault();
+                      onNavigate(guideHref(snapshot, link.target));
+                    }
+                  }}
                   {...(link.target.kind === 'external'
                     ? { target: '_blank', rel: 'noreferrer' }
                     : {})}

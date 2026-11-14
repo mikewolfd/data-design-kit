@@ -156,6 +156,7 @@ export interface OperatorCatalogOwnerEntry {
   description?: string;
   enableEvidence?: boolean;
   localSql?: LocalSqlConfig;
+  retainReceiptsDir?: string;
 }
 
 export interface TemporalValueGuards {
@@ -779,9 +780,11 @@ export async function createDocSpecCatalogOwner(
   let retainReceiptsDirReal: string | undefined;
   if (config.retainReceiptsDir) {
     const absRetain = resolve(config.retainReceiptsDir);
-    const { mkdir } = await import('node:fs/promises');
+    const { mkdir, mkdtemp } = await import('node:fs/promises');
     await mkdir(absRetain, { recursive: true });
-    retainReceiptsDirReal = await realpath(absRetain);
+    // Native receipt names are worker-local counters. A fresh directory preserves older bytes
+    // across owner restarts without broadening the current owner's evidence allowlist.
+    retainReceiptsDirReal = await realpath(await mkdtemp(resolve(absRetain, 'owner-')));
     if (!isWithinRoots(retainReceiptsDirReal, permittedRoots)) {
       permittedRoots.push(retainReceiptsDirReal);
     }
@@ -1213,6 +1216,9 @@ export async function loadOperatorOwnerConfig(
     if (!isObject(item) || typeof item.id !== 'string' || !item.id.trim())
       fail('invalid_registration', 'Each owner config entry requires a non-empty string id.');
     const entry = item as unknown as OperatorCatalogOwnerEntry;
+    if (entry.retainReceiptsDir !== undefined &&
+      (typeof entry.retainReceiptsDir !== 'string' || !isAbsolute(entry.retainReceiptsDir)))
+      fail('invalid_registration', 'retainReceiptsDir must be an absolute directory path.');
     if (seenIds.has(entry.id))
       fail('invalid_registration', `Duplicate catalog id in owner config: ${entry.id}`);
     seenIds.add(entry.id);
@@ -1285,6 +1291,7 @@ export async function loadOperatorOwnerConfig(
         ...(entry.supportedRecipeIds ? { supportedRecipeIds: entry.supportedRecipeIds } : {}),
         ...(entry.description ? { description: entry.description } : {}),
         enableEvidence: entry.enableEvidence ?? true,
+        ...(entry.retainReceiptsDir ? { retainReceiptsDir: entry.retainReceiptsDir } : {}),
       });
       if (entry.localSql) {
         const local = await createLocalCatalogSql(entry.localSql, {

@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exactObjectField } from '../../src/domain/exact';
 import type { Catalog, CatalogSnapshot } from '../../src/domain/types';
 import { CatalogAccess } from '../../src/server/access';
@@ -1014,6 +1014,7 @@ pq.write_table(table, sys.argv[1])
               docspecBinary: DEFAULT_DOCSPEC_BINARY,
               docspecSha256: DEFAULT_DOCSPEC_SHA256,
               permittedRoots: [pubDir, locDir, dataDir],
+              retainReceiptsDir: join(tmp, 'receipts'),
             },
           ],
         }),
@@ -1037,7 +1038,7 @@ pq.write_table(table, sys.argv[1])
         const store = new CatalogStore(locLoaded.registrations, 'local');
         const snap = await store.snapshot('paired-stack');
         const access = new CatalogAccess(store, locLoaded.owners);
-        const queryRes = await access.query({
+        const queryRequest = {
           catalogId: 'paired-stack',
           catalogSha256: snap.identity.catalogSha256,
           recipeId: 'urn:test:paired:recipe:by_code',
@@ -1050,13 +1051,31 @@ pq.write_table(table, sys.argv[1])
           },
           parameters: { target_code: 'A1' },
           limit: 10,
-        });
+        };
+        const queryRes = await access.query(queryRequest);
         assert.equal(queryRes.status, 'ok');
         assert.equal(queryRes.returned, 1);
         assert.deepEqual(exactObjectField(queryRes.rows[0], 'code'), 'A1');
         assert.deepEqual(exactObjectField(queryRes.rows[0], 'amount'), { $number: '42.50' });
         assert.equal(queryRes.execution?.engine?.id, 'docspec');
         assert.equal(queryRes.execution?.engine?.binarySha256, DEFAULT_DOCSPEC_SHA256);
+        const firstReceipt = queryRes.execution?.record;
+        assert.ok(firstReceipt, 'Operator receipt retention must reach the native worker.');
+        const firstBytes = await readFile(fileURLToPath(firstReceipt.uri));
+        assert.equal(sha256(firstBytes), firstReceipt.sha256);
+        for (const owner of locLoaded.owners.values()) await owner.close();
+        locLoaded.owners.clear();
+        const restarted = await loadOperatorOwnerConfig(configPath, 'local');
+        try {
+          const secondAccess = new CatalogAccess(store, restarted.owners);
+          const second = await secondAccess.query(queryRequest);
+          assert.ok(second.execution?.record);
+          assert.notEqual(second.execution.record.uri, firstReceipt.uri);
+          assert.equal(sha256(await readFile(fileURLToPath(firstReceipt.uri))), firstReceipt.sha256);
+          assert.equal(sha256(await readFile(fileURLToPath(second.execution.record.uri))), second.execution.record.sha256);
+        } finally {
+          for (const owner of restarted.owners.values()) await owner.close();
+        }
       } finally {
         for (const owner of locLoaded.owners.values()) {
           await owner.close();

@@ -9,6 +9,7 @@ import { Overview, Evidence, Activity, Compare } from './MetadataPanels';
 import { DataPanel } from './DataPanel';
 import { Connections } from './Connections';
 import { Guides } from './Guides';
+import { CatalogStart } from './CatalogStart';
 import { publisherMetadata } from '../features/publisher-metadata';
 import { PublisherMetadataNotice } from '../features/dataset-context';
 import { parseViewerTheme, type ViewerTheme } from '../lib/theme';
@@ -222,6 +223,24 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
     .filter((item) => matchesFacets(item, facets))
     .sort((a, b) => a.searchRank(route.search) - b.searchRank(route.search));
   const metadata = snapshot ? publisherMetadata(snapshot) : undefined;
+  const hasStart = !!metadata?.workflows.length;
+  const showStart = hasStart && !route.dataset && route.tab === 'Overview';
+  const hasSourceLinks = discovery.some((item) => item.sourceIds.length > 0);
+  const openStart = () =>
+    navigate({
+      dataset: '',
+      version: '',
+      resource: '',
+      release: '',
+      recipe: '',
+      guide: '',
+      tab: 'Overview',
+    });
+  function openGuideLink(href: string) {
+    window.history.pushState({}, '', href);
+    setRoute(routeFromUrl());
+    setExportOpen(false);
+  }
   const titleCounts = new Map<string, number>();
   for (const item of snapshot?.catalog.datasets ?? []) {
     const title = titleOf(item);
@@ -236,12 +255,12 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
       dataset?.rowMeaning === 'One future fixture row');
   useEffect(() => {
     document.title =
-      dataset && snapshot
+      dataset && snapshot && !showStart
         ? `${titleOf(dataset)} · ${snapshot.title} · ${theme.brand.name}`
         : snapshot
           ? `${snapshot.title} · ${theme.brand.name}`
           : `${theme.brand.name} · ${theme.brand.tagline}`;
-  }, [dataset, snapshot, theme.brand.name, theme.brand.tagline]);
+  }, [dataset, snapshot, showStart, theme.brand.name, theme.brand.tagline]);
   function chooseDataset(id: string, versionId?: string, releaseId?: string) {
     navigate({
       dataset: id,
@@ -329,7 +348,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
       </a>
       <div className="app-layout">
         <aside className="sidebar" aria-label="Dataset discovery">
-          <ViewerBrand theme={theme} />
+          <ViewerBrand theme={theme} onHome={hasStart ? openStart : undefined} />
           <div className="sidebar-top">
             <p className="eyebrow">Explore data</p>
             <label className="eyebrow" htmlFor="catalog-choice">
@@ -421,7 +440,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                 <option value="unknown">Record availability unknown</option>
               </select>
             </label>
-            {!!snapshot?.catalog.sources.length && (
+            {!!snapshot?.catalog.sources.length && hasSourceLinks && (
               <label className="filter-label source-filter">
                 Source capture
                 <select
@@ -491,6 +510,8 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                   A source capture is a recorded retrieval or observation of a source. The
                   publisher’s recorded scope labels each capture; exact identifiers are in Checks &
                   sources.
+                  {!hasSourceLinks &&
+                    ' This catalog does not supply dataset-to-capture mappings, so capture filtering is unavailable. Record actions use their separately declared exact source keys.'}
                 </p>
               </details>
             )}
@@ -528,8 +549,8 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
               return (
                 <button
                   key={d.id}
-                  className={d.id === dataset?.id ? 'active' : ''}
-                  aria-current={d.id === dataset?.id ? 'page' : undefined}
+                  className={!showStart && d.id === dataset?.id ? 'active' : ''}
+                  aria-current={!showStart && d.id === dataset?.id ? 'page' : undefined}
                   onClick={() => chooseDataset(d.id)}
                 >
                   <span className="dataset-symbol" aria-hidden="true">
@@ -575,6 +596,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
               <div className="nav-empty">
                 <p>No datasets match these filters.</p>
                 <button onClick={clearDiscoveryFilters}>Clear filters</button>
+                {hasStart && <button onClick={openStart}>Try record lookups</button>}
               </div>
             )}
             {datasets.length > limit && (
@@ -599,10 +621,34 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
             <div className="breadcrumb">
               <span>{snapshot?.title || theme.brand.name}</span>
               <span aria-hidden="true">/</span>
-              <span>Datasets</span>
+              {hasStart ? (
+                <button onClick={openStart}>Start with a question</button>
+              ) : (
+                <span>Datasets</span>
+              )}
             </div>
             <span className="header-context">Local preview</span>
           </header>
+          {snapshot && hasStart && !error && !exactLinkMismatch && (
+            <div hidden={!showStart} inert={!showStart}>
+              <CatalogStart
+                key={JSON.stringify([snapshot.id, snapshot.identity])}
+                snapshot={snapshot}
+                active={showStart}
+                search={route.search}
+                onGuide={(guide) =>
+                  navigate({
+                    dataset: snapshot.catalog.datasets[0]?.id ?? '',
+                    version: '',
+                    resource: '',
+                    release: '',
+                    tab: 'Guides',
+                    guide,
+                  })
+                }
+              />
+            </div>
+          )}
           {catalogError && (
             <Notice
               title="Catalog list unavailable"
@@ -639,7 +685,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
               )}
             </Notice>
           ) : snapshot && dataset ? (
-            <>
+            <div hidden={showStart} inert={showStart}>
               {!datasets.some((item) => item.dataset.id === dataset.id) && (
                 <Notice
                   title="The open dataset is outside these results"
@@ -856,6 +902,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                 ))}
               </div>
               <RetainedTaskPanels
+                active={!showStart}
                 key={JSON.stringify([snapshot.id, snapshot.identity])}
                 taskKey={JSON.stringify([
                   dataset.id,
@@ -920,7 +967,9 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                 {route.tab === 'Compare' && (
                   <Compare snapshot={snapshot} dataset={dataset} version={version} />
                 )}
-                {route.tab === 'Guides' && <Guides snapshot={snapshot} guideId={route.guide} />}
+                {route.tab === 'Guides' && (
+                  <Guides snapshot={snapshot} guideId={route.guide} onNavigate={openGuideLink} />
+                )}
               </RetainedTaskPanels>
               <footer className="workspace-footer">
                 <span>
@@ -940,7 +989,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                   />
                 </details>
               </footer>
-            </>
+            </div>
           ) : snapshot ? (
             <Notice title="Dataset unavailable">
               {route.dataset

@@ -50,13 +50,13 @@ test('descriptive choices retain exact version and representation request bindin
   await expect(
     page.getByRole('combobox', { name: 'File, table or service', exact: true }),
   ).toHaveCount(0);
-  await expect(page.locator('.data-toolbar')).toContainText(
+  await expect(page.getByRole('tabpanel').locator('.data-toolbar')).toContainText(
     'Watershed observations · JSON file · Available',
   );
   await page.getByText('Data version identifiers', { exact: true }).click();
   await expect(page.locator('.context-bar')).toContainText(version.id);
   await page.getByText('File, table or service identifiers', { exact: true }).click();
-  await expect(page.locator('.data-toolbar')).toContainText(representation.id);
+  await expect(page.getByRole('tabpanel').locator('.data-toolbar')).toContainText(representation.id);
 });
 
 test('one unselected version still requires a deliberate choice and invalid routes stay invalid', async ({

@@ -199,7 +199,7 @@ async function fixture(page: Page, request: APIRequestContext, variant: Variant 
     {
       comment_id: 'COMMENT-002',
       docket_id: 'DEMO-42',
-      rule_id: 'RULE-9',
+      rule_id: 'RULE-10',
       readable_comment: 'Second independently authored example comment.',
     },
   ];
@@ -421,6 +421,18 @@ test('a related rule lookup uses the complete configured key and returns to the 
     'COMMENT-001',
   );
   await expect(detail).toContainText(readableComment);
+  expect(queries).toHaveLength(2);
+});
+
+test('moving to the next record closes its related lookup without querying the new row implicitly', async ({ page, request }) => {
+  const { queries } = await fixture(page, request);
+  await page.goto('/');
+  const detail = await firstComment(page);
+  await detail.getByRole('button', { name: 'View the related rule', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Related record lookup' }).getByRole('cell', { name: 'RULE-9', exact: true })).toBeVisible();
+  await detail.getByRole('button', { name: 'Next record', exact: true }).click();
+  await expect(detail).toContainText('Second independently authored example comment.');
+  await expect(page.getByRole('region', { name: 'Related record lookup' })).toHaveCount(0);
   expect(queries).toHaveLength(2);
 });
 
