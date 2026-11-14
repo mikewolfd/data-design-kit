@@ -14,6 +14,7 @@ import { PublisherMetadataNotice } from '../features/dataset-context';
 import { parseViewerTheme, type ViewerTheme } from '../lib/theme';
 import { ViewerBrand } from './ViewerBrand';
 import { QueryLab } from './QueryLab';
+import { RetainedTaskPanels } from './RetainedTaskPanels';
 import {
   discoveryItems,
   facetLabels,
@@ -187,6 +188,13 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
   const version =
     versions.find((v) => v.id === route.version) ||
     (!route.version && snapshot && dataset ? selectedVersion(snapshot, dataset) : undefined);
+  const versionResources =
+    snapshot?.catalog.representations.filter((item) => item.version === version?.id) ?? [];
+  const queryResource = route.resource
+    ? versionResources.find((item) => item.id === route.resource)?.id
+    : versionResources.length === 1
+      ? versionResources[0].id
+      : undefined;
   const versionOptions = snapshot && dataset ? versionChoices(snapshot, dataset, versions) : [];
   const publisherVersion = snapshot && dataset ? selectedVersion(snapshot, dataset)?.id : undefined;
   const versionChoiceLabel = (id: string) =>
@@ -847,13 +855,17 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                   </button>
                 ))}
               </div>
-              <div
-                role="tabpanel"
-                tabIndex={0}
-                aria-labelledby={`tab-${route.tab}`}
-                id={`panel-${route.tab}`}
-                className="tab-content"
-                key={`${snapshot.identity.catalogSha256}:${dataset.id}:${version?.id}:${route.tab}`}
+              <RetainedTaskPanels
+                key={JSON.stringify([snapshot.id, snapshot.identity])}
+                taskKey={JSON.stringify([
+                  dataset.id,
+                  version?.id,
+                  boundRelease,
+                  route.resource,
+                  route.recipe,
+                  route.tab,
+                ])}
+                tab={route.tab}
               >
                 {route.tab === 'Overview' && (
                   <Overview
@@ -885,7 +897,20 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                     focusedRecipeId={route.recipe}
                   />
                 )}
-                {route.tab === 'Query' && <QueryLab snapshot={snapshot} />}
+                {route.tab === 'Query' && (
+                  <QueryLab
+                    snapshot={snapshot}
+                    initialBinding={
+                      route.version && version
+                        ? {
+                            datasetId: dataset.id,
+                            versionId: version.id,
+                            representationId: queryResource ?? '',
+                          }
+                        : undefined
+                    }
+                  />
+                )}
                 {route.tab === 'Evidence' && (
                   <Evidence snapshot={snapshot} dataset={dataset} version={version} />
                 )}
@@ -896,7 +921,7 @@ export default function Workspace({ theme = parseViewerTheme() }: { theme?: View
                   <Compare snapshot={snapshot} dataset={dataset} version={version} />
                 )}
                 {route.tab === 'Guides' && <Guides snapshot={snapshot} guideId={route.guide} />}
-              </div>
+              </RetainedTaskPanels>
               <footer className="workspace-footer">
                 <span>
                   {snapshot.mode === 'fixture'
